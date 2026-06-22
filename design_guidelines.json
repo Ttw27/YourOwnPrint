@@ -1,0 +1,253 @@
+{
+  "project_name": "Your Own Print",
+  "description": "A modern e-commerce website for a UK custom print and workwear business.",
+  "default_theme": "theme_1_industrial_dark",
+  "design_principles": [
+    "Build 4 Theme Variations on a single showcase page.",
+    "Show all 4 on the same page with a clear label above each one and a 'Select This Theme' button under each.",
+    "Inner pages (Workwear, Teams/Schools, Design Your Own, Contact) strictly use the default Theme 1 (Industrial Dark).",
+    "No purple/violet gradients.",
+    "No overused Inter font for headings; strictly follow assigned distinct typography.",
+    "Include data-testid attributes on all interactive elements."
+  ],
+  "themes": {
+    "theme_1_industrial_dark": {
+      "name": "Industrial Dark",
+      "feel": "Tough, strong, trades-focused.",
+      "colors": {
+        "background": "#0d0d0d",
+        "surface": "#1a1a1a",
+        "primary": "#ff6b35",
+        "primary_hover": "#e55a2b",
+        "text_main": "#ffffff",
+        "text_muted": "#a0a0a0",
+        "border": "#333333"
+      },
+      "typography": {
+        "heading_font": "Oswald, sans-serif",
+        "body_font": "IBM Plex Sans, sans-serif",
+        "heading_weight": "700",
+        "heading_transform": "uppercase",
+        "body_weight": "400"
+      },
+      "layout": {
+        "border_radius": "0px",
+        "spacing": "dense",
+        "dividers": "diagonal slash dividers"
+      },
+      "button_styles": {
+        "base": "bg-[#ff6b35] text-white font-bold uppercase tracking-wider rounded-none px-8 py-4 transition-transform hover:-translate-y-1 active:translate-y-0",
+        "outline": "border-2 border-[#ff6b35] text-[#ff6b35] font-bold uppercase tracking-wider rounded-none px-8 py-4 hover:bg-[#ff6b35] hover:text-white transition-colors"
+      },
+      "hero_treatment": "Full-width dark background image with heavy black overlay (bg-black/60). Giant uppercase Oswald typography, left-aligned, stacked tightly. Diagonal slash accent overlaying the bottom edge.",
+      "category_grid_treatment": "Bold, sharp-edged rectangular tiles. High contrast, dark overlays with bright orange text on hover. Grid items use tight gaps (gap-4).",
+      "css_variables": {
+        "--background": "13 13 13",
+        "--foreground": "255 255 255",
+        "--primary": "255 107 53",
+        "--primary-foreground": "255 255 255",
+        "--card": "26 26 26",
+        "--card-foreground": "255 255 255",
+        "--border": "51 51 51",
+        "--radius": "0rem"
+      }
+    },
+    "theme_2_clean_professional": {
+      "name": "Clean Professional",
+      "feel": "Corporate, trustworthy, minimal card-based.",
+      "colors": {
+        "background": "#ffffff",
+        "header_footer": "#1a1a2e",
+        "surface": "#f8f9fa",
+        "primary": "#0066ff",
+        "primary_hover": "#0052cc",
+        "text_main": "#1a1a2e",
+        "text_muted": "#4a5568",
+        "border": "#e2e8f0"
+      },
+      "typography": {
+        "heading_font": "Plus Jakarta Sans, sans-serif",
+        "body_font": "Roboto, sans-serif",
+        "heading_weight": "700",
+        "heading_transform": "none",
+        "body_weight": "400"
+      },
+      "layout": {
+        "border_radius": "0.375rem",
+        "spacing": "spacious",
+        "dividers": "subtle lines"
+      },
+      "button_styles": {
+        "base": "bg-[#0066ff] text-white font-semibold rounded-md px-6 py-3 shadow-sm hover:bg-[#0052cc] hover:shadow transition-all",
+        "outline": "border border-[#0066ff] text-[#0066ff] font-semibold rounded-md px-6 py-3 hover:bg-blue-50 transition-colors"
+      },
+      "hero_treatment": "Clean split layout: text on left, crisp product image on right. White background. Trust-centric messaging with structured, legible Plus Jakarta Sans headings.",
+      "category_grid_treatment": "Minimal card-based design with subtle shadows (shadow-sm). Lots of whitespace (p-6). Images are clean, deeply professional, un-cluttered.",
+      "css_variables": {
+        "--background": "255 255 255",
+        "--foreground": "26 26 46",
+        "--primary": "0 102 255",
+        "--primary-foreground": "255 255 255",
+        "--card": "248 249 250",
+        "--card-foreground": "26 26 46",
+        "--border": "226 232 240",
+        "--radius": "0.375rem"
+      }
+    },
+    "theme_3_bold_bright": {
+      "name": "Bold & Bright",
+      "feel": "Energetic, approachable, playful but professional.",
+      "colors": {
+        "background": "#ffffff",
+        "surface": "#f0fdf4",
+        "primary": "#7bc67e",
+        "primary_hover": "#5eb062",
+        "text_main": "#333333",
+        "text_muted": "#555555",
+        "border": "#d1d5db"
+      },
+      "typography": {
+        "heading_font": "Nunito, sans-serif",
+        "body_font": "Nunito, sans-serif",
+        "heading_weight": "800",
+        "heading_transform": "none",
+        "body_weight": "500"
+      },
+      "layout": {
+        "border_radius": "1rem",
+        "spacing": "generous",
+        "dividers": "soft waves or invisible"
+      },
+      "button_styles": {
+        "base": "bg-[#7bc67e] text-[#1a1a1a] font-bold rounded-full px-8 py-4 shadow-md hover:-translate-y-1 transition-transform",
+        "outline": "border-2 border-[#7bc67e] text-[#333333] font-bold rounded-full px-8 py-4 hover:bg-[#f0fdf4] transition-colors"
+      },
+      "hero_treatment": "Bright white background, massive friendly rounded headings. Floating colorful blobs or soft organic shapes behind the hero images. Very approachable.",
+      "category_grid_treatment": "Big colourful category tiles with heavy rounded corners (rounded-2xl). Images fill the cards entirely with a gentle gradient overlay and bold, friendly text centered.",
+      "css_variables": {
+        "--background": "255 255 255",
+        "--foreground": "51 51 51",
+        "--primary": "123 198 126",
+        "--primary-foreground": "26 26 26",
+        "--card": "240 253 244",
+        "--card-foreground": "51 51 51",
+        "--border": "209 213 219",
+        "--radius": "1rem"
+      }
+    },
+    "theme_4_premium_dark": {
+      "name": "Premium Dark",
+      "feel": "High-end premium, elegant, luxurious.",
+      "colors": {
+        "background": "#1e1e2e",
+        "surface": "#2a2a3f",
+        "primary": "#c9a84c",
+        "primary_hover": "#b08f3a",
+        "text_main": "#ffffff",
+        "text_muted": "#b3b3b3",
+        "border": "#3d3d5c"
+      },
+      "typography": {
+        "heading_font": "Cormorant Garamond, serif",
+        "body_font": "Manrope, sans-serif",
+        "heading_weight": "600",
+        "heading_transform": "capitalize",
+        "body_weight": "300",
+        "letter_spacing": "widest"
+      },
+      "layout": {
+        "border_radius": "0.125rem",
+        "spacing": "luxurious",
+        "dividers": "thin gold lines"
+      },
+      "button_styles": {
+        "base": "bg-[#c9a84c] text-[#1e1e2e] font-semibold uppercase tracking-[0.2em] px-8 py-4 hover:bg-[#b08f3a] transition-colors",
+        "outline": "border border-[#c9a84c] text-[#c9a84c] font-semibold uppercase tracking-[0.2em] px-8 py-4 hover:bg-[#c9a84c]/10 transition-colors"
+      },
+      "hero_treatment": "Deep charcoal background with a high-end, cinematic hero image smoothly fading into the dark. Elegant Cormorant Garamond headings with extremely wide tracking. Subtle, slow zoom animations.",
+      "category_grid_treatment": "Refined spacing. Images are monochromatic or desaturated until hovered, when full color elegantly fades in. Thin gold borders on hover.",
+      "css_variables": {
+        "--background": "30 30 46",
+        "--foreground": "255 255 255",
+        "--primary": "201 168 76",
+        "--primary-foreground": "30 30 46",
+        "--card": "42 42 63",
+        "--card-foreground": "255 255 255",
+        "--border": "61 61 92",
+        "--radius": "0.125rem"
+      }
+    }
+  },
+  "global_sections": {
+    "navbar": {
+      "behavior": "sticky",
+      "logo": "yourownprint.co.uk",
+      "links": ["Workwear", "Teams & Schools", "Design Your Own", "Get a Quote", "Contact"]
+    },
+    "hero": {
+      "h1": "Your Brand. Your Clothing. Your Own Print.",
+      "subheadline": "No minimums. No setup fees. Free logo design. UK based.",
+      "ctas": ["Shop Workwear", "Design Your Own T-Shirt"]
+    },
+    "trust_bar": {
+      "items": ["No Minimum Orders", "No Setup Fees", "Free Logo Design", "UK Based"],
+      "rating": "4.5★ from 404 Reviews"
+    },
+    "best_sellers": [
+      { "name": "Personalised T-Shirt", "price": "£6.99", "image": "media.best_sellers.t_shirt" },
+      { "name": "Hoodie", "price": "£14.99", "image": "media.best_sellers.hoodie" },
+      { "name": "Kids T-Shirt", "price": "£7.99", "image": "media.best_sellers.kids_t_shirt" },
+      { "name": "Polo", "price": "£8.99", "image": "media.best_sellers.polo" }
+    ],
+    "footer": {
+      "elements": ["Payment methods (Stripe)", "Socials", "Links", "Theme specific styling"]
+    }
+  },
+  "inner_pages": {
+    "workwear_category": "Product grid for Workwear, built using Theme 1.",
+    "teams_schools_category": "Product grid for Teams & Schools, built using Theme 1.",
+    "design_your_own": {
+      "description": "Interactive T-shirt designer canvas.",
+      "theme": "Theme 1",
+      "layout": {
+        "left_panel": ["Upload image", "Remove background", "Add text font/colour picker", "Filters: None/Vintage/B&W/Warm/Cool", "Clear canvas"],
+        "center_canvas": "White t-shirt mockup area. Drag/resize/rotate functionality.",
+        "right_panel": ["Size selector S-XXL", "Quantity", "Price", "Add to Cart", "Stripe checkout"]
+      }
+    },
+    "contact": "Contact/Get a Quote form page built using Theme 1."
+  },
+  "media": {
+    "heroes": {
+      "industrial": "https://images.unsplash.com/photo-1507497806295-753c4108560c",
+      "corporate": "https://images.pexels.com/photos/18703556/pexels-photo-18703556.jpeg",
+      "bold_bright": "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg",
+      "premium": "https://images.pexels.com/photos/30749329/pexels-photo-30749329.jpeg",
+      "designer_placeholder": "https://images.pexels.com/photos/12025472/pexels-photo-12025472.jpeg"
+    },
+    "sectors": {
+      "Construction & Trades": "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg",
+      "Healthcare": "https://images.pexels.com/photos/5430213/pexels-photo-5430213.jpeg",
+      "Hospitality": "https://images.pexels.com/photos/15323377/pexels-photo-15323377.png",
+      "Retail": "https://images.pexels.com/photos/18703556/pexels-photo-18703556.jpeg",
+      "Sports & Fitness": "https://images.pexels.com/photos/12097160/pexels-photo-12097160.jpeg",
+      "Dance & Theatre": "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg",
+      "Schools & Leavers": "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg",
+      "Hi-Vis": "https://images.pexels.com/photos/34859873/pexels-photo-34859873.jpeg",
+      "Security": "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png",
+      "Beauty & Wellness": "https://images.pexels.com/photos/6899554/pexels-photo-6899554.jpeg"
+    },
+    "best_sellers": {
+      "t_shirt": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg",
+      "hoodie": "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg",
+      "kids_t_shirt": "https://images.pexels.com/photos/31977041/pexels-photo-31977041.jpeg",
+      "polo": "https://images.pexels.com/photos/26063373/pexels-photo-26063373.jpeg"
+    },
+    "general": {
+      "printing_process": "https://images.pexels.com/photos/33650433/pexels-photo-33650433.jpeg"
+    }
+  },
+  "testing": {
+    "attributes": "All interactive elements (buttons, links, form inputs, designer tools, theme selectors) MUST include data-testid. Example: data-testid='theme-1-select-button'."
+  }
+}
