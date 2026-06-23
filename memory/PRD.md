@@ -32,12 +32,26 @@
 - Sports CTA now → `/team-kits`
 - **50/50 backend tests** pass, 100% frontend e2e verified
 
+### Iter 6 — Team Kit & Fight Night refinements (Feb 2026)
+- **Removed** multi-team toggle from `TeamKitConfigurator` (single-team only per user request)
+- **Quote threshold** simplified to `totalKits > 15` only (sponsors & brand no longer force quote)
+- **Sponsor uploads** are now *upload-for-proof only* — no per-kit upcharge, no quote trigger; placement decided at proof stage
+- **Optional brand picker** on team-kit products driven by new `team_kit_brands` collection
+- **Admin Kit Brands CRUD** at `/admin/team-kits` — list/create/edit/delete, filter by product, image + description fields
+- **Fight Night Tee** rebuilt as pay-first flow: removed design-yourself, added back-print (+£3.50) and left/right sleeve (+£3 each) addons, unified sponsor upload section, post-payment quote-request sync for proof tracking
+- **Backend**: `/api/team-kit-brands` GET/POST/PUT/DELETE, `/api/fight-night/addons`, fight-night addon pricing branch in `/api/checkout/session`
+- **Route alias**: `/design-your-own` → `DesignYourOwn` (in addition to `/design`)
+- **Testing**: 58/58 backend tests pass; all 4 critical frontend flows verified on live preview (iteration_6.json)
+
 ## Backlog
 
 ### P1
 - Real WhatsApp number swap
 - Real product photography (especially per colour and team-kit bundles)
-- Wire **remove.bg** API
+- Wire **remove.bg** API (currently placeholder toast)
+- **Cutout.pro** API for AI image effects (poster, sketch, cartoon, enhance) inside Design Your Own
+- Multi-placement output (front/back/sleeve mockups) saved with order for production
+- Persist composed designer image to backend (S3 / object storage) for fulfilment
 - **Resend** transactional emails (free proofs, review-request emails, quote acknowledgements)
 - Multi-product cart (currently 1 product per Stripe session)
 - Tiny `/admin/inbox` dashboard for quote_requests + payment_transactions + contact_submissions
@@ -46,6 +60,7 @@
 ### P2
 - SEO + sitemap + OG images
 - Customer accounts + order history
-- Wishlist / saved designs
+- Wishlist / saved designs (layers panel, undo/redo in designer)
 - Per-placement artwork preview rendered on the live garment image
 - Public Judge.me API write-back so new reviews flow upstream
+- Real Stripe webhooks + fulfilment pipeline (currently test mode only)
