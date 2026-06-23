@@ -181,6 +181,42 @@ class CheckoutStatusOut(BaseModel):
     currency: str
 
 
+# ---------- Reviews ----------
+class ReviewCreate(BaseModel):
+    product_id: str
+    reviewer_name: str
+    reviewer_email: Optional[EmailStr] = None
+    rating: int  # 1-5
+    title: str
+    body: str
+    photos: Optional[List[str]] = None  # base64 data URLs, max 4
+    verified: bool = False  # set by backend, not client
+
+
+class ReviewOut(BaseModel):
+    id: str
+    product_id: str
+    reviewer_name: str
+    rating: int
+    title: str
+    body: str
+    photos: List[str] = []
+    verified: bool = False
+    source: str = "native"  # 'native' | 'judgeme'
+    created_at: str
+
+
+class JudgeMeImportRequest(BaseModel):
+    # Accepts either a list of raw Judge.me review objects, or the shape returned by the widget API.
+    reviews: List[Dict] = Field(default_factory=list)
+    default_product_id: Optional[str] = None  # fallback if review has no mapping
+    product_id_map: Optional[Dict[str, str]] = None  # judgeme product_id/title -> our product_id
+
+
+def _photo_ok(s: str) -> bool:
+    return isinstance(s, str) and s.startswith("data:image/") and len(s) < 1_500_000  # < ~1.5MB
+
+
 # ---------- Routes ----------
 @api_router.get("/")
 async def root():
@@ -312,6 +348,121 @@ async def checkout_status(session_id: str, http_request: Request):
         amount_total=float(status_resp.amount_total) / 100.0,
         currency=status_resp.currency,
     )
+
+
+@api_router.post("/reviews", response_model=ReviewOut)
+async def create_review(payload: ReviewCreate):
+    if payload.product_id not in PRODUCTS:
+        raise HTTPException(400, "Unknown product_id")
+    if payload.rating < 1 or payload.rating > 5:
+        raise HTTPException(400, "Rating must be 1-5")
+    photos = []
+    for p in (payload.photos or [])[:4]:
+        if _photo_ok(p):
+            photos.append(p)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "product_id": payload.product_id,
+        "reviewer_name": payload.reviewer_name.strip()[:80] or "Anonymous",
+        "reviewer_email": payload.reviewer_email,
+        "rating": payload.rating,
+        "title": payload.title.strip()[:120],
+        "body": payload.body.strip()[:2000],
+        "photos": photos,
+        "verified": False,
+        "source": "native",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.reviews.insert_one(doc)
+    return ReviewOut(**{k: doc[k] for k in ReviewOut.model_fields.keys()})
+
+
+@api_router.get("/reviews/product/{product_id}")
+async def list_product_reviews(product_id: str, limit: int = 50):
+    if product_id not in PRODUCTS:
+        raise HTTPException(404, "Unknown product")
+    cursor = db.reviews.find({"product_id": product_id}).sort("created_at", -1).limit(limit)
+    items = []
+    total = 0
+    rating_sum = 0
+    async for r in cursor:
+        items.append({k: r.get(k) for k in ReviewOut.model_fields.keys()})
+        total += 1
+        rating_sum += int(r.get("rating", 0))
+    avg = round(rating_sum / total, 2) if total else 0
+    return {"product_id": product_id, "average": avg, "count": total, "reviews": items}
+
+
+@api_router.get("/reviews/aggregate")
+async def reviews_aggregate():
+    pipeline = [
+        {"$group": {"_id": "$product_id", "avg": {"$avg": "$rating"}, "count": {"$sum": 1}}}
+    ]
+    out = {}
+    async for doc in db.reviews.aggregate(pipeline):
+        out[doc["_id"]] = {"average": round(doc["avg"], 2), "count": doc["count"]}
+    return out
+
+
+@api_router.get("/reviews/recent")
+async def recent_reviews(limit: int = 12):
+    cursor = db.reviews.find({}).sort("created_at", -1).limit(limit)
+    items = []
+    async for r in cursor:
+        items.append({k: r.get(k) for k in ReviewOut.model_fields.keys()})
+    return items
+
+
+@api_router.post("/reviews/import-judgeme")
+async def import_judgeme(payload: JudgeMeImportRequest):
+    """Accepts a paste/upload of Judge.me reviews JSON (one-off migration).
+    Maps each review to one of our product IDs via product_id_map (judgeme key -> our id)
+    or falls back to default_product_id. Supports the standard Judge.me review object shape
+    AND the widget review shape.
+    """
+    imported = 0
+    skipped = 0
+    pmap = payload.product_id_map or {}
+    for r in payload.reviews:
+        # Normalise — Judge.me review object fields
+        jm_pid = str(r.get("product_id") or r.get("product_external_id") or r.get("product_handle") or "")
+        jm_title_key = str(r.get("product_title") or "")
+        mapped = pmap.get(jm_pid) or pmap.get(jm_title_key) or payload.default_product_id
+        if not mapped or mapped not in PRODUCTS:
+            skipped += 1
+            continue
+        rating = int(r.get("rating") or 5)
+        rating = max(1, min(5, rating))
+        body = str(r.get("body") or r.get("review_body") or r.get("content") or "")[:2000]
+        title = str(r.get("title") or r.get("review_title") or "Verified review")[:120]
+        reviewer = str(r.get("reviewer_name") or r.get("name") or r.get("author") or "Customer")[:80]
+        created = str(r.get("created_at") or r.get("date") or datetime.now(timezone.utc).isoformat())
+        pictures = r.get("pictures") or r.get("photos") or []
+        photos = []
+        for p in pictures[:4]:
+            if isinstance(p, dict):
+                u = p.get("urls", {}).get("original") or p.get("url") or p.get("original")
+                if u:
+                    photos.append(u)
+            elif isinstance(p, str):
+                photos.append(p)
+        doc = {
+            "id": str(uuid.uuid4()),
+            "product_id": mapped,
+            "reviewer_name": reviewer or "Customer",
+            "reviewer_email": None,
+            "rating": rating,
+            "title": title,
+            "body": body,
+            "photos": photos,
+            "verified": True,
+            "source": "judgeme",
+            "created_at": created,
+            "judgeme_id": r.get("id") or r.get("review_id"),
+        }
+        await db.reviews.insert_one(doc)
+        imported += 1
+    return {"imported": imported, "skipped": skipped}
 
 
 @api_router.post("/webhook/stripe")
