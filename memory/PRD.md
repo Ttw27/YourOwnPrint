@@ -1,52 +1,49 @@
 # Your Own Print — PRD
 
 ## Original Problem Statement
-Build a complete, modern e-commerce website for a UK custom print and workwear business "Your Own Print" (yourownprint.co.uk). Fully standalone (no Shopify). Stripe payments. Built-in custom product designer.
-Build 4 distinct theme variations on a single homepage showcase so the owner can pick. After theme selection, the rest of the site (Design Your Own tool, category pages) is built in the chosen theme (default: Industrial Dark).
+Build a complete modern e-commerce website for UK custom print & workwear "Your Own Print" (yourownprint.co.uk). 4 theme variations on a showcase, then implement everything in the chosen theme (default Industrial Dark; later switched to **Theme 3 Bold & Bright** by user).
 
 ## User Personas
-- **Small business owner / trades** — needs branded workwear in low quantities, no minimums.
-- **School / sports / dance group leader** — needs personalised hoodies, tees, polos for a class or team.
-- **Marketing manager** — wants premium-feel branded apparel for staff or events.
+- **Small business owner / trades** — branded workwear, no minimums
+- **School / sports / dance group leader** — leavers hoodies, kit, dance apparel
+- **Marketing manager** — branded staff/event apparel
 
 ## Tech Stack
-- React 19 + Tailwind + Shadcn UI (sonner toasts) + react-router 7
+- React 19 + Tailwind + Shadcn UI + sonner toasts + react-router 7
 - FastAPI + MongoDB (motor)
-- emergentintegrations Stripe checkout (test mode: `sk_test_emergent`)
+- emergentintegrations Stripe checkout (test mode)
 
-## Architecture
-- Backend `/app/backend/server.py` — products catalogue (in-memory), contact, theme-selection, Stripe checkout session + status + webhook
-- Frontend routes: `/` (theme showcase), `/workwear`, `/teams-schools`, `/design`, `/contact`, `/checkout/success`
-- Theme components: 4 independent self-contained homepages in `/app/frontend/src/components/themes/`
-- Shared Industrial Dark navbar/footer in `/app/frontend/src/components/IndustrialLayout.jsx`
+## Implemented (2026-02 / iter 2)
 
-## Implemented (2026-02)
-- [x] 4 theme showcase homepage with distinct fonts (Oswald / Plus Jakarta Sans / Nunito / Cormorant Garamond), colours and layouts
-- [x] All 4 themes include sticky navbar, hero, trust bar, sector grid (10), Design Your Own feature, best sellers, reviews, footer
-- [x] "Select This Theme" buttons persist to localStorage + POST to `/api/theme-selection`
-- [x] Workwear category page (4 products)
-- [x] Teams, Schools & Clubs category page (4 products)
-- [x] Design Your Own interactive tool: upload image, add text (font + colour), 5 filters, drag/resize/rotate/delete, size selector S–XXL, quantity, live price
-- [x] Stripe test-mode checkout (server-side prices, GBP, /api/checkout/session, /api/checkout/status polling, /api/webhook/stripe)
-- [x] Contact / Get a Quote form persisted to MongoDB
-- [x] Remove-background button — placeholder toast (remove.bg API to be wired)
-- [x] Responsive mobile layouts across all themes & pages
-- [x] data-testid coverage on all interactive elements
-- [x] 13/13 backend tests passing, frontend critical flows verified
+### Iteration 1
+- [x] 4-theme showcase (Industrial, Clean Professional, Bold & Bright, Premium Dark) + bonus YOP Brand Edition (Theme 2B) at `/themes`
+- [x] Workwear & Teams/Schools category pages
+- [x] Designer tool (upload/text/filters/drag-resize-rotate, size, qty)
+- [x] Stripe test-mode checkout
+- [x] Contact / Get a Quote form
+
+### Iteration 2 — Theme 3 Bold & Bright pick + Reviews
+- [x] **Theme 3 Bold & Bright** rebuilt as canonical theme — all inner pages restyled (Home, Workwear, Teams, Designer, Contact, CheckoutSuccess)
+- [x] **Native review system** — POST /api/reviews with photos (base64 data URLs, auto-resized client-side to ~1000px, max 4 per review). Per-product aggregate + 5-star distribution bars.
+- [x] **Product detail pages** at `/product/:id` with reviews block + "Customise this product" CTA → Designer
+- [x] **/reviews** index page: product grid + most-recent reviews
+- [x] **/admin/import-reviews** — paste Judge.me JSON, map product titles → our IDs, default fallback. Imported reviews tagged `verified=true`, `source='judgeme'`.
+- [x] Star ratings shown on every product card across the site
+- [x] 24/24 backend tests passing, full frontend e2e verified
 
 ## Backlog
-**P0 (post-theme-pick)**
-- Rebuild inner pages (Workwear, Teams/Schools, Design Your Own, Contact) in the theme the owner picks (currently Industrial Dark for all inner pages by user request)
 
-**P1**
-- Wire real remove.bg API for one-click background removal
-- Add cart with multi-product checkout (currently single-product per session)
-- Product detail pages with size guides + fabric specs
-- Real product catalogue management (admin panel) — replace in-memory PRODUCTS dict
+### P1
+- Wire real **remove.bg** API for one-click background removal
+- **Email order confirmations** + **review-request emails** via Resend (close the loop on new orders → reviews)
+- Real **product catalogue admin** UI to add/edit products & images
+- **Multi-product cart** (currently 1 product per checkout session)
+- **Photo storage** — switch base64-in-Mongo to object storage when review photo volume grows
 
-**P2**
-- SEO meta + sitemap + OG images per page
-- Account login + order history (Emergent Google Auth)
-- Email order confirmation via Resend
-- Bulk-order quote calculator
-- Reviews import from Judge.me
+### P2
+- SEO meta + sitemap + Open Graph images
+- **Bulk quote calculator** (50+ tee tiered pricing) — high conversion on workwear sites
+- Customer accounts / order history (Emergent Google Auth)
+- Reviews moderation queue + spam filter
+- Wishlist & saved designs
+- Live chat widget integration
