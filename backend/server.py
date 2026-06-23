@@ -312,6 +312,13 @@ PLACEMENTS: List[Dict] = [
 ]
 PLACEMENT_BY_ID = {p["id"]: p for p in PLACEMENTS}
 
+# Fight-night tee specific addon prices (overrides PLACEMENT_BY_ID for product_id='boxing-fight-tee')
+FIGHT_NIGHT_ADDONS: Dict[str, Dict] = {
+    "back-print":   {"label": "Back print",   "price": 3.50},
+    "left-sleeve":  {"label": "Left sleeve",  "price": 3.00},
+    "right-sleeve": {"label": "Right sleeve", "price": 3.00},
+}
+
 
 def _validate_placements(placements: List[str]) -> List[str]:
     """Return cleaned placements list, raising 400 if exclusivity rules are broken."""
@@ -477,6 +484,63 @@ async def list_placements():
     return PLACEMENTS
 
 
+@api_router.get("/fight-night/addons")
+async def list_fight_night_addons():
+    return [{"id": k, **v} for k, v in FIGHT_NIGHT_ADDONS.items()]
+
+
+# ---------- Team-kit brands (admin-editable) ----------
+class TeamKitBrand(BaseModel):
+    id: Optional[str] = None
+    product_id: str  # links to one of the team-kits products
+    brand: str
+    name: str
+    price: float
+    image: Optional[str] = ""
+    description: Optional[str] = ""
+    active: bool = True
+
+
+@api_router.get("/team-kit-brands")
+async def list_brands(product_id: Optional[str] = None):
+    q = {"active": True}
+    if product_id:
+        q["product_id"] = product_id
+    out = []
+    async for d in db.team_kit_brands.find(q).sort("price", 1):
+        out.append({k: d.get(k) for k in ["id", "product_id", "brand", "name", "price", "image", "description", "active"]})
+    return out
+
+
+@api_router.post("/team-kit-brands")
+async def create_brand(payload: TeamKitBrand):
+    if payload.product_id not in PRODUCTS:
+        raise HTTPException(400, "Unknown product_id")
+    doc = payload.model_dump()
+    doc["id"] = str(uuid.uuid4())
+    doc["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.team_kit_brands.insert_one(doc)
+    return {k: doc.get(k) for k in ["id", "product_id", "brand", "name", "price", "image", "description", "active"]}
+
+
+@api_router.put("/team-kit-brands/{brand_id}")
+async def update_brand(brand_id: str, payload: TeamKitBrand):
+    update = {k: v for k, v in payload.model_dump().items() if k != "id"}
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    res = await db.team_kit_brands.update_one({"id": brand_id}, {"$set": update})
+    if res.matched_count == 0:
+        raise HTTPException(404, "Brand not found")
+    return {"ok": True}
+
+
+@api_router.delete("/team-kit-brands/{brand_id}")
+async def delete_brand(brand_id: str):
+    res = await db.team_kit_brands.delete_one({"id": brand_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Brand not found")
+    return {"ok": True}
+
+
 @api_router.post("/quote-request")
 async def create_quote_request(payload: QuoteRequest):
     # Limit artwork sizes silently
@@ -514,12 +578,17 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
     size_upcharges: Dict[str, float] = product.get("size_upcharges", {}) or {}
     allowed_sizes = set(product.get("sizes", []))
 
-    # Resolve placements (blank wins)
+    # Resolve placements (blank wins). Special override for fight-night tee.
     if payload.blank:
         placements_clean: List[str] = []
+        print_cost = 0.0
+    elif payload.product_id == "boxing-fight-tee":
+        # Fight night addons use bespoke pricing
+        placements_clean = [p for p in (payload.placements or []) if p in FIGHT_NIGHT_ADDONS]
+        print_cost = round(sum(FIGHT_NIGHT_ADDONS[p]["price"] for p in placements_clean), 2)
     else:
         placements_clean = _validate_placements(payload.placements or [])
-    print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
+        print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
 
     # Resolve size quantities (new path preferred, legacy fallback)
     size_qtys: Dict[str, int] = {}

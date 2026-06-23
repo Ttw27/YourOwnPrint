@@ -1,39 +1,73 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
-import { submitQuoteRequest } from "../lib/api";
+import { api, createCheckout, fetchFightNightAddons } from "../lib/api";
 import { toast } from "sonner";
-import { Upload, Plus, Trash2, Loader2, Sparkles, Zap, Send, ArrowRight, BadgeCheck, Camera } from "lucide-react";
+import { Plus, Minus, Loader2, Send, Zap, Sparkles, ShieldCheck, Info, Camera, Upload } from "lucide-react";
 
 const SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
 
 export default function FightNightTee() {
-  const [contact, setContact] = useState({ name: "", email: "", phone: "", company: "" });
-  const [eventDate, setEventDate] = useState("");
-  const [logos, setLogos] = useState([]); // base64
-  const [layoutNote, setLayoutNote] = useState(""); // "main sponsor centre, others around"
+  const [tee, setTee] = useState(null);
+  const [addons, setAddons] = useState([]);
+  const [color, setColor] = useState("Black");
   const [sizeQtys, setSizeQtys] = useState({});
-  const [notes, setNotes] = useState("");
+  const [sponsors, setSponsors] = useState([]);
+  const [backPrint, setBackPrint] = useState(false);
+  const [backMode, setBackMode] = useState("large");   // "large" | "sponsors"
+  const [leftSleeve, setLeftSleeve] = useState(false);
+  const [rightSleeve, setRightSleeve] = useState(false);
+  const [eventDate, setEventDate] = useState("");
+  const [contact, setContact] = useState({ name: "", email: "", phone: "", company: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-  const fileRef = useRef(null);
+  const sponsorRef = useRef(null);
 
-  const totalQty = Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0);
+  useEffect(() => {
+    Promise.all([api.get("/products/boxing-fight-tee").then(r => r.data), fetchFightNightAddons()])
+      .then(([p, a]) => { setTee(p); setAddons(a); setColor(p.colors[0]?.name || "Black"); });
+  }, []);
 
-  const onPickImages = (e) => {
-    const files = Array.from(e.target.files || []);
-    files.slice(0, 30 - logos.length).forEach((f) => {
+  const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
+  const addonMap = useMemo(() => Object.fromEntries(addons.map(a => [a.id, a])), [addons]);
+  const selectedAddons = useMemo(() => {
+    const list = [];
+    if (backPrint) list.push("back-print");
+    if (leftSleeve) list.push("left-sleeve");
+    if (rightSleeve) list.push("right-sleeve");
+    return list;
+  }, [backPrint, leftSleeve, rightSleeve]);
+  const addonCostPerTee = selectedAddons.reduce((s, id) => s + (addonMap[id]?.price || 0), 0);
+  const basePrice = tee?.price ?? 11.99;
+  const total = useMemo(() => {
+    if (!tee) return 0;
+    const upcharges = tee.size_upcharges || {};
+    let t = 0;
+    Object.entries(sizeQtys).forEach(([sz, q]) => {
+      const qn = Number(q) || 0;
+      if (qn <= 0) return;
+      t += (basePrice + (upcharges[sz] || 0) + addonCostPerTee) * qn;
+    });
+    return t;
+  }, [tee, sizeQtys, basePrice, addonCostPerTee]);
+
+  const setSizeQty = (sz, q) => {
+    const n = Math.max(0, Math.min(2000, Number(q) || 0));
+    setSizeQtys(prev => { const next = { ...prev }; if (n === 0) delete next[sz]; else next[sz] = n; return next; });
+  };
+  const bump = (sz, d) => setSizeQty(sz, (sizeQtys[sz] || 0) + d);
+
+  const onPickSponsors = (e) => {
+    Array.from(e.target.files || []).slice(0, 30 - sponsors.length).forEach((f) => {
       const r = new FileReader();
       r.onload = () => {
         const img = new Image();
         img.onload = () => {
-          const max = 800;
-          const sc = Math.min(1, max / Math.max(img.width, img.height));
+          const max = 800; const sc = Math.min(1, max / Math.max(img.width, img.height));
           const w = Math.round(img.width * sc), h = Math.round(img.height * sc);
           const c = document.createElement("canvas"); c.width = w; c.height = h;
           c.getContext("2d").drawImage(img, 0, 0, w, h);
-          setLogos(prev => [...prev, c.toDataURL("image/png")]);
+          setSponsors(prev => [...prev, c.toDataURL("image/png")]);
         };
         img.src = r.result;
       };
@@ -41,109 +75,97 @@ export default function FightNightTee() {
     });
     e.target.value = "";
   };
-  const removeLogo = (i) => setLogos(prev => prev.filter((_, idx) => idx !== i));
-  const setSizeQty = (sz, q) => {
-    const n = Math.max(0, Math.min(2000, Number(q) || 0));
-    setSizeQtys(prev => { const next = { ...prev }; if (n === 0) delete next[sz]; else next[sz] = n; return next; });
-  };
-  const bump = (sz, d) => setSizeQty(sz, (sizeQtys[sz] || 0) + d);
+  const removeSponsor = (i) => setSponsors(prev => prev.filter((_, idx) => idx !== i));
 
-  const submit = async () => {
-    if (!contact.name.trim() || !contact.email.trim()) { toast.error("Name and email are required."); return; }
-    if (logos.length === 0) { toast.error("Upload at least one sponsor logo."); return; }
-    if (totalQty < 1) { toast.error("Pick at least 1 tee size & quantity."); return; }
+  const validate = () => {
+    if (!contact.name.trim() || !contact.email.trim()) return "Add your name and email";
+    if (sponsors.length === 0) return "Upload at least one sponsor logo for the front";
+    if (totalQty < 1) return "Pick at least 1 tee size & quantity";
+    return null;
+  };
+
+  const checkout = async () => {
+    const err = validate(); if (err) { toast.error(err); return; }
     setSubmitting(true);
     try {
-      const sizesStr = Object.entries(sizeQtys).map(([s, q]) => `${s}×${q}`).join(", ");
-      const message = `Fight night tee — let-us-do-it-for-you flow.\nEvent date: ${eventDate || "TBC"}\nLogos uploaded: ${logos.length}\nLayout note: ${layoutNote || "(not specified — we'll arrange)"}\nSizes: ${sizesStr}\nTotal tees: ${totalQty}\nNotes:\n${notes}`;
-      await submitQuoteRequest({
-        kind: "fight_night",
-        name: contact.name,
-        email: contact.email,
-        phone: contact.phone,
+      const designMeta = {
+        flow: "fight_night_tee",
+        contact_name: contact.name,
+        contact_email: contact.email,
+        contact_phone: contact.phone,
         company: contact.company,
-        sport: "boxing",
-        kit_type: "fight-night-tee",
-        quantity: totalQty,
-        deadline: eventDate,
-        message,
-        artwork: logos,
+        event_date: eventDate,
+        color,
+        sponsors_count: String(sponsors.length),
+        back_print: backPrint ? backMode : "no",
+        left_sleeve: leftSleeve ? "yes" : "no",
+        right_sleeve: rightSleeve ? "yes" : "no",
+        proof_before_print: "true",
+      };
+      // Pass sponsor data URLs via design_meta (split if necessary). For Stripe metadata size limits we store only count + send full artwork to a quote_requests doc shadow record so the team has the actual files.
+      // Actually we'll persist sponsors in a quote_requests doc keyed by session_id reference (best-effort) for the team to access — backend will tie it via metadata.session_id after checkout.
+      const { url, session_id } = await createCheckout({
         product_id: "boxing-fight-tee",
+        size_qtys: sizeQtys,
+        color,
+        placements: selectedAddons,
+        blank: false,
+        origin_url: window.location.origin,
+        design_meta: designMeta,
       });
-      toast.success("Sent! Free proof on the way within 1 working day.");
-      setDone(true);
+      // Best-effort: also send artwork to /api/quote-request so we keep the actual logo files on file.
+      try {
+        await api.post("/quote-request", {
+          kind: "fight_night",
+          name: contact.name,
+          email: contact.email,
+          phone: contact.phone,
+          company: contact.company,
+          sport: "boxing",
+          kit_type: `fight-night-tee-${session_id}`,
+          quantity: totalQty,
+          deadline: eventDate,
+          message: `PAID fight-night order. Sponsors: ${sponsors.length}. Back print: ${backPrint ? backMode : "no"}. Sleeves: ${leftSleeve ? "L" : ""}${rightSleeve ? "R" : ""}. Stripe session: ${session_id}. Proof before print.`,
+          artwork: sponsors,
+          product_id: "boxing-fight-tee",
+        });
+      } catch { /* non-blocking quote sync */ }
+      window.location.href = url;
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Could not submit. Please try again.");
-    } finally {
+      toast.error(e?.response?.data?.detail || e.message || "Checkout failed");
       setSubmitting(false);
     }
   };
 
-  if (done) {
-    return (
-      <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
-        <BoldNavbar />
-        <WhatsAppFAB preset="Hi! I just submitted a fight-night tee request." />
-        <div className="max-w-3xl mx-auto px-6 py-20 text-center">
-          <div className="mx-auto w-20 h-20 bg-[#7bc67e] rounded-full grid place-items-center"><BadgeCheck className="text-[#1a1a1a]" size={36} /></div>
-          <h2 className="mt-5 font-nunito font-black text-3xl">Sent! Free proof incoming 🥊</h2>
-          <p className="mt-3 text-[#4b5563]">We'll arrange your sponsors and email back a free proof within 1 working day. Pay only when you're happy.</p>
-          <div className="mt-6 flex justify-center gap-3 flex-wrap">
-            <WhatsAppInline preset="Hi! I just submitted a fight-night tee request — anything you need from me?" label="WhatsApp us" />
-            <Link to="/" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white font-nunito font-extrabold px-6 py-3 rounded-full transition-colors">Back to home</Link>
-          </div>
-        </div>
-        <BoldFooter />
-      </div>
-    );
-  }
+  if (!tee) return <div className="bg-white min-h-screen"><BoldNavbar /><div className="p-12 text-center">Loading…</div></div>;
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
       <BoldNavbar />
-      <WhatsAppFAB preset="Hi! I'd like a fight-night tee with multiple sponsors." />
+      <WhatsAppFAB preset="Hi! Question about the fight-night tee…" />
 
+      {/* Hero */}
       <div className="relative overflow-hidden border-b border-[#dcfce7]">
         <div className="absolute -top-16 -left-16 w-[400px] h-[400px] rounded-full bg-[#fde68a]/35 blur-3xl" />
         <div className="absolute -bottom-20 -right-16 w-[400px] h-[400px] rounded-full bg-[#7bc67e]/25 blur-3xl" />
-        <div className="relative max-w-5xl mx-auto px-6 py-12 grid lg:grid-cols-2 gap-8 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#1a1a1a] text-[#7bc67e] font-nunito font-extrabold rounded-full text-xs">
-              <Zap size={14} /> Fight Night · Boxing · MMA · Muay Thai
-            </div>
-            <h1 className="mt-3 font-nunito font-black text-4xl lg:text-6xl leading-[1.05]">
-              Fight Night <span className="text-[#7bc67e]">Sponsor Tees</span>
-            </h1>
-            <p className="text-[#4b5563] mt-3 text-lg">
-              Two ways to do it: design it yourself with the Designer, or upload all your sponsor logos and <strong>let us arrange them for you — free proof included</strong> before you pay a penny.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link to="/design?product=boxing-fight-tee" data-testid="fight-design-yourself" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white font-nunito font-extrabold px-5 py-3 rounded-full transition-colors">
-                Design it yourself <ArrowRight size={14} />
-              </Link>
-              <a href="#let-us" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-5 py-3 rounded-full transition-colors">
-                Let us do it for you ↓
-              </a>
-            </div>
+        <div className="relative max-w-5xl mx-auto px-6 py-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#1a1a1a] text-[#7bc67e] font-nunito font-extrabold rounded-full text-xs">
+            <Zap size={14} /> Fight Night Sponsor Tee · Pay → Free Proof → Print
           </div>
-          <div className="relative">
-            <div className="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl">
-              <img src="https://images.pexels.com/photos/9311461/pexels-photo-9311461.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" className="w-full h-full object-cover" />
-            </div>
-          </div>
+          <h1 className="mt-3 font-nunito font-black text-4xl lg:text-6xl leading-[1.05]">
+            Walk-out tees, <span className="text-[#7bc67e]">sorted.</span>
+          </h1>
+          <p className="text-[#4b5563] mt-3 text-lg max-w-2xl">
+            Upload your sponsors, pay securely, and <strong>we&apos;ll send a free artwork proof before we print a thing</strong>.
+            Nothing goes to print until you&apos;re happy.
+          </p>
         </div>
       </div>
 
-      <div id="let-us" className="max-w-5xl mx-auto px-6 py-10 space-y-6">
-        <div className="bg-[#f0fdf4] border-2 border-[#7bc67e] rounded-3xl p-5 flex items-start gap-3">
-          <Sparkles className="text-[#7bc67e] flex-shrink-0 mt-1" size={20} />
-          <div>
-            <div className="font-nunito font-extrabold">Let us do it for you — free artwork proof</div>
-            <p className="text-sm text-[#4b5563] mt-1">Upload as many logos as you'd like. The more logos, the smaller they'll be on the tee — but our designers will arrange them in the cleanest way possible. We'll email you a free proof to approve before you pay.</p>
-          </div>
-        </div>
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-5">
+        <ProofBanner />
 
-        <Block title="1. Your details">
+        <Block n={1} title="Your details">
           <div className="grid md:grid-cols-2 gap-3">
             <Field label="Your name *" v={contact.name} onV={(v) => setContact({ ...contact, name: v })} testId="fn-name" />
             <Field label="Email *" type="email" v={contact.email} onV={(v) => setContact({ ...contact, email: v })} testId="fn-email" />
@@ -153,60 +175,108 @@ export default function FightNightTee() {
           </div>
         </Block>
 
-        <Block title="2. Upload all your sponsor logos">
-          <div className="flex flex-wrap items-center gap-3" data-testid="fn-logos">
-            {logos.map((src, i) => (
-              <div key={i} className="relative w-20 h-20 rounded-xl bg-white border border-[#dcfce7] overflow-hidden">
+        <Block n={2} title="Upload sponsor logos">
+          <div className="text-xs text-[#4b5563] mb-3">
+            The <strong>main sponsor goes on the front big</strong>. Upload all sponsors — we&apos;ll lay them out cleanly and send a free proof.
+          </div>
+          <div className="flex flex-wrap items-center gap-2" data-testid="fn-logos">
+            {sponsors.map((src, i) => (
+              <div key={i} className="relative w-16 h-16 rounded-xl bg-white border border-[#dcfce7] overflow-hidden">
                 <img src={src} alt="" className="w-full h-full object-contain p-1" />
-                <button onClick={() => removeLogo(i)} className="absolute -top-2 -right-2 w-5 h-5 bg-[#1a1a1a] text-white rounded-full text-xs grid place-items-center">×</button>
+                <button onClick={() => removeSponsor(i)} className="absolute -top-2 -right-2 w-5 h-5 bg-[#1a1a1a] text-white rounded-full text-xs grid place-items-center">×</button>
               </div>
             ))}
-            <button data-testid="fn-upload-logos" onClick={() => fileRef.current?.click()} className="w-20 h-20 rounded-xl border-2 border-dashed border-[#7bc67e] grid place-items-center text-[#7bc67e] hover:bg-[#f0fdf4]">
-              <Plus size={20} />
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPickImages} />
+            {sponsors.length < 30 && (
+              <button data-testid="fn-upload-logos" onClick={() => sponsorRef.current?.click()} className="w-16 h-16 rounded-xl border-2 border-dashed border-[#7bc67e] grid place-items-center text-[#7bc67e] hover:bg-[#f0fdf4]"><Plus size={18} /></button>
+            )}
+            <input ref={sponsorRef} type="file" accept="image/*" multiple hidden onChange={onPickSponsors} />
           </div>
-          <div className="text-xs text-[#4b5563] mt-2">{logos.length}/30 logos uploaded · PNG with transparent background works best.</div>
-          <textarea data-testid="fn-layout-note" value={layoutNote} onChange={(e) => setLayoutNote(e.target.value)} placeholder="Layout preference (optional) — e.g. 'main sponsor centre, others around it', or 'list-style on back'" rows={2} className="mt-3 w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm" />
+          <div className="text-xs text-[#4b5563] mt-2">{sponsors.length}/30 logos uploaded</div>
         </Block>
 
-        <Block title="3. Sizes & quantity">
+        <Block n={3} title="Back print (optional)">
+          <label className="flex items-start gap-3 p-3 rounded-xl border-2 border-[#e5e7eb] cursor-pointer hover:border-[#dcfce7] transition-colors" data-testid="fn-back-toggle">
+            <input type="checkbox" checked={backPrint} onChange={(e) => setBackPrint(e.target.checked)} className="mt-1 w-4 h-4 accent-[#7bc67e]" />
+            <div className="flex-1">
+              <div className="font-nunito font-extrabold text-sm">Add a print on the back</div>
+              <div className="text-xs text-[#4b5563]">+£{addonMap["back-print"]?.price.toFixed(2) || "3.50"} per tee</div>
+            </div>
+          </label>
+          {backPrint && (
+            <div className="grid sm:grid-cols-2 gap-2 mt-3" data-testid="fn-back-mode">
+              {[
+                { id: "large", label: "Large logo", desc: "One big logo (e.g. gym logo) centred on the back" },
+                { id: "sponsors", label: "More sponsors", desc: "Another set of sponsor logos on the back" },
+              ].map((m) => (
+                <button key={m.id} data-testid={`fn-back-mode-${m.id}`} onClick={() => setBackMode(m.id)}
+                  className={`text-left p-3 rounded-xl border-2 transition-all ${backMode === m.id ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#dcfce7]"}`}>
+                  <div className="font-nunito font-extrabold text-sm">{m.label}</div>
+                  <div className="text-xs text-[#4b5563] mt-1">{m.desc}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </Block>
+
+        <Block n={4} title="Sleeve prints (optional)">
+          <div className="grid sm:grid-cols-2 gap-2">
+            <label data-testid="fn-left-sleeve-toggle" className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${leftSleeve ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#dcfce7]"}`}>
+              <input type="checkbox" checked={leftSleeve} onChange={(e) => setLeftSleeve(e.target.checked)} className="mt-1 w-4 h-4 accent-[#7bc67e]" />
+              <div className="flex-1"><div className="font-nunito font-extrabold text-sm">Left sleeve</div><div className="text-xs text-[#4b5563]">+£{addonMap["left-sleeve"]?.price.toFixed(2) || "3.00"} per tee</div></div>
+            </label>
+            <label data-testid="fn-right-sleeve-toggle" className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${rightSleeve ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#dcfce7]"}`}>
+              <input type="checkbox" checked={rightSleeve} onChange={(e) => setRightSleeve(e.target.checked)} className="mt-1 w-4 h-4 accent-[#7bc67e]" />
+              <div className="flex-1"><div className="font-nunito font-extrabold text-sm">Right sleeve</div><div className="text-xs text-[#4b5563]">+£{addonMap["right-sleeve"]?.price.toFixed(2) || "3.00"} per tee</div></div>
+            </label>
+          </div>
+        </Block>
+
+        <Block n={5} title="Tee colour & sizes">
+          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Colour</div>
+          <div className="flex gap-2 mb-4">
+            {tee.colors.map((c) => (
+              <button key={c.name} data-testid={`fn-color-${c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} onClick={() => setColor(c.name)} title={c.name} className={`w-9 h-9 rounded-full border-2 ${color === c.name ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-[#e5e7eb]"}`} style={{ background: c.hex }} />
+            ))}
+          </div>
+          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Sizes (total <span data-testid="fn-total-qty" className="font-extrabold text-[#1a1a1a]">{totalQty}</span>)</div>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {SIZES.map((sz) => {
-              const qty = sizeQtys[sz] || 0;
-              const active = qty > 0;
+              const qty = sizeQtys[sz] || 0; const active = qty > 0;
               return (
                 <div key={sz} data-testid={`fn-size-${sz}`} className={`rounded-xl border-2 p-2 ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
                   <div className="text-center font-nunito font-extrabold text-sm">{sz}</div>
                   <div className="flex items-center gap-1 mt-1">
-                    <button data-testid={`fn-size-${sz}-minus`} onClick={() => bump(sz, -1)} className="w-6 h-6 grid place-items-center rounded-full bg-white border disabled:opacity-40" disabled={qty === 0}>−</button>
+                    <button data-testid={`fn-size-${sz}-minus`} onClick={() => bump(sz, -1)} className="w-6 h-6 grid place-items-center rounded-full bg-white border disabled:opacity-40" disabled={qty === 0}><Minus size={10} /></button>
                     <input data-testid={`fn-size-${sz}-qty`} type="number" min={0} value={qty} onChange={(e) => setSizeQty(sz, e.target.value)} className="w-full text-center bg-transparent text-xs font-bold focus:outline-none" />
-                    <button data-testid={`fn-size-${sz}-plus`} onClick={() => bump(sz, 1)} className="w-6 h-6 grid place-items-center rounded-full bg-white border">+</button>
+                    <button data-testid={`fn-size-${sz}-plus`} onClick={() => bump(sz, 1)} className="w-6 h-6 grid place-items-center rounded-full bg-white border"><Plus size={10} /></button>
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="mt-2 text-xs text-[#4b5563]">Total: <strong data-testid="fn-total-qty">{totalQty}</strong> tees</div>
         </Block>
 
-        <Block title="4. Anything else?">
-          <textarea data-testid="fn-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Tee colour preference, deadline, special requests…" className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm" />
-        </Block>
-
+        {/* Total + Checkout */}
         <div className="bg-[#1a1a1a] text-white rounded-3xl p-6">
-          <div className="flex items-baseline justify-between flex-wrap gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Free proof, then pay</div>
-              <div className="font-nunito font-black text-2xl mt-1">{totalQty} tees · {logos.length} logos</div>
-              <div className="text-xs text-neutral-400 mt-1">From £11.99/tee — final price confirmed in the proof email.</div>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <button data-testid="fn-submit" onClick={submit} disabled={submitting} className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold px-6 py-3.5 rounded-full transition-transform hover:-translate-y-0.5">
-                {submitting ? <><Loader2 className="animate-spin" size={16} /> Sending…</> : <><Send size={16} /> Send for free proof</>}
-              </button>
-              <WhatsAppInline preset="Hi! Quick question about fight night tees…" label="WhatsApp" />
-            </div>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between"><span>Tee base ({totalQty} × £{basePrice.toFixed(2)})</span><span>£{(basePrice * totalQty).toFixed(2)}</span></div>
+            {Object.entries(tee.size_upcharges || {}).some(([sz]) => (sizeQtys[sz] || 0) > 0) && (
+              <div className="flex justify-between text-neutral-300"><span>Size upcharges</span><span>£{Object.entries(sizeQtys).reduce((s, [sz, q]) => s + ((tee.size_upcharges?.[sz] || 0) * (Number(q) || 0)), 0).toFixed(2)}</span></div>
+            )}
+            {addonCostPerTee > 0 && (
+              <div className="flex justify-between text-neutral-300"><span>Prints ({selectedAddons.length} extra × £{addonCostPerTee.toFixed(2)} × {totalQty})</span><span>£{(addonCostPerTee * totalQty).toFixed(2)}</span></div>
+            )}
+          </div>
+          <div className="border-t border-white/10 mt-3 pt-3 flex items-baseline justify-between">
+            <span className="font-nunito font-extrabold">Total</span>
+            <span data-testid="fn-total" className="text-[#7bc67e] font-nunito font-black text-4xl">£{total.toFixed(2)}</span>
+          </div>
+          <div className="text-xs text-neutral-400 mt-1">Pay now → we send a <strong className="text-[#7bc67e]">free artwork proof</strong> → only then do we print.</div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button data-testid="fn-checkout" onClick={checkout} disabled={submitting} className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold px-6 py-3.5 rounded-full transition-transform hover:-translate-y-0.5">
+              {submitting ? <><Loader2 className="animate-spin" size={16} /> Redirecting…</> : <><ShieldCheck size={16} /> Pay £{total.toFixed(2)} — proof before print</>}
+            </button>
+            <WhatsAppInline preset="Hi! Quick question about fight night tees…" label="WhatsApp" />
           </div>
         </div>
       </div>
@@ -216,10 +286,24 @@ export default function FightNightTee() {
   );
 }
 
-function Block({ title, children }) {
+function ProofBanner() {
+  return (
+    <div className="bg-[#f0fdf4] border-2 border-[#7bc67e] rounded-3xl p-4 flex items-start gap-3">
+      <Sparkles className="text-[#7bc67e] flex-shrink-0 mt-1" size={20} />
+      <div className="text-sm">
+        <span className="font-nunito font-extrabold">How it works:</span>{" "}
+        Pay today → we&apos;ll arrange your sponsors → email you a <strong>free proof for approval</strong> →{" "}
+        <strong>nothing prints until you say it&apos;s perfect</strong>.
+      </div>
+    </div>
+  );
+}
+function Block({ n, title, children }) {
   return (
     <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-5">
-      <h3 className="font-nunito font-extrabold text-[#1a1a1a] mb-3">{title}</h3>
+      <h3 className="font-nunito font-extrabold text-[#1a1a1a] mb-3 flex items-center gap-2">
+        <span className="w-7 h-7 rounded-full bg-[#7bc67e] text-[#1a1a1a] grid place-items-center font-black text-sm">{n}</span>{title}
+      </h3>
       {children}
     </div>
   );

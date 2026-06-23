@@ -12,6 +12,7 @@ import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import ProductDetail from "@/pages/ProductDetail";
 import ReviewsPage from "@/pages/Reviews";
 import AdminImport from "@/pages/AdminImport";
+import AdminTeamKits from "@/pages/AdminTeamKits";
 import Sports from "@/pages/Sports";
 import TeamKits from "@/pages/TeamKits";
 import TeamKitBuilder from "@/pages/TeamKitBuilder";
@@ -37,6 +38,7 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/admin/import-reviews" element={<AdminImport />} />
+          <Route path="/admin/team-kits" element={<AdminTeamKits />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
         </Routes>
         {/* Site-wide WhatsApp FAB. Pages that already render their own FAB will overlap harmlessly,
@@ -51,7 +53,7 @@ function App() {
 // Hide global FAB on routes where pages render their own variant (with bespoke preset text).
 function SiteFAB() {
   const { pathname } = useLocation();
-  const ownFabRoutes = ["/sports", "/team-kit-builder", "/team-kits", "/fight-night-tee"];
+  const ownFabRoutes = ["/sports", "/team-kit-builder", "/team-kits", "/fight-night-tee", "/admin"];
   if (ownFabRoutes.some(r => pathname.startsWith(r))) return null;
   if (pathname.startsWith("/product/")) return null;
   return <WhatsAppFAB />;

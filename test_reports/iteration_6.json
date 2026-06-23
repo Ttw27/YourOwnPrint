@@ -1,0 +1,48 @@
+{
+  "summary": "Iteration 6 fully tested. Backend: 58/58 tests pass overall (8 new in test_iteration6.py). Frontend: all 4 critical flows verified end-to-end on the live preview URL.\n\nBackend results:\n- GET /api/fight-night/addons returns back-print=£3.50, left-sleeve=£3.00, right-sleeve=£3.00 ✓\n- GET /api/products returns >=20 items including boxing-fight-tee, fight-shorts, football-kit-bundle ✓\n- /api/team-kit-brands full CRUD: POST creates (returns id), GET ?product_id=football-kit-bundle filters correctly, PUT updates name+price (verified via subsequent GET), DELETE removes (verified absent after GET). Invalid product_id → 400, missing id PUT → 404 ✓\n- POST /api/quote-request with kind='team_kit' persists and returns {ok:true,id:...} ✓\n- POST /api/checkout/session for boxing-fight-tee with placements=['back-print','left-sleeve','right-sleeve'] returns 200 + Stripe URL; GET /api/checkout/status amount_total = base £11.99 + £3 + £3 + £3.50 = £21.49 (math verified) ✓\n\nFrontend results:\n- /admin/team-kits: CRUD UI works. Created TEST_UIBrand (£49.99, football-kit-bundle), edited model name to TEST_UIModel_Edited (verified in list refresh), deleted (verified absent). Toast 'Deleted' confirmed. data-testids: admin-product (SELECT with 5 bundle options), admin-brand, admin-name, admin-price, admin-image, admin-description, admin-save, admin-edit-{id}, admin-delete-{id}, admin-brand-{id}, admin-brand-list ✓\n- /team-kits → click team-kit-card-football-kit-bundle → /product/football-kit-bundle: TeamKitConfigurator renders. brand-picker visible with brand-joma chip (matches admin-seeded brand). Sponsors upload section present with 'No upcharge' helper text ✓. Roster defaults to 1 row. Added 4 more rows → kit-total-price = £124.95 (5×24.99); kit-direct-checkout visible (no quote button). Added rows to reach 17 players → kit-direct-checkout disappears, submit-quote appears = quote threshold (>15) works exactly as spec'd ✓\n- /fight-night-tee: filled fn-name, fn-email, fn-event-date; uploaded tiny PNG sponsor; toggled fn-back-toggle + fn-left-sleeve-toggle + fn-right-sleeve-toggle; clicked fn-size-M-plus → fn-total shows £21.49 (11.99 + 3 + 3 + 3.5). Clicked fn-checkout → POST /api/checkout/session returned 200 with Stripe URL, browser redirected to Stripe sandbox showing 'Payment £21.49' ✓. Request body contained placements=['back-print','left-sleeve','right-sleeve'] and design_meta.flow='fight_night_tee'.\n- /design (route is /design, NOT /design-your-own as the review request stated): canvas page loads with all designer-* testids (upload, removebg, text-input, font, color, add-text, filters 5x, size 5x, qty controls, total, checkout). qty=3 → designer-total shows £20.97 (3×£6.99). Clicked designer-checkout → redirected to Stripe sandbox showing 'Payment £20.97' ✓.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "/design-your-own URL",
+        "issue": "Review request listed path '/design-your-own' but the actual registered route in App.js is '/design'. The URL '/design-your-own' falls through to render only WhatsAppFAB + toast container (blank black page) because no catch-all 404 page exists. All in-app links/CTAs/footers already point to '/design' (correct), so end-users are not affected. Either add a route alias '/design-your-own' → DesignYourOwn or add a NotFound 404 page so the URL doesn't render as a broken blank screen.",
+        "affected_selectors": []
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Admin /admin/team-kits — page header",
+        "issues": ["Header reads only 'ADMIN' in green uppercase with no main title (e.g., 'Team kit brands'). Body text 'Add the kit brands & pricing...' provides context, but the H1 is missing — adds polish if added."]
+      },
+      {
+        "screen": "TeamKitConfigurator roster quick-add (option > span hydration warning)",
+        "issues": ["React console warning: '<span> cannot be a child of <option>' originating from TeamKitConfigurator.jsx line 183 (Quick add… select). Source-mapped to Emergent's editing wrapper injecting <span> inside <option>. Not user-visible but pollutes console — acceptable for now."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration6.py",
+    "/app/test_reports/pytest/pytest_iter6.xml"
+  ],
+  "action_items": [
+    "(Minor) Either alias /design-your-own → DesignYourOwn in App.js routes OR add a 404 NotFound route so unknown paths don't render as blank black screens.",
+    "(Cosmetic) Add an H1 title on /admin/team-kits (currently only an 'ADMIN' pill is visible)."
+  ],
+  "critical_code_review_comments": [
+    "Fight-night addon pricing branch in /api/checkout/session (server.py L585-588) correctly routes boxing-fight-tee through FIGHT_NIGHT_ADDONS instead of PLACEMENT_BY_ID — math verified end-to-end via Stripe-displayed £21.49.",
+    "Team-kit-brands CRUD correctly excludes MongoDB _id from list responses (only id, product_id, brand, name, price, image, description, active returned). PUT correctly strips client-supplied id from update payload.",
+    "Quote threshold in TeamKitConfigurator switches direct-checkout ↔ submit-quote precisely at >15 (16 triggers quote, 15 still allows Stripe) — matches spec 'strictly > 15'.",
+    "Sponsor upload on /fight-night-tee correctly enforces 'Upload at least one sponsor logo for the front' before allowing checkout — good UX guard."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration6.py (NEW — 8 tests covering iteration 6)"
+  ],
+  "success_rate": {"backend": "100% (58/58)", "frontend": "100% on all 4 iter-6 flows"},
+  "test_credentials": "none required",
+  "seed_data_creation": "TEST_-prefixed quote_requests and team_kit_brands docs created and cleaned up during test_brand_crud_flow. Stripe test-mode payment_transactions persisted (sandbox).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `REACT_APP_BACKEND_URL=<url> pytest /app/backend/tests/ -v` — now 58 tests across 6 files. Iter6 fight-night addon testids in actual UI are fn-back-toggle / fn-left-sleeve-toggle / fn-right-sleeve-toggle (NOT the spec-listed fn-back-print/fn-left-sleeve/fn-right-sleeve). Designer route is /design not /design-your-own. Admin /admin/team-kits already has a pre-seeded 'Joma · Match-day pro' brand (product_id=football-kit-bundle).",
+  "rca of the issue": "Only one minor finding: /design-your-own URL is not registered. RCA: App.js line 36 registers `<Route path='/design' element={<DesignYourOwn />} />`. The review request used the descriptive name '/design-your-own' but no such route exists, and there is no catch-all 404 element, so the SPA renders only mount-level chrome (FAB + Toaster) and looks blank. Mitigation: add `<Route path='/design-your-own' element={<DesignYourOwn />} />` as alias, or add `<Route path='*' element={<NotFound />} />`. End-users are unaffected because every internal Link/CTA already targets '/design'."
+}

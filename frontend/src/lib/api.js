@@ -64,3 +64,24 @@ export async function submitQuoteRequest(payload) {
   const { data } = await api.post("/quote-request", payload);
   return data;
 }
+
+export async function fetchFightNightAddons() {
+  const { data } = await api.get("/fight-night/addons");
+  return data;
+}
+export async function fetchTeamKitBrands(product_id) {
+  const { data } = await api.get("/team-kit-brands", { params: product_id ? { product_id } : {} });
+  return data;
+}
+export async function createTeamKitBrand(payload) {
+  const { data } = await api.post("/team-kit-brands", payload);
+  return data;
+}
+export async function updateTeamKitBrand(id, payload) {
+  const { data } = await api.put(`/team-kit-brands/${id}`, payload);
+  return data;
+}
+export async function deleteTeamKitBrand(id) {
+  const { data } = await api.delete(`/team-kit-brands/${id}`);
+  return data;
+}
