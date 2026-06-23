@@ -69,6 +69,10 @@ export async function fetchFightNightAddons() {
   const { data } = await api.get("/fight-night/addons");
   return data;
 }
+export async function fetchTeamKitAddons() {
+  const { data } = await api.get("/team-kits/addons");
+  return data;
+}
 export async function fetchTeamKitBrands(product_id) {
   const { data } = await api.get("/team-kit-brands", { params: product_id ? { product_id } : {} });
   return data;

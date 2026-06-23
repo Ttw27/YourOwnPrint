@@ -235,6 +235,40 @@ PRODUCTS: Dict[str, Dict] = {
         "image": "https://images.pexels.com/photos/8260101/pexels-photo-8260101.jpeg",
         "description": "Match jersey + shorts + tracksuit per player. The complete squad bundle.",
     },
+
+    # ----- Front-print-only kit variants (cheaper — no names/numbers, just badge + front sponsor) -----
+    "football-kit-front-only": {
+        "id": "football-kit-front-only",
+        "name": "Football Kit — Front Print Only",
+        "price": 18.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg",
+        "description": "Jersey + shorts per player. Club badge + 1 front sponsor only. No names/numbers — saves you £6/kit.",
+    },
+    "football-premium-front-only": {
+        "id": "football-premium-front-only",
+        "name": "Football Premium — Front Print Only",
+        "price": 22.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
+        "description": "Jersey + shorts + socks. Badge + 1 front sponsor. No names/numbers — cheaper match-day setup.",
+    },
+    "rugby-kit-front-only": {
+        "id": "rugby-kit-front-only",
+        "name": "Rugby Kit — Front Print Only",
+        "price": 25.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
+        "description": "Heavy-grade rugby shirt + shorts. Crest + front sponsor only — names/numbers excluded.",
+    },
+    "training-pack-front-only": {
+        "id": "training-pack-front-only",
+        "name": "Training Pack — Front Print Only",
+        "price": 12.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/4720234/pexels-photo-4720234.jpeg",
+        "description": "Tee + shorts per player. Club crest + front sponsor only. Cheapest training option.",
+    },
 }
 
 
@@ -295,6 +329,10 @@ _VARIANT_MAP = {
     "rugby-kit-bundle":       {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "training-pack-bundle":   {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "full-squad-pack":        {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "football-kit-front-only":     {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "football-premium-front-only": {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "rugby-kit-front-only":        {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "training-pack-front-only":    {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
 }
 for _pid, _meta in _VARIANT_MAP.items():
     if _pid in PRODUCTS:
@@ -317,6 +355,14 @@ FIGHT_NIGHT_ADDONS: Dict[str, Dict] = {
     "back-print":   {"label": "Back print",   "price": 3.50},
     "left-sleeve":  {"label": "Left sleeve",  "price": 3.00},
     "right-sleeve": {"label": "Right sleeve", "price": 3.00},
+}
+
+# Team-kit addon pricing (per player, applied to category=team-kits products only).
+# Front sponsor is FREE & included. Sleeves & back print are paid extras.
+TEAM_KIT_ADDONS: Dict[str, Dict] = {
+    "left-sleeve":  {"label": "Left sleeve logo",  "price": 3.00},
+    "right-sleeve": {"label": "Right sleeve logo", "price": 3.00},
+    "back-print":   {"label": "Back print",        "price": 3.50},
 }
 
 
@@ -489,6 +535,11 @@ async def list_fight_night_addons():
     return [{"id": k, **v} for k, v in FIGHT_NIGHT_ADDONS.items()]
 
 
+@api_router.get("/team-kits/addons")
+async def list_team_kit_addons():
+    return [{"id": k, **v} for k, v in TEAM_KIT_ADDONS.items()]
+
+
 # ---------- Team-kit brands (admin-editable) ----------
 class TeamKitBrand(BaseModel):
     id: Optional[str] = None
@@ -586,6 +637,10 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         # Fight night addons use bespoke pricing
         placements_clean = [p for p in (payload.placements or []) if p in FIGHT_NIGHT_ADDONS]
         print_cost = round(sum(FIGHT_NIGHT_ADDONS[p]["price"] for p in placements_clean), 2)
+    elif product.get("category") == "team-kits":
+        # Team-kit addons (sleeves + back print). Front sponsor is free & not a placement.
+        placements_clean = [p for p in (payload.placements or []) if p in TEAM_KIT_ADDONS]
+        print_cost = round(sum(TEAM_KIT_ADDONS[p]["price"] for p in placements_clean), 2)
     else:
         placements_clean = _validate_placements(payload.placements or [])
         print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)

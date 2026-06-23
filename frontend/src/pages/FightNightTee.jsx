@@ -16,12 +16,18 @@ export default function FightNightTee() {
   const [sponsors, setSponsors] = useState([]);
   const [backPrint, setBackPrint] = useState(false);
   const [backMode, setBackMode] = useState("large");   // "large" | "sponsors"
+  const [backArt, setBackArt] = useState(null);        // artwork data URL for back print
   const [leftSleeve, setLeftSleeve] = useState(false);
+  const [leftArt, setLeftArt] = useState(null);
   const [rightSleeve, setRightSleeve] = useState(false);
+  const [rightArt, setRightArt] = useState(null);
   const [eventDate, setEventDate] = useState("");
   const [contact, setContact] = useState({ name: "", email: "", phone: "", company: "" });
   const [submitting, setSubmitting] = useState(false);
   const sponsorRef = useRef(null);
+  const backRef = useRef(null);
+  const leftRef = useRef(null);
+  const rightRef = useRef(null);
 
   useEffect(() => {
     Promise.all([api.get("/products/boxing-fight-tee").then(r => r.data), fetchFightNightAddons()])
@@ -77,10 +83,31 @@ export default function FightNightTee() {
   };
   const removeSponsor = (i) => setSponsors(prev => prev.filter((_, idx) => idx !== i));
 
+  const pickSingleArt = (e, setter) => {
+    const f = e.target.files?.[0]; e.target.value = "";
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 800; const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * sc), h = Math.round(img.height * sc);
+        const c = document.createElement("canvas"); c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        setter(c.toDataURL("image/png"));
+      };
+      img.src = r.result;
+    };
+    r.readAsDataURL(f);
+  };
+
   const validate = () => {
     if (!contact.name.trim() || !contact.email.trim()) return "Add your name and email";
     if (sponsors.length === 0) return "Upload at least one sponsor logo for the front";
     if (totalQty < 1) return "Pick at least 1 tee size & quantity";
+    if (backPrint && !backArt) return "Upload artwork for the back print (or untick back print)";
+    if (leftSleeve && !leftArt) return "Upload artwork for the left sleeve (or untick left sleeve)";
+    if (rightSleeve && !rightArt) return "Upload artwork for the right sleeve (or untick right sleeve)";
     return null;
   };
 
@@ -125,8 +152,8 @@ export default function FightNightTee() {
           kit_type: `fight-night-tee-${session_id}`,
           quantity: totalQty,
           deadline: eventDate,
-          message: `PAID fight-night order. Sponsors: ${sponsors.length}. Back print: ${backPrint ? backMode : "no"}. Sleeves: ${leftSleeve ? "L" : ""}${rightSleeve ? "R" : ""}. Stripe session: ${session_id}. Proof before print.`,
-          artwork: sponsors,
+          message: `PAID fight-night order. Sponsors: ${sponsors.length}. Back print: ${backPrint ? backMode : "no"}${backPrint && backArt ? " (art uploaded)" : ""}. Sleeves: ${leftSleeve ? "L" : ""}${rightSleeve ? "R" : ""}${(leftSleeve && leftArt) || (rightSleeve && rightArt) ? " (art uploaded)" : ""}. Stripe session: ${session_id}. Proof before print.`,
+          artwork: [...sponsors, backArt, leftArt, rightArt].filter(Boolean),
           product_id: "boxing-fight-tee",
         });
       } catch { /* non-blocking quote sync */ }
@@ -203,31 +230,72 @@ export default function FightNightTee() {
             </div>
           </label>
           {backPrint && (
-            <div className="grid sm:grid-cols-2 gap-2 mt-3" data-testid="fn-back-mode">
-              {[
-                { id: "large", label: "Large logo", desc: "One big logo (e.g. gym logo) centred on the back" },
-                { id: "sponsors", label: "More sponsors", desc: "Another set of sponsor logos on the back" },
-              ].map((m) => (
-                <button key={m.id} data-testid={`fn-back-mode-${m.id}`} onClick={() => setBackMode(m.id)}
-                  className={`text-left p-3 rounded-xl border-2 transition-all ${backMode === m.id ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#dcfce7]"}`}>
-                  <div className="font-nunito font-extrabold text-sm">{m.label}</div>
-                  <div className="text-xs text-[#4b5563] mt-1">{m.desc}</div>
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="grid sm:grid-cols-2 gap-2 mt-3" data-testid="fn-back-mode">
+                {[
+                  { id: "large", label: "Large logo", desc: "One big logo (e.g. gym logo) centred on the back" },
+                  { id: "sponsors", label: "More sponsors", desc: "Another set of sponsor logos on the back" },
+                ].map((m) => (
+                  <button key={m.id} data-testid={`fn-back-mode-${m.id}`} onClick={() => setBackMode(m.id)}
+                    className={`text-left p-3 rounded-xl border-2 transition-all ${backMode === m.id ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#dcfce7]"}`}>
+                    <div className="font-nunito font-extrabold text-sm">{m.label}</div>
+                    <div className="text-xs text-[#4b5563] mt-1">{m.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-3" data-testid="fn-back-upload-row">
+                <div className="w-16 h-16 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
+                  {backArt ? <img src={backArt} alt="" className="w-full h-full object-contain p-1" data-testid="fn-back-art-preview" /> : <Camera size={18} className="text-[#7bc67e]" />}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="text-xs font-nunito font-bold text-[#1a1a1a]">Back print artwork *</div>
+                  <button data-testid="fn-back-upload" onClick={() => backRef.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full inline-flex items-center justify-center gap-1 w-fit"><Upload size={12} /> {backArt ? "Replace" : "Upload back art"}</button>
+                  {backArt && <button data-testid="fn-back-clear" onClick={() => setBackArt(null)} className="text-[10px] font-nunito font-bold text-rose-500 hover:underline w-fit">Remove</button>}
+                  <input ref={backRef} type="file" accept="image/*" hidden onChange={(e) => pickSingleArt(e, setBackArt)} />
+                </div>
+              </div>
+            </>
           )}
         </Block>
 
         <Block n={4} title="Sleeve prints (optional)">
-          <div className="grid sm:grid-cols-2 gap-2">
-            <label data-testid="fn-left-sleeve-toggle" className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${leftSleeve ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#dcfce7]"}`}>
-              <input type="checkbox" checked={leftSleeve} onChange={(e) => setLeftSleeve(e.target.checked)} className="mt-1 w-4 h-4 accent-[#7bc67e]" />
-              <div className="flex-1"><div className="font-nunito font-extrabold text-sm">Left sleeve</div><div className="text-xs text-[#4b5563]">+£{addonMap["left-sleeve"]?.price.toFixed(2) || "3.00"} per tee</div></div>
-            </label>
-            <label data-testid="fn-right-sleeve-toggle" className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${rightSleeve ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#dcfce7]"}`}>
-              <input type="checkbox" checked={rightSleeve} onChange={(e) => setRightSleeve(e.target.checked)} className="mt-1 w-4 h-4 accent-[#7bc67e]" />
-              <div className="flex-1"><div className="font-nunito font-extrabold text-sm">Right sleeve</div><div className="text-xs text-[#4b5563]">+£{addonMap["right-sleeve"]?.price.toFixed(2) || "3.00"} per tee</div></div>
-            </label>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className={`rounded-xl border-2 p-3 transition-colors ${leftSleeve ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb]"}`}>
+              <label data-testid="fn-left-sleeve-toggle" className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={leftSleeve} onChange={(e) => setLeftSleeve(e.target.checked)} className="mt-1 w-4 h-4 accent-[#7bc67e]" />
+                <div className="flex-1"><div className="font-nunito font-extrabold text-sm">Left sleeve</div><div className="text-xs text-[#4b5563]">+£{addonMap["left-sleeve"]?.price.toFixed(2) || "3.00"} per tee</div></div>
+              </label>
+              {leftSleeve && (
+                <div className="mt-3 flex items-center gap-3" data-testid="fn-left-upload-row">
+                  <div className="w-14 h-14 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
+                    {leftArt ? <img src={leftArt} alt="" className="w-full h-full object-contain p-1" data-testid="fn-left-art-preview" /> : <Camera size={16} className="text-[#7bc67e]" />}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <button data-testid="fn-left-upload" onClick={() => leftRef.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1 w-fit"><Upload size={12} /> {leftArt ? "Replace" : "Upload"}</button>
+                    {leftArt && <button data-testid="fn-left-clear" onClick={() => setLeftArt(null)} className="text-[10px] font-nunito font-bold text-rose-500 hover:underline w-fit">Remove</button>}
+                    <input ref={leftRef} type="file" accept="image/*" hidden onChange={(e) => pickSingleArt(e, setLeftArt)} />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className={`rounded-xl border-2 p-3 transition-colors ${rightSleeve ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb]"}`}>
+              <label data-testid="fn-right-sleeve-toggle" className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={rightSleeve} onChange={(e) => setRightSleeve(e.target.checked)} className="mt-1 w-4 h-4 accent-[#7bc67e]" />
+                <div className="flex-1"><div className="font-nunito font-extrabold text-sm">Right sleeve</div><div className="text-xs text-[#4b5563]">+£{addonMap["right-sleeve"]?.price.toFixed(2) || "3.00"} per tee</div></div>
+              </label>
+              {rightSleeve && (
+                <div className="mt-3 flex items-center gap-3" data-testid="fn-right-upload-row">
+                  <div className="w-14 h-14 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
+                    {rightArt ? <img src={rightArt} alt="" className="w-full h-full object-contain p-1" data-testid="fn-right-art-preview" /> : <Camera size={16} className="text-[#7bc67e]" />}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <button data-testid="fn-right-upload" onClick={() => rightRef.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1 w-fit"><Upload size={12} /> {rightArt ? "Replace" : "Upload"}</button>
+                    {rightArt && <button data-testid="fn-right-clear" onClick={() => setRightArt(null)} className="text-[10px] font-nunito font-bold text-rose-500 hover:underline w-fit">Remove</button>}
+                    <input ref={rightRef} type="file" accept="image/*" hidden onChange={(e) => pickSingleArt(e, setRightArt)} />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </Block>
 

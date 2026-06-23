@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 7 fully tested end-to-end against the live preview URL. Backend: 9/9 new tests pass (test_iteration7.py). Frontend: all 4 critical flows verified.\n\nBackend results:\n- GET /api/team-kits/addons returns exactly 3 items: left-sleeve £3.00, right-sleeve £3.00, back-print £3.50 ✓\n- GET /api/products?category=team-kits returns 9 items including the 4 new front-only variants (football-kit-front-only £18.99, football-premium-front-only £22.99, rugby-kit-front-only £25.99, training-pack-front-only £12.99) ✓\n- POST /api/checkout/session for football-kit-bundle with size_qtys={M:5} + all 3 addons returns 200 + Stripe URL; GET /api/checkout/status amount_total = 172.45 ✓\n- POST /api/checkout/session for football-kit-front-only with size_qtys={L:10} + left-sleeve addon returns amount_total = 219.90 ✓\n- Regression: boxing-fight-tee with back+left+right placements still computes 1×(11.99+3.5+3+3) = 21.49 via FIGHT_NIGHT_ADDONS pricing ✓\n\nFrontend results:\n- /product/football-kit-bundle (TeamKitConfigurator): front-sponsor-block shows 'FREE · 1 logo'; addon-left-sleeve, addon-right-sleeve, addon-back-print present with +£3.00/+£3.00/+£3.50 labels. With 5 kits + all 3 addons toggled: kit-total-price = £172.45 ✓. Clicking kit-direct-checkout while addons are toggled but no artwork uploaded → toast 'Upload artwork for the left sleeve (or untick it)' ✓.\n- /product/football-kit-front-only: page renders TeamKitConfigurator, roster block shows 'Front-print-only variant — names & numbers are not included' helper text, price summary shows '· front print only' instead of '· badge + names + numbers included' ✓.\n- /fight-night-tee: enabling fn-back-toggle reveals fn-back-upload row + fn-back-upload button; same for fn-left-sleeve-toggle → fn-left-upload, fn-right-sleeve-toggle → fn-right-upload. With sponsor uploaded but back-print toggled on (no back art) → toast 'Upload artwork for the back print (or untick back print)' ✓. fn-total correctly shows £21.49 for 1 × M + back + L sleeve + R sleeve.\n- /design (Designer): adding 2 text items + 1 uploaded image creates 3 layers. Selecting a text item exposes sel-rotate, sel-fontsize, sel-color, sel-font, sel-text, plus layer-up / layer-down / layer-duplicate / layer-delete ✓. Selected image shows handle-rotate-img-{id} (top), handle-resize-img-{id} (bottom-right) and close X ✓. sel-rotate slider can be moved (verified value=45 dispatch) ✓. Double-clicking the text on canvas triggers design-text-edit-{id} inline edit input ✓. designer-ai-poster / -sketch / -cartoon / -enhance all show '— coming soon (Cutout.pro API to be wired)' toast ✓.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration7.py",
+    "/app/test_reports/pytest/pytest_iter7.xml"
+  ],
+  "action_items": [
+    "(Cosmetic only — non-blocking) Designer layer testids are `design-item-{id}` / `design-item-edit-{id}` / `design-item-delete-{id}`, not the `design-text-{id}` / `design-img-{id}` names listed in the review request. Functionality works (inline edit input is still `design-text-edit-{id}`), but if the spec naming is required, rename in DesignYourOwn.jsx.",
+    "(Spec deviation, minor) Review request says AI effect buttons should show an 'error toast when none selected'. Actual UX shows the 'coming soon' toast regardless of selection state. Either acceptable (placeholder behaviour) or align with spec if E1 wants stricter UX."
+  ],
+  "critical_code_review_comments": [
+    "Team-kit addon pricing path in server.py L640-643 cleanly routes category='team-kits' through TEAM_KIT_ADDONS — Stripe-verified totals for both bundle (£172.45) and front-only (£219.90).",
+    "Front-only variants share the team-kits category & TEAM_KIT_ADDONS pricing — correct & consistent.",
+    "TeamKitConfigurator.validate() correctly blocks checkout per-addon when toggled-on art is missing (separate messages for left sleeve / right sleeve / back print) — solid UX guard.",
+    "FightNightTee.validate() now requires per-addon dedicated art uploads (back, left, right) — matches spec.",
+    "DesignYourOwn supports multi-item canvas with pointer interaction modes (move/resize/rotate), inline text editing, layer ops (up/down/duplicate/delete) and selected-properties panel — all working."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration7.py (NEW — 9 pytest tests covering iteration 7)"
+  ],
+  "success_rate": {"backend": "100% (9/9 new, all 67 across suite)", "frontend": "100% on all 4 iter-7 flows"},
+  "test_credentials": "none required",
+  "seed_data_creation": "Stripe test-mode payment_transactions persisted (sandbox) for football-kit-bundle, football-kit-front-only and boxing-fight-tee checkout sessions.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `REACT_APP_BACKEND_URL=<url> pytest /app/backend/tests/ -v`. test_iteration7.py adds 9 tests. Iter-7 testid naming quirks: fight-night toggles are fn-back-toggle / fn-left-sleeve-toggle / fn-right-sleeve-toggle (NOT fn-back-print/fn-left-sleeve/fn-right-sleeve as the review request listed); designer canvas layer testids are `design-item-{id}` (NOT `design-text-{id}` or `design-img-{id}`). Inline edit input is still `design-text-edit-{id}` as spec'd. Designer route is /design (no /design-your-own alias still — carried from iter-6).",
+  "rca of the issue": "No defects found. Two minor spec-vs-implementation naming/behaviour deviations noted under action_items; neither blocks UX or correctness."
+}
