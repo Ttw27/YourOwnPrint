@@ -32,6 +32,17 @@
 - Sports CTA now → `/team-kits`
 - **50/50 backend tests** pass, 100% frontend e2e verified
 
+### Iter 9 — Designer back print + dual transparent PNG (Feb 2026)
+- **Back-print toggle in Designer** — adds upcharge per unit = **60% of unit price rounded to nearest £0.99 (£0.99 floor)**. Calculated server-side via `designer_back_print_price()` helper. Per-product values exposed via `/api/designer/products[].back_print_price`: tee £3.99, hoodie £8.99, kids-tee £4.99, polo £4.99, workwear-tee £3.99, workwear-sweat £7.99, school-hoodie £9.99, sports-tee £4.99.
+- **Front/Back canvas tabs** — separate item lists per side (`frontItems` / `backItems`), `designer-view-front` / `designer-view-back` toggle. Clicking the Back tab auto-enables back-print.
+- **Side badge** on canvas (`designer-side-badge`) shows "FRONT VIEW" / "BACK VIEW".
+- **Layers panel** is view-aware — shows current side count + "front/back N" hint for the other side.
+- **Dual transparent PNG export** — both front and (when back enabled) back composed at 2000×2000 (print) + 1000×1000 (preview) and POSTed in a single `/api/designer/artwork` doc with new fields `back_png`, `back_preview_png`, `back_items_count`. Independent 6 MB caps per side.
+- **Designer-flow checkout branch** in `/api/checkout/session` — adds back-print upcharge only when `design_meta.flow=='designer'` and `'back-print'` is in placements; placed before PLACEMENT_BY_ID catch-all so existing PDP flows are untouched.
+- **Edge case** — backEnabled with empty backItems raises a toast and aborts before any network calls.
+- **State reset** on product change — clears front/back items, sizeQtys, backEnabled, view → 'front'.
+- **Testing**: 85/85 backend tests pass (10 new in test_iteration9.py); all 6 critical iter-9 frontend flows verified end-to-end on live preview (iteration_9.json).
+
 ### Iter 8 — Designer overhaul v2 + Admin-managed designer products (Feb 2026)
 - **Text auto-fit**: text items now use `inline-block` + `white-space: nowrap` with no fixed width — bounding box hugs the rendered text exactly. Resize handle is always reachable.
 - **Size-quantity matrix in designer**: replaces single size+qty with per-size buckets (S/M/L/XL/...) each with own quantity, matching the Fight-Night UX. Totals computed accurately, not lumped.
