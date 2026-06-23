@@ -13,6 +13,7 @@ import ProductDetail from "@/pages/ProductDetail";
 import ReviewsPage from "@/pages/Reviews";
 import AdminImport from "@/pages/AdminImport";
 import Sports from "@/pages/Sports";
+import TeamKits from "@/pages/TeamKits";
 import TeamKitBuilder from "@/pages/TeamKitBuilder";
 import FightNightTee from "@/pages/FightNightTee";
 import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
@@ -28,6 +29,7 @@ function App() {
           <Route path="/workwear" element={<Workwear />} />
           <Route path="/teams-schools" element={<TeamsSchools />} />
           <Route path="/sports" element={<Sports />} />
+          <Route path="/team-kits" element={<TeamKits />} />
           <Route path="/team-kit-builder" element={<TeamKitBuilder />} />
           <Route path="/fight-night-tee" element={<FightNightTee />} />
           <Route path="/design" element={<DesignYourOwn />} />
@@ -49,7 +51,7 @@ function App() {
 // Hide global FAB on routes where pages render their own variant (with bespoke preset text).
 function SiteFAB() {
   const { pathname } = useLocation();
-  const ownFabRoutes = ["/sports", "/team-kit-builder", "/fight-night-tee"];
+  const ownFabRoutes = ["/sports", "/team-kit-builder", "/team-kits", "/fight-night-tee"];
   if (ownFabRoutes.some(r => pathname.startsWith(r))) return null;
   if (pathname.startsWith("/product/")) return null;
   return <WhatsAppFAB />;

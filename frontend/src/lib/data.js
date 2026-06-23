@@ -65,7 +65,7 @@ export const NAV_LINKS = [
   { label: "Workwear", to: "/workwear" },
   { label: "Teams & Schools", to: "/teams-schools" },
   { label: "Sports & Combat", to: "/sports" },
-  { label: "Team Kit Builder", to: "/team-kit-builder" },
+  { label: "Team Kits", to: "/team-kits" },
   { label: "Design Your Own", to: "/design", highlight: true },
   { label: "Get a Quote", to: "/contact" },
 ];

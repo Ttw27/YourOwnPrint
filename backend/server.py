@@ -193,6 +193,48 @@ PRODUCTS: Dict[str, Dict] = {
         "image": "https://images.pexels.com/photos/4761787/pexels-photo-4761787.jpeg",
         "description": "Stretch panel fight shorts. Sublimated print — names, sponsors, gym branding.",
     },
+
+    # ----- Team Kit Bundles (price-per-player, includes club badge + names & numbers) -----
+    "football-kit-bundle": {
+        "id": "football-kit-bundle",
+        "name": "Football Kit Bundle",
+        "price": 24.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg",
+        "description": "Jersey + shorts per player. Includes club badge & names/numbers. Just upload your badge.",
+    },
+    "football-premium-bundle": {
+        "id": "football-premium-bundle",
+        "name": "Football Premium Bundle",
+        "price": 29.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
+        "description": "Jersey + shorts + socks per player. Match-day ready. Badge + names/numbers included.",
+    },
+    "rugby-kit-bundle": {
+        "id": "rugby-kit-bundle",
+        "name": "Rugby Kit Bundle",
+        "price": 32.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
+        "description": "Heavy-grade rugby shirt + shorts per player. Crest + names included.",
+    },
+    "training-pack-bundle": {
+        "id": "training-pack-bundle",
+        "name": "Training Pack",
+        "price": 17.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/4720234/pexels-photo-4720234.jpeg",
+        "description": "Breathable training tee + shorts. Club crest + initials. Perfect for mid-week sessions.",
+    },
+    "full-squad-pack": {
+        "id": "full-squad-pack",
+        "name": "Full Squad Pack",
+        "price": 54.99,
+        "category": "team-kits",
+        "image": "https://images.pexels.com/photos/8260101/pexels-photo-8260101.jpeg",
+        "description": "Match jersey + shorts + tracksuit per player. The complete squad bundle.",
+    },
 }
 
 
@@ -247,6 +289,12 @@ _VARIANT_MAP = {
     "boxing-fight-tee":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "White", "hex": "#ffffff"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "muay-thai-shorts":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}, {"name": "Gold", "hex": "#d4a017"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "fight-shorts":        {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Red", "hex": "#b91c1c"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    # Team kit bundles — full size range incl. kids
+    "football-kit-bundle":    {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "football-premium-bundle":{"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "rugby-kit-bundle":       {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "training-pack-bundle":   {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "full-squad-pack":        {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
 }
 for _pid, _meta in _VARIANT_MAP.items():
     if _pid in PRODUCTS:

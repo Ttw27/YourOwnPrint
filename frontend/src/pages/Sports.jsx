@@ -47,8 +47,8 @@ export default function Sports() {
             <p className="text-[#4b5563] mt-4 text-lg max-w-lg">Match-day jerseys, fight-night sponsor tees, training tracksuits — names, numbers, sponsors, badges.
               Big team or solo athlete, we've got you.</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link to="/team-kit-builder" data-testid="sports-team-kit-cta" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md hover:-translate-y-1 transition-transform">
-                Team Kit Builder <ArrowRight size={16} />
+              <Link to="/team-kits" data-testid="sports-team-kit-cta" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md hover:-translate-y-1 transition-transform">
+                Team Kits Gallery <ArrowRight size={16} />
               </Link>
               <Link to="/fight-night-tee" data-testid="sports-fight-night-cta" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full transition-colors">
                 Fight Night Tee

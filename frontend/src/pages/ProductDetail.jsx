@@ -5,6 +5,7 @@ import ProductReviews from "../components/bold/ProductReviews";
 import PricePromise from "../components/bold/PricePromise";
 import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
+import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
 import { api, fetchReviewsAggregate, fetchPlacements, createCheckout } from "../lib/api";
 import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon } from "lucide-react";
@@ -165,7 +166,7 @@ export default function ProductDetail() {
         <div className="text-xs font-nunito font-bold text-[#4b5563] mb-4">
           <Link to="/" className="hover:text-[#7bc67e]">Home</Link>
           <span className="mx-2">/</span>
-          <Link to={product?.category === "workwear" ? "/workwear" : product?.category === "teams-schools" ? "/teams-schools" : product?.category === "sports" ? "/sports" : "/"} className="hover:text-[#7bc67e]">{product?.category || "Shop"}</Link>
+          <Link to={product?.category === "workwear" ? "/workwear" : product?.category === "teams-schools" ? "/teams-schools" : product?.category === "sports" ? "/sports" : product?.category === "team-kits" ? "/team-kits" : "/"} className="hover:text-[#7bc67e]">{product?.category || "Shop"}</Link>
           <span className="mx-2">/</span>
           <span data-testid="product-breadcrumb-name">{product?.name || ""}</span>
         </div>
@@ -174,6 +175,38 @@ export default function ProductDetail() {
           <div className="text-[#4b5563] py-20 text-center">Loading…</div>
         ) : err ? (
           <div className="text-rose-600 py-20 text-center font-nunito font-bold">{err}</div>
+        ) : product && product.category === "team-kits" ? (
+          <>
+            <div className="grid lg:grid-cols-12 gap-8 mb-12">
+              <div className="lg:col-span-5">
+                <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7] sticky top-20">
+                  <div className="aspect-square overflow-hidden rounded-2xl bg-white">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="mt-4">
+                    <span className="inline-block bg-[#fde68a] text-[#1a1a1a] text-xs font-nunito font-extrabold uppercase tracking-wider px-3 py-1 rounded-full">Team Kit Bundle</span>
+                    <h1 data-testid="product-name" className="mt-2 font-nunito font-black text-3xl lg:text-4xl">{product.name}</h1>
+                    <p className="text-[#4b5563] mt-2 text-sm">{product.description}</p>
+                    <div className="mt-3">
+                      <span className="text-xs font-nunito font-bold text-[#4b5563]">from</span>
+                      <div className="text-[#7bc67e] font-nunito font-black text-4xl leading-tight">£{product.price.toFixed(2)}<span className="text-sm font-bold text-[#4b5563]"> /player</span></div>
+                    </div>
+                    {agg && <div className="mt-2"><StarRating value={agg.average} size={14} /> <span className="text-xs text-[#4b5563]">({agg.count} reviews)</span></div>}
+                  </div>
+                </div>
+              </div>
+              <div className="lg:col-span-7">
+                <TeamKitConfigurator product={product} />
+                <div className="mt-5">
+                  <BespokeQuoteCard productName={product.name} />
+                </div>
+                <div className="mt-5">
+                  <PricePromise variant="card" />
+                </div>
+              </div>
+            </div>
+            <ProductReviews productId={product.id} productName={product.name} />
+          </>
         ) : product && (
           <>
             <div className="grid lg:grid-cols-12 gap-8 mb-12">
