@@ -32,6 +32,20 @@
 - Sports CTA now → `/team-kits`
 - **50/50 backend tests** pass, 100% frontend e2e verified
 
+### Iter 8 — Designer overhaul v2 + Admin-managed designer products (Feb 2026)
+- **Text auto-fit**: text items now use `inline-block` + `white-space: nowrap` with no fixed width — bounding box hugs the rendered text exactly. Resize handle is always reachable.
+- **Size-quantity matrix in designer**: replaces single size+qty with per-size buckets (S/M/L/XL/...) each with own quantity, matching the Fight-Night UX. Totals computed accurately, not lumped.
+- **Layers panel**: lists every text/image layer in the right rail with per-layer remove + click-to-select. "Clear all layers" replaces the global clear.
+- **Designer-enabled products via admin**:
+  - 8 products enabled by default (tees, hoodies, polos, workwear basics): personalised-tee, personalised-hoodie, kids-tee, polo-shirt, workwear-tshirt, workwear-sweatshirt, school-hoodie, sports-tee
+  - Each product carries `designer_image` (the canvas backdrop) + `designer_print_area` ({x,y,w,h} %)
+  - New `/admin/designer-products` page — per-product toggle, image URL, print-area coordinates, Save button
+  - Backend overrides persisted in `designer_settings` collection, merged into in-memory PRODUCTS on startup + on PATCH
+- **Transparent PNG export on checkout**: client composes all layers (no garment background) onto a hidden canvas at 1000×1000 (preview) + 2000×2000 (print-ready), POSTs to `/api/designer/artwork`, and references the returned `artwork_id` in Stripe session metadata for fulfilment lookup.
+- **Backend additions**: `/api/designer/products`, `/api/admin/designer-products` GET+PATCH, `/api/designer/artwork` POST+GET, startup hook merges Mongo overrides
+- **TeamKitConfigurator copy**: back-print description now clearly states "Back print sits below the player's name & number — names & numbers are already included in your kit price."
+- **Testing**: 75/75 backend tests pass (8 new in test_iteration8.py); all 5 critical frontend flows verified on live preview (iteration_8.json)
+
 ### Iter 7 — Team Kit print restructure + Designer overhaul (Feb 2026)
 - **Team Kit print structure rebuilt**: front sponsor = FREE, single upload only. Sleeves +£3.00/kit each. Back print +£3.50/kit. Each toggled addon REQUIRES its own artwork upload before checkout (per-addon validation).
 - **4 new front-print-only product variants** (cheaper, no names/numbers): football-kit-front-only £18.99, football-premium-front-only £22.99, rugby-kit-front-only £25.99, training-pack-front-only £12.99 — share TEAM_KIT_ADDONS pricing
