@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 9 fully verified end-to-end. Backend: 10/10 new pytest tests pass (test_iteration9.py) covering back_print_price in /api/designer/products (exact values per spec), designer-flow checkout pricing (tee 21.96, hoodie 23.98), regression for boxing-fight-tee + team-kit + plain personalised-tee placements, and back PNG persistence (with 6MB cap + null-back path). Frontend: all 6 critical iter-9 flows pass against live preview URL.\n\nBackend results (test_iteration9.py — 10/10 PASS):\n- GET /api/designer/products returns 8 products, each with exact back_print_price: personalised-tee=3.99, personalised-hoodie=8.99, kids-tee=4.99, polo-shirt=4.99, workwear-tshirt=3.99, workwear-sweatshirt=7.99, school-hoodie=9.99, sports-tee=4.99 ✓\n- Designer checkout personalised-tee M:2 + back-print + design_meta.flow='designer' → amount_total=£21.96 = 2*(6.99+3.99) ✓\n- Designer checkout personalised-hoodie M:1 + back-print → £23.98 = 14.99+8.99 ✓\n- Regression boxing-fight-tee placements=[back-print,left-sleeve,right-sleeve] → £21.49 = 11.99+3.50+3+3 (uses FIGHT_NIGHT_ADDONS) ✓\n- Regression football-kit-bundle placements=[back-print] → £28.49 = 24.99+3.50 (uses TEAM_KIT_ADDONS) ✓\n- Regression plain personalised-tee with full-front (no design_meta) → £10.49 = 6.99+3.50 (PLACEMENT_BY_ID) ✓; with unknown placement → falls back to base 6.99 ✓\n- POST /api/designer/artwork with back_png + back_preview_png + back_items_count → returns {id}; GET returns full doc incl. back_png, back_preview_png, items_count=2, back_items_count=3 ✓\n- Oversized back_png (>6MB) → 400 with 'back' in error message ✓\n- POST without back fields → 200, back_png=null, back_items_count=0 ✓\n\nFrontend results (live preview, viewport 1920x4000):\n- /design-your-own renders: designer-view-front (active default), designer-view-back, designer-back-toggle ('Print on back too · +£3.99/unit'), designer-side-badge ('FRONT VIEW') ✓\n- Personalised-tee, M:2, no back → designer-total = £13.98 ✓; ticking designer-back-toggle → £21.96 ✓; unticking → £13.98 ✓\n- Clicking designer-view-back: auto-ticks back-toggle, switches view, badge becomes 'BACK VIEW' ✓; Layers panel title shows 'back N · front M' with correct counts ✓; adding text on back doesn't appear on front layers list ✓\n- Switching products (tee → kids-tee) resets frontItems, backItems, sizeQtys, backEnabled=false, view='front' ✓\n- Edge case: backEnabled=true + backItems empty + M:1 → designer-checkout triggers toast 'Add at least one element to the back design (or turn off back print)' AND fires ZERO /api/designer/artwork or /api/checkout/session calls ✓\n- Full checkout (front items + back items + M:1): designer-checkout fires exactly ONE POST /api/designer/artwork (body contains BOTH artwork_png + back_png as data:image/png, items_count=1, back_items_count=1) + ONE POST /api/checkout/session, then browser redirects to https://checkout.stripe.com/c/pay/cs_test_… showing £10.98 = 6.99+3.99 ✓",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration9.py",
+    "/app/test_reports/pytest/pytest_iter9.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L938-940: designer_back_print_price(unit_price)=max(0.99, round(unit_price*0.6)-0.01) correctly snaps to nearest £.99 with £0.99 floor — produces exact spec values for all 8 designer products.",
+    "server.py L662-666: /api/checkout/session designer-flow branch is correctly placed BEFORE the catch-all PLACEMENT_BY_ID branch and only triggers when design_meta.flow=='designer' AND product is not boxing-fight-tee or team-kits — clean dispatch order, no regression risk.",
+    "server.py L1022-1046: /api/designer/artwork enforces 6MB caps independently on artwork_png and back_png with clear error messages.",
+    "DesignYourOwn.jsx: composeArtwork(sizePx, itemsList) now takes itemsList param so both front and back can be rendered to separate canvases; checkout() runs front (2 sizes) + back (2 sizes) in parallel via Promise.all, then sends ONE consolidated POST /api/designer/artwork — efficient single-doc design.",
+    "DesignYourOwn.jsx L77-85: useEffect resets frontItems, backItems, sizeQtys, backEnabled, view on productId change — correctly prevents stale state across products.",
+    "DesignYourOwn.jsx L244-246: backEnabled=true with empty backItems raises a toast BEFORE setCheckingOut(true) and BEFORE any composeArtwork() calls — early-return prevents wasted compute and network calls.",
+    "DesignYourOwn.jsx L401-403: clicking 'Back' tab auto-enables back-print via `if (!backEnabled) setBackEnabled(true)` — matches spec exactly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration9.py (NEW — 10 pytest tests for iteration 9)"
+  ],
+  "success_rate": {"backend": "100% (10/10 tests)", "frontend": "100% on all 6 iter-9 flows"},
+  "test_credentials": "none required",
+  "seed_data_creation": "A handful of /api/designer/artwork docs persisted in MongoDB (both with and without back PNGs). Three real Stripe TEST-MODE checkout sessions created (£21.96 tee, £23.98 hoodie, £10.98 frontend e2e checkout).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "test_iteration9.py covers all 10 iter-9 backend tests; run with `REACT_APP_BACKEND_URL=<url> pytest /app/backend/tests/test_iteration9.py -v`. Key testids: designer-view-front, designer-view-back, designer-back-toggle, designer-side-badge, designer-total. The back toggle checkbox is inside the designer-back-toggle <label>, query via `[data-testid=\"designer-back-toggle\"] input[type=\"checkbox\"]`. Sleep ≥8s after clicking designer-checkout — two PNG composes at 2000px each before the artwork POST + checkout POST + Stripe redirect.",
+  "rca of the issue": "No defects. Iteration 9 delivers all spec items cleanly: back_print_price computed server-side via designer_back_print_price() helper, designer-flow checkout dispatcher correctly priced before PLACEMENT_BY_ID, /api/designer/artwork extended with back_png/back_preview_png/back_items_count + independent 6MB cap, frontend has separate frontItems/backItems lists with view-aware Layers panel, auto-tick on Back tab click, and a single consolidated artwork POST on checkout carrying both PNGs."
+}

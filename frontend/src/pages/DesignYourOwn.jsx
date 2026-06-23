@@ -26,7 +26,10 @@ export default function DesignYourOwn() {
   const [productId, setProductId] = useState(searchParams.get("product") || "");
   const [sizeQtys, setSizeQtys] = useState({});
   const [filter, setFilter] = useState("none");
-  const [items, setItems] = useState([]);
+  const [view, setView] = useState("front");                 // "front" | "back"
+  const [backEnabled, setBackEnabled] = useState(false);     // adds back-print to checkout
+  const [frontItems, setFrontItems] = useState([]);
+  const [backItems, setBackItems]   = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [drag, setDrag] = useState(null);
@@ -38,6 +41,12 @@ export default function DesignYourOwn() {
   const printAreaRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const items = view === "front" ? frontItems : backItems;
+  const setItems = (updater) => {
+    if (view === "front") setFrontItems(typeof updater === "function" ? updater(frontItems) : updater);
+    else                  setBackItems(typeof updater === "function" ? updater(backItems)  : updater);
+  };
+
   useEffect(() => {
     fetchDesignerProducts().then((list) => {
       setProducts(list);
@@ -48,22 +57,35 @@ export default function DesignYourOwn() {
   const product = products.find(p => p.id === productId);
   const printArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
   const unitPrice = product?.price ?? 0;
+  const backPrintPrice = product?.back_print_price ?? 0;
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
   const subtotal = useMemo(() => {
     if (!product) return 0;
     const u = product.size_upcharges || {};
+    const extra = backEnabled ? backPrintPrice : 0;
     let t = 0;
     Object.entries(sizeQtys).forEach(([sz, q]) => {
       const qn = Number(q) || 0;
       if (qn <= 0) return;
-      t += (unitPrice + (u[sz] || 0)) * qn;
+      t += (unitPrice + (u[sz] || 0) + extra) * qn;
     });
     return t;
-  }, [sizeQtys, unitPrice, product]);
+  }, [sizeQtys, unitPrice, product, backEnabled, backPrintPrice]);
   const selected = items.find(i => i.id === selectedId) || null;
 
-  // Reset sizeQtys when product changes
-  useEffect(() => { setSizeQtys({}); }, [productId]);
+  // Reset state when product changes
+  useEffect(() => {
+    setSizeQtys({});
+    setFrontItems([]);
+    setBackItems([]);
+    setBackEnabled(false);
+    setView("front");
+    setSelectedId(null);
+    setEditingId(null);
+  }, [productId]);
+
+  // Clear transient selection state when switching front/back view
+  useEffect(() => { setSelectedId(null); setEditingId(null); setDrag(null); }, [view]);
 
   const setSizeQty = (sz, q) => {
     const n = Math.max(0, Math.min(500, Number(q) || 0));
@@ -184,12 +206,12 @@ export default function DesignYourOwn() {
   });
 
   // ---- Render to transparent PNG ----
-  const composeArtwork = async (sizePx) => {
+  const composeArtwork = async (sizePx, itemsList) => {
     const c = document.createElement("canvas");
     c.width = sizePx; c.height = sizePx;
     const ctx = c.getContext("2d");
     ctx.clearRect(0, 0, sizePx, sizePx);
-    for (const it of items) {
+    for (const it of itemsList) {
       const cx = (it.x / 100) * sizePx + ((it.w || 0) / 100) * sizePx / 2;
       const cy = (it.y / 100) * sizePx + (it.type === "text" ? (it.fontSize || 28) / 2 : ((it.h || 0) / 100) * sizePx / 2);
       ctx.save();
@@ -219,18 +241,30 @@ export default function DesignYourOwn() {
   const checkout = async () => {
     if (!product) { toast.error("Pick a product"); return; }
     if (totalQty < 1) { toast.error("Pick at least one size & quantity"); return; }
-    if (items.length === 0) { toast.error("Add at least one image or text to your design"); return; }
+    if (frontItems.length === 0 && backItems.length === 0) { toast.error("Add at least one image or text to your design"); return; }
+    if (backEnabled && backItems.length === 0) { toast.error("Add at least one element to the back design (or turn off back print)"); return; }
     setCheckingOut(true);
     try {
-      const [previewPng, artworkPng] = await Promise.all([
-        composeArtwork(1000),
-        composeArtwork(2000),
+      // Front always; back only if user enabled it
+      const [frontPreview, frontFull] = await Promise.all([
+        composeArtwork(1000, frontItems),
+        composeArtwork(2000, frontItems),
       ]);
+      let backFull = null, backPreview = null;
+      if (backEnabled) {
+        [backPreview, backFull] = await Promise.all([
+          composeArtwork(1000, backItems),
+          composeArtwork(2000, backItems),
+        ]);
+      }
       const { id: artwork_id } = await saveDesignerArtwork({
         product_id: productId,
-        artwork_png: artworkPng,
-        preview_png: previewPng,
-        items_count: items.length,
+        artwork_png: frontFull,
+        preview_png: frontPreview,
+        back_png: backFull,
+        back_preview_png: backPreview,
+        items_count: frontItems.length,
+        back_items_count: backItems.length,
         width: 2000, height: 2000,
       });
       const { url } = await createCheckout({
@@ -238,13 +272,16 @@ export default function DesignYourOwn() {
         size_qtys: sizeQtys,
         origin_url: window.location.origin,
         blank: false,
+        placements: backEnabled ? ["back-print"] : [],
         design_meta: {
           flow: "designer",
-          items: String(items.length),
-          text_count: String(items.filter(i => i.type === "text").length),
-          image_count: String(items.filter(i => i.type === "image").length),
+          items: String(frontItems.length),
+          back_items: String(backItems.length),
+          text_count: String(frontItems.filter(i => i.type === "text").length + backItems.filter(i => i.type === "text").length),
+          image_count: String(frontItems.filter(i => i.type === "image").length + backItems.filter(i => i.type === "image").length),
           artwork_id,
           filter,
+          back_print: backEnabled ? "yes" : "no",
         },
       });
       window.location.href = url;
@@ -323,7 +360,7 @@ export default function DesignYourOwn() {
               </div>
             </Panel>
 
-            <Panel title={`Layers · ${items.length}`}>
+            <Panel title={`Layers · ${view} ${items.length}${backEnabled && view === "front" ? ` · back ${backItems.length}` : ""}${backEnabled && view === "back" ? ` · front ${frontItems.length}` : ""}`}>
               {items.length === 0 ? (
                 <div className="text-xs text-[#4b5563] text-center py-2">No layers yet</div>
               ) : (
@@ -351,6 +388,31 @@ export default function DesignYourOwn() {
           </aside>
 
           <main className="lg:col-span-6">
+            {/* Front / Back tabs + back-print enable */}
+            <div className="flex items-center justify-between flex-wrap gap-3 mb-3" data-testid="designer-view-tabs">
+              <div className="inline-flex bg-[#f0fdf4] rounded-full p-1 border border-[#dcfce7]">
+                <button
+                  data-testid="designer-view-front"
+                  onClick={() => setView("front")}
+                  className={`px-4 py-1.5 rounded-full font-nunito font-extrabold text-sm transition-colors ${view === "front" ? "bg-[#7bc67e] text-[#1a1a1a]" : "text-[#4b5563] hover:text-[#1a1a1a]"}`}
+                >Front</button>
+                <button
+                  data-testid="designer-view-back"
+                  onClick={() => { if (!backEnabled) setBackEnabled(true); setView("back"); }}
+                  className={`px-4 py-1.5 rounded-full font-nunito font-extrabold text-sm transition-colors ${view === "back" ? "bg-[#7bc67e] text-[#1a1a1a]" : "text-[#4b5563] hover:text-[#1a1a1a]"}`}
+                >Back {backEnabled && <span className="ml-1 text-[10px]">+£{backPrintPrice.toFixed(2)}</span>}</button>
+              </div>
+              <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-back-toggle">
+                <input
+                  type="checkbox"
+                  checked={backEnabled}
+                  onChange={(e) => { const on = e.target.checked; setBackEnabled(on); if (!on && view === "back") setView("front"); }}
+                  className="w-4 h-4 accent-[#7bc67e]"
+                />
+                <span className="text-xs font-nunito font-extrabold">Print on back too · +£{backPrintPrice.toFixed(2)}/unit</span>
+              </label>
+            </div>
+
             <div className="bg-[#f0fdf4] rounded-3xl p-4 border-2 border-[#dcfce7]">
               <div
                 ref={canvasRef}
@@ -360,6 +422,10 @@ export default function DesignYourOwn() {
                 data-testid="design-canvas"
               >
                 <img src={product?.image} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+                {/* Side badge */}
+                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-nunito font-extrabold uppercase tracking-[0.2em] text-[#1a1a1a] border border-[#dcfce7]" data-testid="designer-side-badge">
+                  {view === "front" ? "Front view" : "Back view"}
+                </div>
                 {/* Print area rectangle — the design overlay lives strictly inside this box */}
                 <div
                   ref={printAreaRef}
@@ -547,7 +613,7 @@ export default function DesignYourOwn() {
 
             <Panel title="Total">
               <div className="flex items-baseline justify-between">
-                <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}</span>
+                <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}</span>
                 <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
               </div>
               <button data-testid="designer-checkout" onClick={checkout} disabled={checkingOut} className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold rounded-full px-6 py-4 shadow-md hover:-translate-y-0.5 transition-transform">

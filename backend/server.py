@@ -659,6 +659,11 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         # Team-kit addons (sleeves + back print). Front sponsor is free & not a placement.
         placements_clean = [p for p in (payload.placements or []) if p in TEAM_KIT_ADDONS]
         print_cost = round(sum(TEAM_KIT_ADDONS[p]["price"] for p in placements_clean), 2)
+    elif (payload.design_meta or {}).get("flow") == "designer":
+        # Designer flow: back print = 60% of unit price rounded to nearest £.99 (£0.99 floor).
+        wants_back = "back-print" in (payload.placements or [])
+        placements_clean = ["back-print"] if wants_back else []
+        print_cost = designer_back_print_price(base_price) if wants_back else 0.0
     else:
         placements_clean = _validate_placements(payload.placements or [])
         print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
@@ -919,12 +924,20 @@ class DesignerSettings(BaseModel):
 
 class DesignerArtwork(BaseModel):
     product_id: str
-    artwork_png: str           # data URL / base64 (transparent, print-quality)
-    preview_png: Optional[str] = None  # smaller preview
+    artwork_png: str           # data URL / base64 (front, transparent, print-quality)
+    preview_png: Optional[str] = None  # smaller preview (front)
+    back_png: Optional[str] = None             # data URL / base64 (back, transparent, print-quality)
+    back_preview_png: Optional[str] = None     # smaller preview (back)
     items_count: int = 0
+    back_items_count: int = 0
     width: Optional[int] = None
     height: Optional[int] = None
     session_id: Optional[str] = None
+
+
+def designer_back_print_price(unit_price: float) -> float:
+    """60% of unit price, snapped to nearest £.99 (with a £0.99 floor)."""
+    return max(0.99, round(unit_price * 0.6) - 0.01)
 
 
 async def _merge_designer_overrides():
@@ -959,6 +972,7 @@ async def list_designer_products():
                 "print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
                 "sizes": p.get("sizes", []),
                 "size_upcharges": p.get("size_upcharges", {}),
+                "back_print_price": designer_back_print_price(float(p["price"])),
             })
     return out
 
@@ -1012,12 +1026,17 @@ async def save_designer_artwork(payload: DesignerArtwork):
         raise HTTPException(400, "Unknown product_id")
     if not payload.artwork_png or len(payload.artwork_png) > 6_000_000:
         raise HTTPException(400, "artwork_png missing or too large")
+    if payload.back_png and len(payload.back_png) > 6_000_000:
+        raise HTTPException(400, "back_png too large")
     doc = {
         "id": str(uuid.uuid4()),
         "product_id": payload.product_id,
         "artwork_png": payload.artwork_png,
         "preview_png": payload.preview_png,
+        "back_png": payload.back_png,
+        "back_preview_png": payload.back_preview_png,
         "items_count": payload.items_count,
+        "back_items_count": payload.back_items_count,
         "width": payload.width,
         "height": payload.height,
         "session_id": payload.session_id,
@@ -1033,7 +1052,12 @@ async def get_designer_artwork(artwork_id: str):
     doc = await db.designer_artwork.find_one({"id": artwork_id})
     if not doc:
         raise HTTPException(404, "Artwork not found")
-    return {k: doc.get(k) for k in ("id", "product_id", "artwork_png", "preview_png", "items_count", "width", "height", "session_id", "created_at")}
+    return {k: doc.get(k) for k in (
+        "id", "product_id", "artwork_png", "preview_png",
+        "back_png", "back_preview_png",
+        "items_count", "back_items_count",
+        "width", "height", "session_id", "created_at",
+    )}
 
 
 @api_router.post("/webhook/stripe")
