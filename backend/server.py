@@ -370,7 +370,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
     else:
         # Legacy: single size + quantity
         sz = payload.size or "M"
-        q_int = int(payload.quantity or 1)
+        q_int = int(payload.quantity) if payload.quantity is not None else 1
         if q_int < 1:
             raise HTTPException(400, "Quantity must be ≥ 1")
         if allowed_sizes and sz not in allowed_sizes:
