@@ -1,6 +1,6 @@
 import React from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Home from "@/pages/Home";
 import ThemeShowcase from "@/pages/ThemeShowcase";
@@ -12,6 +12,10 @@ import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import ProductDetail from "@/pages/ProductDetail";
 import ReviewsPage from "@/pages/Reviews";
 import AdminImport from "@/pages/AdminImport";
+import Sports from "@/pages/Sports";
+import TeamKitBuilder from "@/pages/TeamKitBuilder";
+import FightNightTee from "@/pages/FightNightTee";
+import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
 
 function App() {
   return (
@@ -23,6 +27,9 @@ function App() {
           <Route path="/themes" element={<ThemeShowcase />} />
           <Route path="/workwear" element={<Workwear />} />
           <Route path="/teams-schools" element={<TeamsSchools />} />
+          <Route path="/sports" element={<Sports />} />
+          <Route path="/team-kit-builder" element={<TeamKitBuilder />} />
+          <Route path="/fight-night-tee" element={<FightNightTee />} />
           <Route path="/design" element={<DesignYourOwn />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/product/:id" element={<ProductDetail />} />
@@ -30,9 +37,22 @@ function App() {
           <Route path="/admin/import-reviews" element={<AdminImport />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
         </Routes>
+        {/* Site-wide WhatsApp FAB. Pages that already render their own FAB will overlap harmlessly,
+            but to avoid duplicates each page-level FAB is identical position/size — only rendered once
+            visually because pages don't include their own anymore. */}
+        <SiteFAB />
       </BrowserRouter>
     </div>
   );
+}
+
+// Hide global FAB on routes where pages render their own variant (with bespoke preset text).
+function SiteFAB() {
+  const { pathname } = useLocation();
+  const ownFabRoutes = ["/sports", "/team-kit-builder", "/fight-night-tee"];
+  if (ownFabRoutes.some(r => pathname.startsWith(r))) return null;
+  if (pathname.startsWith("/product/")) return null;
+  return <WhatsAppFAB />;
 }
 
 export default App;

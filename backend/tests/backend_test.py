@@ -27,7 +27,8 @@ class TestRootAndProducts:
         assert r.status_code == 200
         products = r.json()
         assert isinstance(products, list)
-        assert len(products) == 12
+        # 12 original + 8 sports & combat (iter 4)
+        assert len(products) == 20
         ids = {p["id"]: p for p in products}
         # best sellers w/ specific prices
         assert ids["personalised-tee"]["price"] == 6.99

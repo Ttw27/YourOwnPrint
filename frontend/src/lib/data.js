@@ -54,10 +54,18 @@ export const TRUST_ITEMS = [
 
 export const RATING = { value: 4.5, count: 404 };
 
+// ---- WhatsApp ----
+// Swap this number whenever you're ready (placeholder for now).
+export const WHATSAPP_NUMBER_RAW = "+447000000000";  // E.164
+export const WHATSAPP_NUMBER_DISPLAY = "+44 7000 000000";
+export const buildWhatsAppLink = (preset = "Hi! I'd like some help with my custom print order.") =>
+  `https://wa.me/${WHATSAPP_NUMBER_RAW.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(preset)}`;
+
 export const NAV_LINKS = [
   { label: "Workwear", to: "/workwear" },
   { label: "Teams & Schools", to: "/teams-schools" },
+  { label: "Sports & Combat", to: "/sports" },
+  { label: "Team Kit Builder", to: "/team-kit-builder" },
   { label: "Design Your Own", to: "/design", highlight: true },
   { label: "Get a Quote", to: "/contact" },
-  { label: "Contact", to: "/contact" },
 ];

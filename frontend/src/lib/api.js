@@ -59,3 +59,8 @@ export async function fetchPlacements() {
   const { data } = await api.get("/placements");
   return data;
 }
+
+export async function submitQuoteRequest(payload) {
+  const { data } = await api.post("/quote-request", payload);
+  return data;
+}

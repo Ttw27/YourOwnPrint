@@ -127,6 +127,72 @@ PRODUCTS: Dict[str, Dict] = {
         "image": "https://images.pexels.com/photos/12097160/pexels-photo-12097160.jpeg",
         "description": "Performance fabric tee, club crest included.",
     },
+
+    # ----- Sports & Combat -----
+    "football-jersey": {
+        "id": "football-jersey",
+        "name": "Football Match Jersey",
+        "price": 18.99,
+        "category": "sports",
+        "image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
+        "description": "Performance match jersey. Club crest, sponsor, names & numbers — match-day ready.",
+    },
+    "football-shorts": {
+        "id": "football-shorts",
+        "name": "Football Shorts",
+        "price": 8.99,
+        "category": "sports",
+        "image": "https://images.pexels.com/photos/3651597/pexels-photo-3651597.jpeg",
+        "description": "Lightweight match shorts to pair with the jersey. Number & sponsor print available.",
+    },
+    "rugby-shirt": {
+        "id": "rugby-shirt",
+        "name": "Rugby Match Shirt",
+        "price": 24.99,
+        "category": "sports",
+        "image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
+        "description": "Heavy-grade rugby shirt. Reinforced collar. Crest, sponsor, names + numbers.",
+    },
+    "training-tracksuit": {
+        "id": "training-tracksuit",
+        "name": "Training Tracksuit",
+        "price": 39.99,
+        "category": "sports",
+        "image": "https://images.pexels.com/photos/8260101/pexels-photo-8260101.jpeg",
+        "description": "Full tracksuit (jacket + bottoms). Branded for training & travel days.",
+    },
+    "training-tee": {
+        "id": "training-tee",
+        "name": "Training Tee",
+        "price": 9.99,
+        "category": "sports",
+        "image": "https://images.pexels.com/photos/4720234/pexels-photo-4720234.jpeg",
+        "description": "Breathable training tee — squad name, initials, club crest.",
+    },
+    "boxing-fight-tee": {
+        "id": "boxing-fight-tee",
+        "name": "Boxing Fight Night Sponsor Tee",
+        "price": 11.99,
+        "category": "sports",
+        "image": "https://images.pexels.com/photos/9311461/pexels-photo-9311461.jpeg",
+        "description": "Walk-out tee for fight night — main sponsor + multiple supporting logos. Free proof included.",
+    },
+    "muay-thai-shorts": {
+        "id": "muay-thai-shorts",
+        "name": "Muay Thai / Kickboxing Shorts",
+        "price": 22.99,
+        "category": "sports",
+        "image": "https://images.pexels.com/photos/4761779/pexels-photo-4761779.jpeg",
+        "description": "Traditional cut Muay Thai shorts. Custom names, club logo, sponsor — vibrant satin print.",
+    },
+    "fight-shorts": {
+        "id": "fight-shorts",
+        "name": "MMA / BJJ Fight Shorts",
+        "price": 19.99,
+        "category": "sports",
+        "image": "https://images.pexels.com/photos/4761787/pexels-photo-4761787.jpeg",
+        "description": "Stretch panel fight shorts. Sublimated print — names, sponsors, gym branding.",
+    },
 }
 
 
@@ -172,6 +238,15 @@ _VARIANT_MAP = {
     "team-polo":           {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "dance-tee":           {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "sports-tee":          {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    # Sports & combat
+    "football-jersey":     {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "football-shorts":     {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "White", "hex": "#ffffff"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Royal", "hex": "#1d4ed8"}, {"name": "Red", "hex": "#b91c1c"}], "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": {}},
+    "rugby-shirt":         {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "training-tracksuit":  {"colors": COLOURS_HOODIE, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "training-tee":        {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "boxing-fight-tee":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "White", "hex": "#ffffff"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "muay-thai-shorts":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}, {"name": "Gold", "hex": "#d4a017"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "fight-shorts":        {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Red", "hex": "#b91c1c"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
 }
 for _pid, _meta in _VARIANT_MAP.items():
     if _pid in PRODUCTS:
@@ -288,6 +363,24 @@ class JudgeMeImportRequest(BaseModel):
     product_id_map: Optional[Dict[str, str]] = None  # judgeme product_id/title -> our product_id
 
 
+class QuoteRequest(BaseModel):
+    """Generic quote request — used for team kits 10+, fight-night 'do it for us', bespoke print enquiries."""
+    kind: str  # 'team_kit' | 'fight_night' | 'bespoke_print' | 'general'
+    name: str
+    email: EmailStr
+    phone: Optional[str] = ""
+    company: Optional[str] = ""  # club / gym / business name
+    sport: Optional[str] = ""
+    kit_type: Optional[str] = ""  # home/away/training/etc.
+    quantity: Optional[int] = 0
+    deadline: Optional[str] = ""
+    message: str
+    # File metadata only — files referenced by data URL or external URL.
+    artwork: Optional[List[str]] = None  # base64 data URLs; size-limited each
+    roster: Optional[List[Dict]] = None  # [{name, number, size, qty}, ...]
+    product_id: Optional[str] = None
+
+
 def _photo_ok(s: str) -> bool:
     return isinstance(s, str) and s.startswith("data:image/") and len(s) < 1_500_000  # < ~1.5MB
 
@@ -334,6 +427,32 @@ async def select_theme(payload: ThemeSelectionRequest):
 @api_router.get("/placements")
 async def list_placements():
     return PLACEMENTS
+
+
+@api_router.post("/quote-request")
+async def create_quote_request(payload: QuoteRequest):
+    # Limit artwork sizes silently
+    artwork = [a for a in (payload.artwork or []) if isinstance(a, str) and len(a) < 1_500_000][:12]
+    doc = {
+        "id": str(uuid.uuid4()),
+        "kind": payload.kind,
+        "name": payload.name.strip()[:80],
+        "email": payload.email,
+        "phone": (payload.phone or "")[:40],
+        "company": (payload.company or "")[:120],
+        "sport": (payload.sport or "")[:60],
+        "kit_type": (payload.kit_type or "")[:60],
+        "quantity": int(payload.quantity or 0),
+        "deadline": (payload.deadline or "")[:60],
+        "message": (payload.message or "")[:5000],
+        "artwork": artwork,
+        "roster": (payload.roster or [])[:300],
+        "product_id": payload.product_id,
+        "status": "new",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.quote_requests.insert_one(doc)
+    return {"ok": True, "id": doc["id"]}
 
 
 # ---------- Stripe Checkout ----------

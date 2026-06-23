@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 4 fully tested. Backend: all 33 tests pass (8 new sports products with correct prices+variants, /api/quote-request happy path + invalid email 422 + silent 12-item truncation + >1.5MB artwork drop, existing /api/checkout/session unchanged, regression sports checkout 91.96 match). Frontend: Home + Navbar (nav-sports-combat, nav-team-kit-builder visible & navigating); /sports renders hero + 8 product cards + Team Kit + Fight Night CTAs (CTA navigation verified); 5/6 sport-group testids correct (muay-thai key is 'muaythai' not 'muay-thai' — minor naming mismatch from spec). Team Kit Builder: <10 kits surfaces kit-direct-checkout which POSTs /api/checkout/session with product_id=football-jersey and size_qtys correctly; >=10 kits surfaces submit-quote which POSTs /api/quote-request with kind='team_kit' and shows 'Quote request sent! 🎉' success screen. Fight Night Tee: fight-design-yourself href='/design?product=boxing-fight-tee' ✅; let-us-do-it flow with logo upload + 5 M-size + fn-submit posts /api/quote-request and shows 'Sent! Free proof incoming 🥊'. ProductDetail (polo-shirt): exactly 1 WhatsApp FAB (site FAB suppressed on /product/*), FAB href starts with 'https://wa.me/447000000000' ✅; BespokeQuoteCard + bespoke-contact-link rendered; print-mode-custom & print-mode-blank both present with custom default; Blank mode hides placement-grid and changes button to 'Checkout (Blank)'; Custom mode + 2 placements shows Section 4 with artwork-{placement}-upload buttons; add-to-cart disabled with 'Upload prints to checkout' until BOTH artwork slots uploaded, then becomes enabled with correct price 'Checkout £44.97' (3 × £14.99); customise-design now reads 'Upload your prints'. All math/disabled-states correct.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/sports", "issues": ["Sport-group testid for Muay Thai is 'sport-group-muaythai' (no hyphen) — spec hinted at 'muay-thai'. Cosmetic only; functional. Other 5 groups (football, rugby, boxing, mma, training) match expected."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/backend/tests/test_iteration3.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_reviews.py",
+    "/app/test_reports/pytest/pytest_iter4.xml"
+  ],
+  "action_items": [
+    "Optional: rename Muay Thai sport-group key from 'muaythai' to 'muay-thai' in /app/frontend/src/pages/Sports.jsx for testid consistency with spec — purely cosmetic."
+  ],
+  "critical_code_review_comments": [
+    "server.py: /api/quote-request correctly silently truncates artwork list to 12 and silently drops items >=1.5MB — confirmed by tests. Good defensive limits.",
+    "QuoteRequest model uses EmailStr → invalid email returns 422 as expected.",
+    "Stripe metadata for team-kit checkout correctly forwards club/sport/kit_type/names_numbers as design_meta_* — visible in captured POST.",
+    "ProductDetail correctly disables add-to-cart with all three triggers: (totalQty<1) OR (custom & no placements) OR (custom & not all artwork uploaded). Lock copy 'Upload prints to checkout' matches spec.",
+    "SiteFAB suppression: /sports, /team-kit-builder, /fight-night-tee, /product/* — confirmed exactly 1 FAB on each. No duplicates.",
+    "TeamKitBuilder: roster-size dropdown and qty input keyed by index work; switching between kit-direct-checkout and submit-quote at the totalKits=10 boundary is reactive and clean.",
+    "Tests now use REACT_APP_BACKEND_URL from env — no hardcoded URLs.",
+    "Minor: legacy backend_test.py was asserting len(products)==12 — updated to 20 to reflect new sports catalogue."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py (NEW — 10 tests covering sports products + quote-request + sports checkout)",
+    "/app/backend/tests/backend_test.py (updated product count assertion 12 → 20)"
+  ],
+  "success_rate": {"backend": "100% (33/33)", "frontend": "100% on all iter-4 flows tested"},
+  "test_credentials": "none required",
+  "seed_data_creation": "Each Stripe checkout test creates a payment_transactions doc (initiated state). Each quote-request test inserts into db.quote_requests. All TEST_-prefixed names/emails for easy cleanup.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/ -v` — 33 tests across backend_test.py, test_iteration3.py, test_iteration4.py, test_reviews.py. Iteration 4 file covers sports products + /api/quote-request. Frontend hot reload works. WhatsApp number is placeholder (+447000000000) — wired correctly throughout. Tiny PNG fixture used: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/AAAZ4gk3AAAAAXRSTlPM0jRW/QAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII='.",
+  "rca of the issue": "No critical issues found. The only minor cosmetic naming nit is sport-group-muaythai vs sport-group-muay-thai in Sports.jsx line 12 (key:'muaythai'). Reproduction: GET /sports, inspect any group card data-testid attribute. Mitigation: change key from 'muaythai' to 'muay-thai' in SPORT_GROUPS constant — purely cosmetic, no functional impact."
+}

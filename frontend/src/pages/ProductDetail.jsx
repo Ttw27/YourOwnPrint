@@ -1,11 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ProductReviews from "../components/bold/ProductReviews";
 import PricePromise from "../components/bold/PricePromise";
+import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
+import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { api, fetchReviewsAggregate, fetchPlacements, createCheckout } from "../lib/api";
 import { toast } from "sonner";
-import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, BadgeCheck, Shirt } from "lucide-react";
+import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon } from "lucide-react";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -16,11 +18,13 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  // selection state
+  // Selections
   const [color, setColor] = useState(null);
   const [sizeQtys, setSizeQtys] = useState({});
-  const [blank, setBlank] = useState(false);
+  const [printMode, setPrintMode] = useState("custom"); // "custom" | "blank"
   const [selectedPlacements, setSelectedPlacements] = useState([]);
+  // Per-placement artwork uploads (data URLs)
+  const [artwork, setArtwork] = useState({}); // { 'left-breast': dataUrl, ... }
   const [checkingOut, setCheckingOut] = useState(false);
 
   useEffect(() => {
@@ -31,48 +35,68 @@ export default function ProductDetail() {
       fetchReviewsAggregate().catch(() => ({})),
     ])
       .then(([p, pl, ag]) => {
-        setProduct(p);
-        setPlacements(pl);
-        setAggregates(ag);
+        setProduct(p); setPlacements(pl); setAggregates(ag);
         setColor((p.colors && p.colors[0]?.name) || null);
         setSizeQtys({});
-        setBlank(false);
+        setPrintMode("custom");
         setSelectedPlacements([]);
+        setArtwork({});
       })
       .catch((e) => setErr(e?.response?.status === 404 ? "Product not found" : "Could not load product"))
       .finally(() => setLoading(false));
   }, [id]);
 
+  const blank = printMode === "blank";
   const agg = aggregates[id];
-
   const placementById = useMemo(() => Object.fromEntries(placements.map(p => [p.id, p])), [placements]);
 
   const togglePlacement = (pid) => {
-    if (blank) setBlank(false);
+    if (blank) return;
     setSelectedPlacements((prev) => {
       const has = prev.includes(pid);
-      if (has) return prev.filter(x => x !== pid);
-      // enforce exclusivity
+      if (has) {
+        // also drop any uploaded art for that placement
+        setArtwork((a) => { const next = { ...a }; delete next[pid]; return next; });
+        return prev.filter(x => x !== pid);
+      }
       const excludes = placementById[pid]?.excludes || [];
       const next = prev.filter(x => !excludes.includes(x));
-      // also remove this id from any other placement that excludes it
-      const reverseExcl = placements
-        .filter(p => p.excludes.includes(pid))
-        .map(p => p.id);
+      const reverseExcl = placements.filter(p => p.excludes.includes(pid)).map(p => p.id);
+      // also drop artwork for excluded placements
+      excludes.concat(reverseExcl).forEach((excl) => {
+        setArtwork((a) => { const nx = { ...a }; delete nx[excl]; return nx; });
+      });
       return [...next.filter(x => !reverseExcl.includes(x)), pid];
     });
   };
-
   const isPlacementDisabled = (pid) => {
     if (blank) return true;
     const excl = placementById[pid]?.excludes || [];
     return excl.some(e => selectedPlacements.includes(e));
   };
 
-  const totalQty = useMemo(
-    () => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0),
-    [sizeQtys]
-  );
+  // Artwork upload — auto-resize to <800px
+  const onPickArtwork = (pid, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1000;
+        const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * sc), h = Math.round(img.height * sc);
+        const c = document.createElement("canvas"); c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        setArtwork(prev => ({ ...prev, [pid]: c.toDataURL("image/png") }));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  const removeArtwork = (pid) =>
+    setArtwork(prev => { const next = { ...prev }; delete next[pid]; return next; });
+
+  const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
   const printCostPerGarment = useMemo(
     () => (blank ? 0 : selectedPlacements.reduce((s, pid) => s + (placementById[pid]?.price || 0), 0)),
     [blank, selectedPlacements, placementById]
@@ -90,19 +114,27 @@ export default function ProductDetail() {
     return total;
   }, [product, sizeQtys, printCostPerGarment]);
 
+  const allArtworkUploaded = useMemo(
+    () => blank || (selectedPlacements.length > 0 && selectedPlacements.every(p => artwork[p])),
+    [blank, selectedPlacements, artwork]
+  );
+  const checkoutBlocked = totalQty < 1
+    || (!blank && selectedPlacements.length === 0)
+    || (!blank && !allArtworkUploaded);
+
   const setSizeQty = (sz, q) => {
     const n = Math.max(0, Math.min(5000, Number(q) || 0));
-    setSizeQtys((prev) => {
-      const next = { ...prev };
-      if (n === 0) delete next[sz];
-      else next[sz] = n;
-      return next;
-    });
+    setSizeQtys((prev) => { const next = { ...prev }; if (n === 0) delete next[sz]; else next[sz] = n; return next; });
   };
-  const bump = (sz, delta) => setSizeQty(sz, (sizeQtys[sz] || 0) + delta);
+  const bump = (sz, d) => setSizeQty(sz, (sizeQtys[sz] || 0) + d);
 
   const onCheckout = async () => {
-    if (totalQty < 1) { toast.error("Add at least 1 item to a size"); return; }
+    if (checkoutBlocked) {
+      if (totalQty < 1) toast.error("Add at least 1 item to a size");
+      else if (!blank && selectedPlacements.length === 0) toast.error("Pick at least one print placement (or switch to Buy Blank)");
+      else toast.error("Please upload artwork for every selected placement");
+      return;
+    }
     setCheckingOut(true);
     try {
       const { url } = await createCheckout({
@@ -112,6 +144,10 @@ export default function ProductDetail() {
         placements: blank ? [] : selectedPlacements,
         blank,
         origin_url: window.location.origin,
+        design_meta: blank ? { mode: "blank" } : {
+          mode: "uploaded",
+          placements_uploaded: Object.keys(artwork).join(","),
+        },
       });
       window.location.href = url;
     } catch (e) {
@@ -120,27 +156,16 @@ export default function ProductDetail() {
     }
   };
 
-  const goCustomise = () => {
-    if (totalQty < 1) { toast.error("Pick at least one size & quantity first"); return; }
-    if (blank) { toast.error("Switch off 'Buy blank' to design a print"); return; }
-    if (selectedPlacements.length === 0) { toast.error("Pick at least one print placement first"); return; }
-    const qs = new URLSearchParams({
-      product: product.id,
-      placements: selectedPlacements.join(","),
-      color: color || "",
-    });
-    navigate(`/design?${qs.toString()}`);
-  };
-
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
       <BoldNavbar />
+      <WhatsAppFAB preset={`Hi! Question about the ${product?.name || "product"}…`} />
 
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="text-xs font-nunito font-bold text-[#4b5563] mb-4">
           <Link to="/" className="hover:text-[#7bc67e]">Home</Link>
           <span className="mx-2">/</span>
-          <Link to={`/${product?.category === "workwear" ? "workwear" : product?.category === "teams-schools" ? "teams-schools" : ""}`} className="hover:text-[#7bc67e]">{product?.category || "Shop"}</Link>
+          <Link to={product?.category === "workwear" ? "/workwear" : product?.category === "teams-schools" ? "/teams-schools" : product?.category === "sports" ? "/sports" : "/"} className="hover:text-[#7bc67e]">{product?.category || "Shop"}</Link>
           <span className="mx-2">/</span>
           <span data-testid="product-breadcrumb-name">{product?.name || ""}</span>
         </div>
@@ -200,9 +225,7 @@ export default function ProductDetail() {
 
                 {/* Sizes */}
                 <Section title="2. Sizes & quantity" right={
-                  <span className="text-xs text-[#4b5563]">
-                    Total: <span data-testid="size-total-qty" className="font-nunito font-extrabold text-[#1a1a1a]">{totalQty}</span>
-                  </span>
+                  <span className="text-xs text-[#4b5563]">Total: <span data-testid="size-total-qty" className="font-nunito font-extrabold text-[#1a1a1a]">{totalQty}</span></span>
                 }>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" data-testid="size-grid">
                     {(product.sizes || []).map((sz) => {
@@ -210,83 +233,113 @@ export default function ProductDetail() {
                       const upcharge = (product.size_upcharges || {})[sz] || 0;
                       const active = qty > 0;
                       return (
-                        <div
-                          key={sz}
-                          data-testid={`size-row-${sz}`}
-                          className={`rounded-xl border-2 p-2.5 transition-colors ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}
-                        >
+                        <div key={sz} data-testid={`size-row-${sz}`} className={`rounded-xl border-2 p-2.5 transition-colors ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
                           <div className="flex items-center justify-between">
                             <span className="font-nunito font-extrabold text-sm">{sz}</span>
                             {upcharge > 0 && <span className="text-[10px] font-nunito font-bold text-[#4b5563]">+£{upcharge.toFixed(2)}</span>}
                           </div>
                           <div className="flex items-center gap-1 mt-2">
                             <button data-testid={`size-${sz}-minus`} onClick={() => bump(sz, -1)} className="w-7 h-7 grid place-items-center rounded-full bg-white border border-[#e5e7eb] hover:border-[#7bc67e] disabled:opacity-40" disabled={qty === 0}><Minus size={12} /></button>
-                            <input
-                              data-testid={`size-${sz}-qty`}
-                              type="number"
-                              min={0}
-                              value={qty}
-                              onChange={(e) => setSizeQty(sz, e.target.value)}
-                              className="w-full text-center bg-transparent font-nunito font-extrabold text-sm focus:outline-none"
-                            />
+                            <input data-testid={`size-${sz}-qty`} type="number" min={0} value={qty} onChange={(e) => setSizeQty(sz, e.target.value)} className="w-full text-center bg-transparent font-nunito font-extrabold text-sm focus:outline-none" />
                             <button data-testid={`size-${sz}-plus`} onClick={() => bump(sz, 1)} className="w-7 h-7 grid place-items-center rounded-full bg-white border border-[#e5e7eb] hover:border-[#7bc67e]"><Plus size={12} /></button>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                  {totalQty > 0 && (
-                    <div className="mt-3 text-xs text-[#4b5563]" data-testid="size-summary">
-                      <Info size={12} className="inline mr-1" />
-                      Ordering: {Object.entries(sizeQtys).filter(([, q]) => q > 0).map(([sz, q]) => `${sz}×${q}`).join(" · ")}
+                </Section>
+
+                {/* PRINT MODE — prominent segmented choice */}
+                <Section title="3. Print options">
+                  <div className="grid grid-cols-2 gap-2 mb-4" data-testid="print-mode-toggle">
+                    <button
+                      data-testid="print-mode-custom"
+                      onClick={() => setPrintMode("custom")}
+                      className={`p-4 rounded-2xl border-2 text-left transition-all ${printMode === "custom" ? "border-[#7bc67e] bg-[#f0fdf4] shadow-md" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-4 h-4 rounded-full border-2 ${printMode === "custom" ? "border-[#7bc67e] bg-[#7bc67e]" : "border-[#e5e7eb]"}`} />
+                        <span className="font-nunito font-extrabold">Add Custom Print</span>
+                      </div>
+                      <div className="text-xs text-[#4b5563] mt-1.5">Pick placements, upload your logo, free proof.</div>
+                    </button>
+                    <button
+                      data-testid="print-mode-blank"
+                      onClick={() => setPrintMode("blank")}
+                      className={`p-4 rounded-2xl border-2 text-left transition-all ${printMode === "blank" ? "border-[#1a1a1a] bg-[#1a1a1a] text-white shadow-md" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-4 h-4 rounded-full border-2 ${printMode === "blank" ? "border-white bg-white" : "border-[#e5e7eb]"}`} />
+                        <span className="font-nunito font-extrabold">Buy Blank — No Print</span>
+                      </div>
+                      <div className={`text-xs mt-1.5 ${printMode === "blank" ? "text-neutral-300" : "text-[#4b5563]"}`}>Plain garment, no decoration. Just the base price.</div>
+                    </button>
+                  </div>
+
+                  {!blank && (
+                    <>
+                      <div className={`grid grid-cols-2 gap-2`} data-testid="placements-grid">
+                        {placements.map((p) => {
+                          const checked = selectedPlacements.includes(p.id);
+                          const disabled = isPlacementDisabled(p.id);
+                          return (
+                            <label
+                              key={p.id}
+                              data-testid={`placement-${p.id}`}
+                              className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${checked ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                            >
+                              <input type="checkbox" checked={checked} disabled={disabled} onChange={() => togglePlacement(p.id)} className="w-4 h-4 accent-[#7bc67e]" data-testid={`placement-${p.id}-checkbox`} />
+                              <div className="flex-1">
+                                <div className="font-nunito font-extrabold text-sm">{p.label}</div>
+                                <div className="text-xs text-[#4b5563]">+£{p.price.toFixed(2)} / garment</div>
+                              </div>
+                              <Shirt size={16} className="text-[#7bc67e]" />
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 text-xs text-[#4b5563] flex items-start gap-1.5">
+                        <Info size={12} className="mt-0.5 flex-shrink-0" />
+                        <span><strong>Full front replaces left/right breast.</strong> Pick any combination of front, back & sleeves.</span>
+                      </div>
+                    </>
+                  )}
+                  {blank && (
+                    <div className="bg-[#1a1a1a]/5 rounded-xl p-4 text-sm text-[#4b5563] flex items-start gap-2">
+                      <Info size={14} className="mt-0.5 text-[#1a1a1a]" />
+                      <span>You're buying <strong>blank garments only</strong> — no print, just the base price.</span>
                     </div>
                   )}
                 </Section>
 
-                {/* Print placement */}
-                <Section title="3. Print options" right={
-                  <button
-                    onClick={() => { setBlank(b => !b); if (!blank) setSelectedPlacements([]); }}
-                    data-testid="buy-blank-toggle"
-                    className={`text-xs font-nunito font-extrabold px-3 py-1.5 rounded-full transition-colors ${blank ? "bg-[#1a1a1a] text-white" : "bg-[#f0fdf4] text-[#1a1a1a] hover:bg-[#dcfce7]"}`}
+                {/* UPLOAD ARTWORK — visible only when custom + at least 1 placement */}
+                {!blank && selectedPlacements.length > 0 && (
+                  <Section
+                    title="4. Upload your prints"
+                    right={
+                      allArtworkUploaded
+                        ? <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e]"><Check size={14} /> All artwork uploaded</span>
+                        : <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-rose-500"><Lock size={12} /> Required to checkout</span>
+                    }
                   >
-                    {blank ? "✓ Buy Blank (no print)" : "Buy blank"}
-                  </button>
-                }>
-                  <div className={`grid grid-cols-2 gap-2 ${blank ? "opacity-50 pointer-events-none" : ""}`} data-testid="placements-grid">
-                    {placements.map((p) => {
-                      const checked = selectedPlacements.includes(p.id);
-                      const disabled = isPlacementDisabled(p.id);
-                      return (
-                        <label
-                          key={p.id}
-                          data-testid={`placement-${p.id}`}
-                          className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
-                            checked ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"
-                          } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={disabled}
-                            onChange={() => togglePlacement(p.id)}
-                            className="w-4 h-4 accent-[#7bc67e]"
-                            data-testid={`placement-${p.id}-checkbox`}
-                          />
-                          <div className="flex-1">
-                            <div className="font-nunito font-extrabold text-sm">{p.label}</div>
-                            <div className="text-xs text-[#4b5563]">+£{p.price.toFixed(2)} / garment</div>
-                          </div>
-                          <Shirt size={16} className="text-[#7bc67e]" />
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-3 text-xs text-[#4b5563] flex items-start gap-1.5">
-                    <Info size={12} className="mt-0.5 flex-shrink-0" />
-                    <span>Pick any combination — front & back, sleeves, breast logo. <strong>Full front replaces left/right breast.</strong> Or buy blank with no print.</span>
-                  </div>
-                </Section>
+                    <div className="grid sm:grid-cols-2 gap-3" data-testid="artwork-grid">
+                      {selectedPlacements.map((pid) => (
+                        <ArtworkSlot
+                          key={pid}
+                          placement={placementById[pid]}
+                          dataUrl={artwork[pid]}
+                          onPick={(file) => onPickArtwork(pid, file)}
+                          onRemove={() => removeArtwork(pid)}
+                          testId={`artwork-${pid}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="mt-3 text-xs text-[#4b5563] flex items-start gap-1.5">
+                      <Info size={12} className="mt-0.5 flex-shrink-0" />
+                      <span>PNG with transparent background works best · we'll send a free proof before printing · same logo for every placement? Just upload the same file for each.</span>
+                    </div>
+                  </Section>
+                )}
 
                 {/* Price summary */}
                 <div className="bg-[#1a1a1a] text-white rounded-3xl p-6" data-testid="price-summary">
@@ -297,9 +350,7 @@ export default function ProductDetail() {
                   {Object.entries(product.size_upcharges || {}).some(([sz]) => (sizeQtys[sz] || 0) > 0) && (
                     <div className="flex items-center justify-between text-sm mt-1 text-neutral-300">
                       <span>Size upcharges</span>
-                      <span data-testid="price-upcharge">
-                        £{Object.entries(sizeQtys).reduce((s, [sz, q]) => s + ((product.size_upcharges?.[sz] || 0) * (Number(q) || 0)), 0).toFixed(2)}
-                      </span>
+                      <span data-testid="price-upcharge">£{Object.entries(sizeQtys).reduce((s, [sz, q]) => s + ((product.size_upcharges?.[sz] || 0) * (Number(q) || 0)), 0).toFixed(2)}</span>
                     </div>
                   )}
                   {printCostPerGarment > 0 && (
@@ -312,30 +363,40 @@ export default function ProductDetail() {
                     <span className="font-nunito font-extrabold">Total</span>
                     <span data-testid="price-total" className="text-[#7bc67e] font-nunito font-black text-4xl">£{lineTotal.toFixed(2)}</span>
                   </div>
-                  <div className="text-xs text-neutral-400 mt-1">incl. free UK delivery on orders over £50 · Stripe secure checkout</div>
 
                   <div className="mt-5 grid sm:grid-cols-2 gap-2">
                     <button
                       data-testid="add-to-cart"
                       onClick={onCheckout}
-                      disabled={checkingOut || totalQty < 1}
-                      className="inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 text-[#1a1a1a] font-nunito font-extrabold rounded-full px-5 py-3.5 shadow-md transition-transform hover:-translate-y-0.5"
+                      disabled={checkingOut || checkoutBlocked}
+                      className="inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 disabled:cursor-not-allowed text-[#1a1a1a] font-nunito font-extrabold rounded-full px-5 py-3.5 shadow-md transition-transform hover:-translate-y-0.5"
                     >
-                      {checkingOut ? <><Loader2 className="animate-spin" size={16} /> Redirecting…</> : <><ShoppingCart size={16} /> {blank ? "Checkout (Blank)" : "Checkout"}</>}
+                      {checkingOut
+                        ? <><Loader2 className="animate-spin" size={16} /> Redirecting…</>
+                        : blank
+                          ? <><ShoppingCart size={16} /> Checkout (Blank)</>
+                          : !allArtworkUploaded
+                            ? <><Lock size={14} /> Upload prints to checkout</>
+                            : <><ShoppingCart size={16} /> Checkout £{lineTotal.toFixed(2)}</>}
                     </button>
                     <button
                       data-testid="customise-design"
-                      onClick={goCustomise}
-                      disabled={blank || selectedPlacements.length === 0 || totalQty < 1}
+                      onClick={() => {
+                        if (blank) { toast.error("Switch to 'Add Custom Print' first"); return; }
+                        if (selectedPlacements.length === 0) { toast.error("Pick at least one print placement first"); return; }
+                        const qs = new URLSearchParams({ product: product.id, placements: selectedPlacements.join(","), color: color || "" });
+                        navigate(`/design?${qs.toString()}`);
+                      }}
+                      disabled={blank || selectedPlacements.length === 0}
                       className="inline-flex items-center justify-center gap-2 border-2 border-[#7bc67e] text-[#7bc67e] hover:bg-[#7bc67e] hover:text-[#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed font-nunito font-extrabold rounded-full px-5 py-3.5 transition-colors"
                     >
-                      <Wand2 size={16} /> Design these prints
+                      <Wand2 size={16} /> Upload your prints
                     </button>
                   </div>
-                  <div className="text-xs text-neutral-400 mt-2">"Design these prints" lets you upload your logo & preview before paying.</div>
+                  <div className="text-xs text-neutral-400 mt-2">"Upload your prints" opens our designer for live previewing — or upload directly above and checkout.</div>
                 </div>
 
-                {/* Trust strip + price promise card */}
+                {/* Trust strip */}
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   {[
                     { icon: ShieldCheck, label: "UK based" },
@@ -348,7 +409,14 @@ export default function ProductDetail() {
                     </div>
                   ))}
                 </div>
+
+                <BespokeQuoteCard productName={product.name} />
                 <PricePromise variant="card" />
+
+                <div className="bg-[#f0fdf4] rounded-2xl p-4 border border-[#dcfce7] flex items-center justify-between gap-3 flex-wrap">
+                  <div className="text-sm font-nunito font-bold text-[#1a1a1a]">Need instant help? Our UK team is on WhatsApp.</div>
+                  <WhatsAppInline preset={`Hi! Question about the ${product.name}…`} label="WhatsApp" />
+                </div>
               </div>
             </div>
 
@@ -365,11 +433,40 @@ export default function ProductDetail() {
 function Section({ title, right, children }) {
   return (
     <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-5">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         <h3 className="font-nunito font-extrabold text-[#1a1a1a]">{title}</h3>
         {right}
       </div>
       {children}
+    </div>
+  );
+}
+
+function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId }) {
+  const ref = useRef(null);
+  return (
+    <div className={`rounded-xl border-2 p-3 transition-colors ${dataUrl ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-dashed border-[#e5e7eb] bg-white"}`} data-testid={testId}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-nunito font-extrabold text-sm">{placement?.label}</span>
+        {dataUrl
+          ? <span className="inline-flex items-center gap-1 text-xs font-nunito font-bold text-[#7bc67e]"><Check size={12} /> Uploaded</span>
+          : <span className="text-xs text-rose-500 font-nunito font-bold">Required</span>}
+      </div>
+      {dataUrl ? (
+        <div className="flex items-center gap-2">
+          <img src={dataUrl} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-[#dcfce7] p-1" />
+          <div className="flex flex-col gap-1.5">
+            <button data-testid={`${testId}-replace`} onClick={() => ref.current?.click()} className="text-xs font-nunito font-extrabold bg-white border border-[#dcfce7] hover:border-[#7bc67e] rounded-full px-3 py-1.5 transition-colors">Replace</button>
+            <button data-testid={`${testId}-remove`} onClick={onRemove} className="text-xs font-nunito font-extrabold text-rose-500 hover:bg-rose-50 rounded-full px-3 py-1.5 transition-colors inline-flex items-center gap-1"><Trash2 size={10} /> Remove</button>
+          </div>
+        </div>
+      ) : (
+        <button data-testid={`${testId}-upload`} onClick={() => ref.current?.click()} className="w-full bg-white hover:bg-[#f0fdf4] border border-dashed border-[#7bc67e] text-[#7bc67e] py-4 rounded-lg flex flex-col items-center gap-1 transition-colors">
+          <Upload size={18} />
+          <span className="text-xs font-nunito font-extrabold">Upload artwork</span>
+        </button>
+      )}
+      <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => onPick(e.target.files?.[0])} />
     </div>
   );
 }
