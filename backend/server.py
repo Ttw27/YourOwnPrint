@@ -130,6 +130,76 @@ PRODUCTS: Dict[str, Dict] = {
 }
 
 
+# ---------- Variant defaults applied to every product ----------
+DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"]
+DEFAULT_SIZE_UPCHARGES = {"3XL": 1.50, "4XL": 3.00}
+KIDS_SIZES = ["3-4", "5-6", "7-8", "9-11", "12-13"]
+
+COLOURS_GARMENT = [
+    {"name": "White", "hex": "#ffffff"},
+    {"name": "Black", "hex": "#0d0d0d"},
+    {"name": "Navy", "hex": "#1a2a4a"},
+    {"name": "Royal Blue", "hex": "#1d4ed8"},
+    {"name": "Red", "hex": "#b91c1c"},
+    {"name": "Bottle Green", "hex": "#14532d"},
+    {"name": "Grey Marl", "hex": "#9ca3af"},
+    {"name": "Yellow", "hex": "#facc15"},
+]
+COLOURS_HIVIS = [
+    {"name": "Hi-Vis Yellow", "hex": "#facc15"},
+    {"name": "Hi-Vis Orange", "hex": "#fb923c"},
+]
+COLOURS_HOODIE = [
+    {"name": "Black", "hex": "#0d0d0d"},
+    {"name": "Grey Marl", "hex": "#9ca3af"},
+    {"name": "Navy", "hex": "#1a2a4a"},
+    {"name": "Burgundy", "hex": "#7f1d1d"},
+    {"name": "Bottle Green", "hex": "#14532d"},
+    {"name": "White", "hex": "#ffffff"},
+]
+
+# Apply variants to each product
+_VARIANT_MAP = {
+    "personalised-tee":    {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "personalised-hoodie": {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "kids-tee":            {"colors": COLOURS_GARMENT, "sizes": KIDS_SIZES, "size_upcharges": {}},
+    "polo-shirt":          {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "workwear-jacket":     {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Charcoal", "hex": "#374151"}], "sizes": DEFAULT_SIZES[1:], "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "hi-vis-vest":         {"colors": COLOURS_HIVIS, "sizes": ["S/M", "L/XL", "XXL"], "size_upcharges": {}},
+    "workwear-tshirt":     {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "workwear-sweatshirt": {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "school-hoodie":       {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "team-polo":           {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "dance-tee":           {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "sports-tee":          {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+}
+for _pid, _meta in _VARIANT_MAP.items():
+    if _pid in PRODUCTS:
+        PRODUCTS[_pid].update(_meta)
+
+
+# ---------- Print placements ----------
+PLACEMENTS: List[Dict] = [
+    {"id": "left-breast",  "label": "Left breast",  "price": 2.50, "excludes": ["full-front"]},
+    {"id": "right-breast", "label": "Right breast", "price": 2.50, "excludes": ["full-front"]},
+    {"id": "full-front",   "label": "Full front",   "price": 3.50, "excludes": ["left-breast", "right-breast"]},
+    {"id": "back-print",   "label": "Back print",   "price": 3.50, "excludes": []},
+    {"id": "left-sleeve",  "label": "Left sleeve",  "price": 1.50, "excludes": []},
+    {"id": "right-sleeve", "label": "Right sleeve", "price": 1.50, "excludes": []},
+]
+PLACEMENT_BY_ID = {p["id"]: p for p in PLACEMENTS}
+
+
+def _validate_placements(placements: List[str]) -> List[str]:
+    """Return cleaned placements list, raising 400 if exclusivity rules are broken."""
+    cleaned = [p for p in (placements or []) if p in PLACEMENT_BY_ID]
+    for pid in cleaned:
+        for excl in PLACEMENT_BY_ID[pid]["excludes"]:
+            if excl in cleaned:
+                raise HTTPException(400, f"'{pid}' cannot be combined with '{excl}'")
+    return cleaned
+
+
 # ---------- Models ----------
 class ContactRequest(BaseModel):
     name: str
@@ -162,10 +232,15 @@ class ThemeSelectionRequest(BaseModel):
 
 class CheckoutRequest(BaseModel):
     product_id: str
-    quantity: int = 1
-    size: Optional[str] = "M"
+    quantity: int = 1  # legacy single-size path
+    size: Optional[str] = "M"  # legacy
+    # New richer fields (preferred):
+    size_qtys: Optional[Dict[str, int]] = None  # {"M": 5, "L": 10, ...}
+    color: Optional[str] = None
+    placements: Optional[List[str]] = None
+    blank: bool = False  # "buy blank" — no placements
     origin_url: str
-    design_meta: Optional[Dict[str, str]] = None  # text/filter notes only — no prices
+    design_meta: Optional[Dict[str, str]] = None
 
 
 class CheckoutResponse(BaseModel):
@@ -256,17 +331,71 @@ async def select_theme(payload: ThemeSelectionRequest):
     return {"ok": True, "id": doc["id"]}
 
 
+@api_router.get("/placements")
+async def list_placements():
+    return PLACEMENTS
+
+
 # ---------- Stripe Checkout ----------
 @api_router.post("/checkout/session", response_model=CheckoutResponse)
 async def create_checkout(payload: CheckoutRequest, http_request: Request):
     if payload.product_id not in PRODUCTS:
         raise HTTPException(400, "Invalid product")
-    if payload.quantity < 1 or payload.quantity > 500:
-        raise HTTPException(400, "Quantity must be 1-500")
 
     product = PRODUCTS[payload.product_id]
-    unit_price = float(product["price"])
-    total_amount = round(unit_price * payload.quantity, 2)
+    base_price = float(product["price"])
+    size_upcharges: Dict[str, float] = product.get("size_upcharges", {}) or {}
+    allowed_sizes = set(product.get("sizes", []))
+
+    # Resolve placements (blank wins)
+    if payload.blank:
+        placements_clean: List[str] = []
+    else:
+        placements_clean = _validate_placements(payload.placements or [])
+    print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
+
+    # Resolve size quantities (new path preferred, legacy fallback)
+    size_qtys: Dict[str, int] = {}
+    if payload.size_qtys:
+        for sz, q in payload.size_qtys.items():
+            try:
+                q_int = int(q)
+            except (TypeError, ValueError):
+                continue
+            if q_int <= 0:
+                continue
+            if allowed_sizes and sz not in allowed_sizes:
+                raise HTTPException(400, f"Size '{sz}' not available for this product")
+            size_qtys[sz] = q_int
+    else:
+        # Legacy: single size + quantity
+        sz = payload.size or "M"
+        q_int = int(payload.quantity or 1)
+        if q_int < 1:
+            raise HTTPException(400, "Quantity must be ≥ 1")
+        if allowed_sizes and sz not in allowed_sizes:
+            sz = next(iter(allowed_sizes)) if allowed_sizes else sz
+        size_qtys[sz] = q_int
+
+    if not size_qtys:
+        raise HTTPException(400, "Select at least one size with quantity ≥ 1")
+
+    total_qty = sum(size_qtys.values())
+    if total_qty < 1 or total_qty > 5000:
+        raise HTTPException(400, "Total quantity must be 1-5000")
+
+    # Compute total server-side
+    total_amount = 0.0
+    line_breakdown = []
+    for sz, q in size_qtys.items():
+        unit = base_price + float(size_upcharges.get(sz, 0.0)) + print_cost
+        line = round(unit * q, 2)
+        total_amount += line
+        line_breakdown.append(f"{sz}×{q}@£{unit:.2f}")
+    total_amount = round(total_amount, 2)
+
+    if total_amount < 0.5:
+        raise HTTPException(400, "Total below Stripe minimum (£0.50)")
 
     host_url = str(http_request.base_url)
     webhook_url = f"{host_url}api/webhook/stripe"
@@ -274,13 +403,17 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
 
     origin = payload.origin_url.rstrip("/")
     success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{origin}/design"
+    cancel_url = f"{origin}/product/{payload.product_id}"
 
     metadata = {
         "product_id": payload.product_id,
         "product_name": product["name"],
-        "size": payload.size or "M",
-        "quantity": str(payload.quantity),
+        "color": (payload.color or "")[:60],
+        "blank": "true" if payload.blank or not placements_clean else "false",
+        "placements": ",".join(placements_clean)[:400],
+        "sizes": ",".join(line_breakdown)[:400],
+        "total_qty": str(total_qty),
+        "print_cost_per_garment": f"£{print_cost:.2f}",
     }
     if payload.design_meta:
         for k, v in payload.design_meta.items():
@@ -304,8 +437,11 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
             "session_id": session.session_id,
             "product_id": payload.product_id,
             "product_name": product["name"],
-            "quantity": payload.quantity,
-            "size": payload.size or "M",
+            "color": payload.color,
+            "placements": placements_clean,
+            "blank": bool(payload.blank or not placements_clean),
+            "size_qtys": size_qtys,
+            "total_quantity": total_qty,
             "amount": total_amount,
             "currency": "gbp",
             "metadata": metadata,

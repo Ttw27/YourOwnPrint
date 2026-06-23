@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
+import PricePromise from "../components/bold/PricePromise";
 import { SECTORS, REVIEWS as STATIC_REVIEWS, RATING } from "../lib/data";
 import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews } from "../lib/api";
 import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera } from "lucide-react";
@@ -68,6 +69,9 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Price Promise band — compact */}
+      <PricePromise variant="band" />
+
       {/* Sectors */}
       <div className="max-w-7xl mx-auto px-6 py-20">
         <h2 className="text-center font-nunito font-black text-4xl lg:text-5xl text-[#1a1a1a]">Shop by Sector</h2>
@@ -90,8 +94,7 @@ export default function Home() {
 
       {/* Designer feature */}
       <div className="bg-[#f0fdf4] border-y border-[#dcfce7]">
-        <div className="max-w-7xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-10 items-center">
-          <div>
+        <div className="max-w-7xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-10 items-center">          <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs">
               <Smile size={14} className="text-[#7bc67e]" /> So easy, anyone can do it
             </div>
@@ -158,6 +161,9 @@ export default function Home() {
           <Link to="/reviews" className="mt-4 inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-6 py-2.5 rounded-full transition-colors">Browse & review →</Link>
         </div>
       </div>
+
+      {/* Full price promise hero */}
+      <PricePromise variant="hero" />
 
       <BoldFooter />
     </div>

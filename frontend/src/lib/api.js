@@ -54,3 +54,8 @@ export async function importJudgeMe(payload) {
   const { data } = await api.post("/reviews/import-judgeme", payload);
   return data;
 }
+
+export async function fetchPlacements() {
+  const { data } = await api.get("/placements");
+  return data;
+}

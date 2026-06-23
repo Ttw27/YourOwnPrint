@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { StarRating } from "./BoldLayout";
 import { fetchProductReviews, submitReview } from "../../lib/api";
 import { toast } from "sonner";
-import { Star, Camera, Loader2, ShieldCheck, X } from "lucide-react";
+import { Star, Camera, Loader2, ShieldCheck, X, Filter } from "lucide-react";
 
 const MAX_PHOTOS = 4;
 
@@ -10,6 +10,7 @@ export default function ProductReviews({ productId, productName }) {
   const [data, setData] = useState({ average: 0, count: 0, reviews: [] });
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [filter, setFilter] = useState({ rating: null, withPhotos: false });
   const reload = async () => {
     setLoading(true);
     try { setData(await fetchProductReviews(productId)); } finally { setLoading(false); }
@@ -17,6 +18,17 @@ export default function ProductReviews({ productId, productName }) {
   useEffect(() => { reload(); }, [productId]);
 
   const distribution = computeDistribution(data.reviews);
+  const photoCount = useMemo(() => data.reviews.filter(r => (r.photos || []).length > 0).length, [data.reviews]);
+  const filtered = useMemo(() => {
+    return data.reviews.filter((r) => {
+      if (filter.rating && r.rating !== filter.rating) return false;
+      if (filter.withPhotos && (!r.photos || r.photos.length === 0)) return false;
+      return true;
+    });
+  }, [data.reviews, filter]);
+
+  const clearFilters = () => setFilter({ rating: null, withPhotos: false });
+  const hasFilter = filter.rating !== null || filter.withPhotos;
 
   return (
     <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-6 lg:p-8" data-testid="product-reviews-block">
@@ -58,9 +70,45 @@ export default function ProductReviews({ productId, productName }) {
               No reviews yet — be the first!
             </div>
           ) : (
-            <ul className="space-y-4" data-testid="reviews-list">
-              {data.reviews.map((r) => <ReviewCard key={r.id} r={r} />)}
-            </ul>
+            <>
+              {/* Filter chips */}
+              <div className="flex items-center gap-2 flex-wrap mb-4" data-testid="review-filter-chips">
+                <span className="inline-flex items-center gap-1 text-xs font-nunito font-bold text-[#4b5563]"><Filter size={12} /> Filter:</span>
+                <FilterChip
+                  active={!hasFilter}
+                  onClick={clearFilters}
+                  testId="review-filter-all"
+                  label={`All (${data.count})`}
+                />
+                <FilterChip
+                  active={filter.withPhotos}
+                  onClick={() => setFilter(f => ({ ...f, withPhotos: !f.withPhotos }))}
+                  testId="review-filter-photos"
+                  label={<span className="inline-flex items-center gap-1"><Camera size={12} /> With photos ({photoCount})</span>}
+                  disabled={photoCount === 0}
+                />
+                {[5, 4, 3, 2, 1].map(r => (
+                  <FilterChip
+                    key={r}
+                    active={filter.rating === r}
+                    onClick={() => setFilter(f => ({ ...f, rating: f.rating === r ? null : r }))}
+                    testId={`review-filter-${r}`}
+                    label={<span className="inline-flex items-center gap-0.5">{r}<Star size={10} className="fill-current" /> ({distribution[r]})</span>}
+                    disabled={distribution[r] === 0}
+                  />
+                ))}
+              </div>
+
+              {filtered.length === 0 ? (
+                <div className="text-[#4b5563] py-8 text-center bg-[#f0fdf4] rounded-2xl border border-[#dcfce7]">
+                  No reviews match this filter. <button onClick={clearFilters} className="text-[#7bc67e] font-nunito font-bold hover:underline">Clear filters</button>
+                </div>
+              ) : (
+                <ul className="space-y-4" data-testid="reviews-list">
+                  {filtered.map((r) => <ReviewCard key={r.id} r={r} />)}
+                </ul>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -205,4 +253,22 @@ function computeDistribution(reviews) {
   const d = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   reviews.forEach((r) => { if (d[r.rating] !== undefined) d[r.rating] += 1; });
   return d;
+}
+
+function FilterChip({ active, onClick, testId, label, disabled = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      data-testid={testId}
+      className={`text-xs font-nunito font-extrabold px-3 py-1.5 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+        active
+          ? "bg-[#7bc67e] text-[#1a1a1a]"
+          : "bg-[#f0fdf4] text-[#1a1a1a] hover:bg-[#dcfce7]"
+      }`}
+    >
+      {label}
+    </button>
+  );
 }
