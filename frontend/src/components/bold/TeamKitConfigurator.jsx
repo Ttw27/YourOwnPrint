@@ -253,7 +253,10 @@ export default function TeamKitConfigurator({ product }) {
       {/* 5. Extra prints (paid) */}
       <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-5" data-testid="extra-prints-block">
         <h3 className="font-nunito font-extrabold text-[#1a1a1a]">{stepBase + 4}. Extra prints <span className="text-xs font-bold text-[#4b5563]">(optional)</span></h3>
-        <div className="text-xs text-[#4b5563] mt-1 mb-3">Add sleeve logos or a back print. Each priced per kit. Upload the artwork before checkout.</div>
+        <div className="text-xs text-[#4b5563] mt-1 mb-3">
+          Add sleeve logos or a back print. Each priced per kit. Upload the artwork before checkout.<br />
+          <span className="text-[#1a1a1a]"><Info size={10} className="inline mr-1" /><strong>Back print sits below the player&apos;s name &amp; number</strong> — names &amp; numbers are already included in your kit price.</span>
+        </div>
         <div className="grid md:grid-cols-3 gap-3">
           <AddonSlot
             testId="left-sleeve"

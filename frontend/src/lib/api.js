@@ -89,3 +89,21 @@ export async function deleteTeamKitBrand(id) {
   const { data } = await api.delete(`/team-kit-brands/${id}`);
   return data;
 }
+
+// ----- Designer (Design Your Own) -----
+export async function fetchDesignerProducts() {
+  const { data } = await api.get("/designer/products");
+  return data;
+}
+export async function fetchAdminDesignerProducts() {
+  const { data } = await api.get("/admin/designer-products");
+  return data;
+}
+export async function updateDesignerSettings(product_id, payload) {
+  const { data } = await api.patch(`/admin/designer-products/${product_id}`, payload);
+  return data;
+}
+export async function saveDesignerArtwork(payload) {
+  const { data } = await api.post("/designer/artwork", payload);
+  return data;
+}

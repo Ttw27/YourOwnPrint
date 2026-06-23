@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 8 fully verified. Backend: 8/8 new pytest tests pass (test_iteration8.py). Frontend: all 5 critical flows (designer page, size matrix, layers/upload, checkout→Stripe redirect, admin CRUD, TeamKitConfigurator copy) verified end-to-end against the live preview URL.\n\nBackend results (test_iteration8.py):\n- GET /api/designer/products → exactly 8 products with id set {personalised-tee, personalised-hoodie, kids-tee, polo-shirt, workwear-tshirt, workwear-sweatshirt, school-hoodie, sports-tee}, each carrying print_area={x,y,w,h} and non-empty sizes array ✓\n- GET /api/admin/designer-products → 29 products total, exactly 8 with designer_enabled=true ✓\n- PATCH /api/admin/designer-products/personalised-tee with new print_area persists; subsequent GET /api/designer/products reflects updated x=10/w=60 ✓. Unknown product → 404, out-of-range coord (x=-1) → 400. Restored to defaults after test. ✓\n- POST /api/designer/artwork (tiny PNG data URL) → returns {id}; GET /api/designer/artwork/{id} returns full doc with matching artwork_png, items_count, product_id ✓\n- Validation: empty artwork_png → 400; >6MB payload → 400; unknown product_id → 400 ✓\n- Regression: /api/products returns 29; team-kits/addons and fight-night/addons IDs unchanged; designer checkout flow with design_meta.artwork_id propagates to Stripe (200 + Stripe URL) ✓\n\nFrontend results:\n- /design-your-own: page loads, designer-product dropdown shows exactly 8 options in the expected order, design-print-area dashed rectangle rendered on canvas ✓\n- Adding 'HELLO' via designer-text-input + designer-add-text → layers-list shows 1 item; text bounding box is auto-fit (inline-block + nowrap) ✓\n- Switching to polo-shirt resets totals to £0.00; switching back to personalised-tee, clicking designer-size-M-plus 2× + designer-size-L-plus 1× → M qty=2, L qty=1 (separate buckets, NOT combined), designer-total=£20.97 = 3×£6.99 ✓\n- Uploading a 1×1 PNG via the hidden file input behind designer-upload-btn → layers-list grows to 2; clicking a layer-{id} reveals selected-properties panel ✓\n- Clicking designer-checkout fires POST /api/designer/artwork (1 request) + POST /api/checkout/session (1 request); browser redirects to https://checkout.stripe.com/c/pay/cs_test_… showing £20.97 ✓\n- /admin/designer-products: dp-list shows all 29 products; filter 'polo' narrows to 2; toggling dp-enabled-workwear-jacket reveals dp-x/y/w/h inputs; editing values + dp-save-personalised-tee triggers PATCH and shows 'saved' toast ✓\n- /product/football-kit-bundle (TeamKitConfigurator): extra-prints-block now contains the new copy: 'Back print sits below the player's name & number — names & numbers are already included in your kit price.' ✓",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Product page (football-kit-bundle)", "issues": ["React console warning: hydration error — '<%s> cannot be a child of <span> option'. Cosmetic only, not blocking, but worth investigating in BoldNavbar/select component."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration8.py",
+    "/app/test_reports/pytest/pytest_iter8.xml"
+  ],
+  "action_items": [
+    "(Cosmetic) Investigate React hydration warning about <span> inside <option> (appears on /product/football-kit-bundle). Likely from a select element with an icon/span inside <option>. Non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "server.py L344-357: _DESIGNER_DEFAULTS correctly carries 8 products, with polo-shirt having a custom print_area {28,26,44,40}. Startup hook merges Mongo overrides via _merge_designer_overrides — clean pattern.",
+    "PATCH /admin/designer-products validates 0<=val<=100 for x/y/w/h and persists to db.designer_settings + updates in-memory PRODUCTS so changes take effect immediately without restart — well-designed.",
+    "/designer/artwork enforces 6MB upper bound and unknown product → 400 with correct error messages.",
+    "DesignYourOwn.jsx composeArtwork() renders all items onto a transparent canvas at both 1000 and 2000 px (preview + print). Items_count and artwork_id flow through to Stripe metadata via design_meta.artwork_id — verified end-to-end.",
+    "Designer text items use inline-block + white-space:nowrap + no fixed width → bounding box correctly auto-fits the rendered text (no more giant invisible rectangle from iter-7 issue).",
+    "AdminDesignerProducts.jsx uses correct data-testids (dp-list, dp-filter, dp-{id}, dp-enabled-{id}, dp-x/y/w/h-{id}, dp-save-{id}) and only reveals print-area inputs when designer_enabled is true."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration8.py (NEW — 8 pytest tests covering iteration 8)"
+  ],
+  "success_rate": {"backend": "100% (8/8 new tests)", "frontend": "100% on all 5 iter-8 flows"},
+  "test_credentials": "none required",
+  "seed_data_creation": "Designer artwork docs persisted in MongoDB during testing (a few transparent PNGs from /designer/artwork POSTs). One real Stripe TEST-MODE checkout session created for personalised-tee 3×£6.99 = £20.97.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `REACT_APP_BACKEND_URL=<url> pytest /app/backend/tests/ -v`. test_iteration8.py covers 8 designer-related tests. Designer route is /design-your-own (in addition to /design). Tiny base64 PNG (transparent 1×1) is enough for /api/designer/artwork POSTs. Sleep ≥6s after clicking designer-checkout — composeArtwork renders to canvas at 1000 and 2000 px which takes a moment before the artwork POST + checkout POST + Stripe redirect chain completes.",
+  "rca of the issue": "No defects. Iteration 8 delivers all spec items cleanly: 8-product designer feed, admin CRUD with print-area validation (0-100% per coord), transparent-PNG artwork upload + retrieval (with 6MB cap), composed PNG → artwork_id propagation to Stripe metadata, separate size-quantity matrix buckets, layers panel with per-layer delete, and the TeamKitConfigurator copy clarification."
+}

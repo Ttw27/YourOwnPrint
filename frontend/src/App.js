@@ -13,6 +13,7 @@ import ProductDetail from "@/pages/ProductDetail";
 import ReviewsPage from "@/pages/Reviews";
 import AdminImport from "@/pages/AdminImport";
 import AdminTeamKits from "@/pages/AdminTeamKits";
+import AdminDesignerProducts from "@/pages/AdminDesignerProducts";
 import Sports from "@/pages/Sports";
 import TeamKits from "@/pages/TeamKits";
 import TeamKitBuilder from "@/pages/TeamKitBuilder";
@@ -40,6 +41,7 @@ function App() {
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/admin/import-reviews" element={<AdminImport />} />
           <Route path="/admin/team-kits" element={<AdminTeamKits />} />
+          <Route path="/admin/designer-products" element={<AdminDesignerProducts />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
         </Routes>
         {/* Site-wide WhatsApp FAB. Pages that already render their own FAB will overlap harmlessly,

@@ -339,6 +339,24 @@ for _pid, _meta in _VARIANT_MAP.items():
         PRODUCTS[_pid].update(_meta)
 
 
+# ---------- Designer (Design Your Own) configuration ----------
+# Products enabled in the designer + their canvas image + print-area bounds (percent).
+DEFAULT_PRINT_AREA = {"x": 22, "y": 20, "w": 56, "h": 55}
+_DESIGNER_DEFAULTS: Dict[str, Dict] = {
+    "personalised-tee":     {"designer_enabled": True, "designer_image": PRODUCTS["personalised-tee"]["image"],     "designer_print_area": DEFAULT_PRINT_AREA},
+    "personalised-hoodie":  {"designer_enabled": True, "designer_image": PRODUCTS["personalised-hoodie"]["image"],  "designer_print_area": DEFAULT_PRINT_AREA},
+    "kids-tee":             {"designer_enabled": True, "designer_image": PRODUCTS["kids-tee"]["image"],             "designer_print_area": DEFAULT_PRINT_AREA},
+    "polo-shirt":           {"designer_enabled": True, "designer_image": PRODUCTS["polo-shirt"]["image"],           "designer_print_area": {"x": 28, "y": 26, "w": 44, "h": 40}},
+    "workwear-tshirt":      {"designer_enabled": True, "designer_image": PRODUCTS["workwear-tshirt"]["image"],      "designer_print_area": DEFAULT_PRINT_AREA},
+    "workwear-sweatshirt":  {"designer_enabled": True, "designer_image": PRODUCTS["workwear-sweatshirt"]["image"],  "designer_print_area": DEFAULT_PRINT_AREA},
+    "school-hoodie":        {"designer_enabled": True, "designer_image": PRODUCTS["school-hoodie"]["image"],        "designer_print_area": DEFAULT_PRINT_AREA},
+    "sports-tee":           {"designer_enabled": True, "designer_image": PRODUCTS["sports-tee"]["image"],           "designer_print_area": DEFAULT_PRINT_AREA},
+}
+for _pid, _meta in _DESIGNER_DEFAULTS.items():
+    if _pid in PRODUCTS:
+        PRODUCTS[_pid].update(_meta)
+
+
 # ---------- Print placements ----------
 PLACEMENTS: List[Dict] = [
     {"id": "left-breast",  "label": "Left breast",  "price": 2.50, "excludes": ["full-front"]},
@@ -890,6 +908,132 @@ async def import_judgeme(payload: JudgeMeImportRequest):
         await db.reviews.insert_one(doc)
         imported += 1
     return {"imported": imported, "skipped": skipped}
+
+
+# ---------- Designer (Design Your Own) endpoints ----------
+class DesignerSettings(BaseModel):
+    designer_enabled: bool = True
+    designer_image: str
+    designer_print_area: Dict[str, float]  # {x,y,w,h} percent
+
+
+class DesignerArtwork(BaseModel):
+    product_id: str
+    artwork_png: str           # data URL / base64 (transparent, print-quality)
+    preview_png: Optional[str] = None  # smaller preview
+    items_count: int = 0
+    width: Optional[int] = None
+    height: Optional[int] = None
+    session_id: Optional[str] = None
+
+
+async def _merge_designer_overrides():
+    """Read /designer_settings collection and overlay onto in-memory PRODUCTS."""
+    async for doc in db.designer_settings.find({}):
+        pid = doc.get("product_id")
+        if pid in PRODUCTS:
+            for k in ("designer_enabled", "designer_image", "designer_print_area"):
+                if k in doc and doc[k] is not None:
+                    PRODUCTS[pid][k] = doc[k]
+
+
+@app.on_event("startup")
+async def _designer_startup():
+    try:
+        await _merge_designer_overrides()
+    except Exception as e:
+        logger.error(f"designer overlay failed: {e}")
+
+
+@api_router.get("/designer/products")
+async def list_designer_products():
+    """Products available in the Design Your Own canvas."""
+    out = []
+    for p in PRODUCTS.values():
+        if p.get("designer_enabled"):
+            out.append({
+                "id": p["id"],
+                "name": p["name"],
+                "price": p["price"],
+                "image": p.get("designer_image") or p["image"],
+                "print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
+                "sizes": p.get("sizes", []),
+                "size_upcharges": p.get("size_upcharges", {}),
+            })
+    return out
+
+
+@api_router.get("/admin/designer-products")
+async def admin_list_designer_products():
+    """Admin view — ALL products with their current designer settings."""
+    out = []
+    for p in PRODUCTS.values():
+        out.append({
+            "id": p["id"],
+            "name": p["name"],
+            "category": p["category"],
+            "main_image": p["image"],
+            "designer_enabled": bool(p.get("designer_enabled")),
+            "designer_image": p.get("designer_image") or p["image"],
+            "designer_print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
+        })
+    return out
+
+
+@api_router.patch("/admin/designer-products/{product_id}")
+async def update_designer_settings(product_id: str, payload: DesignerSettings):
+    if product_id not in PRODUCTS:
+        raise HTTPException(404, "Product not found")
+    pa = payload.designer_print_area
+    for k in ("x", "y", "w", "h"):
+        if k not in pa:
+            raise HTTPException(400, f"print_area missing '{k}'")
+        if not (0 <= float(pa[k]) <= 100):
+            raise HTTPException(400, f"print_area '{k}' must be 0-100")
+    doc = {
+        "product_id": product_id,
+        "designer_enabled": payload.designer_enabled,
+        "designer_image": payload.designer_image,
+        "designer_print_area": pa,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.designer_settings.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
+    # Apply to in-memory PRODUCTS so it's immediately reflected.
+    PRODUCTS[product_id]["designer_enabled"] = payload.designer_enabled
+    PRODUCTS[product_id]["designer_image"] = payload.designer_image
+    PRODUCTS[product_id]["designer_print_area"] = pa
+    return {"ok": True}
+
+
+@api_router.post("/designer/artwork")
+async def save_designer_artwork(payload: DesignerArtwork):
+    """Save a composed transparent PNG (and optional preview) for an order."""
+    if payload.product_id not in PRODUCTS:
+        raise HTTPException(400, "Unknown product_id")
+    if not payload.artwork_png or len(payload.artwork_png) > 6_000_000:
+        raise HTTPException(400, "artwork_png missing or too large")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "product_id": payload.product_id,
+        "artwork_png": payload.artwork_png,
+        "preview_png": payload.preview_png,
+        "items_count": payload.items_count,
+        "width": payload.width,
+        "height": payload.height,
+        "session_id": payload.session_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.designer_artwork.insert_one(doc)
+    return {"id": doc["id"]}
+
+
+@api_router.get("/designer/artwork/{artwork_id}")
+async def get_designer_artwork(artwork_id: str):
+    """Retrieve a saved artwork — used by fulfilment/admin."""
+    doc = await db.designer_artwork.find_one({"id": artwork_id})
+    if not doc:
+        raise HTTPException(404, "Artwork not found")
+    return {k: doc.get(k) for k in ("id", "product_id", "artwork_png", "preview_png", "items_count", "width", "height", "session_id", "created_at")}
 
 
 @api_router.post("/webhook/stripe")
