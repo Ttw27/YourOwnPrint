@@ -32,6 +32,20 @@
 - Sports CTA now → `/team-kits`
 - **50/50 backend tests** pass, 100% frontend e2e verified
 
+### Iter 7 — Team Kit print restructure + Designer overhaul (Feb 2026)
+- **Team Kit print structure rebuilt**: front sponsor = FREE, single upload only. Sleeves +£3.00/kit each. Back print +£3.50/kit. Each toggled addon REQUIRES its own artwork upload before checkout (per-addon validation).
+- **4 new front-print-only product variants** (cheaper, no names/numbers): football-kit-front-only £18.99, football-premium-front-only £22.99, rugby-kit-front-only £25.99, training-pack-front-only £12.99 — share TEAM_KIT_ADDONS pricing
+- **Fight Night Tee** — dedicated upload slot per addon (back print, left sleeve, right sleeve) when toggled ON; checkout blocked until artwork provided
+- **Designer (Design Your Own) overhaul**:
+  - Multiple text + image items, fully composable layers
+  - **Double-click text to edit inline** (`design-text-edit-{id}` input replaces the rendered text)
+  - **In-canvas handles**: rotate knob (top centre) + resize dot (bottom-right) on selected items
+  - **Selected-item properties panel** with font, colour, font-size slider, rotation slider, image-size slider
+  - **Layer controls**: up/down/duplicate/delete
+  - **AI effect placeholders** (Cutout.pro Poster/Sketch/Cartoon/Enhance) — toast "coming soon" until API key wired
+- **Backend**: new TEAM_KIT_ADDONS dict, `/api/team-kits/addons` endpoint, checkout pricing branch for category=team-kits routes through TEAM_KIT_ADDONS
+- **Testing**: 67/67 backend tests pass (9 new in test_iteration7.py); all 4 critical frontend flows verified on live preview (iteration_7.json)
+
 ### Iter 6 — Team Kit & Fight Night refinements (Feb 2026)
 - **Removed** multi-team toggle from `TeamKitConfigurator` (single-team only per user request)
 - **Quote threshold** simplified to `totalKits > 15` only (sponsors & brand no longer force quote)
