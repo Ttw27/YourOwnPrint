@@ -32,6 +32,12 @@
 - Sports CTA now → `/team-kits`
 - **50/50 backend tests** pass, 100% frontend e2e verified
 
+### Iter 10 — Designer polish (Feb 2026)
+- **Removed Filters panel** (Vintage/B&W/Warm/Cool) and the `filter` state — AI effects (Cutout.pro placeholders) remain for proper image effects
+- **Per-layer reorder** — every row in the Layers panel now has its own `layer-up-{id}` / `layer-down-{id}` buttons (boundary buttons are disabled), so customers can reorder layers inline without selecting first
+- **Size breakdown chips** under the total — when sizes are picked, a chip strip shows the per-size breakdown (e.g. "6 × L · 2 × XL · 2 × M"), so customers see exactly what they configured before checkout. Testids `size-breakdown` + `size-breakdown-{sz}`
+- **Testing**: 17/17 frontend checks pass on live preview (iteration_10.json); backend unchanged.
+
 ### Iter 9 — Designer back print + dual transparent PNG (Feb 2026)
 - **Back-print toggle in Designer** — adds upcharge per unit = **60% of unit price rounded to nearest £0.99 (£0.99 floor)**. Calculated server-side via `designer_back_print_price()` helper. Per-product values exposed via `/api/designer/products[].back_print_price`: tee £3.99, hoodie £8.99, kids-tee £4.99, polo £4.99, workwear-tee £3.99, workwear-sweat £7.99, school-hoodie £9.99, sports-tee £4.99.
 - **Front/Back canvas tabs** — separate item lists per side (`frontItems` / `backItems`), `designer-view-front` / `designer-view-back` toggle. Clicking the Back tab auto-enables back-print.
