@@ -357,6 +357,23 @@ for _pid, _meta in _DESIGNER_DEFAULTS.items():
         PRODUCTS[_pid].update(_meta)
 
 
+# Designer product info (composition / long description / use-case badges).
+# Surfaced in the Designer product picker to help brand-builders pick the right blank.
+_DESIGNER_INFO: Dict[str, Dict] = {
+    "personalised-tee":     {"composition": "180 GSM · 100% ring-spun cotton",            "description_long": "Mid-weight everyday tee. Soft hand, durable wash, slight stretch in the collar. Our most versatile blank.",                  "use_cases": ["branded-to-sell", "daily-use"]},
+    "personalised-hoodie":  {"composition": "320 GSM · 80% cotton / 20% polyester brushed-back fleece", "description_long": "Heavyweight pullover hoodie with kangaroo pocket and double-lined hood. Premium feel — sits well on the high street.", "use_cases": ["branded-to-sell", "daily-use"]},
+    "kids-tee":             {"composition": "165 GSM · 100% combed cotton",                "description_long": "Lightweight kids' tee, sized 3–14yrs. Soft against young skin and wash-resistant down to 40°C.",                                "use_cases": ["kids", "daily-use"]},
+    "polo-shirt":           {"composition": "210 GSM · 65% polyester / 35% cotton piqué",  "description_long": "Easy-iron piqué polo with reinforced taped neckline. Pro look, ideal for client-facing teams.",                                "use_cases": ["workwear", "branded-to-sell"]},
+    "workwear-tshirt":      {"composition": "200 GSM · 100% ring-spun cotton heavy",       "description_long": "Workwear-grade tee with reinforced shoulders and tear-away neck label. Industrial-wash safe up to 60°C.",                       "use_cases": ["workwear", "daily-use"]},
+    "workwear-sweatshirt":  {"composition": "280 GSM · 50/50 cotton-poly fleece",          "description_long": "Crew-neck workwear sweatshirt. Ribbed cuffs/hem, no pilling, holds shape across heavy use.",                                  "use_cases": ["workwear"]},
+    "school-hoodie":        {"composition": "300 GSM · 80% cotton / 20% polyester",        "description_long": "Robust school-grade hoodie. Soft inner brushed fleece, durable seams, named-print friendly.",                                "use_cases": ["kids", "daily-use"]},
+    "sports-tee":           {"composition": "150 GSM · 100% recycled polyester wicking",   "description_long": "Lightweight performance tee with moisture-wicking finish and four-way stretch. Eco-credentials on the swing tag.",            "use_cases": ["sports", "eco"]},
+}
+for _pid, _meta in _DESIGNER_INFO.items():
+    if _pid in PRODUCTS:
+        PRODUCTS[_pid].update(_meta)
+
+
 # ---------- Print placements ----------
 PLACEMENTS: List[Dict] = [
     {"id": "left-breast",  "label": "Left breast",  "price": 2.50, "excludes": ["full-front"]},
@@ -660,10 +677,18 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         placements_clean = [p for p in (payload.placements or []) if p in TEAM_KIT_ADDONS]
         print_cost = round(sum(TEAM_KIT_ADDONS[p]["price"] for p in placements_clean), 2)
     elif (payload.design_meta or {}).get("flow") == "designer":
-        # Designer flow: back print = 60% of unit price rounded to nearest £.99 (£0.99 floor).
-        wants_back = "back-print" in (payload.placements or [])
-        placements_clean = ["back-print"] if wants_back else []
-        print_cost = designer_back_print_price(base_price) if wants_back else 0.0
+        # Designer flow: back-print = 60% of unit price rounded to nearest £.99 (£0.99 floor).
+        #                neck-label = flat NECK_LABEL_PRICE per garment.
+        wanted = set(payload.placements or [])
+        placements_clean = []
+        extra = 0.0
+        if "back-print" in wanted:
+            placements_clean.append("back-print")
+            extra += designer_back_print_price(base_price)
+        if "neck-label" in wanted:
+            placements_clean.append("neck-label")
+            extra += NECK_LABEL_PRICE
+        print_cost = round(extra, 2)
     else:
         placements_clean = _validate_placements(payload.placements or [])
         print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
@@ -920,6 +945,9 @@ class DesignerSettings(BaseModel):
     designer_enabled: bool = True
     designer_image: str
     designer_print_area: Dict[str, float]  # {x,y,w,h} percent
+    composition: Optional[str] = None
+    description_long: Optional[str] = None
+    use_cases: Optional[List[str]] = None
 
 
 class DesignerArtwork(BaseModel):
@@ -928,8 +956,11 @@ class DesignerArtwork(BaseModel):
     preview_png: Optional[str] = None  # smaller preview (front)
     back_png: Optional[str] = None             # data URL / base64 (back, transparent, print-quality)
     back_preview_png: Optional[str] = None     # smaller preview (back)
+    neck_label_pngs: Optional[Dict[str, str]] = None         # {"M": data-url, "L": data-url, ...}
+    neck_label_preview_pngs: Optional[Dict[str, str]] = None  # smaller previews per size
     items_count: int = 0
     back_items_count: int = 0
+    neck_label_items_count: int = 0
     width: Optional[int] = None
     height: Optional[int] = None
     session_id: Optional[str] = None
@@ -940,12 +971,18 @@ def designer_back_print_price(unit_price: float) -> float:
     return max(0.99, round(unit_price * 0.6) - 0.01)
 
 
+NECK_LABEL_PRICE = 1.50  # Flat per-garment DTF neck-label upcharge
+
+USE_CASE_OPTIONS = ["workwear", "branded-to-sell", "daily-use", "sports", "kids", "eco"]
+
+
 async def _merge_designer_overrides():
     """Read /designer_settings collection and overlay onto in-memory PRODUCTS."""
     async for doc in db.designer_settings.find({}):
         pid = doc.get("product_id")
         if pid in PRODUCTS:
-            for k in ("designer_enabled", "designer_image", "designer_print_area"):
+            for k in ("designer_enabled", "designer_image", "designer_print_area",
+                     "composition", "description_long", "use_cases"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -973,8 +1010,17 @@ async def list_designer_products():
                 "sizes": p.get("sizes", []),
                 "size_upcharges": p.get("size_upcharges", {}),
                 "back_print_price": designer_back_print_price(float(p["price"])),
+                "neck_label_price": NECK_LABEL_PRICE,
+                "composition": p.get("composition"),
+                "description_long": p.get("description_long"),
+                "use_cases": p.get("use_cases") or [],
             })
     return out
+
+
+@api_router.get("/designer/use-cases")
+async def list_use_cases():
+    return USE_CASE_OPTIONS
 
 
 @api_router.get("/admin/designer-products")
@@ -990,6 +1036,9 @@ async def admin_list_designer_products():
             "designer_enabled": bool(p.get("designer_enabled")),
             "designer_image": p.get("designer_image") or p["image"],
             "designer_print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
+            "composition": p.get("composition") or "",
+            "description_long": p.get("description_long") or "",
+            "use_cases": p.get("use_cases") or [],
         })
     return out
 
@@ -1004,11 +1053,18 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
             raise HTTPException(400, f"print_area missing '{k}'")
         if not (0 <= float(pa[k]) <= 100):
             raise HTTPException(400, f"print_area '{k}' must be 0-100")
+    use_cases = payload.use_cases or []
+    for uc in use_cases:
+        if uc not in USE_CASE_OPTIONS:
+            raise HTTPException(400, f"unknown use_case '{uc}'. Allowed: {USE_CASE_OPTIONS}")
     doc = {
         "product_id": product_id,
         "designer_enabled": payload.designer_enabled,
         "designer_image": payload.designer_image,
         "designer_print_area": pa,
+        "composition": (payload.composition or None),
+        "description_long": (payload.description_long or None),
+        "use_cases": use_cases,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.designer_settings.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
@@ -1016,6 +1072,11 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
     PRODUCTS[product_id]["designer_enabled"] = payload.designer_enabled
     PRODUCTS[product_id]["designer_image"] = payload.designer_image
     PRODUCTS[product_id]["designer_print_area"] = pa
+    if payload.composition is not None:
+        PRODUCTS[product_id]["composition"] = payload.composition or None
+    if payload.description_long is not None:
+        PRODUCTS[product_id]["description_long"] = payload.description_long or None
+    PRODUCTS[product_id]["use_cases"] = use_cases
     return {"ok": True}
 
 
@@ -1028,6 +1089,11 @@ async def save_designer_artwork(payload: DesignerArtwork):
         raise HTTPException(400, "artwork_png missing or too large")
     if payload.back_png and len(payload.back_png) > 6_000_000:
         raise HTTPException(400, "back_png too large")
+    # Neck-label PNGs are smaller — cap each at 2MB to keep the doc reasonable
+    for pngs in ((payload.neck_label_pngs or {}), (payload.neck_label_preview_pngs or {})):
+        for sz, data in pngs.items():
+            if data and len(data) > 2_000_000:
+                raise HTTPException(400, f"neck_label_pngs['{sz}'] too large")
     doc = {
         "id": str(uuid.uuid4()),
         "product_id": payload.product_id,
@@ -1035,8 +1101,11 @@ async def save_designer_artwork(payload: DesignerArtwork):
         "preview_png": payload.preview_png,
         "back_png": payload.back_png,
         "back_preview_png": payload.back_preview_png,
+        "neck_label_pngs": payload.neck_label_pngs,
+        "neck_label_preview_pngs": payload.neck_label_preview_pngs,
         "items_count": payload.items_count,
         "back_items_count": payload.back_items_count,
+        "neck_label_items_count": payload.neck_label_items_count,
         "width": payload.width,
         "height": payload.height,
         "session_id": payload.session_id,
@@ -1055,7 +1124,8 @@ async def get_designer_artwork(artwork_id: str):
     return {k: doc.get(k) for k in (
         "id", "product_id", "artwork_png", "preview_png",
         "back_png", "back_preview_png",
-        "items_count", "back_items_count",
+        "neck_label_pngs", "neck_label_preview_pngs",
+        "items_count", "back_items_count", "neck_label_items_count",
         "width", "height", "session_id", "created_at",
     )}
 

@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 11 (both backend + frontend) testing for neck-label add-on + product-info-card. Backend: 9/9 pytest tests pass (test_iteration11.py) covering /designer/products new fields (composition, description_long, use_cases, neck_label_price=1.50), /designer/use-cases endpoint, checkout pricing for neck-only (2*(6.99+1.50)=16.98) and back+neck additively (2*(6.99+3.99+1.50)=24.96), PATCH /admin/designer-products with new fields + restore, unknown use_case → 400, /designer/artwork with neck_label_pngs persistence, and >2MB neck_label_png → 400. Frontend (/design-your-own): all 25 critical UI/integration checks pass — 3-tab strip (front/back/neck) renders, both toggles render with correct +£ amounts, product-info-card shows composition + description + use-case badges (branded-to-sell, daily-use for personalised-tee), totals update correctly (£20.97 base → £25.47 with neck → £37.44 with both → £32.94 back-only after un-ticking neck), neck canvas shows NECK LABEL badge + neutral '60 × 30 mm' background, designer-add-size-token only visible on neck view, clicking adds ONE size-token-{id} item showing literal '{SIZE}', second click is rejected (only one allowed), full e2e M=2+L=1 with both toggles + texts on all 3 sides fires POST /designer/artwork carrying back_png + neck_label_pngs with keys ['L','M'] and POST /checkout/session with placements=['back-print','neck-label'] + design_meta.neck_label='yes'. Regression: empty back items + backEnabled blocks checkout with 'Add at least one element to the back design...', empty neck items + neckEnabled blocks with 'Add at least one element to the neck label...'. Admin /admin/designer-products: dp-composition-{id}, dp-description-{id}, all 6 dp-use-case-{uc}-{pid} toggle buttons + dp-save-{id} all present for enabled products; saving fires PATCH carrying composition + description_long + use_cases and shows 'Personalised T-Shirt saved' toast.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration11.py",
+    "/app/test_reports/pytest/iter11_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "DesignYourOwn.jsx is now 760 lines — past the 700-line guidance from iter10. Consider splitting the Layers panel, Canvas/print-area, and Selected-properties panel into separate components.",
+    "Admin PATCH /admin/designer-products/{id} requires `designer_image` and `designer_print_area` even when the caller only wants to update composition/description/use_cases. Consider making those optional + falling back to current PRODUCTS values to enable partial PATCH semantics — currently a 422 is returned for partial bodies (workaround in tests: include current values from GET first).",
+    "Backend hard-codes neck_label_pngs <= 2MB and back_png/artwork_png <= 6MB. Add constants (NECK_LABEL_PNG_MAX_BYTES, etc.) instead of magic numbers for maintainability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration11.py"
+  ],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% (25/25 critical checks)"},
+  "test_credentials": "N/A — no auth needed for designer + admin endpoints in this iteration",
+  "seed_data_creation": "None — used existing personalised-tee defaults; PATCH test restores values after each modification",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 11 acceptance verified end-to-end on https://branded-workwear-lab.preview.emergentagent.com. Backend tests are in /app/backend/tests/test_iteration11.py (9 tests). The frontend e2e blocks Stripe redirect via page.route('**stripe.com/**', abort) to avoid leaving the SPA mid-test while still observing both POST /api/designer/artwork (carries neck_label_pngs with one entry per UNIQUE size used, keys are sorted alphabetically e.g. ['L','M'] for M+L) and POST /api/checkout/session (placements + design_meta.neck_label='yes'). Total computations validated client-side and server-side: neck-only £8.49/garment (6.99+1.50), back+neck £12.48/garment (6.99+3.99+1.50). The 'designer-add-size-token' button is gated to view==='neck' AND only one allowed; rendered span always displays literal '{SIZE}' regardless of item.text. PATCH /admin/designer-products requires designer_image + designer_print_area in body — partial bodies return 422. The admin /admin/designer-products page has no auth in this build (open access)."
+}

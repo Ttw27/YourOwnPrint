@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchDesignerProducts, createCheckout, saveDesignerArtwork } from "../lib/api";
 import { toast } from "sonner";
-import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers } from "lucide-react";
+import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info } from "lucide-react";
 
 const FONTS = [
   { label: "Nunito", value: "Nunito, sans-serif" },
@@ -13,15 +13,30 @@ const FONTS = [
   { label: "Cormorant", value: "'Cormorant Garamond', serif" },
 ];
 
+// Neck label canvas aspect (width:height) — landscape, mimics a ~60×30mm sewn-in label
+const NECK_LABEL_ASPECT = 2;  // 2:1 wide:high
+// Default print area within the neck label canvas
+const NECK_LABEL_PRINT_AREA = { x: 5, y: 10, w: 90, h: 80 };
+const USE_CASE_LABELS = {
+  "workwear": "Workwear",
+  "branded-to-sell": "Branded to sell",
+  "daily-use": "Daily use",
+  "sports": "Sports",
+  "kids": "Kids",
+  "eco": "Eco",
+};
+
 export default function DesignYourOwn() {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [productId, setProductId] = useState(searchParams.get("product") || "");
   const [sizeQtys, setSizeQtys] = useState({});
-  const [view, setView] = useState("front");                 // "front" | "back"
+  const [view, setView] = useState("front");                 // "front" | "back" | "neck"
   const [backEnabled, setBackEnabled] = useState(false);     // adds back-print to checkout
+  const [neckEnabled, setNeckEnabled] = useState(false);     // adds neck-label to checkout
   const [frontItems, setFrontItems] = useState([]);
   const [backItems, setBackItems]   = useState([]);
+  const [neckItems, setNeckItems]   = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [drag, setDrag] = useState(null);
@@ -33,10 +48,11 @@ export default function DesignYourOwn() {
   const printAreaRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const items = view === "front" ? frontItems : backItems;
+  const items = view === "front" ? frontItems : view === "back" ? backItems : neckItems;
   const setItems = (updater) => {
-    if (view === "front") setFrontItems(typeof updater === "function" ? updater(frontItems) : updater);
-    else                  setBackItems(typeof updater === "function" ? updater(backItems)  : updater);
+    if (view === "front")     setFrontItems(typeof updater === "function" ? updater(frontItems) : updater);
+    else if (view === "back") setBackItems(typeof updater === "function" ? updater(backItems)   : updater);
+    else                      setNeckItems(typeof updater === "function" ? updater(neckItems)   : updater);
   };
 
   useEffect(() => {
@@ -47,14 +63,16 @@ export default function DesignYourOwn() {
   }, []);
 
   const product = products.find(p => p.id === productId);
-  const printArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
+  const garmentPrintArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
+  const printArea = view === "neck" ? NECK_LABEL_PRINT_AREA : garmentPrintArea;
   const unitPrice = product?.price ?? 0;
   const backPrintPrice = product?.back_print_price ?? 0;
+  const neckLabelPrice = product?.neck_label_price ?? 1.5;
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
   const subtotal = useMemo(() => {
     if (!product) return 0;
     const u = product.size_upcharges || {};
-    const extra = backEnabled ? backPrintPrice : 0;
+    const extra = (backEnabled ? backPrintPrice : 0) + (neckEnabled ? neckLabelPrice : 0);
     let t = 0;
     Object.entries(sizeQtys).forEach(([sz, q]) => {
       const qn = Number(q) || 0;
@@ -62,7 +80,7 @@ export default function DesignYourOwn() {
       t += (unitPrice + (u[sz] || 0) + extra) * qn;
     });
     return t;
-  }, [sizeQtys, unitPrice, product, backEnabled, backPrintPrice]);
+  }, [sizeQtys, unitPrice, product, backEnabled, backPrintPrice, neckEnabled, neckLabelPrice]);
   const selected = items.find(i => i.id === selectedId) || null;
 
   // Reset state when product changes
@@ -70,13 +88,15 @@ export default function DesignYourOwn() {
     setSizeQtys({});
     setFrontItems([]);
     setBackItems([]);
+    setNeckItems([]);
     setBackEnabled(false);
+    setNeckEnabled(false);
     setView("front");
     setSelectedId(null);
     setEditingId(null);
   }, [productId]);
 
-  // Clear transient selection state when switching front/back view
+  // Clear transient selection state when switching view
   useEffect(() => { setSelectedId(null); setEditingId(null); setDrag(null); }, [view]);
 
   const setSizeQty = (sz, q) => {
@@ -112,6 +132,14 @@ export default function DesignYourOwn() {
     setItems(prev => [...prev, { id, type: "text", text: txt, x: 25, y: 40, rot: 0, color: textColor, font: textFont, fontSize: 28 }]);
     setSelectedId(id);
     setTextInput("");
+  };
+
+  const addSizeToken = () => {
+    if (view !== "neck") { toast.error("Switch to the Neck label canvas to add a {SIZE} token"); return; }
+    if (neckItems.some(it => it.isSizeToken)) { toast.error("Only one {SIZE} token allowed"); return; }
+    const id = `size-${Date.now()}`;
+    setItems(prev => [...prev, { id, type: "text", text: "{SIZE}", isSizeToken: true, x: 35, y: 55, rot: 0, color: textColor, font: textFont, fontSize: 32 }]);
+    setSelectedId(id);
   };
 
   const removeItem = (id) => {
@@ -198,20 +226,21 @@ export default function DesignYourOwn() {
   });
 
   // ---- Render to transparent PNG ----
-  const composeArtwork = async (sizePx, itemsList) => {
+  // sizePx — canvas dimensions; itemsList — items to render; substituteSize — when set, swap {SIZE} tokens.
+  const composeArtwork = async (sizePx, itemsList, substituteSize = null, aspect = 1) => {
     const c = document.createElement("canvas");
-    c.width = sizePx; c.height = sizePx;
+    c.width = sizePx; c.height = Math.round(sizePx / aspect);
     const ctx = c.getContext("2d");
-    ctx.clearRect(0, 0, sizePx, sizePx);
+    ctx.clearRect(0, 0, c.width, c.height);
     for (const it of itemsList) {
-      const cx = (it.x / 100) * sizePx + ((it.w || 0) / 100) * sizePx / 2;
-      const cy = (it.y / 100) * sizePx + (it.type === "text" ? (it.fontSize || 28) / 2 : ((it.h || 0) / 100) * sizePx / 2);
+      const cx = (it.x / 100) * c.width + ((it.w || 0) / 100) * c.width / 2;
+      const cy = (it.y / 100) * c.height + (it.type === "text" ? (it.fontSize || 28) / 2 : ((it.h || 0) / 100) * c.height / 2);
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate((it.rot || 0) * Math.PI / 180);
       if (it.type === "image") {
-        const w = (it.w / 100) * sizePx;
-        const h = (it.h / 100) * sizePx;
+        const w = (it.w / 100) * c.width;
+        const h = (it.h / 100) * c.height;
         await new Promise((resolve) => {
           const im = new Image(); im.crossOrigin = "anonymous";
           im.onload = () => { ctx.drawImage(im, -w / 2, -h / 2, w, h); resolve(); };
@@ -219,11 +248,12 @@ export default function DesignYourOwn() {
           im.src = it.src;
         });
       } else {
-        const fontPx = (it.fontSize / 100) * (sizePx / 4); // scale text proportionally
+        const text = (it.isSizeToken && substituteSize) ? substituteSize : it.text;
+        const fontPx = (it.fontSize / 100) * (c.width / 4); // scale text proportionally
         ctx.fillStyle = it.color || "#000";
         ctx.font = `800 ${fontPx}px ${it.font || "Nunito, sans-serif"}`;
         ctx.textBaseline = "middle"; ctx.textAlign = "center";
-        ctx.fillText(it.text, 0, 0);
+        ctx.fillText(text, 0, 0);
       }
       ctx.restore();
     }
@@ -233,15 +263,19 @@ export default function DesignYourOwn() {
   const checkout = async () => {
     if (!product) { toast.error("Pick a product"); return; }
     if (totalQty < 1) { toast.error("Pick at least one size & quantity"); return; }
-    if (frontItems.length === 0 && backItems.length === 0) { toast.error("Add at least one image or text to your design"); return; }
+    if (frontItems.length === 0 && backItems.length === 0 && neckItems.length === 0) {
+      toast.error("Add at least one image or text to your design"); return;
+    }
     if (backEnabled && backItems.length === 0) { toast.error("Add at least one element to the back design (or turn off back print)"); return; }
+    if (neckEnabled && neckItems.length === 0) { toast.error("Add at least one element to the neck label (or turn off neck label)"); return; }
     setCheckingOut(true);
     try {
-      // Front always; back only if user enabled it
+      // Front always
       const [frontPreview, frontFull] = await Promise.all([
         composeArtwork(1000, frontItems),
         composeArtwork(2000, frontItems),
       ]);
+      // Back only if enabled
       let backFull = null, backPreview = null;
       if (backEnabled) {
         [backPreview, backFull] = await Promise.all([
@@ -249,14 +283,31 @@ export default function DesignYourOwn() {
           composeArtwork(2000, backItems),
         ]);
       }
+      // Neck label — one PNG per unique size if enabled
+      let neckPngs = null, neckPreviewPngs = null;
+      if (neckEnabled) {
+        neckPngs = {}; neckPreviewPngs = {};
+        const sizesUsed = Object.entries(sizeQtys).filter(([, q]) => Number(q) > 0).map(([s]) => s);
+        for (const sz of sizesUsed) {
+          // Print resolution 1500x750 (2:1) ≈ 60×30mm @ ~600dpi
+          neckPngs[sz]        = await composeArtwork(1500, neckItems, sz, NECK_LABEL_ASPECT);
+          neckPreviewPngs[sz] = await composeArtwork(600,  neckItems, sz, NECK_LABEL_ASPECT);
+        }
+      }
+      const placements = [];
+      if (backEnabled) placements.push("back-print");
+      if (neckEnabled) placements.push("neck-label");
       const { id: artwork_id } = await saveDesignerArtwork({
         product_id: productId,
         artwork_png: frontFull,
         preview_png: frontPreview,
         back_png: backFull,
         back_preview_png: backPreview,
+        neck_label_pngs: neckPngs,
+        neck_label_preview_pngs: neckPreviewPngs,
         items_count: frontItems.length,
         back_items_count: backItems.length,
+        neck_label_items_count: neckItems.length,
         width: 2000, height: 2000,
       });
       const { url } = await createCheckout({
@@ -264,15 +315,17 @@ export default function DesignYourOwn() {
         size_qtys: sizeQtys,
         origin_url: window.location.origin,
         blank: false,
-        placements: backEnabled ? ["back-print"] : [],
+        placements,
         design_meta: {
           flow: "designer",
           items: String(frontItems.length),
           back_items: String(backItems.length),
-          text_count: String(frontItems.filter(i => i.type === "text").length + backItems.filter(i => i.type === "text").length),
-          image_count: String(frontItems.filter(i => i.type === "image").length + backItems.filter(i => i.type === "image").length),
+          neck_items: String(neckItems.length),
+          text_count: String(frontItems.filter(i => i.type === "text").length + backItems.filter(i => i.type === "text").length + neckItems.filter(i => i.type === "text").length),
+          image_count: String(frontItems.filter(i => i.type === "image").length + backItems.filter(i => i.type === "image").length + neckItems.filter(i => i.type === "image").length),
           artwork_id,
           back_print: backEnabled ? "yes" : "no",
+          neck_label: neckEnabled ? "yes" : "no",
         },
       });
       window.location.href = url;
@@ -339,9 +392,19 @@ export default function DesignYourOwn() {
               <button data-testid="designer-add-text" onClick={addText} className="mt-3 w-full bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs py-2.5 rounded-full transition-colors flex items-center justify-center gap-2">
                 <Type size={14} /> Add to design
               </button>
+              {view === "neck" && (
+                <button data-testid="designer-add-size-token" onClick={addSizeToken} className="mt-2 w-full bg-[#1a1a1a] hover:bg-black text-[#7bc67e] font-nunito font-extrabold text-xs py-2 rounded-full transition-colors flex items-center justify-center gap-2">
+                  <Tag size={12} /> Add &#123;SIZE&#125; token
+                </button>
+              )}
+              {view === "neck" && (
+                <div className="text-[10px] text-[#4b5563] mt-2 font-bold leading-snug">
+                  The &#123;SIZE&#125; token is swapped for the actual garment size (M, L, XL…) when we print — one label per size in your order.
+                </div>
+              )}
             </Panel>
 
-            <Panel title={`Layers · ${view} ${items.length}${backEnabled && view === "front" ? ` · back ${backItems.length}` : ""}${backEnabled && view === "back" ? ` · front ${frontItems.length}` : ""}`}>
+            <Panel title={`Layers · ${view} ${items.length}${(backEnabled || neckEnabled) && view !== "back" && backEnabled ? ` · back ${backItems.length}` : ""}${(backEnabled || neckEnabled) && view !== "neck" && neckEnabled ? ` · neck ${neckItems.length}` : ""}${view !== "front" ? ` · front ${frontItems.length}` : ""}`}>
               {items.length === 0 ? (
                 <div className="text-xs text-[#4b5563] text-center py-2">No layers yet</div>
               ) : (
@@ -376,7 +439,7 @@ export default function DesignYourOwn() {
           </aside>
 
           <main className="lg:col-span-6">
-            {/* Front / Back tabs + back-print enable */}
+            {/* Front / Back / Neck tabs + back/neck enable toggles */}
             <div className="flex items-center justify-between flex-wrap gap-3 mb-3" data-testid="designer-view-tabs">
               <div className="inline-flex bg-[#f0fdf4] rounded-full p-1 border border-[#dcfce7]">
                 <button
@@ -389,29 +452,51 @@ export default function DesignYourOwn() {
                   onClick={() => { if (!backEnabled) setBackEnabled(true); setView("back"); }}
                   className={`px-4 py-1.5 rounded-full font-nunito font-extrabold text-sm transition-colors ${view === "back" ? "bg-[#7bc67e] text-[#1a1a1a]" : "text-[#4b5563] hover:text-[#1a1a1a]"}`}
                 >Back {backEnabled && <span className="ml-1 text-[10px]">+£{backPrintPrice.toFixed(2)}</span>}</button>
+                <button
+                  data-testid="designer-view-neck"
+                  onClick={() => { if (!neckEnabled) setNeckEnabled(true); setView("neck"); }}
+                  className={`px-4 py-1.5 rounded-full font-nunito font-extrabold text-sm transition-colors ${view === "neck" ? "bg-[#7bc67e] text-[#1a1a1a]" : "text-[#4b5563] hover:text-[#1a1a1a]"}`}
+                >Neck label {neckEnabled && <span className="ml-1 text-[10px]">+£{neckLabelPrice.toFixed(2)}</span>}</button>
               </div>
-              <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-back-toggle">
-                <input
-                  type="checkbox"
-                  checked={backEnabled}
-                  onChange={(e) => { const on = e.target.checked; setBackEnabled(on); if (!on && view === "back") setView("front"); }}
-                  className="w-4 h-4 accent-[#7bc67e]"
-                />
-                <span className="text-xs font-nunito font-extrabold">Print on back too · +£{backPrintPrice.toFixed(2)}/unit</span>
-              </label>
+              <div className="flex items-center gap-2">
+                <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-back-toggle">
+                  <input
+                    type="checkbox"
+                    checked={backEnabled}
+                    onChange={(e) => { const on = e.target.checked; setBackEnabled(on); if (!on && view === "back") setView("front"); }}
+                    className="w-4 h-4 accent-[#7bc67e]"
+                  />
+                  <span className="text-xs font-nunito font-extrabold">Back +£{backPrintPrice.toFixed(2)}</span>
+                </label>
+                <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-neck-toggle">
+                  <input
+                    type="checkbox"
+                    checked={neckEnabled}
+                    onChange={(e) => { const on = e.target.checked; setNeckEnabled(on); if (!on && view === "neck") setView("front"); }}
+                    className="w-4 h-4 accent-[#7bc67e]"
+                  />
+                  <span className="text-xs font-nunito font-extrabold inline-flex items-center gap-1"><Tag size={11} /> Neck +£{neckLabelPrice.toFixed(2)}</span>
+                </label>
+              </div>
             </div>
 
             <div className="bg-[#f0fdf4] rounded-3xl p-4 border-2 border-[#dcfce7]">
               <div
                 ref={canvasRef}
                 onMouseDown={() => { setSelectedId(null); setEditingId(null); }}
-                className="relative aspect-[4/5] bg-white rounded-2xl overflow-hidden select-none"
+                className={`relative bg-white rounded-2xl overflow-hidden select-none ${view === "neck" ? "aspect-[2/1]" : "aspect-[4/5]"}`}
                 data-testid="design-canvas"
               >
-                <img src={product?.image} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+                {view === "neck" ? (
+                  <div className="absolute inset-0 bg-gradient-to-b from-neutral-50 to-neutral-100 grid place-items-center pointer-events-none">
+                    <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-300 font-nunito font-extrabold">Neck label · approx 60 × 30 mm</div>
+                  </div>
+                ) : (
+                  <img src={product?.image} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+                )}
                 {/* Side badge */}
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-nunito font-extrabold uppercase tracking-[0.2em] text-[#1a1a1a] border border-[#dcfce7]" data-testid="designer-side-badge">
-                  {view === "front" ? "Front view" : "Back view"}
+                  {view === "front" ? "Front view" : view === "back" ? "Back view" : "Neck label"}
                 </div>
                 {/* Print area rectangle — the design overlay lives strictly inside this box */}
                 <div
@@ -428,7 +513,7 @@ export default function DesignYourOwn() {
                         <div
                           key={item.id}
                           onMouseDown={(e) => onPointerDownItem(e, item, "move")}
-                          onDoubleClick={(e) => { e.stopPropagation(); setEditingId(item.id); }}
+                          onDoubleClick={(e) => { e.stopPropagation(); if (!item.isSizeToken) setEditingId(item.id); }}
                           style={{
                             position: "absolute",
                             left: `${item.x}%`,
@@ -443,7 +528,7 @@ export default function DesignYourOwn() {
                           }}
                           data-testid={`design-item-${item.id}`}
                         >
-                          {isEditing ? (
+                          {isEditing && !item.isSizeToken ? (
                             <input
                               autoFocus
                               data-testid={`design-text-edit-${item.id}`}
@@ -455,8 +540,8 @@ export default function DesignYourOwn() {
                               style={{ color: item.color, fontFamily: item.font, fontSize: `${item.fontSize}px`, fontWeight: 800, lineHeight: 1.1, background: "rgba(255,255,255,0.6)", border: "1px dashed #7bc67e", borderRadius: 4, outline: "none", padding: "2px 6px", width: `${Math.max(10, (item.text?.length || 4) + 2)}ch` }}
                             />
                           ) : (
-                            <span style={{ color: item.color, fontFamily: item.font, fontSize: `${item.fontSize}px`, fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap", display: "inline-block" }}>
-                              {item.text}
+                            <span data-testid={item.isSizeToken ? `size-token-${item.id}` : undefined} style={{ color: item.color, fontFamily: item.font, fontSize: `${item.fontSize}px`, fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap", display: "inline-block" }}>
+                              {item.isSizeToken ? "{SIZE}" : item.text}
                             </span>
                           )}
                           {isSelected && !isEditing && (
@@ -475,9 +560,11 @@ export default function DesignYourOwn() {
                                 className="absolute -right-2 -bottom-2 w-4 h-4 bg-[#7bc67e] rounded-full cursor-se-resize border-2 border-white"
                                 title="Resize"
                               />
-                              <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setEditingId(item.id)} data-testid={`design-item-edit-${item.id}`} className="absolute -top-3 -left-3 w-6 h-6 bg-white border-2 border-[#7bc67e] text-[#7bc67e] rounded-full text-xs grid place-items-center" title="Edit text">
-                                <Pencil size={10} />
-                              </button>
+                              {!item.isSizeToken && (
+                                <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setEditingId(item.id)} data-testid={`design-item-edit-${item.id}`} className="absolute -top-3 -left-3 w-6 h-6 bg-white border-2 border-[#7bc67e] text-[#7bc67e] rounded-full text-xs grid place-items-center" title="Edit text">
+                                  <Pencil size={10} />
+                                </button>
+                              )}
                               <button onMouseDown={(e) => e.stopPropagation()} onClick={() => removeItem(item.id)} data-testid={`design-item-delete-${item.id}`} className="absolute -top-3 -right-3 w-6 h-6 bg-[#1a1a1a] text-white rounded-full text-xs grid place-items-center" title="Delete">×</button>
                             </>
                           )}
@@ -569,6 +656,28 @@ export default function DesignYourOwn() {
               <select data-testid="designer-product" value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm">
                 {products.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}
               </select>
+              {product && (product.composition || product.description_long || (product.use_cases || []).length > 0) && (
+                <div className="mt-3 space-y-2 text-xs" data-testid="product-info-card">
+                  {product.composition && (
+                    <div className="flex items-start gap-1.5 text-[#1a1a1a]">
+                      <Info size={11} className="text-[#7bc67e] mt-0.5 flex-shrink-0" />
+                      <span className="font-nunito font-bold leading-snug" data-testid="product-composition">{product.composition}</span>
+                    </div>
+                  )}
+                  {product.description_long && (
+                    <p className="text-[#4b5563] font-nunito leading-snug" data-testid="product-description-long">{product.description_long}</p>
+                  )}
+                  {(product.use_cases || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1" data-testid="product-use-cases">
+                      {product.use_cases.map((uc) => (
+                        <span key={uc} data-testid={`product-use-case-${uc}`} className="inline-flex items-center gap-1 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-2 py-0.5 text-[10px] font-nunito font-extrabold text-[#1a1a1a]">
+                          {USE_CASE_LABELS[uc] || uc}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="text-[10px] text-[#4b5563] mt-2 font-bold">{products.length} products available · admin manages list</div>
             </Panel>
 
@@ -600,7 +709,7 @@ export default function DesignYourOwn() {
 
             <Panel title="Total">
               <div className="flex items-baseline justify-between">
-                <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}</span>
+                <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}{neckEnabled && <> + £{neckLabelPrice.toFixed(2)} neck</>}</span>
                 <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
               </div>
               {totalQty > 0 && (

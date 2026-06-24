@@ -5,6 +5,14 @@ import { toast } from "sonner";
 import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon } from "lucide-react";
 
 const DEFAULT_PA = { x: 22, y: 20, w: 56, h: 55 };
+const USE_CASES = [
+  { id: "workwear",        label: "Workwear" },
+  { id: "branded-to-sell", label: "Branded to sell" },
+  { id: "daily-use",       label: "Daily use" },
+  { id: "sports",          label: "Sports" },
+  { id: "kids",            label: "Kids" },
+  { id: "eco",             label: "Eco" },
+];
 
 export default function AdminDesignerProducts() {
   const [products, setProducts] = useState([]);
@@ -32,11 +40,15 @@ export default function AdminDesignerProducts() {
         designer_enabled: p.designer_enabled,
         designer_image: p.designer_image || p.main_image,
         designer_print_area: { x: Number(pa.x), y: Number(pa.y), w: Number(pa.w), h: Number(pa.h) },
+        composition: p.composition || "",
+        description_long: p.description_long || "",
+        use_cases: p.use_cases || [],
       });
       toast.success(`${p.name} saved`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
     finally { setBusy(false); }
   };
+  const toggleUseCase = (id, uc) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, use_cases: (p.use_cases || []).includes(uc) ? (p.use_cases || []).filter(x => x !== uc) : [...(p.use_cases || []), uc] } : p));
 
   const visible = products.filter(p => !filter.trim() || `${p.name} ${p.id} ${p.category}`.toLowerCase().includes(filter.toLowerCase()));
 
@@ -96,6 +108,30 @@ export default function AdminDesignerProducts() {
                               <input data-testid={`dp-${k}-${p.id}`} type="number" min={0} max={100} value={pa[k]} onChange={(e) => updatePA(p.id, k, e.target.value)} className="w-full bg-transparent focus:outline-none text-right" />
                             </div>
                           ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Composition</label>
+                        <input data-testid={`dp-composition-${p.id}`} value={p.composition || ""} onChange={(e) => update(p.id, { composition: e.target.value })} placeholder="e.g. 180 GSM · 100% ring-spun cotton" className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Long description</label>
+                        <textarea data-testid={`dp-description-${p.id}`} value={p.description_long || ""} onChange={(e) => update(p.id, { description_long: e.target.value })} placeholder="2-3 sentences shown in the Designer's product info card" rows={2} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs resize-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Use-case badges</label>
+                        <div className="flex flex-wrap gap-1.5" data-testid={`dp-use-cases-${p.id}`}>
+                          {USE_CASES.map(({ id, label }) => {
+                            const on = (p.use_cases || []).includes(id);
+                            return (
+                              <button
+                                key={id}
+                                data-testid={`dp-use-case-${id}-${p.id}`}
+                                onClick={() => toggleUseCase(p.id, id)}
+                                className={`text-[10px] font-nunito font-extrabold rounded-full px-2.5 py-1 border transition-colors ${on ? "bg-[#7bc67e] text-[#1a1a1a] border-[#7bc67e]" : "bg-white text-[#4b5563] border-[#dcfce7] hover:border-[#7bc67e]"}`}
+                              >{label}</button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
