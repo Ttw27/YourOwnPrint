@@ -32,6 +32,15 @@
 - Sports CTA now → `/team-kits`
 - **50/50 backend tests** pass, 100% frontend e2e verified
 
+### Iter 11 — Neck label add-on + product info card (Feb 2026)
+- **Neck label add-on** (`+£1.50/garment` flat, DTF heat-transfer) — third canvas tab next to Front/Back with a 2:1 landscape aspect that mimics a real ~60×30 mm sewn-in label
+- **`{SIZE}` token** — special locked text item in the neck-label canvas (`designer-add-size-token`, only one allowed per design). On checkout the client composes one transparent neck-label PNG **per unique size** in the order (M.png, L.png, XL.png…) with the actual size baked in — production gets a ready-to-print queue per size variant
+- **Backend storage** — DesignerArtwork model extended with `neck_label_pngs` + `neck_label_preview_pngs` (dicts keyed by size) + `neck_label_items_count`; checkout designer branch now adds back-print + neck-label upcharges additively (server-side `NECK_LABEL_PRICE = 1.50` constant)
+- **Product info card** in the Designer's Product panel — shows `composition` (e.g. "180 GSM · 100% ring-spun cotton"), `description_long` (2–3 sentences), and `use_cases[]` badges (Workwear / Branded to sell / Daily use / Sports / Kids / Eco). Helps brand-starters pick the right blank
+- **Admin** (`/admin/designer-products`) — extra inputs: composition, description textarea, and 6 use-case toggle buttons per product. `/api/admin/designer-products` PATCH validates use_cases against allow-list
+- **Per-product info defaults** seeded for all 8 designer-enabled products (tee, hoodie, kids tee, polo, workwear tee, workwear sweat, school hoodie, sports tee)
+- **Testing**: 9/9 backend tests pass (test_iteration11.py); all 25 critical frontend checks pass on live preview (iteration_11.json). Verified e2e: 2×M + 1×L with back + neck = £37.44 on Stripe.
+
 ### Iter 10 — Designer polish (Feb 2026)
 - **Removed Filters panel** (Vintage/B&W/Warm/Cool) and the `filter` state — AI effects (Cutout.pro placeholders) remain for proper image effects
 - **Per-layer reorder** — every row in the Layers panel now has its own `layer-up-{id}` / `layer-down-{id}` buttons (boundary buttons are disabled), so customers can reorder layers inline without selecting first
