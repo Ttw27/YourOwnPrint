@@ -1,0 +1,21 @@
+{
+  "summary": "Iteration 10 frontend-only verification on /design-your-own. All 17 sub-checks across the 5 requested test areas PASSED. Filters panel is fully removed (no designer-filter-* testids, no CSS filter on the canvas image, AI effect buttons still present and functional). Layers panel renders one row per item with layer-up-{id}, layer-down-{id}, layer-remove-{id} buttons; top-rendered row has its up button disabled and bottom-rendered row has its down button disabled. Clicking layer-down on the top-rendered layer correctly swaps its DOM position with the row below. size-breakdown chip strip is hidden when totalQty=0 and renders exactly 3 chips (size-breakdown-L '6 × L', size-breakdown-XL '2 × XL', size-breakdown-M '2 × M') after 6L+2XL+2M; designer-total reads £69.90 (= 10 × 6.99). Front/Back tabs still work (badge text updates), designer-back-toggle toggles back-print and updates the total (£109.80 with back enabled → £69.90 with it disabled).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "DesignYourOwn.jsx is now 651 lines — getting close to the 700-line guidance. Consider extracting the Layers panel, the Canvas/print-area, and the Selected-properties panel into separate components in a follow-up iteration to keep the file maintainable.",
+    "Note (informational, not a bug): There are TWO sets of layer-up/layer-down testids on the page when an item is selected — the per-row ones (layer-up-{id}/layer-down-{id}) inside the Layers panel rows AND the singletons (testid 'layer-up'/'layer-down') in the Selected-properties strip (via IconBtn). They don't collide because the singletons have no -{id} suffix, but a future selector like [data-testid^='layer-up'] would match both. Worth being aware of."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped", "frontend": "100% (17/17)"},
+  "seed_data_creation": "None — used existing seeded designer product 'Personalised T-Shirt £6.99' with sizes M/L/XL.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All iteration 10 acceptance criteria verified end-to-end via Playwright at https://branded-workwear-lab.preview.emergentagent.com/design-your-own. The layers array is rendered with .slice().reverse() so the most recently added item is the visually topmost row (index 0 in DOM), and that row's up button is disabled while the bottom row's down button is disabled — matches spec. Checkout was NOT triggered live to avoid a real Stripe redirect, but the surrounding code path is unchanged from iteration 9 (which already covered designer-checkout → POST /api/designer/artwork → POST /api/checkout/session). Backend was not exercised in this iteration per the request."
+}

@@ -5,13 +5,6 @@ import { fetchDesignerProducts, createCheckout, saveDesignerArtwork } from "../l
 import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers } from "lucide-react";
 
-const FILTERS = [
-  { key: "none", label: "None", css: "none" },
-  { key: "vintage", label: "Vintage", css: "sepia(0.5) contrast(0.9) saturate(1.1)" },
-  { key: "bw", label: "B&W", css: "grayscale(1) contrast(1.05)" },
-  { key: "warm", label: "Warm", css: "hue-rotate(-10deg) saturate(1.3) brightness(1.05)" },
-  { key: "cool", label: "Cool", css: "hue-rotate(20deg) saturate(1.2) brightness(1.0)" },
-];
 const FONTS = [
   { label: "Nunito", value: "Nunito, sans-serif" },
   { label: "Plus Jakarta", value: "'Plus Jakarta Sans', sans-serif" },
@@ -25,7 +18,6 @@ export default function DesignYourOwn() {
   const [products, setProducts] = useState([]);
   const [productId, setProductId] = useState(searchParams.get("product") || "");
   const [sizeQtys, setSizeQtys] = useState({});
-  const [filter, setFilter] = useState("none");
   const [view, setView] = useState("front");                 // "front" | "back"
   const [backEnabled, setBackEnabled] = useState(false);     // adds back-print to checkout
   const [frontItems, setFrontItems] = useState([]);
@@ -280,7 +272,6 @@ export default function DesignYourOwn() {
           text_count: String(frontItems.filter(i => i.type === "text").length + backItems.filter(i => i.type === "text").length),
           image_count: String(frontItems.filter(i => i.type === "image").length + backItems.filter(i => i.type === "image").length),
           artwork_id,
-          filter,
           back_print: backEnabled ? "yes" : "no",
         },
       });
@@ -350,33 +341,30 @@ export default function DesignYourOwn() {
               </button>
             </Panel>
 
-            <Panel title="Filters">
-              <div className="grid grid-cols-3 gap-2">
-                {FILTERS.map(f => (
-                  <button key={f.key} data-testid={`designer-filter-${f.key}`} onClick={() => setFilter(f.key)} className={`text-xs font-nunito font-extrabold py-2 rounded-full transition-colors ${filter === f.key ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-[#f0fdf4] text-[#1a1a1a] hover:bg-[#dcfce7]"}`}>
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </Panel>
-
             <Panel title={`Layers · ${view} ${items.length}${backEnabled && view === "front" ? ` · back ${backItems.length}` : ""}${backEnabled && view === "back" ? ` · front ${frontItems.length}` : ""}`}>
               {items.length === 0 ? (
                 <div className="text-xs text-[#4b5563] text-center py-2">No layers yet</div>
               ) : (
                 <ul className="space-y-1.5" data-testid="layers-list">
-                  {items.slice().reverse().map((it) => (
-                    <li key={it.id}
-                        onClick={() => setSelectedId(it.id)}
-                        data-testid={`layer-${it.id}`}
-                        className={`flex items-center gap-2 p-1.5 rounded-xl border cursor-pointer transition-colors ${selectedId === it.id ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:bg-[#f0fdf4]"}`}>
-                      <div className="w-7 h-7 rounded-md bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
-                        {it.type === "image" ? <img src={it.src} alt="" className="w-full h-full object-contain" /> : <Type size={12} className="text-[#7bc67e]" />}
-                      </div>
-                      <div className="text-xs font-nunito font-extrabold truncate flex-1">{it.type === "text" ? (it.text || "Text") : "Image"}</div>
-                      <button onClick={(e) => { e.stopPropagation(); removeItem(it.id); }} data-testid={`layer-remove-${it.id}`} className="w-6 h-6 grid place-items-center rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100"><Trash2 size={11} /></button>
-                    </li>
-                  ))}
+                  {items.slice().reverse().map((it, revIdx) => {
+                    const idx = items.length - 1 - revIdx;
+                    const isTop = idx === items.length - 1;
+                    const isBottom = idx === 0;
+                    return (
+                      <li key={it.id}
+                          onClick={() => setSelectedId(it.id)}
+                          data-testid={`layer-${it.id}`}
+                          className={`flex items-center gap-1 p-1.5 rounded-xl border cursor-pointer transition-colors ${selectedId === it.id ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:bg-[#f0fdf4]"}`}>
+                        <div className="w-7 h-7 rounded-md bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
+                          {it.type === "image" ? <img src={it.src} alt="" className="w-full h-full object-contain" /> : <Type size={12} className="text-[#7bc67e]" />}
+                        </div>
+                        <div className="text-xs font-nunito font-extrabold truncate flex-1">{it.type === "text" ? (it.text || "Text") : "Image"}</div>
+                        <button onClick={(e) => { e.stopPropagation(); moveLayer(it.id, "up"); }} disabled={isTop} data-testid={`layer-up-${it.id}`} title="Bring forward" className="w-6 h-6 grid place-items-center rounded-full bg-white border border-[#dcfce7] disabled:opacity-30 hover:bg-[#dcfce7]"><ArrowUp size={10} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); moveLayer(it.id, "down"); }} disabled={isBottom} data-testid={`layer-down-${it.id}`} title="Send back" className="w-6 h-6 grid place-items-center rounded-full bg-white border border-[#dcfce7] disabled:opacity-30 hover:bg-[#dcfce7]"><ArrowDown size={10} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); removeItem(it.id); }} data-testid={`layer-remove-${it.id}`} title="Delete" className="w-6 h-6 grid place-items-center rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100"><Trash2 size={11} /></button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
               {items.length > 0 && (
@@ -418,7 +406,6 @@ export default function DesignYourOwn() {
                 ref={canvasRef}
                 onMouseDown={() => { setSelectedId(null); setEditingId(null); }}
                 className="relative aspect-[4/5] bg-white rounded-2xl overflow-hidden select-none"
-                style={{ filter: FILTERS.find(f => f.key === filter)?.css || "none" }}
                 data-testid="design-canvas"
               >
                 <img src={product?.image} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
@@ -616,6 +603,15 @@ export default function DesignYourOwn() {
                 <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}</span>
                 <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
               </div>
+              {totalQty > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5" data-testid="size-breakdown">
+                  {(product?.sizes || []).filter(sz => (sizeQtys[sz] || 0) > 0).map(sz => (
+                    <span key={sz} data-testid={`size-breakdown-${sz}`} className="inline-flex items-center gap-1 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-2 py-0.5 text-[11px] font-nunito font-extrabold text-[#1a1a1a]">
+                      {sizeQtys[sz]} × <span className="text-[#7bc67e]">{sz}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
               <button data-testid="designer-checkout" onClick={checkout} disabled={checkingOut} className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold rounded-full px-6 py-4 shadow-md hover:-translate-y-0.5 transition-transform">
                 {checkingOut ? <><Loader2 className="animate-spin" size={16} /> Saving design…</> : <><ShoppingCart size={16} /> Checkout with Stripe</>}
               </button>
