@@ -7,6 +7,16 @@
 
 ## Implemented
 
+### Iter 14 — Phase 2: Admin auth + Restricted placements + Customer Q&A (Feb 2026)
+- **JWT admin authentication** (bcrypt + HS256 PyJWT). Admin user seeded at startup from `.env` (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `JWT_SECRET`). Token in `localStorage.yop_admin_token`, attached via axios request interceptor. Cookie also set on login for SSR-friendly auth.
+- **Auth endpoints**: `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
+- **Protected admin routes** via `Depends(require_admin)`: GET/PATCH `/admin/products`, `/admin/products/{id}/meta`, GET/PATCH `/admin/designer-products`, PATCH `/admin/bulk-tiers/defaults`, GET `/admin/qa`, POST `/admin/qa/{id}/answer`, DELETE `/admin/qa/{id}`, plus POST/PUT/DELETE `/team-kit-brands` and POST `/reviews/import-judgeme`.
+- **Frontend admin wall**: `/admin/login` page + `RequireAdmin` wrapper around every `/admin/*` route; persistent admin top-bar with Sign out + nav.
+- **Allowed print placements** per product: new `allowed_placements` field on `ProductMeta` (7 values: left-breast, right-breast, full-front, back-print, left-sleeve, right-sleeve, neck-label). Admin toggles in `/admin/product-settings` (`aps-placements-{id}`). Backend validates against allow-list. `GET /api/products/{id}/allowed-placements` is public. PDP `placements-grid` now filters by this list so a hi-vis vest can hide sleeve prints, etc.
+- **Customer Q&A on PDP** (`pdp-qa-section`): public POST `/api/qa` immediately publishes the question; PDP shows full Q&A list with answers; admin replies/deletes via `/admin/qa` page. Validation: question 5–500 chars; unknown product_id → 400. Admin Q&A page (`/admin/qa`) lists unanswered first.
+- **Backend tests**: 34/34 pass (`test_iteration14.py`). **Frontend e2e**: 15/15 pass on live preview (`iteration_14.json`).
+- **Admin credentials**: stored in `/app/memory/test_credentials.md`.
+
 ### Iter 1–4 (summary)
 - 4-theme showcase (at `/themes`), Theme 3 Bold & Bright chosen
 - All inner pages in Bold & Bright style
