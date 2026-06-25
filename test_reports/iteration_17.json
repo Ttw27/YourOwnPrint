@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only mobile bug-fix verification for iteration_17. All 3 reported mobile bugs (mobile hamburger menu portal fix, /design mobile order, PDP mobile order + collapsibles) PASS. All regressions (desktop mega menu w/ Kit Your Workforce, /api/navigation keys, PDP desktop, smoke tests on portfolio/sports/industries/teams-schools/workwear) PASS.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/design (mobile, designer)", "issues": ["React hydration warning in console: '<span> cannot be a child of <option>' — non-blocking but should be cleaned up. Pre-existing, not related to these 3 bugs."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional, non-blocking) Fix React DOM warning in DesignYourOwn select/option markup — a <span> appears inside an <option> element, causing hydration warnings."
+  ],
+  "critical_code_review_comments": [
+    "BoldLayout.jsx portal fix is correct — overlay confirmed rendered outside <nav> ancestry, bounding-box height = 844px (full viewport). Body scroll lock via useEffect is well-implemented.",
+    "DesignYourOwn.jsx order classes (order-1/2/3 vs lg:order-1/2/3) verified — mobile y-coords: right-aside=234, canvas=986, left-aside=1587; desktop x-coords: 32/341/959. Correct on both.",
+    "ProductDetail.jsx collapsibles both confirmed closed by default; clicking opens them; title at y=548 on mobile (well above-the-fold under gallery)."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (not tested per request)", "frontend": "100% (3/3 bug fixes + 8/8 regression checks passing)" },
+  "test_credentials": "Not used — bug fixes are purely client-side rendering, no auth needed.",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "iteration_17 verified 3 mobile bug fixes. Mobile menu now uses createPortal(document.body) to escape backdrop-blur containing block — overlay is full 844px height. Designer right-aside (product picker) renders first on mobile via Tailwind order classes. PDP mobile shows gallery -> title -> buy panel; description-full and size-guide-panel are in <details> collapsibles (closed by default) below the buy panel. Pre-existing non-blocking React warning in /design: <span> inside <option> — should be cleaned up in a future cycle.",
+  "rca of the issue": "Bug 1 (mobile menu): the parent <nav> uses Tailwind 'backdrop-blur' (backdrop-filter), which creates a CSS containing block, trapping any descendant position:fixed elements within the 64px nav height. Fix: createPortal(overlay, document.body) moves the slide-over outside the nav DOM, allowing position:fixed inset-0 to span the full viewport. Verified with overlay.bounding_box().height === 844 and nav.contains(overlay) === false. Bug 2: addressed via Tailwind order-N / lg:order-N. Bug 3: restructured PDP grid and wrapped the long content in <details>."
+}

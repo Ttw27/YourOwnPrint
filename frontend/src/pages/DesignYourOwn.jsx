@@ -359,7 +359,7 @@ export default function DesignYourOwn() {
         </div>
 
         <div className="grid lg:grid-cols-12 gap-5">
-          <aside className="lg:col-span-3 space-y-4">
+          <aside className="lg:col-span-3 space-y-4 order-3 lg:order-1" data-testid="designer-left-aside">
             <Panel title="Upload">
               <button data-testid="designer-upload-btn" onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#7bc67e] hover:bg-[#f0fdf4] text-[#7bc67e] py-6 rounded-2xl transition-colors">
                 <Upload size={18} /><span className="font-nunito font-extrabold text-sm">Upload image</span>
@@ -438,7 +438,7 @@ export default function DesignYourOwn() {
             </Panel>
           </aside>
 
-          <main className="lg:col-span-6">
+          <main className="lg:col-span-6 order-2 lg:order-2" data-testid="designer-canvas-main">
             {/* Front / Back / Neck tabs + back/neck enable toggles */}
             <div className="flex items-center justify-between flex-wrap gap-3 mb-3" data-testid="designer-view-tabs">
               <div className="inline-flex bg-[#f0fdf4] rounded-full p-1 border border-[#dcfce7]">
@@ -651,7 +651,7 @@ export default function DesignYourOwn() {
             )}
           </main>
 
-          <aside className="lg:col-span-3 space-y-4">
+          <aside className="lg:col-span-3 space-y-4 order-1 lg:order-3" data-testid="designer-right-aside">
             <Panel title="Product">
               <select data-testid="designer-product" value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm">
                 {products.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}

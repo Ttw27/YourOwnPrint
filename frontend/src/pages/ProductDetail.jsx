@@ -9,7 +9,7 @@ import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
 import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
 import { toast } from "sonner";
-import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X } from "lucide-react";
+import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -227,31 +227,17 @@ export default function ProductDetail() {
           </>
         ) : product && (
           <>
-            <div className="grid lg:grid-cols-12 gap-8 mb-12">
-              {/* Left column: image gallery + description + size guide */}
-              <div className="lg:col-span-6 space-y-5">
+            <div className="grid lg:grid-cols-12 gap-8 mb-8">
+              {/* Left column on desktop: image gallery only (description & size guide moved below the buy panel for mobile-first ordering) */}
+              <div className="lg:col-span-6">
                 <ProductGallery product={product} color={color} />
-
-                {product.description_full && (
-                  <div className="bg-[#f0fdf4] border border-[#dcfce7] rounded-2xl p-4 text-sm text-[#1a1a1a] leading-relaxed whitespace-pre-line" data-testid="product-description-full">
-                    {product.description_full}
-                  </div>
-                )}
-
-                {(product.size_guide_table || []).length > 0 && (
-                  <SizeGuidePanel
-                    rows={product.size_guide_table}
-                    name={product.name}
-                    onOpenModal={() => setShowSizeGuide(true)}
-                  />
-                )}
               </div>
 
-              {/* Right column: configurator + buy form */}
+              {/* Right column: title, price, selections — directly under the gallery on mobile */}
               <div className="lg:col-span-6 space-y-5">
                 <div>
                   <span className="inline-block bg-[#fde68a] text-[#1a1a1a] text-xs font-nunito font-extrabold uppercase tracking-wider px-3 py-1 rounded-full">{product.category}</span>
-                  <h1 data-testid="product-name" className="mt-3 font-nunito font-black text-4xl lg:text-5xl text-[#1a1a1a]">{product.name}</h1>
+                  <h1 data-testid="product-name" className="mt-3 font-nunito font-black text-3xl lg:text-5xl text-[#1a1a1a]">{product.name}</h1>
                   <div className="mt-2 flex items-center gap-3 flex-wrap text-xs text-[#4b5563]">
                     {product.brand && <span data-testid="product-brand" className="font-nunito font-extrabold text-[#1a1a1a]">{product.brand}</span>}
                     {product.brand && product.sku && <span>·</span>}
@@ -264,7 +250,7 @@ export default function ProductDetail() {
                       <button data-testid="open-size-guide" onClick={() => setShowSizeGuide(true)} className="text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline inline-flex items-center gap-1">📏 Size guide</button>
                     )}
                   </div>
-                  <p className="text-[#4b5563] mt-4">{product.description}</p>
+                  <p className="text-[#4b5563] mt-3 text-sm" data-testid="product-description-short">{product.description}</p>
                 </div>
 
                 <BulkTierLadder productId={product.id} currentQty={totalQty} />
@@ -485,6 +471,38 @@ export default function ProductDetail() {
               </div>
             </div>
 
+            {/* Collapsible product info — description + size guide. Closed by default so title/price/selections lead the page. */}
+            <div className="grid lg:grid-cols-2 gap-5 mb-12" data-testid="product-info-collapsibles">
+              {product.description_full && (
+                <details className="group bg-white border-2 border-[#dcfce7] rounded-3xl overflow-hidden">
+                  <summary className="cursor-pointer list-none flex items-center justify-between px-5 py-4 hover:bg-[#f0fdf4] transition-colors" data-testid="product-description-toggle">
+                    <span className="font-nunito font-extrabold text-base text-[#1a1a1a]">📋 Full description &amp; care</span>
+                    <ChevronDown size={18} className="text-[#7bc67e] group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="px-5 pb-5 text-sm text-[#1a1a1a] leading-relaxed whitespace-pre-line" data-testid="product-description-full">
+                    {product.description_full}
+                  </div>
+                </details>
+              )}
+
+              {(product.size_guide_table || []).length > 0 && (
+                <details className="group bg-white border-2 border-[#dcfce7] rounded-3xl overflow-hidden">
+                  <summary className="cursor-pointer list-none flex items-center justify-between px-5 py-4 hover:bg-[#f0fdf4] transition-colors" data-testid="product-size-guide-toggle">
+                    <span className="font-nunito font-extrabold text-base text-[#1a1a1a]">📏 Size guide</span>
+                    <ChevronDown size={18} className="text-[#7bc67e] group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="px-5 pb-5">
+                    <SizeGuidePanel
+                      rows={product.size_guide_table}
+                      name={product.name}
+                      onOpenModal={() => setShowSizeGuide(true)}
+                      embedded
+                    />
+                  </div>
+                </details>
+              )}
+            </div>
+
             <RelatedProductsStrip
               productId={product.id}
               title="Customers also bought"
@@ -620,17 +638,26 @@ function ProductGallery({ product, color }) {
 }
 
 // ---- Inline size-guide table preview (left column under description) ----
-function SizeGuidePanel({ rows, name, onOpenModal }) {
+function SizeGuidePanel({ rows, name, onOpenModal, embedded = false }) {
   const cols = rows.length > 0 ? Object.keys(rows[0]).filter((k) => k !== "size") : [];
+  const wrapperClass = embedded ? "" : "bg-white rounded-2xl border-2 border-[#dcfce7] p-4";
   return (
-    <div className="bg-white rounded-2xl border-2 border-[#dcfce7] p-4" data-testid="pdp-size-guide-panel">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <div className="text-[10px] font-nunito font-extrabold uppercase tracking-[0.3em] text-[#7bc67e]">Size guide</div>
-          <div className="text-xs text-[#4b5563]">All measurements in cm · {name}</div>
+    <div className={wrapperClass} data-testid="pdp-size-guide-panel">
+      {!embedded && (
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-[10px] font-nunito font-extrabold uppercase tracking-[0.3em] text-[#7bc67e]">Size guide</div>
+            <div className="text-xs text-[#4b5563]">All measurements in cm · {name}</div>
+          </div>
+          <button onClick={onOpenModal} className="text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline" data-testid="pdp-size-guide-expand">Expand →</button>
         </div>
-        <button onClick={onOpenModal} className="text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline" data-testid="pdp-size-guide-expand">Expand →</button>
-      </div>
+      )}
+      {embedded && (
+        <div className="text-xs text-[#4b5563] mb-2">
+          All measurements in cm · {name} ·{" "}
+          <button onClick={onOpenModal} className="font-nunito font-extrabold text-[#7bc67e] hover:underline" data-testid="pdp-size-guide-expand-embedded">expand full guide →</button>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead><tr className="border-b border-[#dcfce7]">
