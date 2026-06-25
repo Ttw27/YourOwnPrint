@@ -62,12 +62,13 @@ export const buildWhatsAppLink = (preset = "Hi! I'd like some help with my custo
   `https://wa.me/${WHATSAPP_NUMBER_RAW.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(preset)}`;
 
 export const NAV_LINKS = [
+  { label: "Specials", to: "/specials", highlight: true },
   { label: "Workwear", to: "/workwear" },
   { label: "Kit Workforce", to: "/workforce" },
   { label: "Teams & Schools", to: "/teams-schools" },
   { label: "Sports & Combat", to: "/sports" },
   { label: "Team Kits", to: "/team-kits" },
   { label: "Leavers'", to: "/leavers-hoodies" },
-  { label: "Design Your Own", to: "/design", highlight: true },
+  { label: "Design Your Own", to: "/design" },
   { label: "Get a Quote", to: "/contact" },
 ];

@@ -1106,6 +1106,7 @@ class ProductMeta(BaseModel):
     also_bought: Optional[List[str]] = None
     match_with: Optional[List[str]] = None
     image_gallery: Optional[List[str]] = None
+    specials_eligible: Optional[bool] = None
 
 
 class DesignerArtwork(BaseModel):
@@ -1181,7 +1182,7 @@ async def _merge_designer_overrides():
         if pid in PRODUCTS:
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
                      "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-                     "workforce_eligible", "also_bought", "match_with", "image_gallery"):
+                     "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -1427,6 +1428,7 @@ async def admin_list_all_products():
             "also_bought": p.get("also_bought") or [],
             "match_with": p.get("match_with") or [],
             "image_gallery": p.get("image_gallery") or [],
+            "specials_eligible": bool(p.get("specials_eligible")),
         })
     return out
 
@@ -1495,14 +1497,15 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "also_bought": payload.also_bought,
         "match_with": payload.match_with,
         "image_gallery": payload.image_gallery,
+        "specials_eligible": payload.specials_eligible if payload.specials_eligible is not None else bool(PRODUCTS[product_id].get("specials_eligible")),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
               "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-              "workforce_eligible", "also_bought", "match_with", "image_gallery"):
+              "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible"):
         v = doc.get(k)
-        if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible"):
+        if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible", "specials_eligible"):
             PRODUCTS[product_id][k] = v
     return {"ok": True}
 
@@ -1784,6 +1787,24 @@ async def list_workforce_products():
                 "category": p["category"],
                 "brand": p.get("brand") or "",
                 "allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS),
+            })
+    out.sort(key=lambda x: x["price"])
+    return out
+
+
+@api_router.get("/specials/products")
+async def list_specials_products():
+    """Your Own Print Specials — single breast-pocket logo print, no MOQ, starter-business pricing."""
+    out = []
+    for p in PRODUCTS.values():
+        if p.get("specials_eligible"):
+            out.append({
+                "id": p["id"], "name": p["name"], "price": float(p["price"]),
+                "image": p["image"],
+                "description": p.get("description") or "",
+                "sizes": p.get("sizes", []),
+                "category": p["category"],
+                "brand": p.get("brand") or "",
             })
     out.sort(key=lambda x: x["price"])
     return out
@@ -2486,6 +2507,32 @@ def _default_description(product: Dict) -> str:
     if brand and brand != "Your Own Print":
         parts.append(f"\n\nGarment by: {brand}.")
     return "".join(parts)
+
+
+@app.on_event("startup")
+async def _seed_specials_defaults():
+    """One-time seed: flag a sensible starter lineup as Specials-eligible."""
+    try:
+        marker = await db.settings.find_one({"key": "specials_seed_v1"})
+        if marker is not None:
+            return
+        defaults = ["workwear-tshirt", "polo-shirt", "workwear-sweatshirt", "personalised-tee", "personalised-hoodie", "hi-vis-vest"]
+        for pid in defaults:
+            if pid in PRODUCTS:
+                await db.product_meta.update_one(
+                    {"product_id": pid},
+                    {"$set": {"product_id": pid, "specials_eligible": True,
+                              "updated_at": datetime.now(timezone.utc).isoformat()}},
+                    upsert=True,
+                )
+                PRODUCTS[pid]["specials_eligible"] = True
+        await db.settings.update_one(
+            {"key": "specials_seed_v1"},
+            {"$set": {"key": "specials_seed_v1", "ran_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+    except Exception as e:
+        print(f"specials seed failed: {e}")
 
 
 @app.on_event("startup")

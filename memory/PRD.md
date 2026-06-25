@@ -7,6 +7,12 @@
 
 ## Implemented
 
+### Iter 21 — Your Own Print Specials (Feb 2026)
+- New **`/specials`** landing page — curated "starter lineup" for small businesses: single breast-pocket print, **no MOQ**, no setup fees. Bold dark hero with value chips, 3×2 mosaic preview, value-props row, "Starter lineup" grid (each card links to PDP and shows "Breast logo print included · No MOQ"), and trust band.
+- `specials_eligible` flag on `ProductMeta` + admin toggle in `/admin/product-settings` + auto-seed (one-time, marker `specials_seed_v1`) for 6 starter pieces: personalised tee (£6.99), workwear tee, polo, hi-vis vest, sweatshirt, personalised hoodie (£14.99). Sorted ascending by price.
+- Public endpoint `GET /api/specials/products`.
+- Navbar — "Specials" added as the first link with green highlight; "Design Your Own" un-highlighted to give Specials top billing.
+
 ### Iter 20 — Leavers' custom upload + drawstring bag preview (Feb 2026)
 - **Upload your own design** card in `/leavers-hoodies/start` step 3: amber-bordered dropzone (PNG/JPG/SVG, 6 MB cap). Uploading overrides any selected template. Backend now requires either a template OR a custom upload, saves the data URL to a new `leavers_artwork` collection linked to the Stripe payment_transaction.
 - **Drawstring bag preview card**: shows the actual bag photo + price chip + explanation that the bag carries the same design as the hoodie on the front and the **size of the garment inside on the back** — making distribution at school painless.

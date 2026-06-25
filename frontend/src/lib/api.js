@@ -225,6 +225,12 @@ export async function updateWorkforceTiers(payload) {
   return data;
 }
 
+// ----- Your Own Print Specials -----
+export async function fetchSpecialsProducts() {
+  const { data } = await api.get("/specials/products");
+  return data;
+}
+
 // ----- Leavers' templates + checkout + bespoke -----
 export async function fetchLeaversTemplates() {
   const { data } = await api.get("/leavers/templates");

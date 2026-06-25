@@ -56,6 +56,7 @@ export default function AdminProductSettings() {
         bulk_pricing_overrides: (p.bulk_pricing_overrides || []).length ? p.bulk_pricing_overrides : null,
         allowed_placements: Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS,
         workforce_eligible: !!p.workforce_eligible,
+        specials_eligible: !!p.specials_eligible,
         also_bought: Array.isArray(p.also_bought) ? p.also_bought : [],
         match_with: Array.isArray(p.match_with) ? p.match_with : [],
       });
@@ -203,6 +204,16 @@ export default function AdminProductSettings() {
                         </div>
                       </label>
                       <Briefcase size={16} className="text-amber-600" />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-xl p-3" data-testid={`aps-specials-row-${p.id}`}>
+                      <label className="inline-flex items-center gap-2 cursor-pointer flex-1">
+                        <input type="checkbox" checked={!!p.specials_eligible} onChange={(e) => update(p.id, { specials_eligible: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-specials-${p.id}`} />
+                        <div>
+                          <div className="text-sm font-nunito font-extrabold">Include in &quot;Your Own Print Specials&quot;</div>
+                          <div className="text-[11px] text-[#4b5563]">Starter lineup, no MOQ, single breast-logo print. Shown on /specials.</div>
+                        </div>
+                      </label>
+                      <Sparkles size={16} className="text-[#7bc67e]" />
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Image gallery (extra product photos — shown as thumbnails)</div>
