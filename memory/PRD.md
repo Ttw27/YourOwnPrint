@@ -32,6 +32,17 @@
 - Sports CTA now → `/team-kits`
 - **50/50 backend tests** pass, 100% frontend e2e verified
 
+### Iter 12 — Fight Night cleanup + Sports expansion + Leavers' group orders (Feb 2026)
+- **Fight Night Tee simplified** — removed back-mode sub-options (large vs sponsors); now a single full-back toggle with one upload slot. Cleaner UX matching what actually prints.
+- **Fight Night bulk pricing** — tiers 10+ £10.99/tee, 25+ £9.99/tee (base £11.99). Visible ladder + "add N more to drop to £X" nudge on the page; server-side via `FIGHT_NIGHT_BULK_TIERS` + `tier_unit_price()` helper.
+- **Sports expansion** — 5 new standalone products (basketball-vest £19.99, cricket-polo £21.99, hockey-shirt £22.99, athletics-vest £14.99, cycling-jersey £32.99) in category=team-kits with the full configurator.
+- **Leavers' Hoodies / Varsity** — new dedicated `/leavers-hoodies` landing with hero, **bulk tier ladder** (20+ £19.99, 30+ £17.99, 60+ £16.99, 100+ £15.99), 4 garments (pullover, zip, varsity jacket, sweatshirt), 3 ready-to-go design templates, **printed drawstring bag addon (+£3.99/garment)**.
+- **Group Order link feature** — rep creates a shared link via `/leavers-hoodies/start`, gets a unique URL `/leavers/{token}` plus a private manage URL `/leavers/{token}/manage` (manage_token stored in localStorage). Classmates open the link and add their own name + nickname + size + qty. Rep dashboard shows live roster, total with bulk tier auto-applied, "Copy link", remove member, close order, and one-click checkout for the whole group.
+- **Backend**: 9 new endpoints (`/bulk-tiers/fight-night`, `/bulk-tiers/leavers`, `/leavers/products`, `/group-orders` POST/GET/join/manage/close/member-DELETE), `LEAVERS_BAG_PRICE` constant, leavers + drawstring-bag pricing branches in checkout (drawstring-bag flat £3.99/garment as a placement on leavers products; standalone leavers-drawstring-bag product NOT bulk-priced).
+- **Nav**: added "Leavers'" entry.
+- **Testing**: 27/27 backend tests pass (test_iteration12.py); all 15 critical frontend flows pass on live preview (iteration_12.json). Verified e2e: 30 hoodies + bag = £659.40 with bulk tier auto-applied; group-order lifecycle (create → 3 join → DELETE one → close → join-after-close blocked) all green.
+- **Polish**: clipboard fallback to `document.execCommand('copy')` in iframed contexts.
+
 ### Iter 11 — Neck label add-on + product info card (Feb 2026)
 - **Neck label add-on** (`+£1.50/garment` flat, DTF heat-transfer) — third canvas tab next to Front/Back with a 2:1 landscape aspect that mimics a real ~60×30 mm sewn-in label
 - **`{SIZE}` token** — special locked text item in the neck-label canvas (`designer-add-size-token`, only one allowed per design). On checkout the client composes one transparent neck-label PNG **per unique size** in the order (M.png, L.png, XL.png…) with the actual size baked in — production gets a ready-to-print queue per size variant

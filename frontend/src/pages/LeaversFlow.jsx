@@ -215,7 +215,19 @@ export function LeaversManage() {
   const total = totalQty * (unitPrice + bagExtra);
   const joinUrl = `${window.location.origin}/leavers/${token}`;
 
-  const copyLink = () => { navigator.clipboard.writeText(joinUrl); toast.success("Link copied!"); };
+  const copyLink = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(joinUrl);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = joinUrl; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+      }
+      toast.success("Link copied!");
+    } catch { toast.error("Couldn't copy — long-press the URL above"); }
+  };
   const removeMember = async (mid) => {
     if (!confirm("Remove this person from the order?")) return;
     await removeGroupMember(token, manageToken, mid);
