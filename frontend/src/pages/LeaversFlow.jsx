@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversCheckout } from "../lib/api";
 import { toast } from "sonner";
-import { ArrowRight, CheckCircle2, GraduationCap, Sparkles, Loader2, ShieldCheck, Package } from "lucide-react";
+import { ArrowRight, CheckCircle2, GraduationCap, Sparkles, Loader2, ShieldCheck, Package, Upload, ImageIcon } from "lucide-react";
 
 export default function LeaversStart() {
   const navigate = useNavigate();
@@ -16,6 +16,8 @@ export default function LeaversStart() {
   const [details, setDetails] = useState({ school: "", year_group: "Year 11", contact_name: "", contact_email: "", contact_phone: "" });
   const [productId, setProductId] = useState(null);
   const [templateId, setTemplateId] = useState(null);
+  const [customDesign, setCustomDesign] = useState(null); // data URL of own artwork
+  const [bagProduct, setBagProduct] = useState(null);     // drawstring bag info (image+desc)
   const [sizeQtys, setSizeQtys] = useState({}); // {size: qty}
   const [addBag, setAddBag] = useState(false);
 
@@ -26,7 +28,9 @@ export default function LeaversStart() {
       fetchLeaversTiers().catch(() => null),
     ]).then(([ps, ts, lt]) => {
       const garments = (ps || []).filter((p) => p.id !== "leavers-drawstring-bag");
+      const bag = (ps || []).find((p) => p.id === "leavers-drawstring-bag") || null;
       setProducts(garments);
+      setBagProduct(bag);
       setTemplates(ts || []);
       if (lt) setTiers(lt);
     }).finally(() => setLoading(false));
@@ -51,7 +55,8 @@ export default function LeaversStart() {
   const totalAmount = useMemo(() => (unitPrice + bagPerUnit) * totalQty, [unitPrice, bagPerUnit, totalQty]);
 
   const detailsOk = details.school.trim() && details.year_group.trim() && details.contact_name.trim() && details.contact_email.trim();
-  const canCheckout = detailsOk && product && totalQty >= 1;
+  const designOk = !!templateId || !!customDesign;
+  const canCheckout = detailsOk && product && designOk && totalQty >= 1;
 
   const setSizeQty = (sz, v) => setSizeQtys((s) => ({ ...s, [sz]: Math.max(0, Math.min(2000, Number(v) || 0)) }));
   const bump = (sz, d) => setSizeQty(sz, (sizeQtys[sz] || 0) + d);
@@ -60,6 +65,7 @@ export default function LeaversStart() {
     if (!canCheckout) {
       if (!detailsOk) toast.error("Fill in school, year group, name and email first.");
       else if (!product) toast.error("Pick a garment.");
+      else if (!designOk) toast.error("Pick a design or upload your own artwork.");
       else toast.error("Add at least one item to a size.");
       return;
     }
@@ -72,8 +78,9 @@ export default function LeaversStart() {
         contact_email: details.contact_email,
         contact_phone: details.contact_phone,
         product_id: product.id,
-        template_id: template?.id || null,
-        template_title: template?.title || null,
+        template_id: customDesign ? null : (template?.id || null),
+        template_title: customDesign ? null : (template?.title || null),
+        custom_design_data_url: customDesign || null,
         sizes: Object.entries(sizeQtys).filter(([, q]) => Number(q) > 0).map(([size, qty]) => ({ size, qty: Number(qty) })),
         add_drawstring_bag: addBag,
         origin_url: window.location.origin,
@@ -171,6 +178,28 @@ export default function LeaversStart() {
                 </button>
               ))}
             </div>
+
+            {/* Or upload your own design */}
+            <div className="mt-4 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-4" data-testid="ls-custom-design-block">
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <div className="font-extrabold text-sm flex items-center gap-2">Or upload your own design
+                    {customDesign && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#7bc67e] text-[#1a1a1a]">Selected</span>}
+                  </div>
+                  <div className="text-[11px] text-[#4b5563] mt-0.5">PNG, JPG or SVG (max 6&nbsp;MB). We&apos;ll send a free proof before printing. Uploading overrides any template selected above.</div>
+                </div>
+                {customDesign && (
+                  <button type="button" onClick={() => setCustomDesign(null)} className="text-[11px] text-rose-500 hover:underline" data-testid="ls-custom-design-remove">Remove</button>
+                )}
+              </div>
+              <CustomDesignDrop
+                dataUrl={customDesign}
+                onChange={(d) => {
+                  setCustomDesign(d);
+                  if (d) setTemplateId(null);
+                }}
+              />
+            </div>
           </section>
 
           {/* Step 4: sizes + tier ladder */}
@@ -224,11 +253,12 @@ export default function LeaversStart() {
                 })}
               </div>
 
-              <label className="mt-4 flex items-center gap-2 cursor-pointer bg-[#f0fdf4] border border-[#dcfce7] rounded-xl p-3" data-testid="ls-bag-toggle-row">
-                <input type="checkbox" checked={addBag} onChange={(e) => setAddBag(e.target.checked)} className="w-4 h-4 accent-[#7bc67e]" data-testid="ls-bag-toggle" />
-                <Package size={14} className="text-[#7bc67e]" />
-                <span className="text-sm font-extrabold">Matching printed drawstring bag — +£{(tiers.bag_price || 3.99).toFixed(2)} per hoodie</span>
-              </label>
+              <DrawstringBagCard
+                bag={bagProduct}
+                price={tiers.bag_price || 3.99}
+                checked={addBag}
+                onToggle={setAddBag}
+              />
             </section>
           )}
         </div>
@@ -291,5 +321,87 @@ function Field({ label, value, onChange, type = "text", testid }) {
         data-testid={testid}
       />
     </label>
+  );
+}
+
+// ---- Custom design drop / upload ----
+function CustomDesignDrop({ dataUrl, onChange }) {
+  const inputRef = React.useRef(null);
+  const onFile = (file) => {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { toast.error("Image only (PNG, JPG, SVG)."); return; }
+    if (file.size > 6 * 1024 * 1024) { toast.error("Image too large (max 6 MB)."); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => onChange(e.target.result);
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div className="mt-3" data-testid="ls-custom-design-drop">
+      {dataUrl ? (
+        <div className="flex items-center gap-3 bg-white border border-[#fed7aa] rounded-xl p-3">
+          <img src={dataUrl} alt="Your design" className="w-20 h-20 object-contain bg-[#fff7ed] rounded-lg border border-[#fed7aa] p-1" data-testid="ls-custom-design-preview" />
+          <div className="text-xs flex-1">
+            <div className="font-extrabold">Design uploaded</div>
+            <div className="text-[#4b5563]">We&apos;ll proof and reply within 1 working day.</div>
+          </div>
+          <button type="button" onClick={() => inputRef.current?.click()} className="text-xs font-extrabold underline" data-testid="ls-custom-design-replace">Replace</button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full bg-white hover:bg-[#fff7ed] border-2 border-dashed border-[#fbbf24] text-[#b45309] py-6 rounded-xl text-sm font-extrabold inline-flex items-center justify-center gap-2"
+          data-testid="ls-custom-design-upload"
+        >
+          <Upload size={16} /> Upload your design here
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => onFile(e.target.files?.[0])}
+      />
+    </div>
+  );
+}
+
+// ---- Drawstring bag preview + toggle ----
+function DrawstringBagCard({ bag, price, checked, onToggle }) {
+  return (
+    <div className="mt-4 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl overflow-hidden" data-testid="ls-bag-card">
+      <label className="flex flex-col sm:flex-row cursor-pointer">
+        {bag && (
+          <div className="sm:w-44 sm:flex-shrink-0 aspect-[4/3] sm:aspect-square overflow-hidden bg-white">
+            <img src={bag.image} alt="Matching printed drawstring bag" className="w-full h-full object-cover" data-testid="ls-bag-image" />
+          </div>
+        )}
+        <div className="p-4 flex-1 flex flex-col gap-2">
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={(e) => onToggle(e.target.checked)}
+              className="w-5 h-5 accent-[#7bc67e] mt-0.5"
+              data-testid="ls-bag-toggle"
+            />
+            <div className="flex-1">
+              <div className="font-extrabold text-sm flex items-center gap-2">
+                <Package size={14} className="text-[#7bc67e]" />
+                Matching printed drawstring bag
+                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#7bc67e] text-[#1a1a1a] font-extrabold">+£{price.toFixed(2)} / hoodie</span>
+              </div>
+              <div className="text-xs text-[#4b5563] mt-1 leading-relaxed">
+                Same design as your hoodie printed on the front, with the <strong className="text-[#1a1a1a]">size of the garment inside</strong> printed on the back — makes handing them out at school painless.
+              </div>
+              <div className="text-[11px] text-[#4b5563] mt-2 flex items-center gap-1">
+                <ImageIcon size={11} className="text-[#7bc67e]" /> Westford Mill-style carry-all · UK printed
+              </div>
+            </div>
+          </div>
+        </div>
+      </label>
+    </div>
   );
 }

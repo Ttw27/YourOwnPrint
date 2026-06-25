@@ -1607,6 +1607,7 @@ class LeaversCheckoutRequest(BaseModel):
     product_id: str
     template_id: Optional[str] = None
     template_title: Optional[str] = None
+    custom_design_data_url: Optional[str] = None
     sizes: List[LeaversSizeQty]
     add_drawstring_bag: bool = False
     origin_url: str
@@ -1639,6 +1640,15 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     if total_amount < 0.5:
         raise HTTPException(400, "Total below Stripe minimum (£0.50)")
 
+    # Require either a template or a custom upload
+    if not payload.template_id and not payload.custom_design_data_url:
+        raise HTTPException(400, "Pick a design template or upload your own artwork")
+    if payload.custom_design_data_url:
+        if not payload.custom_design_data_url.startswith("data:image/"):
+            raise HTTPException(400, "Custom design must be an image data URL")
+        if len(payload.custom_design_data_url) > 8 * 1024 * 1024:
+            raise HTTPException(400, "Custom design image too large (max ~6 MB)")
+
     host_url = str(http_request.base_url)
     webhook_url = f"{host_url}api/webhook/stripe"
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
@@ -1668,6 +1678,16 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     )
     session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
 
+    artwork_id = None
+    if payload.custom_design_data_url:
+        artwork_id = str(uuid.uuid4())
+        await db.leavers_artwork.insert_one({
+            "id": artwork_id,
+            "session_id": session.session_id,
+            "custom_design": payload.custom_design_data_url,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.session_id,
@@ -1680,6 +1700,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "product_id": payload.product_id,
         "template_id": payload.template_id,
         "template_title": payload.template_title,
+        "custom_design_artwork_id": artwork_id,
         "sizes": [s.model_dump() for s in payload.sizes if s.qty > 0],
         "add_drawstring_bag": bool(payload.add_drawstring_bag),
         "total_quantity": total_qty,

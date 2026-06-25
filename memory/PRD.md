@@ -7,6 +7,11 @@
 
 ## Implemented
 
+### Iter 20 — Leavers' custom upload + drawstring bag preview (Feb 2026)
+- **Upload your own design** card in `/leavers-hoodies/start` step 3: amber-bordered dropzone (PNG/JPG/SVG, 6 MB cap). Uploading overrides any selected template. Backend now requires either a template OR a custom upload, saves the data URL to a new `leavers_artwork` collection linked to the Stripe payment_transaction.
+- **Drawstring bag preview card**: shows the actual bag photo + price chip + explanation that the bag carries the same design as the hoodie on the front and the **size of the garment inside on the back** — making distribution at school painless.
+- Backend validates `custom_design_data_url` (must be `data:image/*`, max ~6 MB).
+
 ### Iter 19 — PDP no-sticky + Leavers' rework (Feb 2026)
 - **PDP**: removed `sticky top-20` from product gallery so the entire left column (image, thumbnails, description, size guide) scrolls together with the buy form.
 - **Leavers' landing**: dropped the "share one link with your year group / group order" wording. Garments and design templates are now **display-only carousels** (admin-editable images, no click-through). "How the order works" copy updated to reflect the new linear flow.
