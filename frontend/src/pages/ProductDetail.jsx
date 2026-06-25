@@ -6,9 +6,9 @@ import PricePromise from "../components/bold/PricePromise";
 import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
-import { api, fetchReviewsAggregate, fetchPlacements, createCheckout } from "../lib/api";
+import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers } from "../lib/api";
 import { toast } from "sonner";
-import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon } from "lucide-react";
+import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X } from "lucide-react";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -23,6 +23,7 @@ export default function ProductDetail() {
   const [color, setColor] = useState(null);
   const [sizeQtys, setSizeQtys] = useState({});
   const [printMode, setPrintMode] = useState("custom"); // "custom" | "blank"
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [selectedPlacements, setSelectedPlacements] = useState([]);
   // Per-placement artwork uploads (data URLs)
   const [artwork, setArtwork] = useState({}); // { 'left-breast': dataUrl, ... }
@@ -230,12 +231,27 @@ export default function ProductDetail() {
                 <div>
                   <span className="inline-block bg-[#fde68a] text-[#1a1a1a] text-xs font-nunito font-extrabold uppercase tracking-wider px-3 py-1 rounded-full">{product.category}</span>
                   <h1 data-testid="product-name" className="mt-3 font-nunito font-black text-4xl lg:text-5xl text-[#1a1a1a]">{product.name}</h1>
+                  <div className="mt-2 flex items-center gap-3 flex-wrap text-xs text-[#4b5563]">
+                    {product.brand && <span data-testid="product-brand" className="font-nunito font-extrabold text-[#1a1a1a]">{product.brand}</span>}
+                    {product.brand && product.sku && <span>·</span>}
+                    {product.sku && <span data-testid="product-sku">SKU: <strong className="text-[#1a1a1a]">{product.sku}</strong></span>}
+                  </div>
                   <div className="mt-3 flex items-center gap-3 flex-wrap">
                     {agg ? <><StarRating value={agg.average} size={16} /><span className="text-sm text-[#4b5563]">{agg.average.toFixed(1)} ({agg.count} reviews)</span></> : <span className="text-sm text-[#4b5563]">No reviews yet</span>}
                     <span className="text-xs font-nunito font-bold text-[#1a1a1a] bg-[#f0fdf4] px-2 py-1 rounded-full border border-[#dcfce7]">From £{product.price.toFixed(2)}</span>
+                    {(product.size_guide_image || (product.size_guide_table || []).length > 0) && (
+                      <button data-testid="open-size-guide" onClick={() => setShowSizeGuide(true)} className="text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline inline-flex items-center gap-1">📏 Size guide</button>
+                    )}
                   </div>
                   <p className="text-[#4b5563] mt-4">{product.description}</p>
+                  {product.description_full && (
+                    <div className="mt-3 bg-[#f0fdf4] border border-[#dcfce7] rounded-2xl p-4 text-sm text-[#1a1a1a] leading-relaxed whitespace-pre-line" data-testid="product-description-full">
+                      {product.description_full}
+                    </div>
+                  )}
                 </div>
+
+                <BulkTierLadder productId={product.id} />
 
                 {/* Colours */}
                 {product.colors?.length > 0 && (
@@ -459,6 +475,68 @@ export default function ProductDetail() {
       </div>
 
       <BoldFooter />
+      {showSizeGuide && <SizeGuideModal product={product} onClose={() => setShowSizeGuide(false)} />}
+    </div>
+  );
+}
+
+// ---- Bulk tier ladder for PDP ----
+function BulkTierLadder({ productId }) {
+  const [data, setData] = useState(null);
+  useEffect(() => { fetchProductBulkTiers(productId).then(setData).catch(() => setData({ mode: "none" })); }, [productId]);
+  if (!data || data.mode === "none" || !data.tiers?.length) return null;
+  const tiersAsc = [...data.tiers].sort((a, b) => a.min_qty - b.min_qty);
+  return (
+    <div className="bg-white rounded-2xl border-2 border-[#dcfce7] p-4" data-testid="pdp-bulk-tiers">
+      <div className="text-[10px] font-nunito font-extrabold uppercase tracking-[0.3em] text-[#7bc67e]">Bulk pricing</div>
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
+        <div className="rounded-xl p-2 text-center bg-[#f0fdf4] text-[#4b5563]">
+          <div className="font-nunito font-extrabold text-sm">£{data.base_price.toFixed(2)}</div>
+          <div className="text-[10px] mt-0.5">1{tiersAsc[0] ? `–${tiersAsc[0].min_qty - 1}` : "+"}</div>
+        </div>
+        {tiersAsc.map((t) => (
+          <div key={t.min_qty} data-testid={`pdp-tier-${t.min_qty}`} className="rounded-xl p-2 text-center bg-[#f0fdf4] text-[#1a1a1a]">
+            <div className="font-nunito font-extrabold text-sm">£{t.unit_price.toFixed(2)}</div>
+            <div className="text-[10px] mt-0.5">{t.min_qty}+ · save £{t.savings_per_unit.toFixed(2)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---- Size guide modal ----
+function SizeGuideModal({ product, onClose }) {
+  const rows = product.size_guide_table || [];
+  const cols = rows.length > 0 ? Object.keys(rows[0]).filter(k => k !== "size") : [];
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={onClose} data-testid="size-guide-modal">
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-auto p-6 relative">
+        <button onClick={onClose} data-testid="size-guide-close" className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#f0fdf4] hover:bg-[#dcfce7] grid place-items-center"><X size={14} /></button>
+        <h2 className="font-nunito font-black text-3xl">Size guide</h2>
+        <p className="text-xs text-[#4b5563] mt-1">{product.name}</p>
+        {product.size_guide_image && (
+          <img src={product.size_guide_image} alt="Size guide" className="mt-4 rounded-2xl border border-[#dcfce7] w-full" data-testid="size-guide-image" />
+        )}
+        {rows.length > 0 && (
+          <div className="mt-4 overflow-x-auto" data-testid="size-guide-table">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-[#dcfce7]">
+                <th className="text-left py-2 px-3 font-nunito font-extrabold">Size</th>
+                {cols.map((c) => <th key={c} className="text-left py-2 px-3 font-nunito font-extrabold capitalize">{c}</th>)}
+              </tr></thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i} className="border-b border-[#dcfce7]/50">
+                    <td className="py-2 px-3 font-nunito font-extrabold">{r.size}</td>
+                    {cols.map((c) => <td key={c} className="py-2 px-3 text-[#4b5563]">{r[c]}{typeof r[c] === "number" ? " cm" : ""}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

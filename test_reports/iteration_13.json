@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 13 (both backend + frontend) verified for generic bulk-pricing tiers + product meta (brand/SKU/size guide). Backend: 21/21 pytest tests pass in test_iteration13.py — GET /api/bulk-tiers/defaults (4 tiers desc by min_qty); PATCH /api/admin/bulk-tiers/defaults updates + persists (verified via subsequent GET); invalid payloads (empty list, pct>90, min_qty<1, missing min_qty, missing pct) all return 400; defaults restored to original 4 tiers [200/35, 100/28, 25/18, 10/10]. PATCH /api/admin/products/personalised-tee/meta accepts brand/sku/description_full/size_guide_image/size_guide_table/bulk_pricing_enabled and subsequent GET /api/products/personalised-tee surfaces every field; unknown pid → 404. GET /api/bulk-tiers/product/personalised-tee returns mode=percent with 4 tiers (each unit_price snapped to £.99, savings_per_unit > 0); boxing-fight-tee returns mode=absolute (2 tiers); with bulk DISABLED returns mode=none [], then re-enabled returns percent again. Checkout math on workwear-tshirt @ £7.49 with bulk_pricing_enabled — qty 9→67.41, qty 10→69.90, qty 25→149.75, qty 100→499.00, qty 200→998.00 (matches snap_to_99 + the documented £4.99 duplicate at 100/200). Regression: boxing-fight-tee qty 10 → 109.90 (absolute £10.99 untouched); leavers-pullover-hoodie qty 20 → 399.80 (absolute £19.99 untouched). GET /api/admin/products returns all products with brand/sku/description_full/size_guide_image/size_guide_table/bulk_pricing_enabled/bulk_pricing_overrides fields and workwear-tshirt persists brand='YOP Workwear', bulk_pricing_enabled=true. Frontend: /product/workwear-tshirt shows product-brand='YOP Workwear', product-sku='SKU: YOP-WTS-01', product-description-full populated; open-size-guide CTA opens size-guide-modal containing size-guide-table (3 rows incl. header), size-guide-close dismisses. pdp-bulk-tiers ladder renders 5 cards (1-9 baseline + pdp-tier-10/25/100/200) each with snapped £.99 unit + 'save £X' label (£6.99 save £0.50, £5.99 save £1.50, £4.99 save £2.50, £4.99 save £2.50). /fight-night-tee shows fn-gallery with all four mockup figures fn-gallery-0..3 + fn-share-photos panel + WhatsApp 'Send photos' CTA. /admin/product-settings renders aps-defaults with 4 tier rows (aps-default-qty-0..3 + aps-default-pct-0..3) + aps-defaults-save; aps-filter='workwear-tshirt' narrows aps-list to 1 card; expand → aps-brand/sku pre-populated with persisted values, aps-desc edit works, aps-sg-add appends a new size-guide row, aps-bulk toggle on, aps-save shows toast 'Heavy Cotton Workwear Tee saved'. Persistence then verified directly via GET /api/products/workwear-tshirt.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/fight-night-tee fn-gallery", "issues": ["Only 2 of the 4 mockup figures actually render visible imagery (FRONT + SLEEVES populated; BACK FULL + WORN show empty green tiles). Test ids exist for all 4 as required, but the empty tiles look unintentional — consider adding placeholder imagery or hiding empty figures so the 4-up grid doesn't look broken."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration13.py",
+    "/app/test_reports/pytest/iter13_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL/COSMETIC: Populate or hide the two empty figures in fn-gallery on /fight-night-tee so all four tiles look intentional."
+  ],
+  "critical_code_review_comments": [
+    "PATCH /api/admin/products/{id}/meta accepts ANY admin payload with NO auth — this is the same gap as iteration 12's admin endpoints. Anyone hitting /api/admin/products/{id}/meta or /api/admin/bulk-tiers/defaults from outside can mutate brand/SKU/bulk-pricing globally. Add an admin auth guard before going to production.",
+    "snap_to_99 produces duplicate unit prices at high tiers for low-base products (e.g. £7.49 base → both 100+ and 200+ snap to £4.99). The PDP ladder renders both rows, which is the stated 'expected behaviour' — however from a UX perspective the duplicate £4.99 with identical savings labels looks like a bug to end users. Consider collapsing duplicates or surfacing the higher-qty tier with marketing copy ('Lowest possible price reached').",
+    "bulk_pricing_overrides validation in PATCH /admin/products/{id}/meta only checks 'min_qty' + 'pct' keys exist — it does NOT validate ranges (pct could be 999, min_qty could be 0 or negative). The /admin/bulk-tiers/defaults endpoint validates these; per-product overrides should too.",
+    "In server.py the in-memory PRODUCTS dict is mutated on every PATCH /admin/products/{id}/meta — fine in a single process, but with multiple uvicorn workers PRODUCTS would drift across workers until the startup overlay re-runs. Either rely solely on the DB read path or pin the worker count.",
+    "AdminProductSettings.jsx has no auth gate either — anyone navigating to /admin/product-settings can edit and persist via the (unauthenticated) backend. At minimum hide the route behind a token / NavBar gate."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration13.py",
+    "/app/test_reports/pytest/iter13_results.xml"
+  ],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "100% (all iteration-13 critical checks)"},
+  "test_credentials": "N/A — public endpoints; no auth in this repo for admin yet (flagged above).",
+  "seed_data_creation": "Tests mutate two products' meta: personalised-tee (brand=YOP, sku=YOP-PT-01, size_guide_image=https://x, 1 row size_guide_table, bulk_pricing_enabled=true→false→true) and workwear-tshirt (brand=YOP Workwear, sku=YOP-WTS-01, bulk_pricing_enabled=true). bulk_tiers_pct_default is restored to the original 4 tiers in test_bulk_defaults_restore. Stripe TEST MODE checkout sessions created for math validation — sandbox only, no cleanup needed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 13 fully validated against https://branded-workwear-lab.preview.emergentagent.com. Backend tests in /app/backend/tests/test_iteration13.py (21 tests, run with `pytest backend/tests/test_iteration13.py`). Default bulk tiers live in DB collection 'settings' under key 'bulk_tiers_pct_default' (list of [min_qty,pct] pairs, sorted desc) — fall back to DEFAULT_BULK_TIERS_PCT = [(200,35),(100,28),(25,18),(10,10)]. Product meta lives in collection 'product_meta' keyed by product_id and overlays in-memory PRODUCTS at startup via _merge_designer_overrides(). snap_to_99(p) = max(0.99, round(p)-0.01); apply_bulk_tier_pct iterates tiers desc by qty and applies first match. Frontend testids: pdp-bulk-tiers + pdp-tier-{min_qty} on PDP, fn-gallery + fn-gallery-{0..3} + fn-share-photos on /fight-night-tee, aps-defaults + aps-default-{qty,pct}-{i} + aps-defaults-save + aps-filter + aps-list + aps-{pid} + aps-brand/sku/desc/sg-img/sg-add/bulk/save-{pid} on /admin/product-settings. The 100+ and 200+ tiers for a £7.49 base both snap to £4.99 — that's expected behaviour, not a bug. /admin/product-settings has NO auth guard (same gap as other /admin/* endpoints).",
+  "rca of the issue": "N/A — no critical issues found this iteration. Note above re: duplicate £4.99 tier display is a known UX quirk of snap_to_99 at low base prices, not a code defect."
+}

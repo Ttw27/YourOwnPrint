@@ -204,6 +204,35 @@ export default function FightNightTee() {
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-5">
         <ProofBanner />
 
+        {/* Mockup gallery */}
+        <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="fn-gallery">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <h3 className="font-nunito font-extrabold">See the tee in action</h3>
+            <span className="text-[10px] uppercase tracking-wider text-[#4b5563] font-nunito font-extrabold">Mockup gallery</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {[
+              { src: "https://images.pexels.com/photos/8534124/pexels-photo-8534124.jpeg?auto=compress&w=700", label: "Front" },
+              { src: "https://images.pexels.com/photos/4761352/pexels-photo-4761352.jpeg?auto=compress&w=700", label: "Back full" },
+              { src: "https://images.pexels.com/photos/8534119/pexels-photo-8534119.jpeg?auto=compress&w=700", label: "Sleeves" },
+              { src: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg?auto=compress&w=700", label: "Worn" },
+            ].map((g, i) => (
+              <figure key={i} data-testid={`fn-gallery-${i}`} className="rounded-2xl overflow-hidden border border-[#dcfce7] bg-[#f0fdf4]">
+                <div className="aspect-square overflow-hidden"><img src={g.src} alt={g.label} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" loading="lazy" /></div>
+                <figcaption className="text-[10px] text-center font-nunito font-extrabold uppercase tracking-wider py-1.5 bg-white">{g.label}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <div className="mt-3 bg-[#f0fdf4] border border-[#dcfce7] rounded-xl p-3 flex items-start gap-3" data-testid="fn-share-photos">
+            <span className="text-2xl">📸</span>
+            <div className="flex-1">
+              <div className="text-sm font-nunito font-extrabold text-[#1a1a1a]">Got fight-night photos from a previous event?</div>
+              <div className="text-xs text-[#4b5563] mt-0.5">Send them over WhatsApp — we&apos;ll feature them here (and credit you).</div>
+            </div>
+            <WhatsAppInline preset="Hi! I have fight-night tee photos to share." label="Send photos" />
+          </div>
+        </div>
+
         <Block n={1} title="Your details">
           <div className="grid md:grid-cols-2 gap-3">
             <Field label="Your name *" v={contact.name} onV={(v) => setContact({ ...contact, name: v })} testId="fn-name" />

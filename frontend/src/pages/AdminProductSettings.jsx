@@ -1,0 +1,170 @@
+import React, { useEffect, useState } from "react";
+import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults } from "../lib/api";
+import { toast } from "sonner";
+import { Save, Loader2, Plus, Trash2, Sparkles } from "lucide-react";
+
+export default function AdminProductSettings() {
+  const [products, setProducts] = useState([]);
+  const [defaults, setDefaults] = useState({ tiers: [] });
+  const [filter, setFilter] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState(null);
+
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const [ps, ds] = await Promise.all([fetchAllProductsAdmin(), fetchBulkDefaults()]);
+      setProducts(ps); setDefaults(ds);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { reload(); }, []);
+
+  const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+
+  const addRow = (id) => update(id, { size_guide_table: [...(products.find(p => p.id === id).size_guide_table || []), { size: "", chest: "", length: "" }] });
+  const setRow = (id, i, k, v) => {
+    const p = products.find(x => x.id === id);
+    const t = [...(p.size_guide_table || [])];
+    t[i] = { ...t[i], [k]: k === "size" ? v : (Number(v) || v) };
+    update(id, { size_guide_table: t });
+  };
+  const delRow = (id, i) => update(id, { size_guide_table: (products.find(p => p.id === id).size_guide_table || []).filter((_, j) => j !== i) });
+
+  const addOverride = (id) => update(id, { bulk_pricing_overrides: [...(products.find(p => p.id === id).bulk_pricing_overrides || []), { min_qty: 10, pct: 10 }] });
+  const setOverride = (id, i, k, v) => {
+    const p = products.find(x => x.id === id);
+    const o = [...(p.bulk_pricing_overrides || [])];
+    o[i] = { ...o[i], [k]: Number(v) || 0 };
+    update(id, { bulk_pricing_overrides: o });
+  };
+  const delOverride = (id, i) => update(id, { bulk_pricing_overrides: (products.find(p => p.id === id).bulk_pricing_overrides || []).filter((_, j) => j !== i) });
+
+  const save = async (p) => {
+    setBusy(true);
+    try {
+      await updateProductMeta(p.id, {
+        brand: p.brand || "",
+        sku: p.sku || "",
+        description_full: p.description_full || "",
+        size_guide_image: p.size_guide_image || "",
+        size_guide_table: p.size_guide_table || [],
+        bulk_pricing_enabled: !!p.bulk_pricing_enabled,
+        bulk_pricing_overrides: (p.bulk_pricing_overrides || []).length ? p.bulk_pricing_overrides : null,
+      });
+      toast.success(`${p.name} saved`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setBusy(false); }
+  };
+
+  const saveDefaults = async () => {
+    setBusy(true);
+    try { await updateBulkDefaults({ tiers: defaults.tiers.map(t => ({ min_qty: Number(t.min_qty), pct: Number(t.pct) })) }); toast.success("Bulk defaults saved"); }
+    catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setBusy(false); }
+  };
+
+  const visible = products.filter(p => !filter.trim() || `${p.name} ${p.id} ${p.brand} ${p.sku}`.toLowerCase().includes(filter.toLowerCase()));
+
+  return (
+    <div className="bg-white min-h-screen font-nunito text-[#1a1a1a]">
+      <BoldNavbar />
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
+        <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Product settings</h1>
+        <p className="text-[#4b5563] mt-3 max-w-2xl">Set brand, SKU, full description, size guide and bulk pricing for every product.</p>
+
+        {/* Global bulk defaults */}
+        <div className="mt-6 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="aps-defaults">
+          <h2 className="font-nunito font-extrabold inline-flex items-center gap-2"><Sparkles size={14} className="text-[#7bc67e]" /> Default bulk tiers (% off, snapped to £.99)</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+            {(defaults.tiers || []).sort((a, b) => a.min_qty - b.min_qty).map((t, i) => (
+              <div key={i} className="bg-white border border-[#dcfce7] rounded-xl p-2 text-xs flex items-center gap-1">
+                <input data-testid={`aps-default-qty-${i}`} type="number" min={1} value={t.min_qty} onChange={(e) => setDefaults({ ...defaults, tiers: defaults.tiers.map((x, j) => i === j ? { ...x, min_qty: Number(e.target.value) } : x) })} className="w-12 bg-transparent text-right focus:outline-none font-extrabold" />
+                <span>+</span>
+                <span className="ml-auto">·</span>
+                <input data-testid={`aps-default-pct-${i}`} type="number" min={0} max={90} value={t.pct} onChange={(e) => setDefaults({ ...defaults, tiers: defaults.tiers.map((x, j) => i === j ? { ...x, pct: Number(e.target.value) } : x) })} className="w-12 bg-transparent text-right focus:outline-none font-extrabold" />
+                <span>%</span>
+              </div>
+            ))}
+          </div>
+          <button data-testid="aps-defaults-save" onClick={saveDefaults} disabled={busy} className="mt-3 inline-flex items-center gap-1 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full"><Save size={11} /> Save defaults</button>
+        </div>
+
+        <input data-testid="aps-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter products…" className="mt-6 bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-96" />
+
+        {loading ? <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div> : (
+          <div className="space-y-3 mt-6" data-testid="aps-list">
+            {visible.map((p) => (
+              <div key={p.id} data-testid={`aps-${p.id}`} className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4">
+                <button onClick={() => setOpenId(openId === p.id ? null : p.id)} className="w-full flex items-center gap-3 text-left">
+                  <img src={p.image} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-nunito font-extrabold truncate">{p.name}</div>
+                    <div className="text-[10px] text-[#4b5563]">{p.category} · £{p.price.toFixed(2)}{p.brand && ` · ${p.brand}`}{p.sku && ` · ${p.sku}`}</div>
+                  </div>
+                  {p.bulk_pricing_enabled && <span className="text-[10px] bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-2 py-0.5 rounded-full">BULK</span>}
+                </button>
+                {openId === p.id && (
+                  <div className="mt-4 space-y-3 border-t border-[#dcfce7] pt-4">
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <Lab label="Brand"><input data-testid={`aps-brand-${p.id}`} value={p.brand || ""} onChange={(e) => update(p.id, { brand: e.target.value })} className={ic} /></Lab>
+                      <Lab label="SKU"><input data-testid={`aps-sku-${p.id}`} value={p.sku || ""} onChange={(e) => update(p.id, { sku: e.target.value })} className={ic} /></Lab>
+                    </div>
+                    <Lab label="Full description"><textarea data-testid={`aps-desc-${p.id}`} value={p.description_full || ""} onChange={(e) => update(p.id, { description_full: e.target.value })} rows={3} className={ic + " resize-none"} /></Lab>
+                    <Lab label="Size guide image URL (optional)"><input data-testid={`aps-sg-img-${p.id}`} value={p.size_guide_image || ""} onChange={(e) => update(p.id, { size_guide_image: e.target.value })} className={ic} placeholder="https://…" /></Lab>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Size guide table</div>
+                      <div className="space-y-1.5">
+                        {(p.size_guide_table || []).map((r, i) => (
+                          <div key={i} className="grid grid-cols-12 gap-1 items-center" data-testid={`aps-sg-row-${p.id}-${i}`}>
+                            <input value={r.size || ""} onChange={(e) => setRow(p.id, i, "size", e.target.value)} placeholder="Size" className={ic + " col-span-3"} />
+                            <input value={r.chest || ""} onChange={(e) => setRow(p.id, i, "chest", e.target.value)} placeholder="Chest cm" className={ic + " col-span-4"} />
+                            <input value={r.length || ""} onChange={(e) => setRow(p.id, i, "length", e.target.value)} placeholder="Length cm" className={ic + " col-span-4"} />
+                            <button onClick={() => delRow(p.id, i)} className="col-span-1 grid place-items-center text-rose-500"><Trash2 size={12} /></button>
+                          </div>
+                        ))}
+                      </div>
+                      <button data-testid={`aps-sg-add-${p.id}`} onClick={() => addRow(p.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={11} /> Add size row</button>
+                    </div>
+                    <div>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={!!p.bulk_pricing_enabled} onChange={(e) => update(p.id, { bulk_pricing_enabled: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-bulk-${p.id}`} />
+                        <span className="text-sm font-nunito font-extrabold">Enable bulk pricing on this product</span>
+                      </label>
+                      {p.bulk_pricing_enabled && (
+                        <div className="mt-2 bg-[#f0fdf4] border border-[#dcfce7] rounded-xl p-3">
+                          <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-2">Per-product overrides (leave empty to use defaults)</div>
+                          <div className="space-y-1">
+                            {(p.bulk_pricing_overrides || []).map((o, i) => (
+                              <div key={i} className="flex items-center gap-2" data-testid={`aps-bulk-row-${p.id}-${i}`}>
+                                <input type="number" value={o.min_qty} onChange={(e) => setOverride(p.id, i, "min_qty", e.target.value)} className={ic + " w-20"} />
+                                <span className="text-xs">+ ·</span>
+                                <input type="number" value={o.pct} onChange={(e) => setOverride(p.id, i, "pct", e.target.value)} className={ic + " w-20"} />
+                                <span className="text-xs">%</span>
+                                <button onClick={() => delOverride(p.id, i)} className="ml-auto text-rose-500"><Trash2 size={12} /></button>
+                              </div>
+                            ))}
+                          </div>
+                          <button data-testid={`aps-bulk-add-${p.id}`} onClick={() => addOverride(p.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={11} /> Add override</button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-end">
+                      <button data-testid={`aps-save-${p.id}`} onClick={() => save(p)} disabled={busy} className="inline-flex items-center gap-1.5 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold text-xs px-4 py-2 rounded-full"><Save size={11} /> Save</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <BoldFooter />
+    </div>
+  );
+}
+
+const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7bc67e]";
+function Lab({ label, children }) { return <div><div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">{label}</div>{children}</div>; }

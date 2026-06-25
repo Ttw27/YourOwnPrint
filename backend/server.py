@@ -797,6 +797,19 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         base_price = tier_unit_price(FIGHT_NIGHT_BULK_TIERS, base_price, total_qty)
     elif product.get("category") == "leavers" and payload.product_id != "leavers-drawstring-bag":
         base_price = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base_price, total_qty)
+    elif product.get("bulk_pricing_enabled"):
+        # Generic % tier pricing — use per-product overrides if present, else global defaults
+        ovr = product.get("bulk_pricing_overrides")
+        if ovr:
+            tiers_pct = sorted(
+                [(int(t["min_qty"]), float(t["pct"])) for t in ovr if "min_qty" in t and "pct" in t],
+                key=lambda x: -x[0],
+            )
+        else:
+            doc = await db.settings.find_one({"key": SETTINGS_KEY_BULK_DEFAULTS})
+            tiers_pct = doc["tiers"] if doc and "tiers" in doc else DEFAULT_BULK_TIERS_PCT
+            tiers_pct = sorted([(int(t[0]), float(t[1])) for t in tiers_pct], key=lambda x: -x[0])
+        base_price = apply_bulk_tier_pct(base_price, total_qty, tiers_pct)
 
     # Compute total server-side
     total_amount = 0.0
@@ -1025,6 +1038,16 @@ class DesignerSettings(BaseModel):
     use_cases: Optional[List[str]] = None
 
 
+class ProductMeta(BaseModel):
+    brand: Optional[str] = None
+    sku: Optional[str] = None
+    description_full: Optional[str] = None
+    size_guide_image: Optional[str] = None
+    size_guide_table: Optional[List[Dict]] = None
+    bulk_pricing_enabled: bool = False
+    bulk_pricing_overrides: Optional[List[Dict]] = None
+
+
 class DesignerArtwork(BaseModel):
     product_id: str
     artwork_png: str           # data URL / base64 (front, transparent, print-quality)
@@ -1057,6 +1080,23 @@ LEAVERS_BULK_TIERS_DEFAULT = [(100, 15.99), (60, 16.99), (30, 17.99), (20, 19.99
 
 LEAVERS_BAG_PRICE = 3.99  # printed drawstring carry-all addon, per garment
 
+# Generic per-product bulk-discount tiers (% off base price, snapped to nearest £.99)
+DEFAULT_BULK_TIERS_PCT: List[Tuple[int, float]] = [(200, 35.0), (100, 28.0), (25, 18.0), (10, 10.0)]
+SETTINGS_KEY_BULK_DEFAULTS = "bulk_tiers_pct_default"
+
+
+def snap_to_99(price: float) -> float:
+    """Snap to the nearest £x.99 with a £0.99 floor (e.g. 5.42 → 4.99, 5.51 → 5.99)."""
+    return max(0.99, round(price) - 0.01)
+
+
+def apply_bulk_tier_pct(base_price: float, total_qty: int, tiers_pct: List[Tuple[int, float]]) -> float:
+    """Return discounted unit price using the highest matching % tier; tiers must be desc by qty."""
+    for threshold, pct in tiers_pct:
+        if total_qty >= threshold:
+            return snap_to_99(base_price * (1.0 - pct / 100.0))
+    return base_price
+
 
 def tier_unit_price(tiers: List[Tuple[int, float]], default_price: float, total_qty: int) -> float:
     """Return the highest-discount tier matching total_qty, else default."""
@@ -1073,6 +1113,14 @@ async def _merge_designer_overrides():
         if pid in PRODUCTS:
             for k in ("designer_enabled", "designer_image", "designer_print_area",
                      "composition", "description_long", "use_cases"):
+                if k in doc and doc[k] is not None:
+                    PRODUCTS[pid][k] = doc[k]
+    # Product meta overlay (brand/SKU/size guide/bulk pricing)
+    async for doc in db.product_meta.find({}):
+        pid = doc.get("product_id")
+        if pid in PRODUCTS:
+            for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
+                     "bulk_pricing_enabled", "bulk_pricing_overrides"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -1227,6 +1275,122 @@ async def get_fight_night_tiers():
         "base_price": float(PRODUCTS["boxing-fight-tee"]["price"]),
         "tiers": [{"min_qty": t, "unit_price": p} for t, p in FIGHT_NIGHT_BULK_TIERS],
     }
+
+
+# ---------- Generic bulk pricing ----------
+async def _get_bulk_defaults() -> List[Tuple[int, float]]:
+    doc = await db.settings.find_one({"key": SETTINGS_KEY_BULK_DEFAULTS})
+    if doc and "tiers" in doc:
+        return sorted([(int(t[0]), float(t[1])) for t in doc["tiers"]], key=lambda x: -x[0])
+    return DEFAULT_BULK_TIERS_PCT
+
+
+@api_router.get("/bulk-tiers/defaults")
+async def get_bulk_defaults():
+    tiers = await _get_bulk_defaults()
+    return {"tiers": [{"min_qty": q, "pct": p} for q, p in tiers]}
+
+
+@api_router.patch("/admin/bulk-tiers/defaults")
+async def update_bulk_defaults(payload: Dict):
+    tiers = payload.get("tiers")
+    if not isinstance(tiers, list) or not tiers:
+        raise HTTPException(400, "tiers must be a non-empty list")
+    cleaned = []
+    for t in tiers:
+        try:
+            q = int(t["min_qty"])
+            p = float(t["pct"])
+        except (KeyError, TypeError, ValueError):
+            raise HTTPException(400, "each tier needs min_qty (int) + pct (number)")
+        if q < 1 or not (0 <= p <= 90):
+            raise HTTPException(400, "min_qty >=1; pct 0-90")
+        cleaned.append([q, p])
+    await db.settings.update_one(
+        {"key": SETTINGS_KEY_BULK_DEFAULTS},
+        {"$set": {"key": SETTINGS_KEY_BULK_DEFAULTS, "tiers": cleaned, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+@api_router.get("/bulk-tiers/product/{product_id}")
+async def get_product_bulk_tiers(product_id: str):
+    """Resolved bulk-pricing preview for a product — used by the PDP ladder."""
+    p = PRODUCTS.get(product_id)
+    if not p:
+        raise HTTPException(404, "Product not found")
+    base_price = float(p["price"])
+    # Fight Night & Leavers use absolute tiers (not % based)
+    if product_id == "boxing-fight-tee":
+        return {"mode": "absolute", "base_price": base_price,
+                "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in FIGHT_NIGHT_BULK_TIERS]}
+    if p.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
+        return {"mode": "absolute", "base_price": base_price,
+                "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in LEAVERS_BULK_TIERS_DEFAULT]}
+    if not p.get("bulk_pricing_enabled"):
+        return {"mode": "none", "base_price": base_price, "tiers": []}
+    ovr = p.get("bulk_pricing_overrides")
+    if ovr:
+        tiers_pct = sorted([(int(t["min_qty"]), float(t["pct"])) for t in ovr if "min_qty" in t and "pct" in t], key=lambda x: -x[0])
+    else:
+        tiers_pct = await _get_bulk_defaults()
+    return {
+        "mode": "percent", "base_price": base_price,
+        "tiers": [
+            {"min_qty": q, "pct": pct, "unit_price": snap_to_99(base_price * (1 - pct / 100)),
+             "savings_per_unit": round(base_price - snap_to_99(base_price * (1 - pct / 100)), 2)}
+            for q, pct in tiers_pct
+        ],
+    }
+
+
+# ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
+@api_router.get("/admin/products")
+async def admin_list_all_products():
+    """Admin overview of all products with editable meta fields."""
+    out = []
+    for p in PRODUCTS.values():
+        out.append({
+            "id": p["id"], "name": p["name"], "price": float(p["price"]),
+            "category": p["category"], "image": p["image"],
+            "brand": p.get("brand") or "",
+            "sku": p.get("sku") or "",
+            "description_full": p.get("description_full") or "",
+            "size_guide_image": p.get("size_guide_image") or "",
+            "size_guide_table": p.get("size_guide_table") or [],
+            "bulk_pricing_enabled": bool(p.get("bulk_pricing_enabled")),
+            "bulk_pricing_overrides": p.get("bulk_pricing_overrides") or [],
+        })
+    return out
+
+
+@api_router.patch("/admin/products/{product_id}/meta")
+async def update_product_meta(product_id: str, payload: ProductMeta):
+    if product_id not in PRODUCTS:
+        raise HTTPException(404, "Product not found")
+    if payload.bulk_pricing_overrides:
+        for t in payload.bulk_pricing_overrides:
+            if "min_qty" not in t or "pct" not in t:
+                raise HTTPException(400, "each override needs min_qty + pct")
+    doc = {
+        "product_id": product_id,
+        "brand": payload.brand,
+        "sku": payload.sku,
+        "description_full": payload.description_full,
+        "size_guide_image": payload.size_guide_image,
+        "size_guide_table": payload.size_guide_table,
+        "bulk_pricing_enabled": bool(payload.bulk_pricing_enabled),
+        "bulk_pricing_overrides": payload.bulk_pricing_overrides,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
+    for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
+              "bulk_pricing_enabled", "bulk_pricing_overrides"):
+        v = doc.get(k)
+        if v is not None or k == "bulk_pricing_enabled":
+            PRODUCTS[product_id][k] = v
+    return {"ok": True}
 
 
 @api_router.get("/bulk-tiers/leavers")

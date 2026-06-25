@@ -105,6 +105,28 @@ export async function closeGroupOrder(token, manage_token) {
   const { data } = await api.post(`/group-orders/${token}/manage/${manage_token}/close`);
   return data;
 }
+
+// ----- Product meta + generic bulk pricing -----
+export async function fetchProductBulkTiers(product_id) {
+  const { data } = await api.get(`/bulk-tiers/product/${product_id}`);
+  return data;
+}
+export async function fetchBulkDefaults() {
+  const { data } = await api.get("/bulk-tiers/defaults");
+  return data;
+}
+export async function updateBulkDefaults(payload) {
+  const { data } = await api.patch("/admin/bulk-tiers/defaults", payload);
+  return data;
+}
+export async function fetchAllProductsAdmin() {
+  const { data } = await api.get("/admin/products");
+  return data;
+}
+export async function updateProductMeta(product_id, payload) {
+  const { data } = await api.patch(`/admin/products/${product_id}/meta`, payload);
+  return data;
+}
 export async function fetchTeamKitAddons() {
   const { data } = await api.get("/team-kits/addons");
   return data;
