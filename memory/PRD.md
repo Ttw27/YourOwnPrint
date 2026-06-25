@@ -7,6 +7,13 @@
 
 ## Implemented
 
+### Iter 17 — Default product-meta seed (Feb 2026)
+- **Auto-populates** `description_full`, `size_guide_table`, and `bulk_pricing_enabled=true` for all 39 products on startup (non-destructive: only fills empty values; admin overrides survive).
+- **Garment classifier** picks the right size-guide template per product type: tee/polo/vest (chest + length), hoodie/sweatshirt/jacket (+ sleeve), shorts (waist + inseam), tracksuit (chest + waist). UK sizing in cm.
+- **One-time blanket enable** of bulk pricing across the catalogue (guarded by `settings.product_meta_seed_v1` flag — admins can disable per product after).
+- Now visible on every PDP: long description card, "Size guide" badge → modal, and bulk-tier ladder.
+- Cleaned `**markdown**` literals from already-saved descriptions.
+
 ### Iter 16 — PDP reorder + "Match with" strip (Feb 2026)
 - **New PDP order** (above the footer): Customers also bought → Match with → Questions & answers → Reviews.
 - **"Match with" strip** — admin-curated complementary items (max 4 per product, no auto-fallback). Amber-styled to distinguish from green "also bought".

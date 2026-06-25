@@ -2130,6 +2130,148 @@ async def _seed_admin_user():
         print(f"admin seed failed: {e}")
 
 
+# ---- Default product-meta seed (non-destructive: only fills empty fields) ----
+def _classify_garment(product: Dict) -> str:
+    pid = product["id"].lower()
+    name = product["name"].lower()
+    if "short" in pid or "short" in name:
+        return "shorts"
+    if "jacket" in pid or "jacket" in name or "varsity" in pid:
+        return "jacket"
+    if "vest" in pid or "vest" in name:
+        return "vest"
+    if "polo" in pid or "polo" in name:
+        return "polo"
+    if "tracksuit" in pid:
+        return "tracksuit"
+    if "hoodie" in pid or "hoodie" in name or "pullover" in pid:
+        return "hoodie"
+    if "sweatshirt" in pid or "crewneck" in pid:
+        return "sweatshirt"
+    if "jersey" in pid or "rugby" in pid or "football" in pid or "cycling" in pid or "hockey" in pid:
+        return "jersey"
+    if "bag" in pid or "drawstring" in pid:
+        return "bag"
+    if "bundle" in pid or "squad-pack" in pid or "training-pack" in pid:
+        return "bundle"
+    return "tee"
+
+
+# UK adult sizing in cm (chest, length, sleeve, waist, inseam) — DTF garment averages.
+_SIZE_TABLE_TEMPLATES = {
+    "tee":        [{"chest": 91},  {"chest": 96},  {"chest": 101}, {"chest": 106}, {"chest": 111}, {"chest": 121}, {"chest": 131}, {"chest": 141}],
+    "polo":       [{"chest": 91},  {"chest": 96},  {"chest": 101}, {"chest": 106}, {"chest": 111}, {"chest": 121}, {"chest": 131}, {"chest": 141}],
+    "vest":       [{"chest": 96},  {"chest": 101}, {"chest": 106}, {"chest": 111}],
+    "jersey":     [{"chest": 91},  {"chest": 96},  {"chest": 101}, {"chest": 106}, {"chest": 111}, {"chest": 121}],
+    "hoodie":     [{"chest": 96, "sleeve": 64},  {"chest": 101, "sleeve": 65}, {"chest": 106, "sleeve": 66}, {"chest": 111, "sleeve": 67}, {"chest": 121, "sleeve": 68}, {"chest": 131, "sleeve": 69}],
+    "sweatshirt": [{"chest": 96, "sleeve": 64},  {"chest": 101, "sleeve": 65}, {"chest": 106, "sleeve": 66}, {"chest": 111, "sleeve": 67}, {"chest": 121, "sleeve": 68}, {"chest": 131, "sleeve": 69}],
+    "jacket":     [{"chest": 96, "sleeve": 64},  {"chest": 101, "sleeve": 65}, {"chest": 106, "sleeve": 66}, {"chest": 111, "sleeve": 67}, {"chest": 121, "sleeve": 68}],
+    "shorts":     [{"waist": 71, "inseam": 25}, {"waist": 76, "inseam": 26}, {"waist": 81, "inseam": 27}, {"waist": 86, "inseam": 28}, {"waist": 91, "inseam": 29}],
+    "tracksuit":  [{"chest": 96, "waist": 76}, {"chest": 101, "waist": 81}, {"chest": 106, "waist": 86}, {"chest": 111, "waist": 91}, {"chest": 121, "waist": 96}],
+}
+
+_TEE_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"]
+_SIZE_LABELS = {
+    "tee": _TEE_SIZES, "polo": _TEE_SIZES,
+    "vest": ["S", "M", "L", "XL"],
+    "jersey": ["XS", "S", "M", "L", "XL", "XXL"],
+    "hoodie": ["XS", "S", "M", "L", "XL", "XXL"],
+    "sweatshirt": ["XS", "S", "M", "L", "XL", "XXL"],
+    "jacket": ["S", "M", "L", "XL", "XXL"],
+    "shorts": ["S", "M", "L", "XL", "XXL"],
+    "tracksuit": ["S", "M", "L", "XL", "XXL"],
+}
+
+
+def _default_size_guide(product: Dict) -> Optional[List[Dict]]:
+    garment_type = _classify_garment(product)
+    rows_tpl = _SIZE_TABLE_TEMPLATES.get(garment_type)
+    if not rows_tpl:
+        return None
+    labels = _SIZE_LABELS.get(garment_type, _TEE_SIZES)
+    # Match length to whichever is shorter (avoid IndexError)
+    n = min(len(rows_tpl), len(labels))
+    rows: List[Dict] = []
+    for i in range(n):
+        row = {"size": labels[i]}
+        row.update(rows_tpl[i])
+        # Add length proportional to chest where applicable
+        if "chest" in row and "length" not in row:
+            base_length = 66 if garment_type in ("tee", "polo", "vest") else 70
+            row["length"] = base_length + (i * 2)
+        rows.append(row)
+    return rows
+
+
+def _default_description(product: Dict) -> str:
+    garment_type = _classify_garment(product)
+    name = product["name"]
+    composition = product.get("composition") or ""
+    brand = product.get("brand") or "Your Own Print"
+    type_blurb = {
+        "tee": f"A go-to {name.lower()} you'll reach for week after week. Soft handfeel, reinforced shoulder seams and a UK-printed DTF transfer that won't crack, peel or fade.",
+        "polo": f"Smart-casual {name.lower()} built to look the part in client meetings and on-site. Self-fabric collar, twin-needle stitching at the hem.",
+        "vest": f"High-vis {name.lower()} engineered for trade and warehouse use. Reflective banding plus an unmissable colourway keep your crew seen on every shift.",
+        "jersey": f"Match-day {name.lower()} cut for movement. Breathable moisture-wicking knit, raglan sleeves and an athletic fit.",
+        "hoodie": f"Premium-weight {name.lower()} that's earned its place as our most-printed garment. Brushed-back fleece, kangaroo pocket, ribbed cuffs and hem.",
+        "sweatshirt": f"Classic crewneck {name.lower()} with a soft brushed inside. Roomy enough to layer, sharp enough to wear solo.",
+        "jacket": f"All-weather {name.lower()} engineered for British conditions. Wind-resistant outer, fleece-backed liner, YKK zip.",
+        "shorts": f"Performance {name.lower()} cut for full range of motion. Elasticated waistband with drawcord, anti-bunch panelling.",
+        "tracksuit": f"Two-piece {name.lower()} for warm-ups, travel days and post-match recovery.",
+        "bag": f"Lightweight {name.lower()} — printed front, perfect leavers' takeaway or team gym bag.",
+        "bundle": f"Pre-built {name.lower()} — everything your squad needs to take to the pitch in one box.",
+    }.get(garment_type, f"A {name.lower()} printed in the UK using DTF — durable transfers that survive hot washes and tumble-dries.")
+
+    parts = [type_blurb]
+    if composition:
+        parts.append(f"\n\nFabric: {composition}.")
+    parts.append("\n\nPrinted in-house in the UK using our DTF (Direct to Film) process — flexible, full-colour and hard-wearing. Wash inside-out at 30°C, do not iron directly over print.")
+    if brand and brand != "Your Own Print":
+        parts.append(f"\n\nGarment by: {brand}.")
+    return "".join(parts)
+
+
+@app.on_event("startup")
+async def _seed_default_product_meta():
+    """Non-destructive: only fills empty/None fields. Admin overrides remain untouched.
+    Includes a one-time blanket 'bulk pricing on' pass guarded by settings.product_meta_seed_v1."""
+    try:
+        marker = await db.settings.find_one({"key": "product_meta_seed_v1"})
+        first_run = marker is None
+        for pid, p in PRODUCTS.items():
+            existing = await db.product_meta.find_one({"product_id": pid}) or {}
+            patch: Dict = {}
+
+            if not existing.get("description_full") and not p.get("description_full"):
+                patch["description_full"] = _default_description(p)
+
+            if not existing.get("size_guide_table") and not p.get("size_guide_table"):
+                sg = _default_size_guide(p)
+                if sg:
+                    patch["size_guide_table"] = sg
+
+            # One-time blanket enable of bulk pricing (admins can disable per-product after).
+            if first_run and not existing.get("bulk_pricing_enabled") and not p.get("bulk_pricing_enabled"):
+                patch["bulk_pricing_enabled"] = True
+
+            if patch:
+                patch["product_id"] = pid
+                patch["updated_at"] = datetime.now(timezone.utc).isoformat()
+                await db.product_meta.update_one({"product_id": pid}, {"$set": patch}, upsert=True)
+                for k, v in patch.items():
+                    if k not in ("product_id", "updated_at"):
+                        PRODUCTS[pid][k] = v
+
+        if first_run:
+            await db.settings.update_one(
+                {"key": "product_meta_seed_v1"},
+                {"$set": {"key": "product_meta_seed_v1", "ran_at": datetime.now(timezone.utc).isoformat()}},
+                upsert=True,
+            )
+    except Exception as e:
+        print(f"product-meta seed failed: {e}")
+
+
 app.include_router(api_router)
 
 app.add_middleware(
