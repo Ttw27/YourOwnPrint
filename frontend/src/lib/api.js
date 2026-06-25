@@ -225,6 +225,36 @@ export async function updateWorkforceTiers(payload) {
   return data;
 }
 
+// ----- Leavers' templates + checkout + bespoke -----
+export async function fetchLeaversTemplates() {
+  const { data } = await api.get("/leavers/templates");
+  return data;
+}
+export async function leaversCheckout(payload) {
+  const { data } = await api.post("/leavers/checkout", payload);
+  return data;
+}
+export async function leaversBespoke(payload) {
+  const { data } = await api.post("/leavers/bespoke", payload);
+  return data;
+}
+export async function adminListLeaversTemplates() {
+  const { data } = await api.get("/admin/leavers/templates");
+  return data;
+}
+export async function adminCreateLeaversTemplate(payload) {
+  const { data } = await api.post("/admin/leavers/templates", payload);
+  return data;
+}
+export async function adminUpdateLeaversTemplate(id, payload) {
+  const { data } = await api.put(`/admin/leavers/templates/${id}`, payload);
+  return data;
+}
+export async function adminDeleteLeaversTemplate(id) {
+  const { data } = await api.delete(`/admin/leavers/templates/${id}`);
+  return data;
+}
+
 // ----- Also bought with (cross-sells) -----
 export async function fetchAlsoBought(product_id, limit = 4) {
   const { data } = await api.get(`/products/${product_id}/also-bought`, { params: { limit } });

@@ -1524,6 +1524,206 @@ async def list_leavers_products():
     return out
 
 
+# ---------- Leavers' design templates (admin-editable) ----------
+DEFAULT_LEAVERS_TEMPLATES = [
+    {"id": "year-nicknames", "title": "Year + nicknames", "description": "Big year on the front, nicknames list on the back. The classic.",
+     "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg", "active": True, "sort_order": 1},
+    {"id": "class-list", "title": "Class list", "description": "Every leaver's name printed on the back. One hoodie, the whole year.",
+     "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg", "active": True, "sort_order": 2},
+    {"id": "varsity", "title": "Varsity letter", "description": "Letter on chest, year on the back, your name on the left sleeve.",
+     "image": "https://images.pexels.com/photos/16429777/pexels-photo-16429777.jpeg", "active": True, "sort_order": 3},
+]
+
+
+class LeaversTemplate(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    image: str
+    active: bool = True
+    sort_order: int = 100
+
+
+@api_router.get("/leavers/templates")
+async def list_leavers_templates():
+    out = []
+    async for d in db.leavers_templates.find({}).sort([("sort_order", 1), ("title", 1)]):
+        if d.get("active", True):
+            out.append({k: d.get(k) for k in ("id", "title", "description", "image", "sort_order")})
+    return out
+
+
+@api_router.get("/admin/leavers/templates", dependencies=[Depends(require_admin)])
+async def admin_list_leavers_templates():
+    out = []
+    async for d in db.leavers_templates.find({}).sort([("sort_order", 1), ("title", 1)]):
+        out.append({k: d.get(k) for k in ("id", "title", "description", "image", "active", "sort_order")})
+    return out
+
+
+@api_router.post("/admin/leavers/templates", dependencies=[Depends(require_admin)])
+async def admin_create_leavers_template(payload: LeaversTemplate):
+    if not (payload.image.startswith("http://") or payload.image.startswith("https://") or payload.image.startswith("data:image/")):
+        raise HTTPException(400, "Image must be http(s) or data: URL")
+    doc = payload.model_dump()
+    doc["id"] = str(uuid.uuid4())
+    doc["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.leavers_templates.insert_one(doc)
+    return {k: doc[k] for k in ("id", "title", "description", "image", "active", "sort_order")}
+
+
+@api_router.put("/admin/leavers/templates/{template_id}", dependencies=[Depends(require_admin)])
+async def admin_update_leavers_template(template_id: str, payload: LeaversTemplate):
+    if not (payload.image.startswith("http://") or payload.image.startswith("https://") or payload.image.startswith("data:image/")):
+        raise HTTPException(400, "Image must be http(s) or data: URL")
+    res = await db.leavers_templates.update_one(
+        {"id": template_id},
+        {"$set": {**payload.model_dump(), "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(404, "Template not found")
+    return {"ok": True}
+
+
+@api_router.delete("/admin/leavers/templates/{template_id}", dependencies=[Depends(require_admin)])
+async def admin_delete_leavers_template(template_id: str):
+    res = await db.leavers_templates.delete_one({"id": template_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Template not found")
+    return {"ok": True}
+
+
+# ---------- Leavers' direct checkout (no group-order flow) ----------
+class LeaversSizeQty(BaseModel):
+    size: str
+    qty: int
+
+
+class LeaversCheckoutRequest(BaseModel):
+    school: str
+    year_group: str
+    contact_name: str
+    contact_email: EmailStr
+    contact_phone: Optional[str] = ""
+    product_id: str
+    template_id: Optional[str] = None
+    template_title: Optional[str] = None
+    sizes: List[LeaversSizeQty]
+    add_drawstring_bag: bool = False
+    origin_url: str
+
+
+@api_router.post("/leavers/checkout", response_model=CheckoutResponse)
+async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Request):
+    if payload.product_id not in PRODUCTS:
+        raise HTTPException(400, f"Unknown product '{payload.product_id}'")
+    p = PRODUCTS[payload.product_id]
+    if p.get("category") != "leavers":
+        raise HTTPException(400, "Selected product is not a leavers' garment")
+    sizes_set = set(p.get("sizes") or [])
+    total_qty = 0
+    line_summary: List[str] = []
+    for s in payload.sizes:
+        if s.qty < 1:
+            continue
+        if sizes_set and s.size not in sizes_set:
+            raise HTTPException(400, f"Size '{s.size}' unavailable for {p['name']}")
+        total_qty += int(s.qty)
+        line_summary.append(f"{s.size}×{s.qty}")
+    if total_qty < 1:
+        raise HTTPException(400, "Add at least one item")
+    base = float(p["price"])
+    unit = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base, total_qty)
+    bag_each = LEAVERS_BAG_PRICE if payload.add_drawstring_bag else 0.0
+    per_unit = unit + bag_each
+    total_amount = round(per_unit * total_qty, 2)
+    if total_amount < 0.5:
+        raise HTTPException(400, "Total below Stripe minimum (£0.50)")
+
+    host_url = str(http_request.base_url)
+    webhook_url = f"{host_url}api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    origin = payload.origin_url.rstrip("/")
+    success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}/leavers-hoodies"
+
+    metadata = {
+        "flow": "leavers",
+        "school": payload.school[:80],
+        "year_group": payload.year_group[:60],
+        "contact_name": payload.contact_name[:80],
+        "contact_email": payload.contact_email[:80],
+        "product_id": payload.product_id,
+        "template_id": payload.template_id or "custom",
+        "template_title": (payload.template_title or "")[:80],
+        "total_qty": str(total_qty),
+        "unit_price": f"{unit:.2f}",
+        "bag_each": f"{bag_each:.2f}",
+        "lines": ",".join(line_summary)[:450],
+    }
+
+    checkout_request = CheckoutSessionRequest(
+        amount=total_amount, currency="gbp",
+        success_url=success_url, cancel_url=cancel_url,
+        metadata=metadata,
+    )
+    session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
+
+    await db.payment_transactions.insert_one({
+        "id": str(uuid.uuid4()),
+        "session_id": session.session_id,
+        "flow": "leavers",
+        "school": payload.school,
+        "year_group": payload.year_group,
+        "contact_name": payload.contact_name,
+        "contact_email": payload.contact_email,
+        "contact_phone": payload.contact_phone,
+        "product_id": payload.product_id,
+        "template_id": payload.template_id,
+        "template_title": payload.template_title,
+        "sizes": [s.model_dump() for s in payload.sizes if s.qty > 0],
+        "add_drawstring_bag": bool(payload.add_drawstring_bag),
+        "total_quantity": total_qty,
+        "unit_price": unit,
+        "amount": total_amount,
+        "currency": "gbp",
+        "metadata": metadata,
+        "payment_status": "pending",
+        "status": "initiated",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return CheckoutResponse(url=session.url, session_id=session.session_id)
+
+
+class LeaversBespokeRequest(BaseModel):
+    school: str
+    year_group: str
+    contact_name: str
+    contact_email: EmailStr
+    contact_phone: Optional[str] = ""
+    estimated_qty: int
+    notes: Optional[str] = ""
+
+
+@api_router.post("/leavers/bespoke")
+async def leavers_bespoke(payload: LeaversBespokeRequest):
+    if payload.estimated_qty < 1:
+        raise HTTPException(400, "Estimated quantity must be at least 1")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "kind": "leavers_bespoke",
+        "name": payload.contact_name,
+        "email": payload.contact_email,
+        "phone": payload.contact_phone or "",
+        "company": payload.school,
+        "year_group": payload.year_group,
+        "quantity": int(payload.estimated_qty),
+        "message": payload.notes or "",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.quote_requests.insert_one(doc)
+    return {"ok": True, "id": doc["id"]}
+
+
 # ---------- Kit Your Workforce ----------
 SETTINGS_KEY_WORKFORCE_TIERS = "workforce_tiers_pct"
 SETTINGS_KEY_WORKFORCE_QUOTE_THRESHOLD = "workforce_quote_threshold"
@@ -2265,6 +2465,17 @@ def _default_description(product: Dict) -> str:
     if brand and brand != "Your Own Print":
         parts.append(f"\n\nGarment by: {brand}.")
     return "".join(parts)
+
+
+@app.on_event("startup")
+async def _seed_leavers_templates():
+    try:
+        existing = await db.leavers_templates.count_documents({})
+        if existing == 0:
+            for t in DEFAULT_LEAVERS_TEMPLATES:
+                await db.leavers_templates.insert_one({**t, "created_at": datetime.now(timezone.utc).isoformat()})
+    except Exception as e:
+        print(f"leavers templates seed failed: {e}")
 
 
 @app.on_event("startup")

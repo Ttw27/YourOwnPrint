@@ -587,7 +587,7 @@ function ProductGallery({ product, color }) {
   const [active, setActive] = useState(0);
   const current = images[active] || main;
   return (
-    <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7] sticky top-20" data-testid="product-image-block">
+    <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7]" data-testid="product-image-block">
       <div className="aspect-square overflow-hidden rounded-2xl bg-white relative">
         <img src={current} alt={product.name} className="w-full h-full object-cover" data-testid="product-image-main" />
         {color && (

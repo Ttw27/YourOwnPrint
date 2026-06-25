@@ -7,6 +7,15 @@
 
 ## Implemented
 
+### Iter 19 — PDP no-sticky + Leavers' rework (Feb 2026)
+- **PDP**: removed `sticky top-20` from product gallery so the entire left column (image, thumbnails, description, size guide) scrolls together with the buy form.
+- **Leavers' landing**: dropped the "share one link with your year group / group order" wording. Garments and design templates are now **display-only carousels** (admin-editable images, no click-through). "How the order works" copy updated to reflect the new linear flow.
+- **Bespoke design** CTA + modal: collects school, year, contact, estimated qty + notes; submits to `/api/leavers/bespoke` (stored in `quote_requests`) and offers a WhatsApp deeplink as a fallback.
+- **New /leavers-hoodies/start flow**: single-page wizard — (1) details → (2) pick garment → (3) pick design → (4) sizes with **live bulk-tier highlight** (£24.99 → £19.99 → £17.99 → £16.99 → £15.99 lights up as qty crosses 1/20/30/60/100). Sticky right summary with running total + "Add N more to drop to £X" hint. Stripe checkout end-to-end.
+- **Backend**: new `leavers_templates` collection (seeded with 3 defaults), public `GET /api/leavers/templates`, admin CRUD `/api/admin/leavers/templates`. New `POST /api/leavers/checkout` (Stripe session) and `POST /api/leavers/bespoke` (quote request).
+- **Admin**: new `/admin/leavers-templates` page (CRUD images/titles/descriptions/order). Admin top-bar gets a "Leavers" link.
+- **Removed**: old group-order routes (`/leavers/:token`, `/leavers/:token/manage`) and the `LeaversJoin` / `LeaversManage` components; group flow is fully retired.
+
 ### Iter 18 — PDP layout v2 + thumbnails + tier highlight + Workforce uploads (Feb 2026)
 - **PDP layout restructured**: description + size-guide table moved to the LEFT column under the image. Right column keeps buy-form (title, bulk pricing, colour, sizes, placements).
 - **Image gallery + thumbnails**: new `image_gallery` field on `ProductMeta` (max 8 URLs). Thumbnails strip renders under the main image when gallery has >1 entry; click swaps the main image. Admin can add/remove via `/admin/product-settings → aps-gallery-{id}`.

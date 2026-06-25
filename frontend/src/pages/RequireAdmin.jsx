@@ -52,6 +52,7 @@ function AdminTopBar({ email }) {
         <a href="/admin/designer-products" className="hover:text-amber-300" data-testid="admin-nav-designer">Designer</a>
         <a href="/admin/team-kits" className="hover:text-amber-300" data-testid="admin-nav-team-kits">Team kits</a>
         <a href="/admin/qa" className="hover:text-amber-300" data-testid="admin-nav-qa">Q&amp;A</a>
+        <a href="/admin/leavers-templates" className="hover:text-amber-300" data-testid="admin-nav-leavers-templates">Leavers</a>
         <a href="/admin/import-reviews" className="hover:text-amber-300" data-testid="admin-nav-import">Reviews import</a>
       </div>
       <div className="flex items-center gap-3">
