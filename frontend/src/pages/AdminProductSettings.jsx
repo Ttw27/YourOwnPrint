@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase } from "lucide-react";
 
@@ -59,6 +59,8 @@ export default function AdminProductSettings() {
         specials_eligible: !!p.specials_eligible,
         also_bought: Array.isArray(p.also_bought) ? p.also_bought : [],
         match_with: Array.isArray(p.match_with) ? p.match_with : [],
+        gender_fit: p.gender_fit || "unisex",
+        industry_tags: Array.isArray(p.industry_tags) ? p.industry_tags : [],
       });
       toast.success(`${p.name} saved`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
@@ -193,6 +195,42 @@ export default function AdminProductSettings() {
                             </button>
                           );
                         })}
+                      </div>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3" data-testid={`aps-fit-industry-row-${p.id}`}>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Gender / fit</div>
+                        <select
+                          value={p.gender_fit || "unisex"}
+                          onChange={(e) => update(p.id, { gender_fit: e.target.value })}
+                          className="w-full bg-white border border-[#e5e7eb] rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[#7bc67e]"
+                          data-testid={`aps-gender-${p.id}`}
+                        >
+                          {GENDER_FIT_VALUES.map((g) => <option key={g} value={g}>{g[0].toUpperCase() + g.slice(1)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Industry tags</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {INDUSTRY_SLUGS.map((slug) => {
+                            const list = Array.isArray(p.industry_tags) ? p.industry_tags : [];
+                            const on = list.includes(slug);
+                            return (
+                              <button
+                                key={slug}
+                                type="button"
+                                onClick={() => {
+                                  const next = on ? list.filter((s) => s !== slug) : [...list, slug];
+                                  update(p.id, { industry_tags: next });
+                                }}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border transition ${on ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "bg-white border-[#e5e7eb] text-[#4b5563] hover:border-[#1a1a1a]"}`}
+                                data-testid={`aps-industry-${p.id}-${slug}`}
+                              >
+                                {on ? "✓ " : ""}{slug}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-3 bg-[#fef3c7] border-2 border-[#fde68a] rounded-xl p-3" data-testid={`aps-workforce-row-${p.id}`}>

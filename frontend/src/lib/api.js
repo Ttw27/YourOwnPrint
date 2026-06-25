@@ -231,6 +231,19 @@ export async function fetchSpecialsProducts() {
   return data;
 }
 
+// ----- Industries -----
+export async function fetchIndustries() {
+  const { data } = await api.get("/industries");
+  return data;
+}
+export async function fetchIndustry(slug, opts = {}) {
+  const { data } = await api.get(`/industries/${slug}`, { params: opts });
+  return data;
+}
+
+export const GENDER_FIT_VALUES = ["mens", "womens", "unisex", "kids"];
+export const INDUSTRY_SLUGS = ["trades", "hospitality", "healthcare", "beauty", "construction", "logistics", "fitness", "cleaning", "hair-beauty"];
+
 // ----- Leavers' templates + checkout + bespoke -----
 export async function fetchLeaversTemplates() {
   const { data } = await api.get("/leavers/templates");

@@ -1,37 +1,138 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { NAV_LINKS } from "../../lib/data";
-import { Facebook, Instagram, Star } from "lucide-react";
+import { NAV_MENU } from "../../lib/data";
+import { Facebook, Instagram, Star, ChevronDown, Menu, X } from "lucide-react";
 
 export function BoldNavbar() {
   const { pathname } = useLocation();
+  const [openKey, setOpenKey] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    function onDoc(e) {
+      if (!rootRef.current?.contains(e.target)) setOpenKey(null);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
   return (
-    <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#e5e7eb]">
+    <nav ref={rootRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#e5e7eb]" data-testid="bold-navbar">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" data-testid="nav-logo" className="font-nunito font-extrabold text-lg text-[#1a1a1a]">
+        <Link to="/" data-testid="nav-logo" className="font-nunito font-extrabold text-lg text-[#1a1a1a] flex-shrink-0">
           yourownprint<span className="text-[#7bc67e]">.co.uk</span>
         </Link>
-        <div className="hidden md:flex items-center gap-6 text-sm font-nunito font-bold">
-          {NAV_LINKS.map((l) => {
-            const active = pathname === l.to;
+
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-1 text-sm font-nunito font-bold" data-testid="nav-desktop">
+          {NAV_MENU.map((item) => {
+            if (!item.columns) {
+              const active = pathname === item.to;
+              const testid = `nav-${item.label.toLowerCase().replace(/[^a-z]+/g, "-")}`;
+              return item.cta ? (
+                <Link key={item.key} to={item.to} data-testid={testid} className="ml-2 px-4 py-1.5 bg-[#7bc67e] text-[#1a1a1a] rounded-full hover:bg-[#5eb062] transition-colors">{item.label}</Link>
+              ) : (
+                <Link key={item.key} to={item.to} data-testid={testid} className={`px-3 py-1.5 rounded-full transition-colors ${active ? "text-[#7bc67e]" : "text-[#1a1a1a]"} hover:text-[#7bc67e]`}>{item.label}</Link>
+              );
+            }
+            const isOpen = openKey === item.key;
             return (
-              <Link
-                key={l.label}
-                to={l.to}
-                data-testid={`nav-${l.label.toLowerCase().replace(/[^a-z]+/g, "-")}`}
-                className={
-                  l.highlight
-                    ? "px-4 py-1.5 bg-[#7bc67e] text-[#1a1a1a] rounded-full hover:bg-[#5eb062] transition-colors"
-                    : `${active ? "text-[#7bc67e]" : "text-[#1a1a1a]"} hover:text-[#7bc67e] transition-colors`
-                }
-              >
-                {l.label}
-              </Link>
+              <div key={item.key} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOpenKey(isOpen ? null : item.key)}
+                  className={`px-3 py-1.5 inline-flex items-center gap-1 rounded-full transition-colors ${isOpen ? "text-[#7bc67e]" : "text-[#1a1a1a]"} hover:text-[#7bc67e]`}
+                  data-testid={`nav-${item.key}-trigger`}
+                  aria-expanded={isOpen}
+                >
+                  {item.label} <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </button>
+                {isOpen && (
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-[#dcfce7] p-5 grid gap-6 min-w-[460px]"
+                    style={{ gridTemplateColumns: `repeat(${item.columns.length}, minmax(180px, 1fr))` }}
+                    data-testid={`nav-${item.key}-panel`}
+                  >
+                    {item.columns.map((col, i) => (
+                      <div key={i}>
+                        <div className="text-[10px] uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold mb-3" dangerouslySetInnerHTML={{ __html: col.heading }} />
+                        <ul className="space-y-1.5">
+                          {col.links.map((lnk) => (
+                            <li key={lnk.to}>
+                              <Link
+                                to={lnk.to}
+                                onClick={() => setOpenKey(null)}
+                                className="text-sm font-nunito font-extrabold text-[#1a1a1a] hover:text-[#7bc67e] inline-flex items-center gap-2"
+                                data-testid={`nav-${item.key}-link-${lnk.to.replace(/\W+/g, "-")}`}
+                              >
+                                {lnk.label}
+                                {lnk.badge && (
+                                  <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#1a1a1a]">{lnk.badge}</span>
+                                )}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
-        <Link to="/themes" data-testid="nav-themes" className="text-xs font-nunito font-bold text-neutral-500 hover:text-[#7bc67e]">Themes</Link>
+
+        {/* Mobile burger */}
+        <button
+          type="button"
+          aria-label="Open menu"
+          onClick={() => setMobileOpen(true)}
+          className="md:hidden w-10 h-10 grid place-items-center rounded-full bg-[#f0fdf4] text-[#1a1a1a]"
+          data-testid="nav-mobile-open"
+        >
+          <Menu size={18} />
+        </button>
+
+        <Link to="/themes" data-testid="nav-themes" className="hidden lg:inline text-xs font-nunito font-bold text-neutral-500 hover:text-[#7bc67e] ml-2">Themes</Link>
       </div>
+
+      {/* Mobile slide-over */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black/60" onClick={() => setMobileOpen(false)} data-testid="nav-mobile-overlay">
+          <div className="bg-white w-[88%] max-w-sm h-full p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <span className="font-extrabold">Menu</span>
+              <button onClick={() => setMobileOpen(false)} className="w-8 h-8 grid place-items-center rounded-full bg-[#f0fdf4]" data-testid="nav-mobile-close"><X size={16} /></button>
+            </div>
+            <div className="space-y-4">
+              {NAV_MENU.map((item) => (
+                <div key={item.key}>
+                  {item.columns ? (
+                    <details className="group">
+                      <summary className="font-extrabold py-2 cursor-pointer flex items-center justify-between" data-testid={`nav-mobile-group-${item.key}`}>
+                        {item.label}
+                        <ChevronDown size={16} className="group-open:rotate-180 transition-transform" />
+                      </summary>
+                      <ul className="pl-3 space-y-2 mt-1">
+                        {item.columns.flatMap((c) => c.links).map((lnk) => (
+                          <li key={lnk.to}>
+                            <Link to={lnk.to} onClick={() => setMobileOpen(false)} className="text-sm text-[#1a1a1a] hover:text-[#7bc67e]" data-testid={`nav-mobile-link-${lnk.to.replace(/\W+/g, "-")}`}>{lnk.label}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : (
+                    <Link to={item.to} onClick={() => setMobileOpen(false)} className={`block font-extrabold py-2 ${item.cta ? "text-[#7bc67e]" : "text-[#1a1a1a]"}`} data-testid={`nav-mobile-${item.key}`}>
+                      {item.label}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

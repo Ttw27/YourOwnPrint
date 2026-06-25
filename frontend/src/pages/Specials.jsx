@@ -1,17 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import PricePromise from "../components/bold/PricePromise";
 import { fetchSpecialsProducts } from "../lib/api";
+import { GENDER_FITS } from "../lib/data";
 import { Sparkles, CheckCircle2, ShieldCheck, ArrowRight, Briefcase, Zap, Tag } from "lucide-react";
 
 export default function Specials() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [gender, setGender] = useState("all");
 
   useEffect(() => {
     fetchSpecialsProducts().then(setProducts).catch(() => setProducts([])).finally(() => setLoading(false));
   }, []);
+
+  const filtered = useMemo(() => {
+    if (gender === "all") return products;
+    return products.filter((p) => (p.gender_fit || "unisex") === gender);
+  }, [products, gender]);
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen" data-testid="specials-page">
@@ -68,15 +75,29 @@ export default function Specials() {
         <h2 className="font-black text-3xl mb-2">The starter lineup</h2>
         <p className="text-[#4b5563] mb-6">Hand-picked staples that look smart with a single breast-logo print. Tap one to start your order.</p>
 
+        <div className="flex flex-wrap items-center gap-2 mb-6" data-testid="specials-gender-filter">
+          <span className="text-xs uppercase tracking-[0.3em] text-[#4b5563] font-extrabold mr-2">Fit</span>
+          {GENDER_FITS.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setGender(g.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition ${gender === g.id ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#dcfce7] text-[#4b5563] hover:border-[#7bc67e]"}`}
+              data-testid={`specials-gender-${g.id}`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <div className="text-sm text-[#4b5563]">Loading…</div>
-        ) : products.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-5 text-sm" data-testid="specials-empty">
-            No items in the Specials lineup yet. Admin can flag products via <strong>Product settings → Specials-eligible</strong>.
+            No items match this fit. Try a different filter, or admin can flag products via <strong>Product settings → Specials-eligible</strong>.
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="specials-grid">
-            {products.map((p) => (
+            {filtered.map((p) => (
               <Link
                 key={p.id}
                 to={`/product/${p.id}`}

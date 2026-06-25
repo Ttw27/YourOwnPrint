@@ -7,6 +7,13 @@
 
 ## Implemented
 
+### Iter 22 — Mega-menu + Industries + gender filter + Specials = breast-only (Feb 2026)
+- **Top nav condensed** to 5 items via a mega-menu: `Shop ▾  For Teams ▾  Industries ▾  Design tool  [Get a quote]`. Two-column dropdown panels, mobile slide-over for small screens. All testids preserved.
+- **Industries**: 9 curated landings (`/industries`, `/industries/:slug`) — Trades, Hospitality, Healthcare, Beauty & Spa, Construction, Logistics & Couriers, Fitness & Coaching, Cleaning & Maintenance, Hair & Barbering. Hero image + blurb + product grid filtered by `industry_tags` on each product. Auto-seeded sensible tags across the catalogue (e.g. workwear tee → trades, construction, logistics, cleaning).
+- **Gender / fit pills** (All · Men's · Women's · Unisex · Kids) on Specials, Workwear, and Industry pages — backed by a new `gender_fit` field on `ProductMeta` (default `unisex`).
+- **Specials products locked to left-breast only**: backend seed updates `allowed_placements=["left-breast"]` for all specials-eligible products; PDP also forces this when `specials_eligible=true` regardless of stored placements.
+- **Admin** product-settings: gender_fit dropdown + industry tags multi-select per product.
+
 ### Iter 21 — Your Own Print Specials (Feb 2026)
 - New **`/specials`** landing page — curated "starter lineup" for small businesses: single breast-pocket print, **no MOQ**, no setup fees. Bold dark hero with value chips, 3×2 mosaic preview, value-props row, "Starter lineup" grid (each card links to PDP and shows "Breast logo print included · No MOQ"), and trust band.
 - `specials_eligible` flag on `ProductMeta` + admin toggle in `/admin/product-settings` + auto-seed (one-time, marker `specials_seed_v1`) for 6 starter pieces: personalised tee (£6.99), workwear tee, polo, hi-vis vest, sweatshirt, personalised hoodie (£14.99). Sorted ascending by price.

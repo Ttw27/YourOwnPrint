@@ -72,3 +72,79 @@ export const NAV_LINKS = [
   { label: "Design Your Own", to: "/design" },
   { label: "Get a Quote", to: "/contact" },
 ];
+
+// Structured menu used by the mega-menu navbar
+export const NAV_MENU = [
+  {
+    key: "shop",
+    label: "Shop",
+    columns: [
+      {
+        heading: "Featured",
+        links: [
+          { label: "Your Own Print Specials", to: "/specials", badge: "Starter" },
+          { label: "Workwear", to: "/workwear" },
+          { label: "Sports & Combat", to: "/sports" },
+        ],
+      },
+      {
+        heading: "By collection",
+        links: [
+          { label: "Fight Night Tees", to: "/sports/fight-night" },
+          { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
+          { label: "Team Kits", to: "/team-kits" },
+        ],
+      },
+    ],
+  },
+  {
+    key: "teams",
+    label: "For Teams",
+    columns: [
+      {
+        heading: "Bulk &amp; group",
+        links: [
+          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
+          { label: "Teams & Schools", to: "/teams-schools" },
+          { label: "Team Kits configurator", to: "/team-kits" },
+          { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
+        ],
+      },
+    ],
+  },
+  {
+    key: "industries",
+    label: "Industries",
+    columns: [
+      {
+        heading: "Workforce",
+        links: [
+          { label: "Trades", to: "/industries/trades" },
+          { label: "Construction", to: "/industries/construction" },
+          { label: "Logistics & Couriers", to: "/industries/logistics" },
+          { label: "Cleaning & Maintenance", to: "/industries/cleaning" },
+        ],
+      },
+      {
+        heading: "Front-of-house",
+        links: [
+          { label: "Hospitality", to: "/industries/hospitality" },
+          { label: "Healthcare", to: "/industries/healthcare" },
+          { label: "Beauty & Spa", to: "/industries/beauty" },
+          { label: "Hair & Barbering", to: "/industries/hair-beauty" },
+          { label: "Fitness & Coaching", to: "/industries/fitness" },
+        ],
+      },
+    ],
+  },
+  { key: "design", label: "Design tool", to: "/design" },
+  { key: "contact", label: "Get a quote", to: "/contact", cta: true },
+];
+
+export const GENDER_FITS = [
+  { id: "all", label: "All" },
+  { id: "mens", label: "Men's" },
+  { id: "womens", label: "Women's" },
+  { id: "unisex", label: "Unisex" },
+  { id: "kids", label: "Kids" },
+];

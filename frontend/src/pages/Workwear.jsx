@@ -1,20 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
-import { SECTORS } from "../lib/data";
+import { SECTORS, GENDER_FITS } from "../lib/data";
 import { ArrowRight } from "lucide-react";
 
 export default function Workwear() {
   const [products, setProducts] = useState([]);
   const [aggs, setAggs] = useState({});
   const [loading, setLoading] = useState(true);
+  const [gender, setGender] = useState("all");
 
   useEffect(() => {
     Promise.all([fetchProducts("workwear"), fetchReviewsAggregate()])
       .then(([p, a]) => { setProducts(p); setAggs(a); })
       .finally(() => setLoading(false));
   }, []);
+
+  const filtered = useMemo(() => {
+    if (gender === "all") return products;
+    return products.filter((p) => (p.gender_fit || "unisex") === gender);
+  }, [products, gender]);
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
@@ -39,11 +45,24 @@ export default function Workwear() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="flex flex-wrap items-center gap-2 mb-6" data-testid="workwear-gender-filter">
+          <span className="text-xs uppercase tracking-[0.3em] text-[#4b5563] font-extrabold mr-2">Fit</span>
+          {GENDER_FITS.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setGender(g.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition ${gender === g.id ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#dcfce7] text-[#4b5563] hover:border-[#7bc67e]"}`}
+              data-testid={`workwear-gender-${g.id}`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
         {loading ? (
           <div className="text-[#4b5563]">Loading products…</div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {products.map((p, i) => {
+            {filtered.map((p, i) => {
               const agg = aggs[p.id];
               return (
                 <Link key={p.id} to={`/product/${p.id}`} data-testid={`workwear-product-${i}`} className="group bg-white rounded-2xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md transition-all overflow-hidden">

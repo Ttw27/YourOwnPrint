@@ -1107,6 +1107,23 @@ class ProductMeta(BaseModel):
     match_with: Optional[List[str]] = None
     image_gallery: Optional[List[str]] = None
     specials_eligible: Optional[bool] = None
+    gender_fit: Optional[str] = None  # mens | womens | unisex | kids
+    industry_tags: Optional[List[str]] = None
+
+
+GENDER_FIT_OPTIONS = ["mens", "womens", "unisex", "kids"]
+INDUSTRY_SLUGS = ["trades", "hospitality", "healthcare", "beauty", "construction", "logistics", "fitness", "cleaning", "hair-beauty"]
+INDUSTRIES_CATALOGUE = [
+    {"slug": "trades", "title": "Trades", "subtitle": "Builders, sparks, plumbers, joiners", "hero_image": "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg", "blurb": "Hard-wearing tees, hoodies and hi-vis kitted out with your logo. Built for site, washed at 60°."},
+    {"slug": "hospitality", "title": "Hospitality", "subtitle": "Cafés, bars, pubs, restaurants", "hero_image": "https://images.pexels.com/photos/3007355/pexels-photo-3007355.jpeg", "blurb": "Smart polos and tees that look right behind the bar and front of house. Tidy logo print on the chest."},
+    {"slug": "healthcare", "title": "Healthcare", "subtitle": "Clinics, dental, mobile carers", "hero_image": "https://images.pexels.com/photos/4173324/pexels-photo-4173324.jpeg", "blurb": "Polos, tunics and sweatshirts customers recognise — soft fabrics, clean print, easy on hot washes."},
+    {"slug": "beauty", "title": "Beauty & Spa", "subtitle": "Salons, beauticians, holistic studios", "hero_image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg", "blurb": "Branded tees and sweatshirts that look as polished as the treatments. Tone-on-tone prints land beautifully."},
+    {"slug": "construction", "title": "Construction", "subtitle": "Site crews, foremen, contractors", "hero_image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg", "blurb": "Hi-vis vests, workwear tees and jackets that survive site life. EN ISO 20471 compliant options ready to print."},
+    {"slug": "logistics", "title": "Logistics & Couriers", "subtitle": "Delivery, warehouse, fleets", "hero_image": "https://images.pexels.com/photos/4391483/pexels-photo-4391483.jpeg", "blurb": "Comfortable polos, softshells and hi-vis tops branded with your fleet name. Reorder in any quantity."},
+    {"slug": "fitness", "title": "Fitness & Coaching", "subtitle": "PT studios, gyms, sports coaches", "hero_image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg", "blurb": "Performance tees, hoodies and joggers fit for the gym floor. Crisp prints, full-range movement."},
+    {"slug": "cleaning", "title": "Cleaning & Maintenance", "subtitle": "Cleaning crews, facilities", "hero_image": "https://images.pexels.com/photos/4099235/pexels-photo-4099235.jpeg", "blurb": "Identifiable, easy-care polos and tees. Branded right, your team is recognisable on every site."},
+    {"slug": "hair-beauty", "title": "Hair & Barbering", "subtitle": "Barbers, hairdressers, mobile stylists", "hero_image": "https://images.pexels.com/photos/3998365/pexels-photo-3998365.jpeg", "blurb": "Statement tees, polos and aprons that bring the salon brand to life. Style as sharp as the cuts."},
+]
 
 
 class DesignerArtwork(BaseModel):
@@ -1182,7 +1199,8 @@ async def _merge_designer_overrides():
         if pid in PRODUCTS:
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
                      "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-                     "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible"):
+                     "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible",
+                     "gender_fit", "industry_tags"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -1429,6 +1447,8 @@ async def admin_list_all_products():
             "match_with": p.get("match_with") or [],
             "image_gallery": p.get("image_gallery") or [],
             "specials_eligible": bool(p.get("specials_eligible")),
+            "gender_fit": p.get("gender_fit") or "unisex",
+            "industry_tags": p.get("industry_tags") or [],
         })
     return out
 
@@ -1483,6 +1503,12 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         for u in payload.image_gallery:
             if not isinstance(u, str) or not (u.startswith("http://") or u.startswith("https://") or u.startswith("data:image/")):
                 raise HTTPException(400, "image_gallery entries must be http(s) or data: URLs")
+    if payload.gender_fit is not None and payload.gender_fit not in GENDER_FIT_OPTIONS:
+        raise HTTPException(400, f"gender_fit must be one of {GENDER_FIT_OPTIONS}")
+    if payload.industry_tags is not None:
+        for t in payload.industry_tags:
+            if t not in INDUSTRY_SLUGS:
+                raise HTTPException(400, f"Unknown industry '{t}'. Allowed: {INDUSTRY_SLUGS}")
     doc = {
         "product_id": product_id,
         "brand": payload.brand,
@@ -1498,12 +1524,15 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "match_with": payload.match_with,
         "image_gallery": payload.image_gallery,
         "specials_eligible": payload.specials_eligible if payload.specials_eligible is not None else bool(PRODUCTS[product_id].get("specials_eligible")),
+        "gender_fit": payload.gender_fit,
+        "industry_tags": payload.industry_tags,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
               "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-              "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible"):
+              "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible",
+              "gender_fit", "industry_tags"):
         v = doc.get(k)
         if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible", "specials_eligible"):
             PRODUCTS[product_id][k] = v
@@ -1805,9 +1834,40 @@ async def list_specials_products():
                 "sizes": p.get("sizes", []),
                 "category": p["category"],
                 "brand": p.get("brand") or "",
+                "gender_fit": p.get("gender_fit") or "unisex",
             })
     out.sort(key=lambda x: x["price"])
     return out
+
+
+# ---------- Industries ----------
+@api_router.get("/industries")
+async def list_industries():
+    out = []
+    for ind in INDUSTRIES_CATALOGUE:
+        count = sum(1 for p in PRODUCTS.values() if ind["slug"] in (p.get("industry_tags") or []))
+        out.append({**ind, "product_count": count})
+    return out
+
+
+@api_router.get("/industries/{slug}")
+async def get_industry(slug: str, gender_fit: Optional[str] = None):
+    ind = next((i for i in INDUSTRIES_CATALOGUE if i["slug"] == slug), None)
+    if not ind:
+        raise HTTPException(404, "Industry not found")
+    products = []
+    for p in PRODUCTS.values():
+        if slug in (p.get("industry_tags") or []):
+            if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
+                continue
+            products.append({
+                "id": p["id"], "name": p["name"], "price": float(p["price"]),
+                "image": p["image"], "category": p["category"],
+                "description": p.get("description") or "",
+                "gender_fit": p.get("gender_fit") or "unisex",
+            })
+    products.sort(key=lambda x: x["price"])
+    return {**ind, "products": products}
 
 
 @api_router.get("/workforce/tiers")
@@ -2511,9 +2571,9 @@ def _default_description(product: Dict) -> str:
 
 @app.on_event("startup")
 async def _seed_specials_defaults():
-    """One-time seed: flag a sensible starter lineup as Specials-eligible."""
+    """One-time seed: flag a sensible starter lineup as Specials-eligible (left-breast only)."""
     try:
-        marker = await db.settings.find_one({"key": "specials_seed_v1"})
+        marker = await db.settings.find_one({"key": "specials_seed_v2"})
         if marker is not None:
             return
         defaults = ["workwear-tshirt", "polo-shirt", "workwear-sweatshirt", "personalised-tee", "personalised-hoodie", "hi-vis-vest"]
@@ -2522,17 +2582,66 @@ async def _seed_specials_defaults():
                 await db.product_meta.update_one(
                     {"product_id": pid},
                     {"$set": {"product_id": pid, "specials_eligible": True,
+                              "allowed_placements": ["left-breast"],
                               "updated_at": datetime.now(timezone.utc).isoformat()}},
                     upsert=True,
                 )
                 PRODUCTS[pid]["specials_eligible"] = True
+                PRODUCTS[pid]["allowed_placements"] = ["left-breast"]
         await db.settings.update_one(
-            {"key": "specials_seed_v1"},
-            {"$set": {"key": "specials_seed_v1", "ran_at": datetime.now(timezone.utc).isoformat()}},
+            {"key": "specials_seed_v2"},
+            {"$set": {"key": "specials_seed_v2", "ran_at": datetime.now(timezone.utc).isoformat()}},
             upsert=True,
         )
     except Exception as e:
         print(f"specials seed failed: {e}")
+
+
+@app.on_event("startup")
+async def _seed_industry_tags_defaults():
+    """One-time seed: assign sensible industry tags + gender_fit to existing catalogue."""
+    try:
+        marker = await db.settings.find_one({"key": "industry_seed_v1"})
+        if marker is not None:
+            return
+        # Maps of product_id → industry_tags / gender_fit defaults
+        industry_map = {
+            "workwear-tshirt":     ["trades", "construction", "logistics", "cleaning"],
+            "workwear-sweatshirt": ["trades", "logistics", "cleaning"],
+            "workwear-jacket":     ["trades", "construction", "logistics"],
+            "hi-vis-vest":         ["trades", "construction", "logistics"],
+            "polo-shirt":          ["hospitality", "healthcare", "beauty", "hair-beauty", "fitness"],
+            "personalised-tee":    ["hospitality", "beauty", "hair-beauty", "fitness"],
+            "personalised-hoodie": ["fitness", "beauty", "hair-beauty"],
+        }
+        for pid, tags in industry_map.items():
+            if pid in PRODUCTS:
+                await db.product_meta.update_one(
+                    {"product_id": pid},
+                    {"$set": {"product_id": pid, "industry_tags": tags,
+                              "gender_fit": "unisex",
+                              "updated_at": datetime.now(timezone.utc).isoformat()}},
+                    upsert=True,
+                )
+                PRODUCTS[pid]["industry_tags"] = tags
+                PRODUCTS[pid]["gender_fit"] = "unisex"
+        # Default everything else to unisex too (so filter pills work)
+        for pid, p in PRODUCTS.items():
+            if not p.get("gender_fit"):
+                await db.product_meta.update_one(
+                    {"product_id": pid},
+                    {"$set": {"product_id": pid, "gender_fit": "unisex",
+                              "updated_at": datetime.now(timezone.utc).isoformat()}},
+                    upsert=True,
+                )
+                PRODUCTS[pid]["gender_fit"] = "unisex"
+        await db.settings.update_one(
+            {"key": "industry_seed_v1"},
+            {"$set": {"key": "industry_seed_v1", "ran_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+    except Exception as e:
+        print(f"industry seed failed: {e}")
 
 
 @app.on_event("startup")

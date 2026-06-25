@@ -62,9 +62,12 @@ export default function ProductDetail() {
   const agg = aggregates[id];
   const placementById = useMemo(() => Object.fromEntries(placements.map(p => [p.id, p])), [placements]);
   const visiblePlacements = useMemo(() => {
+    if (product?.specials_eligible) {
+      return placements.filter((pl) => pl.id === "left-breast");
+    }
     if (!Array.isArray(allowedPlacements)) return placements;
     return placements.filter(p => allowedPlacements.includes(p.id));
-  }, [placements, allowedPlacements]);
+  }, [placements, allowedPlacements, product]);
 
   const togglePlacement = (pid) => {
     if (blank) return;
