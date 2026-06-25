@@ -1104,6 +1104,7 @@ class ProductMeta(BaseModel):
     allowed_placements: Optional[List[str]] = None
     workforce_eligible: Optional[bool] = None
     also_bought: Optional[List[str]] = None
+    match_with: Optional[List[str]] = None
 
 
 class DesignerArtwork(BaseModel):
@@ -1179,7 +1180,7 @@ async def _merge_designer_overrides():
         if pid in PRODUCTS:
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
                      "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-                     "workforce_eligible", "also_bought"):
+                     "workforce_eligible", "also_bought", "match_with"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -1423,6 +1424,7 @@ async def admin_list_all_products():
             "allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS),
             "workforce_eligible": bool(p.get("workforce_eligible")),
             "also_bought": p.get("also_bought") or [],
+            "match_with": p.get("match_with") or [],
         })
     return out
 
@@ -1463,6 +1465,14 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
                 raise HTTPException(400, "Cannot cross-sell a product to itself")
             if pid not in PRODUCTS:
                 raise HTTPException(400, f"Unknown also_bought product_id '{pid}'")
+    if payload.match_with is not None:
+        if len(payload.match_with) > 4:
+            raise HTTPException(400, "match_with capped at 4 products")
+        for pid in payload.match_with:
+            if pid == product_id:
+                raise HTTPException(400, "Cannot match a product with itself")
+            if pid not in PRODUCTS:
+                raise HTTPException(400, f"Unknown match_with product_id '{pid}'")
     doc = {
         "product_id": product_id,
         "brand": payload.brand,
@@ -1475,12 +1485,13 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "allowed_placements": payload.allowed_placements,
         "workforce_eligible": payload.workforce_eligible if payload.workforce_eligible is not None else bool(PRODUCTS[product_id].get("workforce_eligible")),
         "also_bought": payload.also_bought,
+        "match_with": payload.match_with,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
               "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-              "workforce_eligible", "also_bought"):
+              "workforce_eligible", "also_bought", "match_with"):
         v = doc.get(k)
         if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible"):
             PRODUCTS[product_id][k] = v
@@ -1785,6 +1796,31 @@ async def also_bought(product_id: str, limit: int = 4):
             "image": q["image"], "category": q["category"],
         })
         if len(out) >= max(1, min(int(limit or 4), 8)):
+            break
+    return out
+
+
+@api_router.get("/products/{product_id}/match-with")
+async def match_with(product_id: str, limit: int = 4):
+    """Curator-picked complementary products (no auto-fallback — returns empty if admin hasn't picked any)."""
+    p = PRODUCTS.get(product_id)
+    if not p:
+        raise HTTPException(404, "Product not found")
+    picks = list(p.get("match_with") or [])
+    out = []
+    seen = set()
+    for pid in picks:
+        if pid in seen:
+            continue
+        seen.add(pid)
+        q = PRODUCTS.get(pid)
+        if not q:
+            continue
+        out.append({
+            "id": q["id"], "name": q["name"], "price": float(q["price"]),
+            "image": q["image"], "category": q["category"],
+        })
+        if len(out) >= max(1, min(int(limit or 4), 6)):
             break
     return out
 

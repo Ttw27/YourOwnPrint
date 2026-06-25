@@ -7,6 +7,14 @@
 
 ## Implemented
 
+### Iter 16 — PDP reorder + "Match with" strip (Feb 2026)
+- **New PDP order** (above the footer): Customers also bought → Match with → Questions & answers → Reviews.
+- **"Match with" strip** — admin-curated complementary items (max 4 per product, no auto-fallback). Amber-styled to distinguish from green "also bought".
+- Backend: `match_with` field on `ProductMeta`, public `GET /api/products/{id}/match-with`, admin meta validation (no self-ref, max 4).
+- Admin: new "Match with" picker added to `/admin/product-settings` accordion (`aps-match-with-{id}`).
+- Refactor: `AlsoBoughtWith.jsx` replaced by generic `RelatedProductsStrip` used by both strips.
+- Smoke-tested: backend validations + frontend ordering confirmed at heading y=2092/2517/2941.
+
 ### Iter 15 — Kit Your Workforce + Also-bought cross-sells (Feb 2026)
 - **Kit Your Workforce builder** at `/workforce` (and `/kit-your-workforce`): mixed-garment bulk page with sticky live-total summary, tier chips, "add N more to unlock −X%" hint. Free breast-logo print included on every garment; optional back-print at +£3.50/garment (only enabled where the product allows `back-print`). Dual CTA: Stripe checkout up to the quote threshold, then quote-only.
 - **Workforce-eligible** flag per product (`workforce_eligible`) — set in `/admin/product-settings`. Seeded on workwear-tshirt, workwear-sweatshirt, workwear-jacket, hi-vis-vest.

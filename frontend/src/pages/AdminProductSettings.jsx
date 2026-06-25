@@ -57,6 +57,7 @@ export default function AdminProductSettings() {
         allowed_placements: Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS,
         workforce_eligible: !!p.workforce_eligible,
         also_bought: Array.isArray(p.also_bought) ? p.also_bought : [],
+        match_with: Array.isArray(p.match_with) ? p.match_with : [],
       });
       toast.success(`${p.name} saved`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
@@ -223,6 +224,33 @@ export default function AdminProductSettings() {
                               }}
                               className={`px-2.5 py-1 rounded-full text-[11px] font-nunito font-extrabold border transition ${on ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#e5e7eb] text-[#4b5563] hover:border-[#7bc67e]"}`}
                               data-testid={`aps-also-bought-${p.id}-${q.id}`}
+                            >
+                              {on ? "✓ " : ""}{q.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">&quot;Match with&quot; (complete-the-look complementary items)</div>
+                      <div className="text-[11px] text-[#4b5563] mb-2">Pick up to 4 complementary products (e.g. matching joggers, beanie). Hidden on PDP if empty (no auto-fallback).</div>
+                      <div className="flex flex-wrap gap-1.5" data-testid={`aps-match-with-${p.id}`}>
+                        {products.filter(q => q.id !== p.id).map((q) => {
+                          const list = Array.isArray(p.match_with) ? p.match_with : [];
+                          const on = list.includes(q.id);
+                          return (
+                            <button
+                              key={q.id}
+                              type="button"
+                              onClick={() => {
+                                let next;
+                                if (on) next = list.filter(x => x !== q.id);
+                                else if (list.length >= 4) { toast.error("Max 4 match-with items per product"); return; }
+                                else next = [...list, q.id];
+                                update(p.id, { match_with: next });
+                              }}
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-nunito font-extrabold border transition ${on ? "bg-amber-400 border-amber-400 text-[#1a1a1a]" : "bg-white border-[#e5e7eb] text-[#4b5563] hover:border-amber-400"}`}
+                              data-testid={`aps-match-with-${p.id}-${q.id}`}
                             >
                               {on ? "✓ " : ""}{q.name}
                             </button>

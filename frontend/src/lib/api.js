@@ -231,6 +231,12 @@ export async function fetchAlsoBought(product_id, limit = 4) {
   return data;
 }
 
+// ----- Match with (curator-picked complementary items) -----
+export async function fetchMatchWith(product_id, limit = 4) {
+  const { data } = await api.get(`/products/${product_id}/match-with`, { params: { limit } });
+  return data;
+}
+
 // ----- Customer Q&A -----
 export async function fetchProductQA(product_id) {
   const { data } = await api.get(`/qa/${product_id}`);

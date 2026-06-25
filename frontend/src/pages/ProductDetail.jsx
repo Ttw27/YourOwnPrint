@@ -2,12 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ProductReviews from "../components/bold/ProductReviews";
-import AlsoBoughtWith from "../components/bold/AlsoBoughtWith";
+import RelatedProductsStrip from "../components/bold/RelatedProductsStrip";
 import PricePromise from "../components/bold/PricePromise";
 import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
-import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion } from "../lib/api";
+import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
 import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X } from "lucide-react";
 
@@ -483,9 +483,23 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <ProductReviews productId={product.id} productName={product.name} />
+            <RelatedProductsStrip
+              productId={product.id}
+              title="Customers also bought"
+              subtitle="Popular pairings"
+              fetcher={fetchAlsoBought}
+              accentColor="#7bc67e"
+              testidPrefix="pdp-also-bought"
+            />
 
-            <AlsoBoughtWith productId={product.id} />
+            <RelatedProductsStrip
+              productId={product.id}
+              title="Match with"
+              subtitle="Complete the look"
+              fetcher={fetchMatchWith}
+              accentColor="#fbbf24"
+              testidPrefix="pdp-match-with"
+            />
 
             <ProductQASection
               productId={product.id}
@@ -510,6 +524,8 @@ export default function ProductDetail() {
                 } finally { setQaBusy(false); }
               }}
             />
+
+            <ProductReviews productId={product.id} productName={product.name} />
           </>
         )}
       </div>
