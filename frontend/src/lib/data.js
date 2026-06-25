@@ -83,6 +83,7 @@ export const NAV_MENU = [
         heading: "Featured",
         links: [
           { label: "Your Own Print Specials", to: "/specials", badge: "Starter" },
+          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
           { label: "Workwear", to: "/workwear" },
           { label: "Portfolio", to: "/portfolio" },
         ],
@@ -137,11 +138,11 @@ export const NAV_MENU = [
         ],
       },
       {
-        heading: "Schools & Bulk",
+        heading: "Schools & Leavers",
         links: [
           { label: "Teams & Schools", to: "/teams-schools" },
           { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
-          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
+          { label: "Fight Night Tees", to: "/fight-night-tee" },
         ],
       },
     ],
@@ -156,6 +157,7 @@ export const NAV_MENU = [
           { label: "Construction & Trades", to: "/industries/construction-trades" },
           { label: "Industrial", to: "/industries/industrial" },
           { label: "Cleaning & Maintenance", to: "/industries/cleaning" },
+          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
         ],
       },
       {
