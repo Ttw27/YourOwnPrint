@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
-import { api, createCheckout, fetchFightNightAddons } from "../lib/api";
+import { api, createCheckout, fetchFightNightAddons, fetchFightNightTiers } from "../lib/api";
 import { toast } from "sonner";
 import { Plus, Minus, Loader2, Send, Zap, Sparkles, ShieldCheck, Info, Camera, Upload } from "lucide-react";
 
@@ -11,11 +11,11 @@ const SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
 export default function FightNightTee() {
   const [tee, setTee] = useState(null);
   const [addons, setAddons] = useState([]);
+  const [tiers, setTiers] = useState([]);
   const [color, setColor] = useState("Black");
   const [sizeQtys, setSizeQtys] = useState({});
   const [sponsors, setSponsors] = useState([]);
   const [backPrint, setBackPrint] = useState(false);
-  const [backMode, setBackMode] = useState("large");   // "large" | "sponsors"
   const [backArt, setBackArt] = useState(null);        // artwork data URL for back print
   const [leftSleeve, setLeftSleeve] = useState(false);
   const [leftArt, setLeftArt] = useState(null);
@@ -30,11 +30,21 @@ export default function FightNightTee() {
   const rightRef = useRef(null);
 
   useEffect(() => {
-    Promise.all([api.get("/products/boxing-fight-tee").then(r => r.data), fetchFightNightAddons()])
-      .then(([p, a]) => { setTee(p); setAddons(a); setColor(p.colors[0]?.name || "Black"); });
+    Promise.all([api.get("/products/boxing-fight-tee").then(r => r.data), fetchFightNightAddons(), fetchFightNightTiers()])
+      .then(([p, a, t]) => { setTee(p); setAddons(a); setTiers(t.tiers || []); setColor(p.colors[0]?.name || "Black"); });
   }, []);
 
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
+
+  const tierUnitPrice = useMemo(() => {
+    const baseDefault = tee?.price ?? 11.99;
+    for (const t of tiers) if (totalQty >= t.min_qty) return t.unit_price;
+    return baseDefault;
+  }, [tiers, totalQty, tee]);
+  const nextTier = useMemo(() => {
+    const sortedAsc = [...tiers].sort((a, b) => a.min_qty - b.min_qty);
+    return sortedAsc.find((t) => totalQty < t.min_qty) || null;
+  }, [tiers, totalQty]);
   const addonMap = useMemo(() => Object.fromEntries(addons.map(a => [a.id, a])), [addons]);
   const selectedAddons = useMemo(() => {
     const list = [];
@@ -44,7 +54,9 @@ export default function FightNightTee() {
     return list;
   }, [backPrint, leftSleeve, rightSleeve]);
   const addonCostPerTee = selectedAddons.reduce((s, id) => s + (addonMap[id]?.price || 0), 0);
-  const basePrice = tee?.price ?? 11.99;
+  const basePrice = tierUnitPrice;
+  const baseListPrice = tee?.price ?? 11.99;
+  const bulkSavingsPerTee = Math.max(0, baseListPrice - basePrice);
   const total = useMemo(() => {
     if (!tee) return 0;
     const upcharges = tee.size_upcharges || {};
@@ -124,7 +136,7 @@ export default function FightNightTee() {
         event_date: eventDate,
         color,
         sponsors_count: String(sponsors.length),
-        back_print: backPrint ? backMode : "no",
+        back_print: backPrint ? "full" : "no",
         left_sleeve: leftSleeve ? "yes" : "no",
         right_sleeve: rightSleeve ? "yes" : "no",
         proof_before_print: "true",
@@ -152,7 +164,7 @@ export default function FightNightTee() {
           kit_type: `fight-night-tee-${session_id}`,
           quantity: totalQty,
           deadline: eventDate,
-          message: `PAID fight-night order. Sponsors: ${sponsors.length}. Back print: ${backPrint ? backMode : "no"}${backPrint && backArt ? " (art uploaded)" : ""}. Sleeves: ${leftSleeve ? "L" : ""}${rightSleeve ? "R" : ""}${(leftSleeve && leftArt) || (rightSleeve && rightArt) ? " (art uploaded)" : ""}. Stripe session: ${session_id}. Proof before print.`,
+          message: `PAID fight-night order. Sponsors: ${sponsors.length}. Back print: ${backPrint ? "full" : "no"}${backPrint && backArt ? " (art uploaded)" : ""}. Sleeves: ${leftSleeve ? "L" : ""}${rightSleeve ? "R" : ""}${(leftSleeve && leftArt) || (rightSleeve && rightArt) ? " (art uploaded)" : ""}. Stripe session: ${session_id}. Proof before print.`,
           artwork: [...sponsors, backArt, leftArt, rightArt].filter(Boolean),
           product_id: "boxing-fight-tee",
         });
@@ -231,17 +243,8 @@ export default function FightNightTee() {
           </label>
           {backPrint && (
             <>
-              <div className="grid sm:grid-cols-2 gap-2 mt-3" data-testid="fn-back-mode">
-                {[
-                  { id: "large", label: "Large logo", desc: "One big logo (e.g. gym logo) centred on the back" },
-                  { id: "sponsors", label: "More sponsors", desc: "Another set of sponsor logos on the back" },
-                ].map((m) => (
-                  <button key={m.id} data-testid={`fn-back-mode-${m.id}`} onClick={() => setBackMode(m.id)}
-                    className={`text-left p-3 rounded-xl border-2 transition-all ${backMode === m.id ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#dcfce7]"}`}>
-                    <div className="font-nunito font-extrabold text-sm">{m.label}</div>
-                    <div className="text-xs text-[#4b5563] mt-1">{m.desc}</div>
-                  </button>
-                ))}
+              <div className="mt-3 text-xs text-[#4b5563] bg-[#f0fdf4] border border-[#dcfce7] rounded-xl px-3 py-2">
+                Full back print — large logo or sponsor strip, your choice at proof stage. Upload the artwork below.
               </div>
               <div className="mt-3 flex items-center gap-3" data-testid="fn-back-upload-row">
                 <div className="w-16 h-16 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
@@ -323,6 +326,36 @@ export default function FightNightTee() {
             })}
           </div>
         </Block>
+
+        {/* Bulk tier ladder */}
+        {tiers.length > 0 && (
+          <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4" data-testid="fn-bulk-tiers">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+              <div className="font-nunito font-extrabold text-sm">Bulk pricing for the corner</div>
+              {bulkSavingsPerTee > 0 && <span className="text-[10px] uppercase tracking-wider font-nunito font-extrabold bg-[#7bc67e] text-[#1a1a1a] px-2 py-0.5 rounded-full" data-testid="fn-bulk-savings">Saving £{bulkSavingsPerTee.toFixed(2)}/tee</span>}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className={`text-xs p-2 rounded-xl text-center ${totalQty < 10 ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-[#f0fdf4] text-[#4b5563]"}`}>
+                <div className="font-nunito font-extrabold text-sm">£{baseListPrice.toFixed(2)}</div>
+                <div className="text-[10px] mt-0.5">1–9 tees</div>
+              </div>
+              {[...tiers].sort((a, b) => a.min_qty - b.min_qty).map((t) => {
+                const active = totalQty >= t.min_qty && (!nextTier || nextTier.min_qty > t.min_qty);
+                return (
+                  <div key={t.min_qty} data-testid={`fn-tier-${t.min_qty}`} className={`text-xs p-2 rounded-xl text-center ${active ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-[#f0fdf4] text-[#4b5563]"}`}>
+                    <div className="font-nunito font-extrabold text-sm">£{t.unit_price.toFixed(2)}</div>
+                    <div className="text-[10px] mt-0.5">{t.min_qty}+ tees</div>
+                  </div>
+                );
+              })}
+            </div>
+            {nextTier && (
+              <div className="text-[11px] text-[#4b5563] mt-2" data-testid="fn-next-tier-hint">
+                Add <strong className="text-[#1a1a1a]">{nextTier.min_qty - totalQty}</strong> more to drop to <strong className="text-[#7bc67e]">£{nextTier.unit_price.toFixed(2)}/tee</strong>.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Total + Checkout */}
         <div className="bg-[#1a1a1a] text-white rounded-3xl p-6">

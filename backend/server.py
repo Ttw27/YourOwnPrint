@@ -6,7 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 import uuid
 from datetime import datetime, timezone
 
@@ -269,6 +269,60 @@ PRODUCTS: Dict[str, Dict] = {
         "image": "https://images.pexels.com/photos/4720234/pexels-photo-4720234.jpeg",
         "description": "Tee + shorts per player. Club crest + front sponsor only. Cheapest training option.",
     },
+
+    # ----- Sports — additional standalone garments (use Team Kit configurator) -----
+    "basketball-vest": {
+        "id": "basketball-vest", "name": "Basketball Vest", "price": 19.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/1080884/pexels-photo-1080884.jpeg",
+        "description": "Reversible-cut basketball vest with mesh side panels. Names, numbers, sponsor.",
+    },
+    "cricket-polo": {
+        "id": "cricket-polo", "name": "Cricket Polo", "price": 21.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/3641377/pexels-photo-3641377.jpeg",
+        "description": "Coloured-cricket polo with tape-print friendly fabric. Club crest + sponsors.",
+    },
+    "hockey-shirt": {
+        "id": "hockey-shirt", "name": "Hockey Shirt", "price": 22.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/8412264/pexels-photo-8412264.jpeg",
+        "description": "Field-hockey-cut shirt with reinforced shoulders. Names, numbers, badge.",
+    },
+    "athletics-vest": {
+        "id": "athletics-vest", "name": "Athletics Vest", "price": 14.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/2304793/pexels-photo-2304793.jpeg",
+        "description": "Lightweight athletics vest. Club name + sponsor on the front.",
+    },
+    "cycling-jersey": {
+        "id": "cycling-jersey", "name": "Cycling Jersey", "price": 32.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/415992/pexels-photo-415992.jpeg",
+        "description": "Sublimation-style cycling jersey, full-body print friendly. Club + sponsors.",
+    },
+
+    # ----- Leavers' hoodies & varsity jackets -----
+    "leavers-pullover-hoodie": {
+        "id": "leavers-pullover-hoodie", "name": "Leavers' Pullover Hoodie", "price": 24.99, "category": "leavers",
+        "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg",
+        "description": "Classic 320 GSM pullover. Names list, nicknames, year, school crest — printed UK in 7-10 days.",
+    },
+    "leavers-zip-hoodie": {
+        "id": "leavers-zip-hoodie", "name": "Leavers' Zip Hoodie", "price": 29.99, "category": "leavers",
+        "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg",
+        "description": "Full-zip hoodie with brushed-back fleece. Bigger back-print area for class lists.",
+    },
+    "varsity-jacket": {
+        "id": "varsity-jacket", "name": "Varsity Jacket", "price": 39.99, "category": "leavers",
+        "image": "https://images.pexels.com/photos/16429777/pexels-photo-16429777.jpeg",
+        "description": "American varsity-style jacket. Letter on chest, year on back, names on sleeves.",
+    },
+    "leavers-sweatshirt": {
+        "id": "leavers-sweatshirt", "name": "Leavers' Crew Sweatshirt", "price": 22.99, "category": "leavers",
+        "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg",
+        "description": "Crew-neck sweatshirt — lighter than the hoodie, same print options.",
+    },
+    "leavers-drawstring-bag": {
+        "id": "leavers-drawstring-bag", "name": "Printed Drawstring Bag", "price": 3.99, "category": "leavers",
+        "image": "https://images.pexels.com/photos/6764015/pexels-photo-6764015.jpeg",
+        "description": "Westford Mill-style carry-all. Same design as your hoodie — add as an addon per person.",
+    },
 }
 
 
@@ -333,6 +387,16 @@ _VARIANT_MAP = {
     "football-premium-front-only": {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "rugby-kit-front-only":        {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "training-pack-front-only":    {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "basketball-vest":             {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "cricket-polo":                {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "hockey-shirt":                {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "athletics-vest":              {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "cycling-jersey":              {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "leavers-pullover-hoodie":     {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "leavers-zip-hoodie":          {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "varsity-jacket":              {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "leavers-sweatshirt":          {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "leavers-drawstring-bag":      {"colors": COLOURS_GARMENT, "sizes": ["One Size"],              "size_upcharges": {}},
 }
 for _pid, _meta in _VARIANT_MAP.items():
     if _pid in PRODUCTS:
@@ -676,6 +740,11 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         # Team-kit addons (sleeves + back print). Front sponsor is free & not a placement.
         placements_clean = [p for p in (payload.placements or []) if p in TEAM_KIT_ADDONS]
         print_cost = round(sum(TEAM_KIT_ADDONS[p]["price"] for p in placements_clean), 2)
+    elif product.get("category") == "leavers":
+        # Leavers flow — only optional addon is drawstring-bag (+£3.99/garment)
+        wanted = set(payload.placements or [])
+        placements_clean = ["drawstring-bag"] if "drawstring-bag" in wanted else []
+        print_cost = LEAVERS_BAG_PRICE if "drawstring-bag" in wanted else 0.0
     elif (payload.design_meta or {}).get("flow") == "designer":
         # Designer flow: back-print = 60% of unit price rounded to nearest £.99 (£0.99 floor).
         #                neck-label = flat NECK_LABEL_PRICE per garment.
@@ -722,6 +791,12 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
     total_qty = sum(size_qtys.values())
     if total_qty < 1 or total_qty > 5000:
         raise HTTPException(400, "Total quantity must be 1-5000")
+
+    # Bulk-tier pricing (override base_price for matching flows)
+    if payload.product_id == "boxing-fight-tee":
+        base_price = tier_unit_price(FIGHT_NIGHT_BULK_TIERS, base_price, total_qty)
+    elif product.get("category") == "leavers" and payload.product_id != "leavers-drawstring-bag":
+        base_price = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base_price, total_qty)
 
     # Compute total server-side
     total_amount = 0.0
@@ -975,6 +1050,21 @@ NECK_LABEL_PRICE = 1.50  # Flat per-garment DTF neck-label upcharge
 
 USE_CASE_OPTIONS = ["workwear", "branded-to-sell", "daily-use", "sports", "kids", "eco"]
 
+# ----- Per-flow bulk pricing tiers (ascending threshold, descending unit price) -----
+# Applied when product_id matches and total qty meets the threshold.
+FIGHT_NIGHT_BULK_TIERS = [(25, 9.99), (10, 10.99)]   # tee base £11.99 → £10.99 @ 10+, £9.99 @ 25+
+LEAVERS_BULK_TIERS_DEFAULT = [(100, 15.99), (60, 16.99), (30, 17.99), (20, 19.99)]
+
+LEAVERS_BAG_PRICE = 3.99  # printed drawstring carry-all addon, per garment
+
+
+def tier_unit_price(tiers: List[Tuple[int, float]], default_price: float, total_qty: int) -> float:
+    """Return the highest-discount tier matching total_qty, else default."""
+    for threshold, price in tiers:  # tiers must be sorted desc by threshold
+        if total_qty >= threshold:
+            return price
+    return default_price
+
 
 async def _merge_designer_overrides():
     """Read /designer_settings collection and overlay onto in-memory PRODUCTS."""
@@ -1128,6 +1218,160 @@ async def get_designer_artwork(artwork_id: str):
         "items_count", "back_items_count", "neck_label_items_count",
         "width", "height", "session_id", "created_at",
     )}
+
+
+# ---------- Bulk tiers (public) ----------
+@api_router.get("/bulk-tiers/fight-night")
+async def get_fight_night_tiers():
+    return {
+        "base_price": float(PRODUCTS["boxing-fight-tee"]["price"]),
+        "tiers": [{"min_qty": t, "unit_price": p} for t, p in FIGHT_NIGHT_BULK_TIERS],
+    }
+
+
+@api_router.get("/bulk-tiers/leavers")
+async def get_leavers_tiers():
+    return {
+        "tiers": [{"min_qty": t, "unit_price": p} for t, p in LEAVERS_BULK_TIERS_DEFAULT],
+        "bag_price": LEAVERS_BAG_PRICE,
+    }
+
+
+@api_router.get("/leavers/products")
+async def list_leavers_products():
+    out = []
+    for p in PRODUCTS.values():
+        if p.get("category") == "leavers":
+            out.append({k: p.get(k) for k in ("id", "name", "price", "image", "description", "sizes")})
+    return out
+
+
+# ---------- Group orders (leavers' hoodies shared link) ----------
+class GroupOrderCreate(BaseModel):
+    school: str
+    year_group: str
+    deadline: str           # ISO date string
+    contact_name: str
+    contact_email: str
+    contact_phone: Optional[str] = None
+    product_id: str
+    design_brief: Optional[str] = None
+    include_bag: bool = False
+
+
+class GroupOrderJoin(BaseModel):
+    name: str
+    nickname: Optional[str] = None
+    size: str
+    qty: int = 1
+    note: Optional[str] = None
+
+
+def _group_order_public(doc: dict) -> dict:
+    """Strip internal fields before returning to public callers."""
+    return {
+        "token": doc["token"],
+        "school": doc["school"],
+        "year_group": doc["year_group"],
+        "deadline": doc["deadline"],
+        "product_id": doc["product_id"],
+        "design_brief": doc.get("design_brief"),
+        "include_bag": bool(doc.get("include_bag")),
+        "status": doc.get("status", "open"),
+        "roster_count": len(doc.get("roster", [])),
+        "created_at": doc.get("created_at"),
+    }
+
+
+@api_router.post("/group-orders")
+async def create_group_order(payload: GroupOrderCreate):
+    if payload.product_id not in PRODUCTS or PRODUCTS[payload.product_id].get("category") != "leavers":
+        raise HTTPException(400, "Unknown leavers product")
+    token = uuid.uuid4().hex[:10]
+    manage_token = uuid.uuid4().hex
+    doc = {
+        "id": str(uuid.uuid4()),
+        "token": token,
+        "manage_token": manage_token,
+        "school": payload.school.strip(),
+        "year_group": payload.year_group.strip(),
+        "deadline": payload.deadline,
+        "contact_name": payload.contact_name.strip(),
+        "contact_email": payload.contact_email.strip(),
+        "contact_phone": (payload.contact_phone or "").strip() or None,
+        "product_id": payload.product_id,
+        "design_brief": payload.design_brief,
+        "include_bag": bool(payload.include_bag),
+        "roster": [],
+        "status": "open",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.group_orders.insert_one(doc)
+    return {"token": token, "manage_token": manage_token}
+
+
+@api_router.get("/group-orders/{token}")
+async def get_group_order_public(token: str):
+    doc = await db.group_orders.find_one({"token": token})
+    if not doc:
+        raise HTTPException(404, "Group order not found")
+    return _group_order_public(doc)
+
+
+@api_router.post("/group-orders/{token}/join")
+async def join_group_order(token: str, payload: GroupOrderJoin):
+    doc = await db.group_orders.find_one({"token": token})
+    if not doc:
+        raise HTTPException(404, "Group order not found")
+    if doc.get("status") != "open":
+        raise HTTPException(400, "This group order is closed")
+    if not payload.name.strip():
+        raise HTTPException(400, "Name is required")
+    qty = max(1, min(10, int(payload.qty or 1)))
+    member = {
+        "id": str(uuid.uuid4()),
+        "name": payload.name.strip()[:60],
+        "nickname": (payload.nickname or "").strip()[:30] or None,
+        "size": payload.size.strip(),
+        "qty": qty,
+        "note": (payload.note or "").strip()[:120] or None,
+        "joined_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.group_orders.update_one({"token": token}, {"$push": {"roster": member}})
+    return {"ok": True, "member_id": member["id"]}
+
+
+@api_router.get("/group-orders/{token}/manage/{manage_token}")
+async def manage_group_order(token: str, manage_token: str):
+    doc = await db.group_orders.find_one({"token": token})
+    if not doc or doc.get("manage_token") != manage_token:
+        raise HTTPException(404, "Group order not found")
+    return {
+        **_group_order_public(doc),
+        "manage_token": manage_token,
+        "contact_name": doc.get("contact_name"),
+        "contact_email": doc.get("contact_email"),
+        "contact_phone": doc.get("contact_phone"),
+        "roster": doc.get("roster", []),
+    }
+
+
+@api_router.delete("/group-orders/{token}/manage/{manage_token}/members/{member_id}")
+async def remove_group_member(token: str, manage_token: str, member_id: str):
+    doc = await db.group_orders.find_one({"token": token})
+    if not doc or doc.get("manage_token") != manage_token:
+        raise HTTPException(404, "Group order not found")
+    await db.group_orders.update_one({"token": token}, {"$pull": {"roster": {"id": member_id}}})
+    return {"ok": True}
+
+
+@api_router.post("/group-orders/{token}/manage/{manage_token}/close")
+async def close_group_order(token: str, manage_token: str):
+    doc = await db.group_orders.find_one({"token": token})
+    if not doc or doc.get("manage_token") != manage_token:
+        raise HTTPException(404, "Group order not found")
+    await db.group_orders.update_one({"token": token}, {"$set": {"status": "closed", "closed_at": datetime.now(timezone.utc).isoformat()}})
+    return {"ok": True}
 
 
 @api_router.post("/webhook/stripe")

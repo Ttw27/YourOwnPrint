@@ -18,6 +18,8 @@ import Sports from "@/pages/Sports";
 import TeamKits from "@/pages/TeamKits";
 import TeamKitBuilder from "@/pages/TeamKitBuilder";
 import FightNightTee from "@/pages/FightNightTee";
+import LeaversHoodies from "@/pages/LeaversHoodies";
+import { LeaversStart, LeaversJoin, LeaversManage } from "@/pages/LeaversFlow";
 import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
 
 function App() {
@@ -34,6 +36,10 @@ function App() {
           <Route path="/team-kits" element={<TeamKits />} />
           <Route path="/team-kit-builder" element={<TeamKitBuilder />} />
           <Route path="/fight-night-tee" element={<FightNightTee />} />
+          <Route path="/leavers-hoodies" element={<LeaversHoodies />} />
+          <Route path="/leavers-hoodies/start" element={<LeaversStart />} />
+          <Route path="/leavers/:token" element={<LeaversJoin />} />
+          <Route path="/leavers/:token/manage" element={<LeaversManage />} />
           <Route path="/design" element={<DesignYourOwn />} />
           <Route path="/design-your-own" element={<DesignYourOwn />} />
           <Route path="/contact" element={<Contact />} />

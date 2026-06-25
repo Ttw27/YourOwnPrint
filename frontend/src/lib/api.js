@@ -69,6 +69,42 @@ export async function fetchFightNightAddons() {
   const { data } = await api.get("/fight-night/addons");
   return data;
 }
+export async function fetchFightNightTiers() {
+  const { data } = await api.get("/bulk-tiers/fight-night");
+  return data;
+}
+export async function fetchLeaversTiers() {
+  const { data } = await api.get("/bulk-tiers/leavers");
+  return data;
+}
+export async function fetchLeaversProducts() {
+  const { data } = await api.get("/leavers/products");
+  return data;
+}
+export async function createGroupOrder(payload) {
+  const { data } = await api.post("/group-orders", payload);
+  return data;
+}
+export async function fetchGroupOrder(token) {
+  const { data } = await api.get(`/group-orders/${token}`);
+  return data;
+}
+export async function joinGroupOrder(token, payload) {
+  const { data } = await api.post(`/group-orders/${token}/join`, payload);
+  return data;
+}
+export async function fetchGroupOrderManage(token, manage_token) {
+  const { data } = await api.get(`/group-orders/${token}/manage/${manage_token}`);
+  return data;
+}
+export async function removeGroupMember(token, manage_token, member_id) {
+  const { data } = await api.delete(`/group-orders/${token}/manage/${manage_token}/members/${member_id}`);
+  return data;
+}
+export async function closeGroupOrder(token, manage_token) {
+  const { data } = await api.post(`/group-orders/${token}/manage/${manage_token}/close`);
+  return data;
+}
 export async function fetchTeamKitAddons() {
   const { data } = await api.get("/team-kits/addons");
   return data;
