@@ -1102,6 +1102,8 @@ class ProductMeta(BaseModel):
     bulk_pricing_enabled: bool = False
     bulk_pricing_overrides: Optional[List[Dict]] = None
     allowed_placements: Optional[List[str]] = None
+    workforce_eligible: Optional[bool] = None
+    also_bought: Optional[List[str]] = None
 
 
 class DesignerArtwork(BaseModel):
@@ -1176,7 +1178,8 @@ async def _merge_designer_overrides():
         pid = doc.get("product_id")
         if pid in PRODUCTS:
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
-                     "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements"):
+                     "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
+                     "workforce_eligible", "also_bought"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -1418,6 +1421,8 @@ async def admin_list_all_products():
             "bulk_pricing_enabled": bool(p.get("bulk_pricing_enabled")),
             "bulk_pricing_overrides": p.get("bulk_pricing_overrides") or [],
             "allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS),
+            "workforce_eligible": bool(p.get("workforce_eligible")),
+            "also_bought": p.get("also_bought") or [],
         })
     return out
 
@@ -1450,6 +1455,14 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         for pl in payload.allowed_placements:
             if pl not in ALLOWED_PLACEMENT_OPTIONS:
                 raise HTTPException(400, f"unknown placement '{pl}'. Allowed: {ALLOWED_PLACEMENT_OPTIONS}")
+    if payload.also_bought is not None:
+        if len(payload.also_bought) > 6:
+            raise HTTPException(400, "also_bought capped at 6 products")
+        for pid in payload.also_bought:
+            if pid == product_id:
+                raise HTTPException(400, "Cannot cross-sell a product to itself")
+            if pid not in PRODUCTS:
+                raise HTTPException(400, f"Unknown also_bought product_id '{pid}'")
     doc = {
         "product_id": product_id,
         "brand": payload.brand,
@@ -1460,13 +1473,16 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "bulk_pricing_enabled": bool(payload.bulk_pricing_enabled),
         "bulk_pricing_overrides": payload.bulk_pricing_overrides,
         "allowed_placements": payload.allowed_placements,
+        "workforce_eligible": payload.workforce_eligible if payload.workforce_eligible is not None else bool(PRODUCTS[product_id].get("workforce_eligible")),
+        "also_bought": payload.also_bought,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
-              "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements"):
+              "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
+              "workforce_eligible", "also_bought"):
         v = doc.get(k)
-        if v is not None or k == "bulk_pricing_enabled":
+        if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible"):
             PRODUCTS[product_id][k] = v
     return {"ok": True}
 
@@ -1485,6 +1501,291 @@ async def list_leavers_products():
     for p in PRODUCTS.values():
         if p.get("category") == "leavers":
             out.append({k: p.get(k) for k in ("id", "name", "price", "image", "description", "sizes")})
+    return out
+
+
+# ---------- Kit Your Workforce ----------
+SETTINGS_KEY_WORKFORCE_TIERS = "workforce_tiers_pct"
+SETTINGS_KEY_WORKFORCE_QUOTE_THRESHOLD = "workforce_quote_threshold"
+WORKFORCE_QUOTE_THRESHOLD_DEFAULT = 100  # > 100 garments → quote-only
+WORKFORCE_BACK_PRINT_PRICE = 3.50  # per-garment add-on
+
+
+async def _get_workforce_tiers() -> List[Tuple[int, float]]:
+    """Return [(min_qty, pct)] sorted desc; falls back to default % bulk tiers."""
+    doc = await db.settings.find_one({"key": SETTINGS_KEY_WORKFORCE_TIERS})
+    if doc and "tiers" in doc and doc["tiers"]:
+        tiers = doc["tiers"]
+    else:
+        tiers = DEFAULT_BULK_TIERS_PCT
+    return sorted([(int(t[0]), float(t[1])) for t in tiers], key=lambda x: -x[0])
+
+
+async def _get_workforce_threshold() -> int:
+    doc = await db.settings.find_one({"key": SETTINGS_KEY_WORKFORCE_QUOTE_THRESHOLD})
+    try:
+        return int(doc["value"]) if doc and "value" in doc else WORKFORCE_QUOTE_THRESHOLD_DEFAULT
+    except (TypeError, ValueError):
+        return WORKFORCE_QUOTE_THRESHOLD_DEFAULT
+
+
+@api_router.get("/workforce/products")
+async def list_workforce_products():
+    """Garments admin has flagged 'workforce_eligible' in /admin/product-settings."""
+    out = []
+    for p in PRODUCTS.values():
+        if p.get("workforce_eligible"):
+            out.append({
+                "id": p["id"], "name": p["name"], "price": float(p["price"]),
+                "image": p["image"],
+                "sizes": p.get("sizes", []),
+                "size_upcharges": p.get("size_upcharges", {}),
+                "category": p["category"],
+                "brand": p.get("brand") or "",
+                "allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS),
+            })
+    out.sort(key=lambda x: x["price"])
+    return out
+
+
+@api_router.get("/workforce/tiers")
+async def get_workforce_tiers():
+    tiers = await _get_workforce_tiers()
+    return {
+        "tiers": [{"min_qty": q, "pct": p} for q, p in sorted(tiers, key=lambda x: x[0])],
+        "quote_threshold": await _get_workforce_threshold(),
+        "back_print_price": WORKFORCE_BACK_PRINT_PRICE,
+    }
+
+
+@api_router.patch("/admin/workforce-tiers", dependencies=[Depends(require_admin)])
+async def update_workforce_tiers(payload: Dict):
+    tiers = payload.get("tiers")
+    if not isinstance(tiers, list) or not tiers:
+        raise HTTPException(400, "tiers must be a non-empty list")
+    cleaned = []
+    for t in tiers:
+        try:
+            q = int(t["min_qty"])
+            p = float(t["pct"])
+        except (KeyError, TypeError, ValueError):
+            raise HTTPException(400, "each tier needs min_qty (int) + pct (number)")
+        if q < 1 or not (0 <= p <= 90):
+            raise HTTPException(400, "min_qty >=1; pct 0-90")
+        cleaned.append([q, p])
+    await db.settings.update_one(
+        {"key": SETTINGS_KEY_WORKFORCE_TIERS},
+        {"$set": {"key": SETTINGS_KEY_WORKFORCE_TIERS, "tiers": cleaned,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    threshold = payload.get("quote_threshold")
+    if threshold is not None:
+        try:
+            tv = int(threshold)
+            if tv < 1:
+                raise ValueError()
+        except (TypeError, ValueError):
+            raise HTTPException(400, "quote_threshold must be a positive integer")
+        await db.settings.update_one(
+            {"key": SETTINGS_KEY_WORKFORCE_QUOTE_THRESHOLD},
+            {"$set": {"key": SETTINGS_KEY_WORKFORCE_QUOTE_THRESHOLD, "value": tv,
+                      "updated_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+    return {"ok": True}
+
+
+class WorkforceLine(BaseModel):
+    product_id: str
+    size: str
+    qty: int
+    back_print: bool = False  # +£3.50/garment
+
+
+class WorkforceCheckoutRequest(BaseModel):
+    lines: List[WorkforceLine]
+    origin_url: str
+    company: Optional[str] = ""
+    contact_name: Optional[str] = ""
+    contact_email: Optional[EmailStr] = None
+    contact_phone: Optional[str] = ""
+
+
+def _resolve_workforce_tier(total_qty: int, tiers: List[Tuple[int, float]]) -> float:
+    """Return the % discount that applies for this total qty (0 if below smallest tier)."""
+    for threshold, pct in tiers:  # already desc
+        if total_qty >= threshold:
+            return pct
+    return 0.0
+
+
+@api_router.post("/workforce/quote", response_model=Dict)
+async def workforce_quote(payload: WorkforceCheckoutRequest):
+    """Used when total qty exceeds quote_threshold. Logs a QuoteRequest entry."""
+    threshold = await _get_workforce_threshold()
+    total_qty = sum(int(ln.qty) for ln in payload.lines if ln.qty > 0)
+    if total_qty <= threshold:
+        raise HTTPException(400, f"Quote-only above {threshold} items. Total submitted: {total_qty}.")
+    if not payload.contact_email or not payload.contact_name:
+        raise HTTPException(400, "Contact name and email are required for a quote")
+    items = []
+    for ln in payload.lines:
+        if ln.product_id not in PRODUCTS or ln.qty < 1:
+            continue
+        items.append({
+            "product_id": ln.product_id,
+            "product_name": PRODUCTS[ln.product_id]["name"],
+            "size": ln.size, "qty": int(ln.qty), "back_print": bool(ln.back_print),
+        })
+    doc = {
+        "id": str(uuid.uuid4()),
+        "kind": "workforce",
+        "name": payload.contact_name, "email": payload.contact_email,
+        "phone": payload.contact_phone or "", "company": payload.company or "",
+        "quantity": total_qty,
+        "message": f"Workforce kit quote — {len(items)} line items, {total_qty} total garments.",
+        "items": items,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.quote_requests.insert_one(doc)
+    return {"ok": True, "id": doc["id"], "total_qty": total_qty}
+
+
+@api_router.post("/workforce/checkout", response_model=CheckoutResponse)
+async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Request):
+    threshold = await _get_workforce_threshold()
+    tiers = await _get_workforce_tiers()
+
+    # Validate lines
+    valid_lines: List[Dict] = []
+    total_qty = 0
+    for ln in payload.lines:
+        if ln.product_id not in PRODUCTS:
+            raise HTTPException(400, f"Unknown product '{ln.product_id}'")
+        p = PRODUCTS[ln.product_id]
+        if not p.get("workforce_eligible"):
+            raise HTTPException(400, f"Product '{p['name']}' is not workforce-eligible")
+        if ln.qty < 1:
+            continue
+        allowed_sizes = set(p.get("sizes") or [])
+        if allowed_sizes and ln.size not in allowed_sizes:
+            raise HTTPException(400, f"Size '{ln.size}' unavailable for {p['name']}")
+        # Back-print only allowed if the product permits it
+        ap = set(p.get("allowed_placements") or ALLOWED_PLACEMENT_OPTIONS)
+        if ln.back_print and "back-print" not in ap:
+            raise HTTPException(400, f"Back print not available on {p['name']}")
+        size_upcharge = float((p.get("size_upcharges") or {}).get(ln.size, 0.0))
+        valid_lines.append({
+            "product_id": ln.product_id,
+            "product_name": p["name"],
+            "size": ln.size, "qty": int(ln.qty),
+            "back_print": bool(ln.back_print),
+            "base_price": float(p["price"]),
+            "size_upcharge": size_upcharge,
+        })
+        total_qty += int(ln.qty)
+
+    if total_qty < 1:
+        raise HTTPException(400, "Add at least one garment to the kit")
+    if total_qty > threshold:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Over {threshold} garments — please request a quote (POST /api/workforce/quote)",
+        )
+
+    discount_pct = _resolve_workforce_tier(total_qty, tiers)
+    factor = 1 - (discount_pct / 100.0)
+
+    # Compute total
+    total_amount = 0.0
+    breakdown_strs: List[str] = []
+    for ln in valid_lines:
+        # tier discount applies only to the garment base (not size upcharges or back-print)
+        unit_garment = snap_to_99(ln["base_price"] * factor) if discount_pct > 0 else ln["base_price"]
+        unit = unit_garment + ln["size_upcharge"] + (WORKFORCE_BACK_PRINT_PRICE if ln["back_print"] else 0.0)
+        line_total = round(unit * ln["qty"], 2)
+        ln["unit_price"] = unit
+        ln["line_total"] = line_total
+        total_amount += line_total
+        breakdown_strs.append(f"{ln['product_id']}·{ln['size']}×{ln['qty']}@£{unit:.2f}")
+    total_amount = round(total_amount, 2)
+
+    if total_amount < 0.5:
+        raise HTTPException(400, "Total below Stripe minimum (£0.50)")
+
+    host_url = str(http_request.base_url)
+    webhook_url = f"{host_url}api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    origin = payload.origin_url.rstrip("/")
+    success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}/workforce"
+
+    metadata = {
+        "flow": "workforce",
+        "total_qty": str(total_qty),
+        "discount_pct": f"{discount_pct:.1f}",
+        "lines": "|".join(breakdown_strs)[:450],
+        "company": (payload.company or "")[:80],
+        "contact_name": (payload.contact_name or "")[:80],
+        "contact_email": (payload.contact_email or "")[:80],
+    }
+
+    checkout_request = CheckoutSessionRequest(
+        amount=total_amount, currency="gbp",
+        success_url=success_url, cancel_url=cancel_url,
+        metadata=metadata,
+    )
+    session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
+
+    await db.payment_transactions.insert_one({
+        "id": str(uuid.uuid4()),
+        "session_id": session.session_id,
+        "flow": "workforce",
+        "lines": valid_lines,
+        "total_quantity": total_qty,
+        "discount_pct": discount_pct,
+        "amount": total_amount,
+        "currency": "gbp",
+        "metadata": metadata,
+        "payment_status": "pending",
+        "status": "initiated",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return CheckoutResponse(url=session.url, session_id=session.session_id)
+
+
+# ---------- Also bought with (cross-sells) ----------
+@api_router.get("/products/{product_id}/also-bought")
+async def also_bought(product_id: str, limit: int = 4):
+    p = PRODUCTS.get(product_id)
+    if not p:
+        raise HTTPException(404, "Product not found")
+    picks = list(p.get("also_bought") or [])
+    # Auto-fallback: same category if admin hasn't picked any
+    if not picks:
+        same_cat = [
+            q for q in PRODUCTS.values()
+            if q["id"] != product_id and q["category"] == p["category"]
+        ]
+        # Take up to limit, stable order (by price asc then id)
+        same_cat.sort(key=lambda x: (float(x["price"]), x["id"]))
+        picks = [q["id"] for q in same_cat[:limit]]
+    out = []
+    seen = set()
+    for pid in picks:
+        if pid in seen:
+            continue
+        seen.add(pid)
+        q = PRODUCTS.get(pid)
+        if not q:
+            continue
+        out.append({
+            "id": q["id"], "name": q["name"], "price": float(q["price"]),
+            "image": q["image"], "category": q["category"],
+        })
+        if len(out) >= max(1, min(int(limit or 4), 8)):
+            break
     return out
 
 

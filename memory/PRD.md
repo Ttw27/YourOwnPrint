@@ -7,14 +7,24 @@
 
 ## Implemented
 
+### Iter 15 — Kit Your Workforce + Also-bought cross-sells (Feb 2026)
+- **Kit Your Workforce builder** at `/workforce` (and `/kit-your-workforce`): mixed-garment bulk page with sticky live-total summary, tier chips, "add N more to unlock −X%" hint. Free breast-logo print included on every garment; optional back-print at +£3.50/garment (only enabled where the product allows `back-print`). Dual CTA: Stripe checkout up to the quote threshold, then quote-only.
+- **Workforce-eligible** flag per product (`workforce_eligible`) — set in `/admin/product-settings`. Seeded on workwear-tshirt, workwear-sweatshirt, workwear-jacket, hi-vis-vest.
+- **Workforce tiers** (admin-configurable): `GET /api/workforce/tiers` + `PATCH /api/admin/workforce-tiers` for tiers list + `quote_threshold` (default 100). Tiers fall back to the global bulk defaults if not customised.
+- **Workforce checkout** `POST /api/workforce/checkout`: validates each line, computes tier discount on garment base only (snap_to_99), adds size upcharges + back-print fees, persists to `payment_transactions`, returns Stripe URL. Rejects non-eligible products + disallowed back-print. Over-threshold → 422 routing to quote.
+- **Workforce quote** `POST /api/workforce/quote`: stores in `quote_requests`. Sales-team picks up within 24h.
+- **Also-bought cross-sells** (`/api/products/{id}/also-bought`): admin-curated picks per product (`also_bought` field, max 6, validates no self-ref) with auto-fallback to same-category siblings (max 4). New `AlsoBoughtWith` component rendered on every PDP between reviews and Q&A.
+- **AdminProductSettings** extended: top-level "Kit Your Workforce tiers" block (`aps-workforce`), per-product workforce-eligible toggle (`aps-workforce-{id}`) and Also-bought picker (`aps-also-bought-{id}`).
+- **Navbar**: "Kit Workforce" link added between Workwear and Teams & Schools.
+- **Tests**: 19/19 backend pytest pass (`/app/backend/tests/test_iteration15.py`). Frontend e2e verified pricing math (30 tees → £179.70 with 18% off + Add-70-more hint), over-threshold quote flow, and Stripe redirect.
+
 ### Iter 14 — Phase 2: Admin auth + Restricted placements + Customer Q&A (Feb 2026)
 - **JWT admin authentication** (bcrypt + HS256 PyJWT). Admin user seeded at startup from `.env` (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `JWT_SECRET`). Token in `localStorage.yop_admin_token`, attached via axios request interceptor. Cookie also set on login for SSR-friendly auth.
 - **Auth endpoints**: `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
 - **Protected admin routes** via `Depends(require_admin)`: GET/PATCH `/admin/products`, `/admin/products/{id}/meta`, GET/PATCH `/admin/designer-products`, PATCH `/admin/bulk-tiers/defaults`, GET `/admin/qa`, POST `/admin/qa/{id}/answer`, DELETE `/admin/qa/{id}`, plus POST/PUT/DELETE `/team-kit-brands` and POST `/reviews/import-judgeme`.
 - **Frontend admin wall**: `/admin/login` page + `RequireAdmin` wrapper around every `/admin/*` route; persistent admin top-bar with Sign out + nav.
-- **Allowed print placements** per product: new `allowed_placements` field on `ProductMeta` (7 values: left-breast, right-breast, full-front, back-print, left-sleeve, right-sleeve, neck-label). Admin toggles in `/admin/product-settings` (`aps-placements-{id}`). Backend validates against allow-list. `GET /api/products/{id}/allowed-placements` is public. PDP `placements-grid` now filters by this list so a hi-vis vest can hide sleeve prints, etc.
-- **Customer Q&A on PDP** (`pdp-qa-section`): public POST `/api/qa` immediately publishes the question; PDP shows full Q&A list with answers; admin replies/deletes via `/admin/qa` page. Validation: question 5–500 chars; unknown product_id → 400. Admin Q&A page (`/admin/qa`) lists unanswered first.
-- **Backend tests**: 34/34 pass (`test_iteration14.py`). **Frontend e2e**: 15/15 pass on live preview (`iteration_14.json`).
+- **Allowed print placements** per product: new `allowed_placements` field on `ProductMeta` (7 values: left-breast, right-breast, full-front, back-print, left-sleeve, right-sleeve, neck-label). Admin toggles in `/admin/product-settings` (`aps-placements-{id}`). PDP `placements-grid` now filters by this list.
+- **Customer Q&A on PDP** (`pdp-qa-section`): public POST `/api/qa` immediately publishes the question; PDP shows full Q&A list with answers; admin replies/deletes via `/admin/qa` page.
 - **Admin credentials**: stored in `/app/memory/test_credentials.md`.
 
 ### Iter 1–4 (summary)

@@ -18,6 +18,7 @@ import AdminProductSettings from "@/pages/AdminProductSettings";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminQA from "@/pages/AdminQA";
 import RequireAdmin from "@/pages/RequireAdmin";
+import KitYourWorkforce from "@/pages/KitYourWorkforce";
 import Sports from "@/pages/Sports";
 import TeamKits from "@/pages/TeamKits";
 import TeamKitBuilder from "@/pages/TeamKitBuilder";
@@ -35,6 +36,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/themes" element={<ThemeShowcase />} />
           <Route path="/workwear" element={<Workwear />} />
+          <Route path="/workforce" element={<KitYourWorkforce />} />
+          <Route path="/kit-your-workforce" element={<KitYourWorkforce />} />
           <Route path="/teams-schools" element={<TeamsSchools />} />
           <Route path="/sports" element={<Sports />} />
           <Route path="/team-kits" element={<TeamKits />} />

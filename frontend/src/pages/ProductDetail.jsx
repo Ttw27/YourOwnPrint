@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ProductReviews from "../components/bold/ProductReviews";
+import AlsoBoughtWith from "../components/bold/AlsoBoughtWith";
 import PricePromise from "../components/bold/PricePromise";
 import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
@@ -483,6 +484,8 @@ export default function ProductDetail() {
             </div>
 
             <ProductReviews productId={product.id} productName={product.name} />
+
+            <AlsoBoughtWith productId={product.id} />
 
             <ProductQASection
               productId={product.id}

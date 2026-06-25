@@ -63,6 +63,7 @@ export const buildWhatsAppLink = (preset = "Hi! I'd like some help with my custo
 
 export const NAV_LINKS = [
   { label: "Workwear", to: "/workwear" },
+  { label: "Kit Workforce", to: "/workforce" },
   { label: "Teams & Schools", to: "/teams-schools" },
   { label: "Sports & Combat", to: "/sports" },
   { label: "Team Kits", to: "/team-kits" },

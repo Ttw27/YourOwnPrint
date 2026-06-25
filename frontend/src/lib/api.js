@@ -203,6 +203,34 @@ export async function fetchAllowedPlacements(product_id) {
   return data; // { allowed_placements: [...] }
 }
 
+// ----- Kit Your Workforce -----
+export async function fetchWorkforceProducts() {
+  const { data } = await api.get("/workforce/products");
+  return data;
+}
+export async function fetchWorkforceTiers() {
+  const { data } = await api.get("/workforce/tiers");
+  return data;
+}
+export async function workforceCheckout(payload) {
+  const { data } = await api.post("/workforce/checkout", payload);
+  return data;
+}
+export async function workforceQuote(payload) {
+  const { data } = await api.post("/workforce/quote", payload);
+  return data;
+}
+export async function updateWorkforceTiers(payload) {
+  const { data } = await api.patch("/admin/workforce-tiers", payload);
+  return data;
+}
+
+// ----- Also bought with (cross-sells) -----
+export async function fetchAlsoBought(product_id, limit = 4) {
+  const { data } = await api.get(`/products/${product_id}/also-bought`, { params: { limit } });
+  return data;
+}
+
 // ----- Customer Q&A -----
 export async function fetchProductQA(product_id) {
   const { data } = await api.get(`/qa/${product_id}`);
