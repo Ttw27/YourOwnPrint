@@ -7,6 +7,14 @@
 
 ## Implemented
 
+### Iter 23 — Expanded Shop menu + Tools showcase (Feb 2026)
+- **Shop mega-menu** expanded to 3 columns: Featured · By collection · **By garment** (T-shirts, Hoodies, Polos, Sweatshirts, Jackets, Hi-Vis, Shorts, Accessories). Wider 760px panel with bigger padding + line-spacing. Mobile slide-over reflects the same groups.
+- **Design tool → Design Your Own** restored in the main nav.
+- **`ToolsShowcase` component**: 5 hero-quality cards showcasing the built-in tools — Design Your Own (lead card 2×2), Specials, Kit Your Workforce, Team Kits, Fight Night Tees — colour blocks (amber/green/gold/purple/red), image overlay, tagline, "Open the tool →" CTA. Two variants: `full` (homepage) and `compact` (collection / industry / shop-by-type pages).
+- Added showcase to: homepage (after PricePromise), IndustryDetail, ShopByType.
+- **`/shop/:slug` page** (T-shirts, Hoodies, Polos, Sweatshirts, Jackets, Hi-Vis, Shorts, Accessories) — dark hero, fit pills, product grid + tools strip at the bottom.
+- Backend: `GET /api/shop/types` and `GET /api/shop/type/{slug}` with classifier auto-tagging garment type from product id/name (no DB writes required).
+
 ### Iter 22 — Mega-menu + Industries + gender filter + Specials = breast-only (Feb 2026)
 - **Top nav condensed** to 5 items via a mega-menu: `Shop ▾  For Teams ▾  Industries ▾  Design tool  [Get a quote]`. Two-column dropdown panels, mobile slide-over for small screens. All testids preserved.
 - **Industries**: 9 curated landings (`/industries`, `/industries/:slug`) — Trades, Hospitality, Healthcare, Beauty & Spa, Construction, Logistics & Couriers, Fitness & Coaching, Cleaning & Maintenance, Hair & Barbering. Hero image + blurb + product grid filtered by `industry_tags` on each product. Auto-seeded sensible tags across the catalogue (e.g. workwear tee → trades, construction, logistics, cleaning).

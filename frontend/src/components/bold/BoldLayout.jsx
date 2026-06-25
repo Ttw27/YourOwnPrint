@@ -50,14 +50,14 @@ export function BoldNavbar() {
                 </button>
                 {isOpen && (
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-[#dcfce7] p-5 grid gap-6 min-w-[460px]"
-                    style={{ gridTemplateColumns: `repeat(${item.columns.length}, minmax(180px, 1fr))` }}
+                    className="absolute left-1/2 -translate-x-1/2 top-full mt-3 bg-white rounded-3xl shadow-2xl border border-[#dcfce7] p-8 grid gap-8"
+                    style={{ gridTemplateColumns: item.columns.length === 1 ? "1fr" : `repeat(${item.columns.length}, minmax(190px, 1fr))`, minWidth: item.columns.length >= 3 ? 760 : (item.columns.length === 2 ? 560 : 320) }}
                     data-testid={`nav-${item.key}-panel`}
                   >
                     {item.columns.map((col, i) => (
                       <div key={i}>
                         <div className="text-[10px] uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold mb-3" dangerouslySetInnerHTML={{ __html: col.heading }} />
-                        <ul className="space-y-1.5">
+                        <ul className="space-y-2">
                           {col.links.map((lnk) => (
                             <li key={lnk.to}>
                               <Link

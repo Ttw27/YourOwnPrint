@@ -241,6 +241,16 @@ export async function fetchIndustry(slug, opts = {}) {
   return data;
 }
 
+// ----- Shop by garment type -----
+export async function fetchShopTypes() {
+  const { data } = await api.get("/shop/types");
+  return data;
+}
+export async function fetchShopByType(slug, opts = {}) {
+  const { data } = await api.get(`/shop/type/${slug}`, { params: opts });
+  return data;
+}
+
 export const GENDER_FIT_VALUES = ["mens", "womens", "unisex", "kids"];
 export const INDUSTRY_SLUGS = ["trades", "hospitality", "healthcare", "beauty", "construction", "logistics", "fitness", "cleaning", "hair-beauty"];
 

@@ -93,6 +93,20 @@ export const NAV_MENU = [
           { label: "Fight Night Tees", to: "/sports/fight-night" },
           { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
           { label: "Team Kits", to: "/team-kits" },
+          { label: "Teams & Schools", to: "/teams-schools" },
+        ],
+      },
+      {
+        heading: "By garment",
+        links: [
+          { label: "T-shirts", to: "/shop/t-shirts" },
+          { label: "Hoodies", to: "/shop/hoodies" },
+          { label: "Polos", to: "/shop/polos" },
+          { label: "Sweatshirts", to: "/shop/sweatshirts" },
+          { label: "Jackets", to: "/shop/jackets" },
+          { label: "Hi-Vis", to: "/shop/hi-vis" },
+          { label: "Shorts", to: "/shop/shorts" },
+          { label: "Accessories", to: "/shop/accessories" },
         ],
       },
     ],
@@ -137,8 +151,17 @@ export const NAV_MENU = [
       },
     ],
   },
-  { key: "design", label: "Design tool", to: "/design" },
+  { key: "design", label: "Design Your Own", to: "/design" },
   { key: "contact", label: "Get a quote", to: "/contact", cta: true },
+];
+
+// 5 hero tools showcased across the site
+export const TOOLS_SHOWCASE = [
+  { key: "design", title: "Design Your Own", tagline: "Live canvas. Drag, upload, type. Print-ready in minutes.", to: "/design", image: "https://images.pexels.com/photos/3826676/pexels-photo-3826676.jpeg", colour: "#fde68a", accent: "#1a1a1a" },
+  { key: "specials", title: "Your Own Print Specials", tagline: "Starter lineup. No MOQ. Breast logo included.", to: "/specials", image: "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg", colour: "#7bc67e", accent: "#1a1a1a" },
+  { key: "workforce", title: "Kit Your Workforce", tagline: "Mixed garments, bulk tiers, one logo across the lot.", to: "/workforce", image: "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg", colour: "#fbbf24", accent: "#1a1a1a" },
+  { key: "team-kits", title: "Team Kits", tagline: "Configurator for clubs and squads — front, back, sleeves.", to: "/team-kits", image: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg", colour: "#a78bfa", accent: "#1a1a1a" },
+  { key: "fight-night", title: "Fight Night Tees", tagline: "Branded tees for fight cards, gyms and combat events.", to: "/sports/fight-night", image: "https://images.pexels.com/photos/4761792/pexels-photo-4761792.jpeg", colour: "#f87171", accent: "#ffffff" },
 ];
 
 export const GENDER_FITS = [

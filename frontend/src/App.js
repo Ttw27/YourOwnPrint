@@ -22,6 +22,7 @@ import KitYourWorkforce from "@/pages/KitYourWorkforce";
 import Specials from "@/pages/Specials";
 import IndustriesIndex from "@/pages/IndustriesIndex";
 import IndustryDetail from "@/pages/IndustryDetail";
+import ShopByType from "@/pages/ShopByType";
 import AdminLeaversTemplates from "@/pages/AdminLeaversTemplates";
 import Sports from "@/pages/Sports";
 import TeamKits from "@/pages/TeamKits";
@@ -46,6 +47,7 @@ function App() {
           <Route path="/your-own-print-specials" element={<Specials />} />
           <Route path="/industries" element={<IndustriesIndex />} />
           <Route path="/industries/:slug" element={<IndustryDetail />} />
+          <Route path="/shop/:slug" element={<ShopByType />} />
           <Route path="/teams-schools" element={<TeamsSchools />} />
           <Route path="/sports" element={<Sports />} />
           <Route path="/team-kits" element={<TeamKits />} />

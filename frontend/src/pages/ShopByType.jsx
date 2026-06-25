@@ -2,11 +2,11 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
-import { fetchIndustry } from "../lib/api";
+import { fetchShopByType } from "../lib/api";
 import { GENDER_FITS } from "../lib/data";
-import { ArrowRight, ShieldCheck, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 
-export default function IndustryDetail() {
+export default function ShopByType() {
   const { slug } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,8 +14,8 @@ export default function IndustryDetail() {
   const [gender, setGender] = useState("all");
 
   useEffect(() => {
-    setLoading(true);
-    fetchIndustry(slug).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
+    setLoading(true); setErr(false);
+    fetchShopByType(slug).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
   }, [slug]);
 
   const filtered = useMemo(() => {
@@ -24,40 +24,31 @@ export default function IndustryDetail() {
     return data.products.filter((p) => (p.gender_fit || "unisex") === gender);
   }, [data, gender]);
 
-  if (err) return <Navigate to="/industries" replace />;
-  if (loading || !data) {
-    return <div className="min-h-screen grid place-items-center bg-white" data-testid="industry-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
-  }
+  if (err) return <Navigate to="/workwear" replace />;
+  if (loading || !data) return <div className="min-h-screen grid place-items-center bg-white" data-testid="shop-type-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
 
   return (
-    <div className="bg-white min-h-screen text-[#1a1a1a] font-nunito" data-testid={`industry-detail-${slug}`}>
+    <div className="bg-white min-h-screen text-[#1a1a1a] font-nunito" data-testid={`shop-type-${slug}`}>
       <BoldNavbar />
       <header className="relative overflow-hidden bg-[#1a1a1a] text-white">
-        <div className="absolute inset-0 opacity-25">
-          <img src={data.hero_image} alt="" className="w-full h-full object-cover" />
-        </div>
+        <div className="absolute inset-0 opacity-25"><img src={data.image} alt="" className="w-full h-full object-cover" /></div>
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/85 to-transparent" />
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
-          <Link to="/industries" className="text-xs text-[#7bc67e] hover:underline" data-testid="industry-back">← All industries</Link>
+        <div className="relative max-w-7xl mx-auto px-6 py-14">
+          <Link to="/" className="text-xs text-[#7bc67e] hover:underline" data-testid="shop-type-back">← Home</Link>
           <h1 className="font-black text-5xl lg:text-6xl mt-3">{data.title}</h1>
-          <div className="text-[#7bc67e] font-extrabold mt-1">{data.subtitle}</div>
-          <p className="text-zinc-300 mt-3 max-w-xl">{data.blurb}</p>
-          <div className="mt-4 inline-flex items-center gap-2 text-xs text-zinc-300">
-            <ShieldCheck size={14} className="text-[#7bc67e]" /> UK printed · free artwork proof · low minimums
-          </div>
+          <div className="text-zinc-300 mt-2">{data.products.length} option{data.products.length === 1 ? "" : "s"} ready to print</div>
         </div>
       </header>
 
       <section className="max-w-7xl mx-auto px-6 py-10">
-        {/* Gender filter pills */}
-        <div className="flex flex-wrap items-center gap-2 mb-6" data-testid="industry-gender-filter">
+        <div className="flex flex-wrap items-center gap-2 mb-6" data-testid="shop-type-gender-filter">
           <span className="text-xs uppercase tracking-[0.3em] text-[#4b5563] font-extrabold mr-2">Fit</span>
           {GENDER_FITS.map((g) => (
             <button
               key={g.id}
               onClick={() => setGender(g.id)}
               className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition ${gender === g.id ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#dcfce7] text-[#4b5563] hover:border-[#7bc67e]"}`}
-              data-testid={`gender-filter-${g.id}`}
+              data-testid={`shop-gender-${g.id}`}
             >
               {g.label}
             </button>
@@ -65,23 +56,23 @@ export default function IndustryDetail() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-5 text-sm" data-testid="industry-empty">
-            Nothing in this fit yet — try a different filter or browse <Link to="/workwear" className="underline text-[#7bc67e]">all workwear</Link>.
+          <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-5 text-sm" data-testid="shop-type-empty">
+            Nothing matches that fit. Try All or <Link to="/workwear" className="underline text-[#7bc67e]">browse workwear</Link>.
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="industry-products-grid">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="shop-type-grid">
             {filtered.map((p) => (
               <Link
                 key={p.id}
                 to={`/product/${p.id}`}
                 className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition-shadow hover:shadow-md"
-                data-testid={`industry-product-${p.id}`}
+                data-testid={`shop-type-product-${p.id}`}
               >
                 <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
                   <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-4">
-                  <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#7bc67e]">{p.category}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{p.category}</div>
                   <div className="font-extrabold text-base mt-0.5">{p.name}</div>
                   <div className="mt-2 flex items-baseline justify-between">
                     <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
@@ -93,6 +84,7 @@ export default function IndustryDetail() {
           </div>
         )}
       </section>
+
       <ToolsShowcase variant="compact" />
       <BoldFooter />
     </div>

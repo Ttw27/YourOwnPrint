@@ -1850,6 +1850,73 @@ async def list_industries():
     return out
 
 
+# ---------- Shop by garment type ----------
+GARMENT_TYPE_CATALOGUE = [
+    {"slug": "t-shirts",    "title": "T-shirts",     "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg"},
+    {"slug": "hoodies",     "title": "Hoodies",      "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg"},
+    {"slug": "polos",       "title": "Polos",        "image": "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg"},
+    {"slug": "sweatshirts", "title": "Sweatshirts",  "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg"},
+    {"slug": "jackets",     "title": "Jackets",      "image": "https://images.pexels.com/photos/16429777/pexels-photo-16429777.jpeg"},
+    {"slug": "hi-vis",      "title": "Hi-Vis",       "image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg"},
+    {"slug": "shorts",      "title": "Shorts",       "image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg"},
+    {"slug": "accessories", "title": "Accessories",  "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
+]
+
+
+def _garment_type_of(product: Dict) -> Optional[str]:
+    pid = product["id"].lower()
+    name = (product.get("name") or "").lower()
+    cat = (product.get("category") or "").lower()
+    if "short" in pid or "short" in name:
+        return "shorts"
+    if "jacket" in pid or "jacket" in name or "varsity" in pid or "softshell" in pid:
+        return "jackets"
+    if "vest" in pid or "hi-vis" in pid or "hi vis" in name:
+        return "hi-vis"
+    if "polo" in pid or "polo" in name:
+        return "polos"
+    if "hoodie" in pid or "hoodie" in name or "pullover" in pid:
+        return "hoodies"
+    if "sweatshirt" in pid or "crewneck" in pid:
+        return "sweatshirts"
+    if "tee" in pid or "tshirt" in pid or "t-shirt" in name or "shirt" in pid:
+        return "t-shirts"
+    if "bag" in pid or "beanie" in pid or "drawstring" in pid:
+        return "accessories"
+    if cat == "leavers":
+        return "hoodies"
+    return None
+
+
+@api_router.get("/shop/types")
+async def list_shop_garment_types():
+    out = []
+    for t in GARMENT_TYPE_CATALOGUE:
+        count = sum(1 for p in PRODUCTS.values() if _garment_type_of(p) == t["slug"])
+        out.append({**t, "product_count": count})
+    return out
+
+
+@api_router.get("/shop/type/{slug}")
+async def shop_by_garment_type(slug: str, gender_fit: Optional[str] = None):
+    meta = next((t for t in GARMENT_TYPE_CATALOGUE if t["slug"] == slug), None)
+    if not meta:
+        raise HTTPException(404, "Garment type not found")
+    items = []
+    for p in PRODUCTS.values():
+        if _garment_type_of(p) == slug:
+            if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
+                continue
+            items.append({
+                "id": p["id"], "name": p["name"], "price": float(p["price"]),
+                "image": p["image"], "category": p["category"],
+                "description": p.get("description") or "",
+                "gender_fit": p.get("gender_fit") or "unisex",
+            })
+    items.sort(key=lambda x: x["price"])
+    return {**meta, "products": items}
+
+
 @api_router.get("/industries/{slug}")
 async def get_industry(slug: str, gender_fit: Optional[str] = None):
     ind = next((i for i in INDUSTRIES_CATALOGUE if i["slug"] == slug), None)
