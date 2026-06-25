@@ -225,22 +225,26 @@ export default function ProductDetail() {
         ) : product && (
           <>
             <div className="grid lg:grid-cols-12 gap-8 mb-12">
-              {/* Image */}
-              <div className="lg:col-span-6">
-                <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7] sticky top-20" data-testid="product-image-block">
-                  <div className="aspect-square overflow-hidden rounded-2xl bg-white relative">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                    {color && (
-                      <div className="absolute bottom-3 left-3 bg-white px-3 py-1.5 rounded-full shadow-md font-nunito font-bold text-xs flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-full border border-[#dcfce7]" style={{ background: (product.colors?.find(c => c.name === color)?.hex) || "#ccc" }} />
-                        {color}
-                      </div>
-                    )}
+              {/* Left column: image gallery + description + size guide */}
+              <div className="lg:col-span-6 space-y-5">
+                <ProductGallery product={product} color={color} />
+
+                {product.description_full && (
+                  <div className="bg-[#f0fdf4] border border-[#dcfce7] rounded-2xl p-4 text-sm text-[#1a1a1a] leading-relaxed whitespace-pre-line" data-testid="product-description-full">
+                    {product.description_full}
                   </div>
-                </div>
+                )}
+
+                {(product.size_guide_table || []).length > 0 && (
+                  <SizeGuidePanel
+                    rows={product.size_guide_table}
+                    name={product.name}
+                    onOpenModal={() => setShowSizeGuide(true)}
+                  />
+                )}
               </div>
 
-              {/* Configurator */}
+              {/* Right column: configurator + buy form */}
               <div className="lg:col-span-6 space-y-5">
                 <div>
                   <span className="inline-block bg-[#fde68a] text-[#1a1a1a] text-xs font-nunito font-extrabold uppercase tracking-wider px-3 py-1 rounded-full">{product.category}</span>
@@ -258,14 +262,9 @@ export default function ProductDetail() {
                     )}
                   </div>
                   <p className="text-[#4b5563] mt-4">{product.description}</p>
-                  {product.description_full && (
-                    <div className="mt-3 bg-[#f0fdf4] border border-[#dcfce7] rounded-2xl p-4 text-sm text-[#1a1a1a] leading-relaxed whitespace-pre-line" data-testid="product-description-full">
-                      {product.description_full}
-                    </div>
-                  )}
                 </div>
 
-                <BulkTierLadder productId={product.id} />
+                <BulkTierLadder productId={product.id} currentQty={totalQty} />
 
                 {/* Colours */}
                 {product.colors?.length > 0 && (
@@ -537,25 +536,113 @@ export default function ProductDetail() {
 }
 
 // ---- Bulk tier ladder for PDP ----
-function BulkTierLadder({ productId }) {
+function BulkTierLadder({ productId, currentQty = 0 }) {
   const [data, setData] = useState(null);
   useEffect(() => { fetchProductBulkTiers(productId).then(setData).catch(() => setData({ mode: "none" })); }, [productId]);
   if (!data || data.mode === "none" || !data.tiers?.length) return null;
   const tiersAsc = [...data.tiers].sort((a, b) => a.min_qty - b.min_qty);
+  // Active tier: highest tier whose min_qty <= currentQty (0 if none)
+  let activeMin = 0;
+  for (const t of tiersAsc) if (currentQty >= t.min_qty) activeMin = t.min_qty;
+  const base1 = activeMin === 0 && currentQty >= 1;
   return (
     <div className="bg-white rounded-2xl border-2 border-[#dcfce7] p-4" data-testid="pdp-bulk-tiers">
-      <div className="text-[10px] font-nunito font-extrabold uppercase tracking-[0.3em] text-[#7bc67e]">Bulk pricing</div>
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-[10px] font-nunito font-extrabold uppercase tracking-[0.3em] text-[#7bc67e]">Bulk pricing</div>
+        {currentQty > 0 && <div className="text-[10px] text-[#4b5563]">Your qty: <strong className="text-[#1a1a1a]" data-testid="bulk-tier-current-qty">{currentQty}</strong></div>}
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
-        <div className="rounded-xl p-2 text-center bg-[#f0fdf4] text-[#4b5563]">
+        <div
+          className={`rounded-xl p-2 text-center transition ${base1 ? "bg-[#7bc67e] text-[#1a1a1a] ring-2 ring-[#7bc67e] ring-offset-1" : "bg-[#f0fdf4] text-[#4b5563]"}`}
+          data-testid="pdp-tier-base"
+          data-active={base1 ? "true" : "false"}
+        >
           <div className="font-nunito font-extrabold text-sm">£{data.base_price.toFixed(2)}</div>
           <div className="text-[10px] mt-0.5">1{tiersAsc[0] ? `–${tiersAsc[0].min_qty - 1}` : "+"}</div>
         </div>
-        {tiersAsc.map((t) => (
-          <div key={t.min_qty} data-testid={`pdp-tier-${t.min_qty}`} className="rounded-xl p-2 text-center bg-[#f0fdf4] text-[#1a1a1a]">
-            <div className="font-nunito font-extrabold text-sm">£{t.unit_price.toFixed(2)}</div>
-            <div className="text-[10px] mt-0.5">{t.min_qty}+ · save £{t.savings_per_unit.toFixed(2)}</div>
+        {tiersAsc.map((t) => {
+          const active = t.min_qty === activeMin;
+          return (
+            <div
+              key={t.min_qty}
+              data-testid={`pdp-tier-${t.min_qty}`}
+              data-active={active ? "true" : "false"}
+              className={`rounded-xl p-2 text-center transition ${active ? "bg-[#7bc67e] text-[#1a1a1a] ring-2 ring-[#7bc67e] ring-offset-1 scale-105" : "bg-[#f0fdf4] text-[#1a1a1a]"}`}
+            >
+              <div className="font-nunito font-extrabold text-sm">£{t.unit_price.toFixed(2)}</div>
+              <div className="text-[10px] mt-0.5">{t.min_qty}+ · save £{t.savings_per_unit.toFixed(2)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---- Product image gallery with thumbnails ----
+function ProductGallery({ product, color }) {
+  const main = product.image;
+  const gallery = Array.isArray(product.image_gallery) ? product.image_gallery : [];
+  const images = [main, ...gallery.filter((u) => u && u !== main)];
+  const [active, setActive] = useState(0);
+  const current = images[active] || main;
+  return (
+    <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7] sticky top-20" data-testid="product-image-block">
+      <div className="aspect-square overflow-hidden rounded-2xl bg-white relative">
+        <img src={current} alt={product.name} className="w-full h-full object-cover" data-testid="product-image-main" />
+        {color && (
+          <div className="absolute bottom-3 left-3 bg-white px-3 py-1.5 rounded-full shadow-md font-nunito font-bold text-xs flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full border border-[#dcfce7]" style={{ background: (product.colors?.find((c) => c.name === color)?.hex) || "#ccc" }} />
+            {color}
           </div>
-        ))}
+        )}
+      </div>
+      {images.length > 1 && (
+        <div className="mt-3 grid grid-cols-5 gap-2" data-testid="product-image-thumbnails">
+          {images.slice(0, 5).map((src, i) => (
+            <button
+              key={src + i}
+              onClick={() => setActive(i)}
+              className={`aspect-square overflow-hidden rounded-lg border-2 transition ${active === i ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-transparent hover:border-[#dcfce7]"}`}
+              data-testid={`product-thumb-${i}`}
+              aria-label={`View image ${i + 1}`}
+            >
+              <img src={src} alt="" className="w-full h-full object-cover bg-white" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Inline size-guide table preview (left column under description) ----
+function SizeGuidePanel({ rows, name, onOpenModal }) {
+  const cols = rows.length > 0 ? Object.keys(rows[0]).filter((k) => k !== "size") : [];
+  return (
+    <div className="bg-white rounded-2xl border-2 border-[#dcfce7] p-4" data-testid="pdp-size-guide-panel">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="text-[10px] font-nunito font-extrabold uppercase tracking-[0.3em] text-[#7bc67e]">Size guide</div>
+          <div className="text-xs text-[#4b5563]">All measurements in cm · {name}</div>
+        </div>
+        <button onClick={onOpenModal} className="text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline" data-testid="pdp-size-guide-expand">Expand →</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-[#dcfce7]">
+            <th className="text-left py-1.5 px-2 font-nunito font-extrabold">Size</th>
+            {cols.map((c) => <th key={c} className="text-left py-1.5 px-2 font-nunito font-extrabold capitalize">{c}</th>)}
+          </tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className="border-b border-[#dcfce7]/40">
+                <td className="py-1.5 px-2 font-nunito font-extrabold">{r.size}</td>
+                {cols.map((c) => <td key={c} className="py-1.5 px-2 text-[#4b5563]">{r[c]}{typeof r[c] === "number" ? " cm" : ""}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

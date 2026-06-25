@@ -1105,6 +1105,7 @@ class ProductMeta(BaseModel):
     workforce_eligible: Optional[bool] = None
     also_bought: Optional[List[str]] = None
     match_with: Optional[List[str]] = None
+    image_gallery: Optional[List[str]] = None
 
 
 class DesignerArtwork(BaseModel):
@@ -1180,7 +1181,7 @@ async def _merge_designer_overrides():
         if pid in PRODUCTS:
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
                      "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-                     "workforce_eligible", "also_bought", "match_with"):
+                     "workforce_eligible", "also_bought", "match_with", "image_gallery"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -1425,6 +1426,7 @@ async def admin_list_all_products():
             "workforce_eligible": bool(p.get("workforce_eligible")),
             "also_bought": p.get("also_bought") or [],
             "match_with": p.get("match_with") or [],
+            "image_gallery": p.get("image_gallery") or [],
         })
     return out
 
@@ -1473,6 +1475,12 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
                 raise HTTPException(400, "Cannot match a product with itself")
             if pid not in PRODUCTS:
                 raise HTTPException(400, f"Unknown match_with product_id '{pid}'")
+    if payload.image_gallery is not None:
+        if len(payload.image_gallery) > 8:
+            raise HTTPException(400, "image_gallery capped at 8 images")
+        for u in payload.image_gallery:
+            if not isinstance(u, str) or not (u.startswith("http://") or u.startswith("https://") or u.startswith("data:image/")):
+                raise HTTPException(400, "image_gallery entries must be http(s) or data: URLs")
     doc = {
         "product_id": product_id,
         "brand": payload.brand,
@@ -1486,12 +1494,13 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "workforce_eligible": payload.workforce_eligible if payload.workforce_eligible is not None else bool(PRODUCTS[product_id].get("workforce_eligible")),
         "also_bought": payload.also_bought,
         "match_with": payload.match_with,
+        "image_gallery": payload.image_gallery,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
               "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-              "workforce_eligible", "also_bought", "match_with"):
+              "workforce_eligible", "also_bought", "match_with", "image_gallery"):
         v = doc.get(k)
         if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible"):
             PRODUCTS[product_id][k] = v
@@ -1621,6 +1630,8 @@ class WorkforceCheckoutRequest(BaseModel):
     contact_name: Optional[str] = ""
     contact_email: Optional[EmailStr] = None
     contact_phone: Optional[str] = ""
+    breast_logo_data_url: Optional[str] = None
+    back_print_data_url: Optional[str] = None
 
 
 def _resolve_workforce_tier(total_qty: int, tiers: List[Tuple[int, float]]) -> float:
@@ -1705,6 +1716,20 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
             detail=f"Over {threshold} garments — please request a quote (POST /api/workforce/quote)",
         )
 
+    # Validate artwork
+    if not payload.breast_logo_data_url or not payload.breast_logo_data_url.startswith("data:image/"):
+        raise HTTPException(400, "Please upload your breast-logo artwork before checking out")
+    needs_back_print = any(ln["back_print"] for ln in valid_lines)
+    if needs_back_print:
+        if not payload.back_print_data_url or not payload.back_print_data_url.startswith("data:image/"):
+            raise HTTPException(400, "You've selected back print on some garments — please upload your back-print artwork")
+    # Cap size to ~8 MB total each (Stripe metadata won't carry the image; we'll save to artwork doc)
+    MAX_DATA_URL = 8 * 1024 * 1024
+    if len(payload.breast_logo_data_url) > MAX_DATA_URL:
+        raise HTTPException(400, "Breast logo image too large (max ~6 MB)")
+    if payload.back_print_data_url and len(payload.back_print_data_url) > MAX_DATA_URL:
+        raise HTTPException(400, "Back print image too large (max ~6 MB)")
+
     discount_pct = _resolve_workforce_tier(total_qty, tiers)
     factor = 1 - (discount_pct / 100.0)
 
@@ -1749,6 +1774,16 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     )
     session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
 
+    artwork_doc_id = str(uuid.uuid4())
+    await db.workforce_artwork.insert_one({
+        "id": artwork_doc_id,
+        "session_id": session.session_id,
+        "breast_logo": payload.breast_logo_data_url,
+        "back_print": payload.back_print_data_url,
+        "needs_back_print": needs_back_print,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.session_id,
@@ -1759,6 +1794,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         "amount": total_amount,
         "currency": "gbp",
         "metadata": metadata,
+        "artwork_id": artwork_doc_id,
         "payment_status": "pending",
         "status": "initiated",
         "created_at": datetime.now(timezone.utc).isoformat(),

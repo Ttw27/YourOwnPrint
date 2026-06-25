@@ -4,12 +4,13 @@ import PricePromise from "../components/bold/PricePromise";
 import { fetchWorkforceProducts, fetchWorkforceTiers, workforceCheckout, workforceQuote } from "../lib/api";
 import { toast } from "sonner";
 import { Plus, Minus, Trash2, ShieldCheck, Truck, Sparkles, ArrowRight, Loader2 } from "lucide-react";
-
 export default function KitYourWorkforce() {
   const [products, setProducts] = useState([]);
   const [tiers, setTiers] = useState({ tiers: [], quote_threshold: 100, back_print_price: 3.5 });
   const [rows, setRows] = useState([]);   // [{ uid, product_id, size, qty, back_print }]
   const [contact, setContact] = useState({ company: "", name: "", email: "", phone: "" });
+  const [breastLogo, setBreastLogo] = useState(null); // data URL
+  const [backPrint, setBackPrint] = useState(null);   // data URL
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -54,7 +55,9 @@ export default function KitYourWorkforce() {
   const totalAmount = useMemo(() => rows.reduce((s, r) => s + lineTotal(r), 0), [rows, currentTierPct, tiers]);
 
   const overThreshold = totalQty > (tiers.quote_threshold || 100);
-  const canCheckout = totalQty >= 1 && !overThreshold;
+  const anyBackPrint = rows.some(r => r.back_print);
+  const artworkOk = !!breastLogo && (!anyBackPrint || !!backPrint);
+  const canCheckout = totalQty >= 1 && !overThreshold && artworkOk;
   const canQuote = totalQty > (tiers.quote_threshold || 100) && contact.name.trim() && contact.email.trim();
 
   const onCheckout = async () => {
@@ -67,6 +70,8 @@ export default function KitYourWorkforce() {
         contact_name: contact.name,
         contact_email: contact.email || undefined,
         contact_phone: contact.phone,
+        breast_logo_data_url: breastLogo,
+        back_print_data_url: anyBackPrint ? backPrint : null,
         lines: rows.map(r => ({ product_id: r.product_id, size: r.size, qty: Number(r.qty), back_print: !!r.back_print })),
       });
       window.location.href = res.url;
@@ -158,8 +163,33 @@ export default function KitYourWorkforce() {
             )}
           </section>
 
+          <section data-testid="workforce-artwork-section">
+            <h2 className="font-black text-2xl mb-3">2. Upload your prints</h2>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <ArtworkUploader
+                label="Breast logo"
+                helper="Printed on every garment (no charge)."
+                required
+                dataUrl={breastLogo}
+                onChange={setBreastLogo}
+                testid="workforce-breast-logo"
+              />
+              <ArtworkUploader
+                label="Back print"
+                helper={anyBackPrint
+                  ? `Required — ${rows.filter(r => r.back_print).length} item(s) have back print selected.`
+                  : "Optional — only used on items where 'Back print' is ticked."}
+                required={anyBackPrint}
+                dataUrl={backPrint}
+                onChange={setBackPrint}
+                testid="workforce-back-print"
+                accent="#1a1a1a"
+              />
+            </div>
+          </section>
+
           <section data-testid="workforce-rows-section">
-            <h2 className="font-black text-2xl mb-3">2. Your kit</h2>
+            <h2 className="font-black text-2xl mb-3">3. Your kit</h2>
             {rows.length === 0 ? (
               <div className="text-sm text-[#4b5563] py-6 text-center border-2 border-dashed border-[#e5e7eb] rounded-2xl">
                 Tap a garment above to add it to your kit.
@@ -171,8 +201,7 @@ export default function KitYourWorkforce() {
                   if (!p) return null;
                   const canBack = (p.allowed_placements || []).includes("back-print");
                   return (
-                    <div key={r.uid} className="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 flex flex-wrap items-center gap-3" data-testid={`workforce-row-${r.uid}`}>
-                      <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                    <div key={r.uid} className="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 flex flex-wrap items-center gap-3" data-testid={`workforce-row-${r.uid}`}>                      <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover" />
                       <div className="flex-1 min-w-[140px]">
                         <div className="font-extrabold text-sm">{p.name}</div>
                         <div className="text-[11px] text-[#4b5563]">Breast logo included free</div>
@@ -219,7 +248,7 @@ export default function KitYourWorkforce() {
 
           {/* Contact form — required for quote */}
           <section data-testid="workforce-contact-section">
-            <h2 className="font-black text-2xl mb-3">3. Your details</h2>
+            <h2 className="font-black text-2xl mb-3">4. Your details</h2>
             <div className="grid sm:grid-cols-2 gap-2">
               <input placeholder="Company / organisation" value={contact.company} onChange={(e) => setContact({ ...contact, company: e.target.value })} className={ic} data-testid="workforce-company" />
               <input placeholder="Contact name *" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} className={ic} data-testid="workforce-name" />
@@ -257,6 +286,13 @@ export default function KitYourWorkforce() {
               >
                 {busy ? <Loader2 className="animate-spin" size={16}/> : <ArrowRight size={16}/>} Checkout securely
               </button>
+              {totalQty >= 1 && !overThreshold && !artworkOk && (
+                <div className="text-[11px] text-amber-300 bg-amber-900/40 border border-amber-700 rounded-lg p-2" data-testid="workforce-artwork-warning">
+                  {!breastLogo
+                    ? "Upload your breast-logo artwork above to enable checkout."
+                    : "Upload your back-print artwork — some garments are set to receive a back print."}
+                </div>
+              )}
               <button
                 onClick={onRequestQuote}
                 disabled={!canQuote || busy}
@@ -288,4 +324,66 @@ const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm
 
 function snap99(price) {
   return Math.max(0.99, Math.round(price) - 0.01);
+}
+
+// ---- Reusable artwork uploader (file → data URL) ----
+function ArtworkUploader({ label, helper, required, dataUrl, onChange, testid, accent = "#fbbf24" }) {
+  const inputRef = React.useRef(null);
+  const onFile = (file) => {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { toast.error("Please choose an image file (PNG, JPG, SVG)."); return; }
+    if (file.size > 6 * 1024 * 1024) { toast.error("Image too large (max 6 MB)."); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => onChange(e.target.result);
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div
+      className={`rounded-2xl border-2 p-3 transition ${dataUrl ? "bg-[#fff7ed] border-[#fed7aa]" : (required ? "bg-white border-dashed border-[#fbbf24]" : "bg-white border-dashed border-[#e5e7eb]")}`}
+      data-testid={`${testid}-card`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-extrabold text-sm flex items-center gap-2">
+            {label}
+            {required && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold" style={{ background: accent, color: "#1a1a1a" }}>Required</span>}
+          </div>
+          <div className="text-[11px] text-[#4b5563] mt-0.5">{helper}</div>
+        </div>
+        {dataUrl && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-[11px] text-rose-500 hover:underline"
+            data-testid={`${testid}-remove`}
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      {dataUrl ? (
+        <div className="mt-2 flex items-center gap-3">
+          <img src={dataUrl} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-[#fed7aa] p-1" data-testid={`${testid}-preview`} />
+          <button type="button" onClick={() => inputRef.current?.click()} className="text-xs font-extrabold underline" data-testid={`${testid}-replace`}>Replace</button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full mt-2 bg-white hover:bg-[#fff7ed] border-2 border-dashed py-4 rounded-lg text-xs font-extrabold inline-flex items-center justify-center gap-2"
+          style={{ borderColor: accent, color: accent === "#1a1a1a" ? "#1a1a1a" : "#b45309" }}
+          data-testid={`${testid}-upload`}
+        >
+          + Upload image
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => onFile(e.target.files?.[0])}
+      />
+    </div>
+  );
 }

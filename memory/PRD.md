@@ -7,6 +7,13 @@
 
 ## Implemented
 
+### Iter 18 — PDP layout v2 + thumbnails + tier highlight + Workforce uploads (Feb 2026)
+- **PDP layout restructured**: description + size-guide table moved to the LEFT column under the image. Right column keeps buy-form (title, bulk pricing, colour, sizes, placements).
+- **Image gallery + thumbnails**: new `image_gallery` field on `ProductMeta` (max 8 URLs). Thumbnails strip renders under the main image when gallery has >1 entry; click swaps the main image. Admin can add/remove via `/admin/product-settings → aps-gallery-{id}`.
+- **Live bulk-tier highlight on PDP**: BulkTierLadder now receives `currentQty` from the sizes-and-quantity total. The active tier tile lights up bright green with a ring + scale-up effect; "Your qty: X" badge appears next to the heading. Each tile carries `data-active="true|false"`.
+- **Kit Your Workforce uploads**: new "2. Upload your prints" section (breast logo required; back-print required only when any row has back-print ticked). Reusable `ArtworkUploader` component (file → base64 data URL, 6 MB cap, image-only mime check). Sticky summary disables Checkout until artwork is uploaded and shows an amber inline warning.
+- **Backend**: `WorkforceCheckoutRequest` now accepts `breast_logo_data_url` + `back_print_data_url`; `/workforce/checkout` validates artwork presence and saves to a new `workforce_artwork` Mongo collection linked to the payment_transaction. Also validates 6 MB per image and rejects checkout when needed back-print artwork is missing.
+
 ### Iter 17 — Default product-meta seed (Feb 2026)
 - **Auto-populates** `description_full`, `size_guide_table`, and `bulk_pricing_enabled=true` for all 39 products on startup (non-destructive: only fills empty values; admin overrides survive).
 - **Garment classifier** picks the right size-guide template per product type: tee/polo/vest (chest + length), hoodie/sweatshirt/jacket (+ sleeve), shorts (waist + inseam), tracksuit (chest + waist). UK sizing in cm.

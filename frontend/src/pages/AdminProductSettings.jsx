@@ -205,6 +205,15 @@ export default function AdminProductSettings() {
                       <Briefcase size={16} className="text-amber-600" />
                     </div>
                     <div>
+                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Image gallery (extra product photos — shown as thumbnails)</div>
+                      <div className="text-[11px] text-[#4b5563] mb-2">Paste public image URLs (https://…) — up to 8. Main product image is always first; these are additional shots (back view, lifestyle, detail).</div>
+                      <ImageGalleryEditor
+                        productId={p.id}
+                        urls={Array.isArray(p.image_gallery) ? p.image_gallery : []}
+                        onChange={(next) => update(p.id, { image_gallery: next })}
+                      />
+                    </div>
+                    <div>
                       <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">&quot;Customers also bought&quot; (cross-sells on this PDP)</div>
                       <div className="text-[11px] text-[#4b5563] mb-2">Pick up to 6 products to show on this PDP. Leave empty to auto-pick from the same category.</div>
                       <div className="flex flex-wrap gap-1.5" data-testid={`aps-also-bought-${p.id}`}>
@@ -298,3 +307,51 @@ export default function AdminProductSettings() {
 
 const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7bc67e]";
 function Lab({ label, children }) { return <div><div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">{label}</div>{children}</div>; }
+
+
+function ImageGalleryEditor({ productId, urls, onChange }) {
+  const [draft, setDraft] = React.useState("");
+  const add = () => {
+    const u = draft.trim();
+    if (!u) return;
+    if (!/^https?:\/\//i.test(u)) { toast.error("URL must start with http:// or https://"); return; }
+    if (urls.length >= 8) { toast.error("Max 8 extra images per product"); return; }
+    onChange([...urls, u]);
+    setDraft("");
+  };
+  const remove = (i) => onChange(urls.filter((_, idx) => idx !== i));
+  return (
+    <div data-testid={`aps-gallery-${productId}`}>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-2">
+        {urls.map((u, i) => (
+          <div key={u + i} className="relative aspect-square bg-white rounded-lg border border-[#e5e7eb] overflow-hidden" data-testid={`aps-gallery-${productId}-thumb-${i}`}>
+            <img src={u} alt="" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="absolute top-0.5 right-0.5 bg-rose-500 text-white text-[10px] w-5 h-5 rounded-full font-extrabold leading-none"
+              data-testid={`aps-gallery-${productId}-remove-${i}`}
+              title="Remove"
+            >×</button>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder="https://images.example.com/product-back.jpg"
+          className="flex-1 bg-white border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#7bc67e]"
+          data-testid={`aps-gallery-${productId}-input`}
+        />
+        <button
+          type="button"
+          onClick={add}
+          className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full"
+          data-testid={`aps-gallery-${productId}-add`}
+        >+ Add</button>
+      </div>
+    </div>
+  );
+}
