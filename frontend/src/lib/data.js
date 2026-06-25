@@ -73,7 +73,7 @@ export const NAV_LINKS = [
   { label: "Get a Quote", to: "/contact" },
 ];
 
-// Structured menu used by the mega-menu navbar
+// Structured menu used by the mega-menu navbar (fallback when /api/navigation isn't reachable).
 export const NAV_MENU = [
   {
     key: "shop",
@@ -84,13 +84,13 @@ export const NAV_MENU = [
         links: [
           { label: "Your Own Print Specials", to: "/specials", badge: "Starter" },
           { label: "Workwear", to: "/workwear" },
-          { label: "Sports & Combat", to: "/sports" },
+          { label: "Portfolio", to: "/portfolio" },
         ],
       },
       {
         heading: "By collection",
         links: [
-          { label: "Fight Night Tees", to: "/sports/fight-night" },
+          { label: "Fight Night Tees", to: "/fight-night-tee" },
           { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
           { label: "Team Kits", to: "/team-kits" },
           { label: "Teams & Schools", to: "/teams-schools" },
@@ -105,6 +105,8 @@ export const NAV_MENU = [
           { label: "Sweatshirts", to: "/shop/sweatshirts" },
           { label: "Jackets", to: "/shop/jackets" },
           { label: "Hi-Vis", to: "/shop/hi-vis" },
+          { label: "Joggers & Trousers", to: "/shop/bottoms" },
+          { label: "Aprons", to: "/shop/aprons" },
           { label: "Shorts", to: "/shop/shorts" },
           { label: "Accessories", to: "/shop/accessories" },
         ],
@@ -113,44 +115,70 @@ export const NAV_MENU = [
   },
   {
     key: "teams",
-    label: "For Teams",
+    label: "Sports & Fitness",
     columns: [
       {
-        heading: "Bulk &amp; group",
+        heading: "Sports",
         links: [
-          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
-          { label: "Teams & Schools", to: "/teams-schools" },
+          { label: "Football Kits", to: "/sports-teams/football" },
+          { label: "Rugby Kits", to: "/sports-teams/rugby" },
           { label: "Team Kits configurator", to: "/team-kits" },
+        ],
+      },
+      {
+        heading: "Fitness",
+        links: [
+          { label: "Gyms", to: "/sports-teams/gyms" },
+          { label: "Personal Trainers", to: "/sports-teams/personal-trainers" },
+          { label: "Boxing Gyms", to: "/sports-teams/boxing-gyms" },
+          { label: "Thai Boxing", to: "/sports-teams/thai-boxing" },
+          { label: "Kickboxing", to: "/sports-teams/kick-boxing" },
+          { label: "Dance Studios", to: "/sports-teams/dance-studios" },
+        ],
+      },
+      {
+        heading: "Schools & Bulk",
+        links: [
+          { label: "Teams & Schools", to: "/teams-schools" },
           { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
+          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
         ],
       },
     ],
   },
   {
     key: "industries",
-    label: "Industries",
+    label: "Workwear",
     columns: [
       {
-        heading: "Workforce",
+        heading: "Trades & Site",
         links: [
-          { label: "Trades", to: "/industries/trades" },
-          { label: "Construction", to: "/industries/construction" },
-          { label: "Logistics & Couriers", to: "/industries/logistics" },
+          { label: "Construction & Trades", to: "/industries/construction-trades" },
+          { label: "Industrial", to: "/industries/industrial" },
           { label: "Cleaning & Maintenance", to: "/industries/cleaning" },
         ],
       },
       {
         heading: "Front-of-house",
         links: [
-          { label: "Hospitality", to: "/industries/hospitality" },
           { label: "Healthcare", to: "/industries/healthcare" },
-          { label: "Beauty & Spa", to: "/industries/beauty" },
-          { label: "Hair & Barbering", to: "/industries/hair-beauty" },
-          { label: "Fitness & Coaching", to: "/industries/fitness" },
+          { label: "Hospitality & Catering", to: "/industries/hospitality-catering" },
+          { label: "Retail", to: "/industries/retail" },
+          { label: "Beauty & Wellness", to: "/industries/beauty-wellness" },
+        ],
+      },
+      {
+        heading: "Office & Field",
+        links: [
+          { label: "Corporate", to: "/industries/corporate" },
+          { label: "Security", to: "/industries/security" },
+          { label: "Sports & Fitness", to: "/industries/sports-fitness" },
+          { label: "All Industries →", to: "/industries" },
         ],
       },
     ],
   },
+  { key: "portfolio", label: "Portfolio", to: "/portfolio" },
   { key: "design", label: "Design Your Own", to: "/design" },
   { key: "contact", label: "Get a quote", to: "/contact", cta: true },
 ];

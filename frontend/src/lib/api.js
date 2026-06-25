@@ -328,3 +328,67 @@ export const PLACEMENT_LABELS = {
   "neck-label": "Neck label",
 };
 export const ALL_PLACEMENTS = ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label"];
+
+// ----- Sports & Fitness Teams landings -----
+export async function fetchSportsTeams() {
+  const { data } = await api.get("/sports-teams");
+  return data;
+}
+export async function fetchSportsTeam(slug) {
+  const { data } = await api.get(`/sports-teams/${slug}`);
+  return data;
+}
+
+// ----- Portfolio -----
+export async function fetchPortfolio(params = {}) {
+  const { data } = await api.get("/portfolio", { params });
+  return data;
+}
+export async function fetchPortfolioCategories() {
+  const { data } = await api.get("/portfolio/categories");
+  return data;
+}
+export async function adminListPortfolio() {
+  const { data } = await api.get("/admin/portfolio");
+  return data;
+}
+export async function adminCreatePortfolio(payload) {
+  const { data } = await api.post("/admin/portfolio", payload);
+  return data;
+}
+export async function adminUpdatePortfolio(id, payload) {
+  const { data } = await api.patch(`/admin/portfolio/${id}`, payload);
+  return data;
+}
+export async function adminDeletePortfolio(id) {
+  const { data } = await api.delete(`/admin/portfolio/${id}`);
+  return data;
+}
+
+// ----- Navigation -----
+export async function fetchNavigation() {
+  const { data } = await api.get("/navigation");
+  return data;
+}
+export async function adminUpdateNavigation(config) {
+  const { data } = await api.patch("/admin/navigation", { config });
+  return data;
+}
+export async function adminResetNavigation() {
+  const { data } = await api.post("/admin/navigation/reset");
+  return data;
+}
+
+// ----- Integration keys -----
+export async function adminListIntegrations() {
+  const { data } = await api.get("/admin/integrations");
+  return data;
+}
+export async function adminUpdateIntegrations(values) {
+  const { data } = await api.patch("/admin/integrations", { values });
+  return data;
+}
+export async function fetchSiteWhatsApp() {
+  const { data } = await api.get("/site/whatsapp");
+  return data;
+}

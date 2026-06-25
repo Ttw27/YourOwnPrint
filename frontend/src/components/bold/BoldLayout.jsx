@@ -1,13 +1,23 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { NAV_MENU } from "../../lib/data";
+import { fetchNavigation } from "../../lib/api";
 import { Facebook, Instagram, Star, ChevronDown, Menu, X } from "lucide-react";
 
 export function BoldNavbar() {
   const { pathname } = useLocation();
   const [openKey, setOpenKey] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [menu, setMenu] = useState(NAV_MENU);
   const rootRef = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetchNavigation()
+      .then((cfg) => { if (alive && cfg?.menu?.length) setMenu(cfg.menu); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     function onDoc(e) {
@@ -20,13 +30,13 @@ export function BoldNavbar() {
   return (
     <nav ref={rootRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#e5e7eb]" data-testid="bold-navbar">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" data-testid="nav-logo" className="font-nunito font-extrabold text-lg text-[#1a1a1a] flex-shrink-0">
-          yourownprint<span className="text-[#7bc67e]">.co.uk</span>
+        <Link to="/" data-testid="nav-logo" className="flex-shrink-0 inline-flex items-center" aria-label="Your Own Print — home">
+          <img src="/logo.png" alt="Your Own Print" className="h-10 w-auto md:h-11 select-none" draggable="false" />
         </Link>
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1 text-sm font-nunito font-bold" data-testid="nav-desktop">
-          {NAV_MENU.map((item) => {
+          {menu.map((item) => {
             if (!item.columns) {
               const active = pathname === item.to;
               const testid = `nav-${item.label.toLowerCase().replace(/[^a-z]+/g, "-")}`;
@@ -106,7 +116,7 @@ export function BoldNavbar() {
               <button onClick={() => setMobileOpen(false)} className="w-8 h-8 grid place-items-center rounded-full bg-[#f0fdf4]" data-testid="nav-mobile-close"><X size={16} /></button>
             </div>
             <div className="space-y-4">
-              {NAV_MENU.map((item) => (
+              {menu.map((item) => (
                 <div key={item.key}>
                   {item.columns ? (
                     <details className="group">
@@ -142,8 +152,8 @@ export function BoldFooter() {
     <footer className="bg-[#1a1a1a] text-white">
       <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-4 gap-8">
         <div>
-          <div className="font-nunito font-extrabold text-lg">
-            yourownprint<span className="text-[#7bc67e]">.co.uk</span>
+          <div className="inline-flex items-center bg-white/90 rounded-xl p-2">
+            <img src="/logo.png" alt="Your Own Print" className="h-9 w-auto" />
           </div>
           <p className="mt-3 text-sm text-neutral-300">Bright, friendly UK print & workwear.</p>
           <div className="flex gap-3 mt-4">

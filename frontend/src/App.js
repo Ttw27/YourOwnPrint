@@ -25,11 +25,16 @@ import IndustryDetail from "@/pages/IndustryDetail";
 import ShopByType from "@/pages/ShopByType";
 import AdminLeaversTemplates from "@/pages/AdminLeaversTemplates";
 import Sports from "@/pages/Sports";
+import SportsTeamDetail from "@/pages/SportsTeamDetail";
 import TeamKits from "@/pages/TeamKits";
 import TeamKitBuilder from "@/pages/TeamKitBuilder";
 import FightNightTee from "@/pages/FightNightTee";
 import LeaversHoodies from "@/pages/LeaversHoodies";
 import LeaversStart from "@/pages/LeaversFlow";
+import Portfolio from "@/pages/Portfolio";
+import AdminPortfolio from "@/pages/AdminPortfolio";
+import AdminNavigation from "@/pages/AdminNavigation";
+import AdminIntegrations from "@/pages/AdminIntegrations";
 import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
 
 function App() {
@@ -50,11 +55,16 @@ function App() {
           <Route path="/shop/:slug" element={<ShopByType />} />
           <Route path="/teams-schools" element={<TeamsSchools />} />
           <Route path="/sports" element={<Sports />} />
+          <Route path="/sports-teams/:slug" element={<SportsTeamDetail />} />
           <Route path="/team-kits" element={<TeamKits />} />
           <Route path="/team-kit-builder" element={<TeamKitBuilder />} />
           <Route path="/fight-night-tee" element={<FightNightTee />} />
           <Route path="/leavers-hoodies" element={<LeaversHoodies />} />
           <Route path="/leavers-hoodies/start" element={<LeaversStart />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/admin/portfolio" element={<RequireAdmin><AdminPortfolio /></RequireAdmin>} />
+          <Route path="/admin/navigation" element={<RequireAdmin><AdminNavigation /></RequireAdmin>} />
+          <Route path="/admin/integrations" element={<RequireAdmin><AdminIntegrations /></RequireAdmin>} />
           <Route path="/admin/leavers-templates" element={<RequireAdmin><AdminLeaversTemplates /></RequireAdmin>} />
           <Route path="/design" element={<DesignYourOwn />} />
           <Route path="/design-your-own" element={<DesignYourOwn />} />

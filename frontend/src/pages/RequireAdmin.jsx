@@ -46,9 +46,12 @@ function AdminTopBar({ email }) {
   };
   return (
     <div className="w-full bg-zinc-900 border-b border-zinc-800 text-zinc-100 px-4 py-2 flex items-center justify-between text-sm" data-testid="admin-topbar">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <span className="text-amber-400 font-bold tracking-wider text-xs uppercase">YOP Admin</span>
         <a href="/admin/product-settings" className="hover:text-amber-300" data-testid="admin-nav-products">Products</a>
+        <a href="/admin/portfolio" className="hover:text-amber-300" data-testid="admin-nav-portfolio">Portfolio</a>
+        <a href="/admin/navigation" className="hover:text-amber-300" data-testid="admin-nav-navigation">Navigation</a>
+        <a href="/admin/integrations" className="hover:text-amber-300" data-testid="admin-nav-integrations">Integrations</a>
         <a href="/admin/designer-products" className="hover:text-amber-300" data-testid="admin-nav-designer">Designer</a>
         <a href="/admin/team-kits" className="hover:text-amber-300" data-testid="admin-nav-team-kits">Team kits</a>
         <a href="/admin/qa" className="hover:text-amber-300" data-testid="admin-nav-qa">Q&amp;A</a>

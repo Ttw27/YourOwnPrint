@@ -375,6 +375,45 @@ PRODUCTS: Dict[str, Dict] = {
         "image": "https://images.pexels.com/photos/6764015/pexels-photo-6764015.jpeg",
         "description": "Westford Mill-style carry-all. Same design as your hoodie — add as an addon per person.",
     },
+
+    # ----- Aprons -----
+    "bib-apron": {
+        "id": "bib-apron", "name": "Bib Apron", "price": 9.99, "category": "workwear",
+        "image": "https://images.pexels.com/photos/4252136/pexels-photo-4252136.jpeg",
+        "description": "Classic bib apron with double front pocket. Hospitality, catering, baristas, baking — printed or embroidered.",
+    },
+    "waist-apron": {
+        "id": "waist-apron", "name": "Waist Apron", "price": 7.49, "category": "workwear",
+        "image": "https://images.pexels.com/photos/4252888/pexels-photo-4252888.jpeg",
+        "description": "Short waist apron with pockets — perfect for front-of-house, baristas and servers.",
+    },
+    "denim-apron": {
+        "id": "denim-apron", "name": "Denim Workshop Apron", "price": 18.99, "category": "workwear",
+        "image": "https://images.pexels.com/photos/8430335/pexels-photo-8430335.jpeg",
+        "description": "Heavyweight denim workshop apron with cross-back straps. Barbers, baristas, makers and trade workshops.",
+    },
+
+    # ----- Bottoms (joggers / trousers / leggings) -----
+    "joggers": {
+        "id": "joggers", "name": "Branded Joggers", "price": 19.99, "category": "best-sellers",
+        "image": "https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg",
+        "description": "Tapered fleece-back joggers — your logo on the thigh or hip. Gyms, leavers, fitness coaches.",
+    },
+    "workwear-trousers": {
+        "id": "workwear-trousers", "name": "Workwear Cargo Trousers", "price": 27.99, "category": "workwear",
+        "image": "https://images.pexels.com/photos/7681056/pexels-photo-7681056.jpeg",
+        "description": "Knee-pad ready cargo trousers. Reinforced seams, multiple pockets. Branded with your logo on the thigh.",
+    },
+    "performance-leggings": {
+        "id": "performance-leggings", "name": "Performance Leggings", "price": 17.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/3760275/pexels-photo-3760275.jpeg",
+        "description": "Full-length performance leggings with squat-proof fabric. Gym, PT, dance — branded with your logo.",
+    },
+    "gym-shorts": {
+        "id": "gym-shorts", "name": "Gym & Training Shorts", "price": 11.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/4753986/pexels-photo-4753986.jpeg",
+        "description": "Lightweight gym shorts with elastic drawcord. Branded with your gym name or logo.",
+    },
 }
 
 
@@ -449,6 +488,15 @@ _VARIANT_MAP = {
     "varsity-jacket":              {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "leavers-sweatshirt":          {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "leavers-drawstring-bag":      {"colors": COLOURS_GARMENT, "sizes": ["One Size"],              "size_upcharges": {}},
+    # Aprons
+    "bib-apron":                   {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Burgundy", "hex": "#7f1d1d"}, {"name": "Khaki", "hex": "#8b7355"}, {"name": "White", "hex": "#ffffff"}], "sizes": ["One Size"], "size_upcharges": {}},
+    "waist-apron":                 {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Burgundy", "hex": "#7f1d1d"}], "sizes": ["One Size"], "size_upcharges": {}},
+    "denim-apron":                 {"colors": [{"name": "Indigo Denim", "hex": "#1e3a8a"}, {"name": "Black Denim", "hex": "#1a1a1a"}], "sizes": ["One Size"], "size_upcharges": {}},
+    # Bottoms
+    "joggers":                     {"colors": COLOURS_HOODIE, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "workwear-trousers":           {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Charcoal", "hex": "#374151"}, {"name": "Khaki", "hex": "#8b7355"}], "sizes": ["28", "30", "32", "34", "36", "38", "40", "42"], "size_upcharges": {"40": 1.50, "42": 3.00}},
+    "performance-leggings":        {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Burgundy", "hex": "#7f1d1d"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "gym-shorts":                  {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Grey Marl", "hex": "#9ca3af"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
 }
 for _pid, _meta in _VARIANT_MAP.items():
     if _pid in PRODUCTS:
@@ -1114,15 +1162,125 @@ class ProductMeta(BaseModel):
 GENDER_FIT_OPTIONS = ["mens", "womens", "unisex", "kids"]
 INDUSTRY_SLUGS = ["trades", "hospitality", "healthcare", "beauty", "construction", "logistics", "fitness", "cleaning", "hair-beauty"]
 INDUSTRIES_CATALOGUE = [
-    {"slug": "trades", "title": "Trades", "subtitle": "Builders, sparks, plumbers, joiners", "hero_image": "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg", "blurb": "Hard-wearing tees, hoodies and hi-vis kitted out with your logo. Built for site, washed at 60°."},
-    {"slug": "hospitality", "title": "Hospitality", "subtitle": "Cafés, bars, pubs, restaurants", "hero_image": "https://images.pexels.com/photos/3007355/pexels-photo-3007355.jpeg", "blurb": "Smart polos and tees that look right behind the bar and front of house. Tidy logo print on the chest."},
     {"slug": "healthcare", "title": "Healthcare", "subtitle": "Clinics, dental, mobile carers", "hero_image": "https://images.pexels.com/photos/4173324/pexels-photo-4173324.jpeg", "blurb": "Polos, tunics and sweatshirts customers recognise — soft fabrics, clean print, easy on hot washes."},
-    {"slug": "beauty", "title": "Beauty & Spa", "subtitle": "Salons, beauticians, holistic studios", "hero_image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg", "blurb": "Branded tees and sweatshirts that look as polished as the treatments. Tone-on-tone prints land beautifully."},
-    {"slug": "construction", "title": "Construction", "subtitle": "Site crews, foremen, contractors", "hero_image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg", "blurb": "Hi-vis vests, workwear tees and jackets that survive site life. EN ISO 20471 compliant options ready to print."},
-    {"slug": "logistics", "title": "Logistics & Couriers", "subtitle": "Delivery, warehouse, fleets", "hero_image": "https://images.pexels.com/photos/4391483/pexels-photo-4391483.jpeg", "blurb": "Comfortable polos, softshells and hi-vis tops branded with your fleet name. Reorder in any quantity."},
-    {"slug": "fitness", "title": "Fitness & Coaching", "subtitle": "PT studios, gyms, sports coaches", "hero_image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg", "blurb": "Performance tees, hoodies and joggers fit for the gym floor. Crisp prints, full-range movement."},
-    {"slug": "cleaning", "title": "Cleaning & Maintenance", "subtitle": "Cleaning crews, facilities", "hero_image": "https://images.pexels.com/photos/4099235/pexels-photo-4099235.jpeg", "blurb": "Identifiable, easy-care polos and tees. Branded right, your team is recognisable on every site."},
-    {"slug": "hair-beauty", "title": "Hair & Barbering", "subtitle": "Barbers, hairdressers, mobile stylists", "hero_image": "https://images.pexels.com/photos/3998365/pexels-photo-3998365.jpeg", "blurb": "Statement tees, polos and aprons that bring the salon brand to life. Style as sharp as the cuts."},
+    {"slug": "construction-trades", "title": "Construction & Trades", "subtitle": "Builders, sparks, plumbers, joiners, site crews", "hero_image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg", "blurb": "Hi-vis vests, workwear tees, jackets and trousers that survive site life. EN ISO 20471 options ready to print."},
+    {"slug": "retail", "title": "Retail", "subtitle": "Shops, garden centres, market stalls", "hero_image": "https://images.pexels.com/photos/1884581/pexels-photo-1884581.jpeg", "blurb": "On-brand polos and tees that make your team unmistakable on the shop floor. Tidy logo print on the chest."},
+    {"slug": "security", "title": "Security", "subtitle": "Door staff, mobile patrol, events", "hero_image": "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png", "blurb": "Bold 'SECURITY' prints front and back. Polos, softshells and hi-vis kit — printed in the UK and ready quickly."},
+    {"slug": "corporate", "title": "Corporate", "subtitle": "Offices, agencies, professional services", "hero_image": "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg", "blurb": "Smart polos, jumpers and softshells for client days, exhibitions and team away-days. Embroidery or print."},
+    {"slug": "sports-fitness", "title": "Sports & Fitness", "subtitle": "Gyms, PTs, coaches, clubs", "hero_image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg", "blurb": "Performance tees, hoodies, joggers and leggings cut for the gym floor. Crisp prints, full-range movement."},
+    {"slug": "industrial", "title": "Industrial", "subtitle": "Warehousing, manufacturing, fabrication, logistics", "hero_image": "https://images.pexels.com/photos/4391483/pexels-photo-4391483.jpeg", "blurb": "Heavy-cotton workwear, hi-vis and softshells built for the floor. Reorder in any quantity."},
+    {"slug": "beauty-wellness", "title": "Beauty & Wellness", "subtitle": "Salons, spas, beauticians, hair & barbering, holistic studios", "hero_image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg", "blurb": "Branded tees, aprons and sweatshirts that look as polished as the treatments. Statement prints land beautifully."},
+    {"slug": "cleaning", "title": "Cleaning & Maintenance", "subtitle": "Cleaning crews, facilities, janitorial", "hero_image": "https://images.pexels.com/photos/4099235/pexels-photo-4099235.jpeg", "blurb": "Identifiable, easy-care polos and tees. Branded right, your team is recognisable on every site."},
+    {"slug": "hospitality-catering", "title": "Hospitality & Catering", "subtitle": "Cafés, bars, pubs, restaurants, mobile caterers", "hero_image": "https://images.pexels.com/photos/3007355/pexels-photo-3007355.jpeg", "blurb": "Smart polos, tees and aprons that look right behind the bar and front of house. Tidy logo print on the chest."},
+
+    # Back-compat aliases (legacy routes still resolve)
+    {"slug": "trades", "title": "Trades", "subtitle": "Builders, sparks, plumbers, joiners", "hero_image": "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg", "blurb": "Hard-wearing tees, hoodies and hi-vis kitted out with your logo. Built for site, washed at 60°.", "alias_of": "construction-trades"},
+    {"slug": "hospitality", "title": "Hospitality", "subtitle": "Cafés, bars, pubs, restaurants", "hero_image": "https://images.pexels.com/photos/3007355/pexels-photo-3007355.jpeg", "blurb": "Smart polos and tees that look right behind the bar and front of house. Tidy logo print on the chest.", "alias_of": "hospitality-catering"},
+    {"slug": "beauty", "title": "Beauty & Spa", "subtitle": "Salons, beauticians, holistic studios", "hero_image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg", "blurb": "Branded tees and sweatshirts that look as polished as the treatments. Tone-on-tone prints land beautifully.", "alias_of": "beauty-wellness"},
+    {"slug": "construction", "title": "Construction", "subtitle": "Site crews, foremen, contractors", "hero_image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg", "blurb": "Hi-vis vests, workwear tees and jackets that survive site life. EN ISO 20471 compliant options ready to print.", "alias_of": "construction-trades"},
+    {"slug": "logistics", "title": "Logistics & Couriers", "subtitle": "Delivery, warehouse, fleets", "hero_image": "https://images.pexels.com/photos/4391483/pexels-photo-4391483.jpeg", "blurb": "Comfortable polos, softshells and hi-vis tops branded with your fleet name. Reorder in any quantity.", "alias_of": "industrial"},
+    {"slug": "fitness", "title": "Fitness & Coaching", "subtitle": "PT studios, gyms, sports coaches", "hero_image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg", "blurb": "Performance tees, hoodies and joggers fit for the gym floor. Crisp prints, full-range movement.", "alias_of": "sports-fitness"},
+    {"slug": "hair-beauty", "title": "Hair & Barbering", "subtitle": "Barbers, hairdressers, mobile stylists", "hero_image": "https://images.pexels.com/photos/3998365/pexels-photo-3998365.jpeg", "blurb": "Statement tees, polos and aprons that bring the salon brand to life. Style as sharp as the cuts.", "alias_of": "beauty-wellness"},
+]
+
+
+# ---------- Sports & Fitness Teams catalogue (SEO landings) ----------
+SPORTS_TEAMS_CATALOGUE = [
+    {"slug": "football", "title": "Football Kits", "h1": "Custom Football Kits, Printed in the UK", "subtitle": "Jerseys, shorts, socks — match-day ready",
+     "hero_image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
+     "intro": "From Sunday League to academy squads — we print and ship full football kits with your crest, sponsor, names and numbers. UK printed, fast turnaround, low minimums.",
+     "seo_paragraph": "Our custom football kits use breathable, sublimation-friendly performance fabric cut for movement. Add a club badge, front sponsor, sleeve sponsors, player names and squad numbers — all baked into the price. We handle artwork, mock-ups and proofs in-house in the UK, so your team gets match-ready quicker.",
+     "faqs": [
+       {"q": "What's the minimum order for a custom football kit?", "a": "There's no minimum — order one kit or fifty. Bulk discounts kick in from 10+ kits."},
+       {"q": "How long until match day?", "a": "Most full football kits ship in 7–10 working days from artwork approval. Rush options available on request."},
+       {"q": "Can I add a sponsor on the back?", "a": "Yes — front sponsor, sleeve sponsors and a small back-of-shorts logo are all supported."},
+     ],
+     "product_ids": ["football-jersey", "football-shorts", "football-kit-bundle", "football-premium-bundle", "football-kit-front-only", "football-premium-front-only", "training-tee", "training-tracksuit"],
+    },
+    {"slug": "rugby", "title": "Rugby Kits", "h1": "Custom Rugby Kits — Heavy-Grade Match Shirts",
+     "subtitle": "Match shirts, training tops, club tracksuits",
+     "hero_image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
+     "intro": "Reinforced rugby shirts built to take a battering. Club crest, sponsor, player names and squad numbers baked into the price. UK printed, ready in 7–10 days.",
+     "seo_paragraph": "Our rugby shirts use heavy-grade fabric with a reinforced collar and twin-needle seams — designed to survive line-outs and laundry day. Add badges, sponsors and back numbers; we'll deliver match-ready kit for any age group, from U7s to seniors.",
+     "faqs": [
+       {"q": "Are kits available in junior sizes?", "a": "Yes — full junior size range from 5–6 years up to 12–13 plus the adult range."},
+       {"q": "Can you replicate our existing crest?", "a": "Absolutely — send us any file (JPG, PNG, PDF, vector) and we'll mock it up for free."},
+       {"q": "Do you do training shirts as well?", "a": "Yes — match shirts, training tees and full tracksuits all under one order."},
+     ],
+     "product_ids": ["rugby-shirt", "rugby-kit-bundle", "rugby-kit-front-only", "training-tee", "training-tracksuit", "sports-tee"],
+    },
+    {"slug": "gyms", "title": "Gym Kit & Branded Apparel", "h1": "Branded Kit for Gyms — Built for the Floor",
+     "subtitle": "Tees, hoodies, joggers, leggings — branded for your gym",
+     "hero_image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg",
+     "intro": "Branded gym kit your members will actually want to wear. Statement prints, soft fabrics, performance fits — and a price that lets you mark them up.",
+     "seo_paragraph": "Whether you run a CrossFit box, a strength gym, a HYROX squad or a high-street commercial gym — branded apparel turns your members into walking billboards. Our gym-ready kit covers tees, hoodies, joggers, leggings and shorts in performance-friendly fabrics. UK printed, low minimums, bulk discounts.",
+     "faqs": [
+       {"q": "Can I sell these to my members?", "a": "Yes — we set you up with bulk pricing so you can mark them up and sell. Just upload your logo, choose your colours and order."},
+       {"q": "Do you do front and back prints?", "a": "Yes — front breast logo plus a larger back print are both included on most products."},
+       {"q": "What's the lead time on a bulk gym kit order?", "a": "Typically 7–10 working days from artwork approval, faster on smaller orders."},
+     ],
+     "product_ids": ["personalised-tee", "personalised-hoodie", "joggers", "performance-leggings", "gym-shorts", "training-tee", "sports-tee"],
+    },
+    {"slug": "personal-trainers", "title": "Personal Trainer Kit", "h1": "Personal Trainer Kit — Branded For Your Studio",
+     "subtitle": "Coach polos, performance tees, hoodies — sorted",
+     "hero_image": "https://images.pexels.com/photos/4720234/pexels-photo-4720234.jpeg",
+     "intro": "Look the part on session day. Branded coach polos, training tees, hoodies and joggers — printed with your logo and ready to wear.",
+     "seo_paragraph": "Personal trainers, group coaches and online coaches need kit that travels well, washes hot and looks professional in client photos. We print PT-friendly performance fabrics with your logo on the chest, name on the sleeve, and your slogan on the back — your call.",
+     "faqs": [
+       {"q": "Can I order just one or two pieces?", "a": "Yes — no minimum. Most PTs start with a tee + hoodie + polo set."},
+       {"q": "Will my logo look right on dark colours?", "a": "Yes — we'll mock it up for free on any colour before you commit, so there's no nasty surprises."},
+       {"q": "Can I add my Instagram handle?", "a": "Of course — pop it under the logo or on the sleeve."},
+     ],
+     "product_ids": ["personalised-tee", "polo-shirt", "personalised-hoodie", "joggers", "training-tee", "sports-tee", "performance-leggings"],
+    },
+    {"slug": "boxing-gyms", "title": "Boxing Gym Kit", "h1": "Boxing Gym Kit — Walk-out Tees, Hoodies & More",
+     "subtitle": "Fight night tees, gym hoodies, sponsor shirts",
+     "hero_image": "https://images.pexels.com/photos/9311461/pexels-photo-9311461.jpeg",
+     "intro": "Branded kit for boxing gyms, white-collar nights and amateur clubs. Fight night sponsor tees, gym hoodies, training kit — printed in the UK and ready quickly.",
+     "seo_paragraph": "Boxing gyms run on identity. Our Fight Night Sponsor Tees carry your main sponsor plus multiple supporting logos at the back, while branded hoodies, walk-out tees and gym staples cover the day-to-day. Low minimums and quick turnaround.",
+     "faqs": [
+       {"q": "Can you handle multiple sponsor logos for fight night?", "a": "Yes — we routinely lay up 4–8 sponsor logos on a single tee, with a free mock-up before approval."},
+       {"q": "How quick can you turn around a fight night order?", "a": "Standard turnaround is 7–10 days; we'll often beat that for fight cards — speak to us if you're tight on time."},
+       {"q": "Do you do walk-out hoodies too?", "a": "Yes — branded gym hoodies, joggers, beanies, drawstring bags — anything you need to outfit your corner."},
+     ],
+     "product_ids": ["boxing-fight-tee", "personalised-tee", "personalised-hoodie", "joggers", "sports-tee", "training-tee"],
+    },
+    {"slug": "thai-boxing", "title": "Thai Boxing Gym Kit", "h1": "Muay Thai Gym Kit & Custom Shorts",
+     "subtitle": "Branded Thai shorts, walk-out tees, gym hoodies",
+     "hero_image": "https://images.pexels.com/photos/4761779/pexels-photo-4761779.jpeg",
+     "intro": "Traditional-cut Muay Thai shorts printed in vibrant satin, branded gym tees and hoodies — kit out your fighters and your members.",
+     "seo_paragraph": "Muay Thai gyms work hard for their identity — and our traditional-cut shorts, sublimated in vibrant colours, do them justice. Add custom names, club logo, sponsor logos and gym branding on full-print shorts, plus matching walk-out tees and hoodies.",
+     "faqs": [
+       {"q": "Can I have my fighter's name on the shorts?", "a": "Yes — names, gym logo, sponsor logos — all baked into the print."},
+       {"q": "Do you offer kids' Thai shorts?", "a": "Yes — we cover junior sizes from 7–8 up to adult."},
+       {"q": "How vibrant is the print on satin?", "a": "Very — sublimation print on satin makes colours pop. We always send a mock-up before printing."},
+     ],
+     "product_ids": ["muay-thai-shorts", "boxing-fight-tee", "personalised-tee", "personalised-hoodie", "training-tee"],
+    },
+    {"slug": "kick-boxing", "title": "Kickboxing Gym Kit", "h1": "Kickboxing Gym Kit, Shorts & Walk-out Tees",
+     "subtitle": "Custom kickboxing shorts, club hoodies, training kit",
+     "hero_image": "https://images.pexels.com/photos/4761787/pexels-photo-4761787.jpeg",
+     "intro": "Branded kickboxing shorts, walk-out tees and club hoodies. Sublimated, durable, ready for the ring or class.",
+     "seo_paragraph": "Kickboxing gyms running anything from after-school junior classes to amateur fight cards rely on kit that survives the bag work and looks sharp on social. We print full sublimated kickboxing shorts, branded tees and hoodies with your gym logo, fighter names and sponsor logos.",
+     "faqs": [
+       {"q": "Can I get the same design on both shorts and tee?", "a": "Yes — we line up matching prints across the kit so the whole squad looks unified."},
+       {"q": "Will the print survive grappling?", "a": "Yes — sublimation prints sit inside the fibres, not on top, so they don't crack or peel."},
+       {"q": "Minimums?", "a": "No minimum — order one set or fifty."},
+     ],
+     "product_ids": ["fight-shorts", "muay-thai-shorts", "boxing-fight-tee", "personalised-tee", "personalised-hoodie", "training-tee"],
+    },
+    {"slug": "dance-studios", "title": "Dance Studio Apparel", "h1": "Custom Dance Studio Apparel & Crew Kit",
+     "subtitle": "Studio tees, hoodies, leggings, joggers — branded",
+     "hero_image": "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg",
+     "intro": "Branded dance studio kit your students, parents and crew will love. Soft tees, comfy hoodies, performance leggings and joggers — printed with your studio's logo.",
+     "seo_paragraph": "From baby ballet to street dance crews — every studio needs branded kit. Our soft-drape tees, hoodies, joggers and leggings carry your studio's logo, dancer's name and crew slogans cleanly. Parents and dancers love them, and they make brilliant studio fundraisers too.",
+     "faqs": [
+       {"q": "Can I sell these to my parents?", "a": "Yes — pre-order forms work brilliantly. We offer bulk pricing for orders of 10+."},
+       {"q": "Do you do small sizes for kids?", "a": "Yes — junior sizes from 3–4 up to 12–13 across most styles."},
+       {"q": "Can dancers have their name on the back?", "a": "Yes — names, year groups, studio colours, crew names — your call."},
+     ],
+     "product_ids": ["dance-tee", "personalised-hoodie", "joggers", "performance-leggings", "personalised-tee", "kids-tee"],
+    },
 ]
 
 
@@ -1845,7 +2003,12 @@ async def list_specials_products():
 async def list_industries():
     out = []
     for ind in INDUSTRIES_CATALOGUE:
-        count = sum(1 for p in PRODUCTS.values() if ind["slug"] in (p.get("industry_tags") or []))
+        if ind.get("alias_of"):
+            continue
+        # Match by canonical slug OR any legacy alias slug pointing to it
+        legacy = {a["slug"] for a in INDUSTRIES_CATALOGUE if a.get("alias_of") == ind["slug"]}
+        count = sum(1 for p in PRODUCTS.values()
+                    if any(s in (p.get("industry_tags") or []) for s in {ind["slug"], *legacy}))
         out.append({**ind, "product_count": count})
     return out
 
@@ -1859,6 +2022,8 @@ GARMENT_TYPE_CATALOGUE = [
     {"slug": "jackets",     "title": "Jackets",      "image": "https://images.pexels.com/photos/16429777/pexels-photo-16429777.jpeg"},
     {"slug": "hi-vis",      "title": "Hi-Vis",       "image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg"},
     {"slug": "shorts",      "title": "Shorts",       "image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg"},
+    {"slug": "bottoms",     "title": "Joggers & Trousers", "image": "https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg"},
+    {"slug": "aprons",      "title": "Aprons",       "image": "https://images.pexels.com/photos/4252136/pexels-photo-4252136.jpeg"},
     {"slug": "accessories", "title": "Accessories",  "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
 ]
 
@@ -1867,6 +2032,10 @@ def _garment_type_of(product: Dict) -> Optional[str]:
     pid = product["id"].lower()
     name = (product.get("name") or "").lower()
     cat = (product.get("category") or "").lower()
+    if "apron" in pid or "apron" in name:
+        return "aprons"
+    if "legging" in pid or "trouser" in pid or "jogger" in pid or "legging" in name or "trouser" in name or "jogger" in name:
+        return "bottoms"
     if "short" in pid or "short" in name:
         return "shorts"
     if "jacket" in pid or "jacket" in name or "varsity" in pid or "softshell" in pid:
@@ -1922,9 +2091,15 @@ async def get_industry(slug: str, gender_fit: Optional[str] = None):
     ind = next((i for i in INDUSTRIES_CATALOGUE if i["slug"] == slug), None)
     if not ind:
         raise HTTPException(404, "Industry not found")
+    # Resolve canonical (if this is a legacy alias)
+    canonical_slug = ind.get("alias_of") or ind["slug"]
+    canonical = next((i for i in INDUSTRIES_CATALOGUE if i["slug"] == canonical_slug), ind)
+    # Tags to match: canonical + any aliases pointing to it
+    match_slugs = {canonical_slug} | {a["slug"] for a in INDUSTRIES_CATALOGUE if a.get("alias_of") == canonical_slug}
     products = []
     for p in PRODUCTS.values():
-        if slug in (p.get("industry_tags") or []):
+        tags = set(p.get("industry_tags") or [])
+        if tags & match_slugs:
             if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
                 continue
             products.append({
@@ -1934,7 +2109,36 @@ async def get_industry(slug: str, gender_fit: Optional[str] = None):
                 "gender_fit": p.get("gender_fit") or "unisex",
             })
     products.sort(key=lambda x: x["price"])
-    return {**ind, "products": products}
+    # Strip the alias_of marker from the response
+    out = {k: v for k, v in canonical.items() if k != "alias_of"}
+    return {**out, "products": products}
+
+
+# ---------- Sports & Fitness Teams (SEO landings) ----------
+@api_router.get("/sports-teams")
+async def list_sports_teams():
+    out = []
+    for s in SPORTS_TEAMS_CATALOGUE:
+        out.append({"slug": s["slug"], "title": s["title"], "subtitle": s["subtitle"],
+                    "hero_image": s["hero_image"], "intro": s["intro"]})
+    return out
+
+
+@api_router.get("/sports-teams/{slug}")
+async def get_sports_team(slug: str):
+    s = next((i for i in SPORTS_TEAMS_CATALOGUE if i["slug"] == slug), None)
+    if not s:
+        raise HTTPException(404, "Sports landing not found")
+    products = []
+    for pid in s.get("product_ids", []):
+        p = PRODUCTS.get(pid)
+        if p:
+            products.append({
+                "id": p["id"], "name": p["name"], "price": float(p["price"]),
+                "image": p["image"], "category": p["category"],
+                "description": p.get("description") or "",
+            })
+    return {**s, "products": products}
 
 
 @api_router.get("/workforce/tiers")
@@ -2512,6 +2716,482 @@ async def admin_list_all_qa():
     return out
 
 
+# ============================================================================
+# Object Storage (Emergent R2-style) — for Portfolio + future asset uploads
+# ============================================================================
+import requests as _requests
+import base64 as _base64
+
+_OBJ_STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
+_OBJ_APP_NAME = "yourownprint"
+_storage_key: Optional[str] = None
+
+
+def _init_storage() -> Optional[str]:
+    """Call once at startup. Sets module-level storage_key."""
+    global _storage_key
+    if _storage_key:
+        return _storage_key
+    key = os.environ.get("EMERGENT_LLM_KEY")
+    if not key:
+        return None
+    try:
+        resp = _requests.post(f"{_OBJ_STORAGE_URL}/init", json={"emergent_key": key}, timeout=30)
+        resp.raise_for_status()
+        _storage_key = resp.json().get("storage_key")
+        return _storage_key
+    except Exception as e:
+        logging.getLogger(__name__).error(f"object-storage init failed: {e}")
+        return None
+
+
+def _storage_put(path: str, data: bytes, content_type: str) -> Dict:
+    key = _init_storage()
+    if not key:
+        raise HTTPException(500, "Object storage not configured (EMERGENT_LLM_KEY missing)")
+    resp = _requests.put(
+        f"{_OBJ_STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key, "Content-Type": content_type},
+        data=data, timeout=120,
+    )
+    if resp.status_code >= 400:
+        raise HTTPException(500, f"object-storage upload failed: {resp.status_code} {resp.text[:200]}")
+    return resp.json()
+
+
+def _storage_get(path: str) -> Tuple[bytes, str]:
+    key = _init_storage()
+    if not key:
+        raise HTTPException(404, "Object storage not configured")
+    resp = _requests.get(
+        f"{_OBJ_STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key}, timeout=60,
+    )
+    if resp.status_code == 404:
+        raise HTTPException(404, "File not found")
+    if resp.status_code >= 400:
+        raise HTTPException(500, f"object-storage fetch failed: {resp.status_code}")
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+@app.on_event("startup")
+async def _startup_init_storage():
+    _init_storage()
+
+
+# ============================================================================
+# Portfolio (admin-curated gallery of past prints)
+# ============================================================================
+
+PORTFOLIO_CATEGORIES = [
+    "workwear", "team-kits", "leavers", "sports", "fitness", "hospitality",
+    "schools", "events", "beauty", "barbering", "other",
+]
+
+
+class PortfolioCreate(BaseModel):
+    title: str
+    category: str = "other"
+    caption: Optional[str] = ""
+    alt_text: Optional[str] = ""
+    image_data_url: str       # data:image/...;base64,...
+    display_order: int = 0
+    featured: bool = False
+
+
+class PortfolioPatch(BaseModel):
+    title: Optional[str] = None
+    category: Optional[str] = None
+    caption: Optional[str] = None
+    alt_text: Optional[str] = None
+    image_data_url: Optional[str] = None    # provided to replace the image
+    display_order: Optional[int] = None
+    featured: Optional[bool] = None
+    is_hidden: Optional[bool] = None
+
+
+def _parse_data_url(data_url: str, max_bytes: int = 8_000_000) -> Tuple[bytes, str, str]:
+    """Returns (bytes, content_type, ext). Raises HTTPException on invalid input."""
+    if not data_url or not data_url.startswith("data:"):
+        raise HTTPException(400, "image_data_url must be a data: URL")
+    try:
+        head, b64 = data_url.split(",", 1)
+        content_type = head.split(";")[0].replace("data:", "") or "image/png"
+        raw = _base64.b64decode(b64)
+    except Exception:
+        raise HTTPException(400, "invalid data URL")
+    if not content_type.startswith("image/"):
+        raise HTTPException(400, "image content-type required")
+    if len(raw) > max_bytes:
+        raise HTTPException(400, f"image too large (max {max_bytes // 1_000_000}MB)")
+    ext = content_type.split("/")[-1].split("+")[0]
+    return raw, content_type, (ext if ext in {"png", "jpeg", "jpg", "webp", "gif"} else "png")
+
+
+@api_router.get("/portfolio")
+async def list_portfolio(category: Optional[str] = None, featured_only: bool = False, limit: int = 200):
+    q: Dict = {"is_hidden": {"$ne": True}}
+    if category and category != "all":
+        q["category"] = category
+    if featured_only:
+        q["featured"] = True
+    items: List[Dict] = []
+    async for d in db.portfolio.find(q).limit(limit):
+        items.append({
+            "id": d["id"], "title": d.get("title", ""),
+            "category": d.get("category", "other"),
+            "caption": d.get("caption", ""),
+            "alt_text": d.get("alt_text", ""),
+            "image_url": d.get("image_url"),
+            "display_order": d.get("display_order", 0),
+            "featured": bool(d.get("featured", False)),
+            "created_at": d.get("created_at"),
+        })
+    items.sort(key=lambda x: (x["display_order"], x["created_at"] or ""))
+    return {"categories": PORTFOLIO_CATEGORIES, "items": items}
+
+
+@api_router.get("/portfolio/categories")
+async def portfolio_categories():
+    return PORTFOLIO_CATEGORIES
+
+
+@api_router.post("/admin/portfolio", dependencies=[Depends(require_admin)])
+async def admin_create_portfolio(payload: PortfolioCreate):
+    if payload.category not in PORTFOLIO_CATEGORIES:
+        raise HTTPException(400, f"unknown category. Allowed: {PORTFOLIO_CATEGORIES}")
+    raw, content_type, ext = _parse_data_url(payload.image_data_url)
+    item_id = str(uuid.uuid4())
+    storage_path = f"{_OBJ_APP_NAME}/portfolio/{item_id}.{ext}"
+    image_url: str
+    storage_meta: Optional[Dict] = None
+    # Try object storage; fall back to inline base64 if it fails (so admin can still upload)
+    try:
+        storage_meta = _storage_put(storage_path, raw, content_type)
+        image_url = f"/api/portfolio/file/{item_id}.{ext}"
+    except HTTPException:
+        # No storage configured — fall back to inline base64
+        image_url = payload.image_data_url
+        storage_path = ""
+    doc = {
+        "id": item_id,
+        "title": payload.title.strip()[:120],
+        "category": payload.category,
+        "caption": (payload.caption or "")[:600],
+        "alt_text": (payload.alt_text or payload.title)[:200],
+        "image_url": image_url,
+        "storage_path": storage_path,
+        "storage_meta": storage_meta,
+        "content_type": content_type,
+        "display_order": int(payload.display_order or 0),
+        "featured": bool(payload.featured),
+        "is_hidden": False,
+        "size_bytes": len(raw),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.portfolio.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.patch("/admin/portfolio/{item_id}", dependencies=[Depends(require_admin)])
+async def admin_update_portfolio(item_id: str, payload: PortfolioPatch):
+    existing = await db.portfolio.find_one({"id": item_id})
+    if not existing:
+        raise HTTPException(404, "Portfolio item not found")
+    patch: Dict = {}
+    for k in ("title", "category", "caption", "alt_text", "display_order", "featured", "is_hidden"):
+        v = getattr(payload, k)
+        if v is not None:
+            if k == "category" and v not in PORTFOLIO_CATEGORIES:
+                raise HTTPException(400, f"unknown category. Allowed: {PORTFOLIO_CATEGORIES}")
+            patch[k] = v
+    if payload.image_data_url:
+        raw, content_type, ext = _parse_data_url(payload.image_data_url)
+        storage_path = f"{_OBJ_APP_NAME}/portfolio/{item_id}.{ext}"
+        try:
+            _storage_put(storage_path, raw, content_type)
+            patch["image_url"] = f"/api/portfolio/file/{item_id}.{ext}"
+            patch["storage_path"] = storage_path
+        except HTTPException:
+            patch["image_url"] = payload.image_data_url
+            patch["storage_path"] = ""
+        patch["content_type"] = content_type
+        patch["size_bytes"] = len(raw)
+    patch["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.portfolio.update_one({"id": item_id}, {"$set": patch})
+    return {"ok": True}
+
+
+@api_router.delete("/admin/portfolio/{item_id}", dependencies=[Depends(require_admin)])
+async def admin_delete_portfolio(item_id: str):
+    res = await db.portfolio.update_one({"id": item_id}, {"$set": {"is_hidden": True, "deleted_at": datetime.now(timezone.utc).isoformat()}})
+    if res.matched_count == 0:
+        raise HTTPException(404, "Portfolio item not found")
+    return {"ok": True}
+
+
+@api_router.get("/admin/portfolio", dependencies=[Depends(require_admin)])
+async def admin_list_portfolio():
+    items = []
+    async for d in db.portfolio.find({}).sort("display_order", 1):
+        items.append({
+            "id": d["id"], "title": d.get("title", ""),
+            "category": d.get("category", "other"),
+            "caption": d.get("caption", ""),
+            "alt_text": d.get("alt_text", ""),
+            "image_url": d.get("image_url"),
+            "display_order": d.get("display_order", 0),
+            "featured": bool(d.get("featured", False)),
+            "is_hidden": bool(d.get("is_hidden", False)),
+            "created_at": d.get("created_at"),
+            "size_bytes": d.get("size_bytes", 0),
+        })
+    return items
+
+
+@api_router.get("/portfolio/file/{filename}")
+async def portfolio_file(filename: str):
+    # filename = "{uuid}.{ext}"
+    item_id = filename.rsplit(".", 1)[0]
+    doc = await db.portfolio.find_one({"id": item_id, "is_hidden": {"$ne": True}})
+    if not doc or not doc.get("storage_path"):
+        raise HTTPException(404, "File not found")
+    data, ct = _storage_get(doc["storage_path"])
+    return Response(content=data, media_type=doc.get("content_type") or ct)
+
+
+# ============================================================================
+# Site navigation config (admin-editable)
+# ============================================================================
+
+DEFAULT_NAV_CONFIG = {
+    "version": 1,
+    "menu": [
+        {
+            "key": "shop", "label": "Shop", "to": None,
+            "columns": [
+                {"heading": "Featured", "links": [
+                    {"label": "Your Own Print Specials", "to": "/specials", "badge": "Starter"},
+                    {"label": "Workwear", "to": "/workwear"},
+                    {"label": "Portfolio", "to": "/portfolio"},
+                ]},
+                {"heading": "By collection", "links": [
+                    {"label": "Fight Night Tees", "to": "/fight-night-tee"},
+                    {"label": "Leavers' Hoodies", "to": "/leavers-hoodies"},
+                    {"label": "Team Kits", "to": "/team-kits"},
+                    {"label": "Teams & Schools", "to": "/teams-schools"},
+                ]},
+                {"heading": "By garment", "links": [
+                    {"label": "T-shirts", "to": "/shop/t-shirts"},
+                    {"label": "Hoodies", "to": "/shop/hoodies"},
+                    {"label": "Polos", "to": "/shop/polos"},
+                    {"label": "Sweatshirts", "to": "/shop/sweatshirts"},
+                    {"label": "Jackets", "to": "/shop/jackets"},
+                    {"label": "Hi-Vis", "to": "/shop/hi-vis"},
+                    {"label": "Joggers & Trousers", "to": "/shop/bottoms"},
+                    {"label": "Aprons", "to": "/shop/aprons"},
+                    {"label": "Shorts", "to": "/shop/shorts"},
+                    {"label": "Accessories", "to": "/shop/accessories"},
+                ]},
+            ],
+        },
+        {
+            "key": "teams", "label": "Sports & Fitness", "to": None,
+            "columns": [
+                {"heading": "Sports", "links": [
+                    {"label": "Football Kits", "to": "/sports-teams/football"},
+                    {"label": "Rugby Kits", "to": "/sports-teams/rugby"},
+                    {"label": "Team Kits configurator", "to": "/team-kits"},
+                ]},
+                {"heading": "Fitness", "links": [
+                    {"label": "Gyms", "to": "/sports-teams/gyms"},
+                    {"label": "Personal Trainers", "to": "/sports-teams/personal-trainers"},
+                    {"label": "Boxing Gyms", "to": "/sports-teams/boxing-gyms"},
+                    {"label": "Thai Boxing", "to": "/sports-teams/thai-boxing"},
+                    {"label": "Kickboxing", "to": "/sports-teams/kick-boxing"},
+                    {"label": "Dance Studios", "to": "/sports-teams/dance-studios"},
+                ]},
+                {"heading": "Schools & Bulk", "links": [
+                    {"label": "Teams & Schools", "to": "/teams-schools"},
+                    {"label": "Leavers' Hoodies", "to": "/leavers-hoodies"},
+                    {"label": "Kit Your Workforce", "to": "/workforce", "badge": "Bulk"},
+                ]},
+            ],
+        },
+        {
+            "key": "industries", "label": "Workwear", "to": None,
+            "columns": [
+                {"heading": "Trades & Site", "links": [
+                    {"label": "Construction & Trades", "to": "/industries/construction-trades"},
+                    {"label": "Industrial", "to": "/industries/industrial"},
+                    {"label": "Cleaning & Maintenance", "to": "/industries/cleaning"},
+                ]},
+                {"heading": "Front-of-house", "links": [
+                    {"label": "Healthcare", "to": "/industries/healthcare"},
+                    {"label": "Hospitality & Catering", "to": "/industries/hospitality-catering"},
+                    {"label": "Retail", "to": "/industries/retail"},
+                    {"label": "Beauty & Wellness", "to": "/industries/beauty-wellness"},
+                ]},
+                {"heading": "Office & Field", "links": [
+                    {"label": "Corporate", "to": "/industries/corporate"},
+                    {"label": "Security", "to": "/industries/security"},
+                    {"label": "Sports & Fitness", "to": "/industries/sports-fitness"},
+                    {"label": "All Industries →", "to": "/industries"},
+                ]},
+            ],
+        },
+        {"key": "portfolio", "label": "Portfolio", "to": "/portfolio"},
+        {"key": "design", "label": "Design Your Own", "to": "/design"},
+        {"key": "contact", "label": "Get a quote", "to": "/contact", "cta": True},
+    ],
+}
+
+
+@api_router.get("/navigation")
+async def get_navigation():
+    doc = await db.settings.find_one({"key": "navigation_config"})
+    if doc and doc.get("config"):
+        return doc["config"]
+    return DEFAULT_NAV_CONFIG
+
+
+@api_router.patch("/admin/navigation", dependencies=[Depends(require_admin)])
+async def update_navigation(payload: Dict):
+    config = payload.get("config")
+    if not isinstance(config, dict) or not isinstance(config.get("menu"), list):
+        raise HTTPException(400, "config.menu must be a list")
+    # light validation
+    for item in config["menu"]:
+        if "key" not in item or "label" not in item:
+            raise HTTPException(400, "each menu item needs key + label")
+        if "columns" in item:
+            for col in item["columns"]:
+                if "links" not in col or not isinstance(col["links"], list):
+                    raise HTTPException(400, "column.links must be a list")
+                for lnk in col["links"]:
+                    if "label" not in lnk or "to" not in lnk:
+                        raise HTTPException(400, "link needs label + to")
+    config["version"] = int(config.get("version", 1)) + 1
+    await db.settings.update_one(
+        {"key": "navigation_config"},
+        {"$set": {"key": "navigation_config", "config": config,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "version": config["version"]}
+
+
+@api_router.post("/admin/navigation/reset", dependencies=[Depends(require_admin)])
+async def reset_navigation():
+    await db.settings.update_one(
+        {"key": "navigation_config"},
+        {"$set": {"key": "navigation_config", "config": DEFAULT_NAV_CONFIG,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+# ============================================================================
+# Integration keys (admin manages from /admin/integrations)
+# ============================================================================
+
+INTEGRATION_KEYS = {
+    "stripe_api_key": {"label": "Stripe Secret Key", "kind": "secret", "env": "STRIPE_API_KEY",
+                       "help": "From https://dashboard.stripe.com/apikeys — Secret key (sk_live_... or sk_test_...)"},
+    "resend_api_key": {"label": "Resend API Key", "kind": "secret", "env": "RESEND_API_KEY",
+                       "help": "From https://resend.com/api-keys — used for transactional emails (quotes, reviews)."},
+    "removebg_api_key": {"label": "remove.bg API Key", "kind": "secret", "env": "REMOVEBG_API_KEY",
+                         "help": "From https://www.remove.bg/api — background removal in Design Your Own."},
+    "cutoutpro_api_key": {"label": "Cutout.pro API Key", "kind": "secret", "env": "CUTOUTPRO_API_KEY",
+                         "help": "From https://www.cutout.pro/api — AI image effects (sketch, poster)."},
+    "judgeme_shop_token": {"label": "Judge.me Shop Token", "kind": "secret", "env": "JUDGEME_SHOP_TOKEN",
+                            "help": "From your Judge.me dashboard — used to import reviews."},
+    "whatsapp_number": {"label": "WhatsApp Number (E.164)", "kind": "text", "env": "WHATSAPP_NUMBER",
+                         "help": "e.g. +447xxxxxxxxx — appears site-wide and on Get-a-Quote."},
+    "contact_email": {"label": "Contact / Reply-to Email", "kind": "text", "env": "CONTACT_EMAIL",
+                       "help": "Where quote requests and bespoke leavers' enquiries are emailed."},
+}
+
+
+def _mask_secret(val: Optional[str]) -> str:
+    if not val:
+        return ""
+    if len(val) <= 8:
+        return "•" * len(val)
+    return val[:4] + "•" * 6 + val[-4:]
+
+
+@api_router.get("/admin/integrations", dependencies=[Depends(require_admin)])
+async def list_integrations():
+    doc = await db.settings.find_one({"key": "integration_keys"}) or {}
+    saved = doc.get("values") or {}
+    out = []
+    for k, meta in INTEGRATION_KEYS.items():
+        env_val = os.environ.get(meta["env"]) or ""
+        db_val = saved.get(k) or ""
+        effective = db_val or env_val
+        out.append({
+            "key": k,
+            "label": meta["label"],
+            "kind": meta["kind"],
+            "help": meta["help"],
+            "env_var": meta["env"],
+            "is_set": bool(effective),
+            "source": "db" if db_val else ("env" if env_val else "none"),
+            "masked": _mask_secret(effective) if meta["kind"] == "secret" else effective,
+        })
+    return out
+
+
+@api_router.patch("/admin/integrations", dependencies=[Depends(require_admin)])
+async def update_integrations(payload: Dict):
+    values = payload.get("values") or {}
+    if not isinstance(values, dict):
+        raise HTTPException(400, "values must be an object")
+    doc = await db.settings.find_one({"key": "integration_keys"}) or {}
+    saved = doc.get("values") or {}
+    for k, v in values.items():
+        if k not in INTEGRATION_KEYS:
+            raise HTTPException(400, f"unknown integration key: {k}")
+        if v == "" or v is None:
+            saved.pop(k, None)
+        else:
+            saved[k] = str(v).strip()
+    await db.settings.update_one(
+        {"key": "integration_keys"},
+        {"$set": {"key": "integration_keys", "values": saved,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    # Hot-apply Stripe key + WhatsApp number for the running process
+    global STRIPE_API_KEY
+    if "stripe_api_key" in values and values["stripe_api_key"]:
+        STRIPE_API_KEY = values["stripe_api_key"]
+    return {"ok": True}
+
+
+async def _get_integration_value(key: str) -> Optional[str]:
+    """Resolve a key from DB (preferred) or env (fallback)."""
+    doc = await db.settings.find_one({"key": "integration_keys"})
+    if doc:
+        v = (doc.get("values") or {}).get(key)
+        if v:
+            return v
+    meta = INTEGRATION_KEYS.get(key)
+    if meta:
+        return os.environ.get(meta["env"])
+    return None
+
+
+@api_router.get("/site/whatsapp")
+async def get_site_whatsapp():
+    """Public — returns the configured WhatsApp number so frontend can use it."""
+    number = await _get_integration_value("whatsapp_number")
+    return {"number": number or ""}
+
+
 @app.on_event("startup")
 async def _seed_admin_user():
     try:
@@ -2668,18 +3348,25 @@ async def _seed_specials_defaults():
 async def _seed_industry_tags_defaults():
     """One-time seed: assign sensible industry tags + gender_fit to existing catalogue."""
     try:
-        marker = await db.settings.find_one({"key": "industry_seed_v1"})
+        marker = await db.settings.find_one({"key": "industry_seed_v2"})
         if marker is not None:
             return
         # Maps of product_id → industry_tags / gender_fit defaults
         industry_map = {
-            "workwear-tshirt":     ["trades", "construction", "logistics", "cleaning"],
-            "workwear-sweatshirt": ["trades", "logistics", "cleaning"],
-            "workwear-jacket":     ["trades", "construction", "logistics"],
-            "hi-vis-vest":         ["trades", "construction", "logistics"],
-            "polo-shirt":          ["hospitality", "healthcare", "beauty", "hair-beauty", "fitness"],
-            "personalised-tee":    ["hospitality", "beauty", "hair-beauty", "fitness"],
-            "personalised-hoodie": ["fitness", "beauty", "hair-beauty"],
+            "workwear-tshirt":     ["construction-trades", "industrial", "cleaning", "trades", "construction", "logistics"],
+            "workwear-sweatshirt": ["construction-trades", "industrial", "cleaning", "trades", "logistics"],
+            "workwear-jacket":     ["construction-trades", "industrial", "logistics", "trades", "construction"],
+            "workwear-trousers":   ["construction-trades", "industrial", "trades", "construction"],
+            "hi-vis-vest":         ["construction-trades", "industrial", "security", "trades", "construction", "logistics"],
+            "polo-shirt":          ["hospitality-catering", "healthcare", "beauty-wellness", "retail", "corporate", "security", "cleaning", "hospitality", "beauty", "hair-beauty", "fitness"],
+            "personalised-tee":    ["hospitality-catering", "beauty-wellness", "retail", "sports-fitness", "hospitality", "beauty", "hair-beauty", "fitness"],
+            "personalised-hoodie": ["sports-fitness", "beauty-wellness", "retail", "corporate", "fitness", "beauty", "hair-beauty"],
+            "bib-apron":           ["hospitality-catering", "beauty-wellness", "retail", "hospitality", "beauty", "hair-beauty"],
+            "waist-apron":         ["hospitality-catering", "retail", "hospitality"],
+            "denim-apron":         ["beauty-wellness", "hospitality-catering", "retail", "hair-beauty", "beauty"],
+            "joggers":             ["sports-fitness", "corporate", "fitness"],
+            "performance-leggings":["sports-fitness", "fitness"],
+            "gym-shorts":          ["sports-fitness", "fitness"],
         }
         for pid, tags in industry_map.items():
             if pid in PRODUCTS:
@@ -2703,8 +3390,8 @@ async def _seed_industry_tags_defaults():
                 )
                 PRODUCTS[pid]["gender_fit"] = "unisex"
         await db.settings.update_one(
-            {"key": "industry_seed_v1"},
-            {"$set": {"key": "industry_seed_v1", "ran_at": datetime.now(timezone.utc).isoformat()}},
+            {"key": "industry_seed_v2"},
+            {"$set": {"key": "industry_seed_v2", "ran_at": datetime.now(timezone.utc).isoformat()}},
             upsert=True,
         )
     except Exception as e:

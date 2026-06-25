@@ -1,16 +1,24 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { buildWhatsAppLink, WHATSAPP_NUMBER_DISPLAY } from "../../lib/data";
-import { MessageCircle } from "lucide-react";
+import { fetchSiteWhatsApp } from "../../lib/api";
 
 export default function WhatsAppFAB({ preset, label = "Chat on WhatsApp", className = "" }) {
-  const href = buildWhatsAppLink(preset);
+  const [number, setNumber] = useState(null);
+  useEffect(() => {
+    fetchSiteWhatsApp().then((d) => setNumber(d?.number || null)).catch(() => {});
+  }, []);
+  // If admin-configured number is present, use it; otherwise hide entirely (no fake placeholder)
+  if (number === null) return null;        // still loading
+  if (number === "") return null;          // admin hasn't set a number — don't show fake FAB
+  const cleaned = number.replace(/[^0-9]/g, "");
+  const href = `https://wa.me/${cleaned}?text=${encodeURIComponent(preset || "Hi! I'd like some help with my custom print order.")}`;
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       data-testid="whatsapp-fab"
-      aria-label={`${label} ${WHATSAPP_NUMBER_DISPLAY}`}
+      aria-label={`${label} ${number}`}
       className={`fixed bottom-5 right-5 z-50 group inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white font-nunito font-extrabold pl-3 pr-4 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 ${className}`}
     >
       <span className="w-9 h-9 grid place-items-center bg-white rounded-full text-[#25D366]">
@@ -22,9 +30,16 @@ export default function WhatsAppFAB({ preset, label = "Chat on WhatsApp", classN
 }
 
 export function WhatsAppInline({ preset, label = "WhatsApp us", className = "" }) {
+  const [number, setNumber] = useState(null);
+  useEffect(() => {
+    fetchSiteWhatsApp().then((d) => setNumber(d?.number || null)).catch(() => {});
+  }, []);
+  if (!number) return null;
+  const cleaned = number.replace(/[^0-9]/g, "");
+  const href = `https://wa.me/${cleaned}?text=${encodeURIComponent(preset || "Hi! I'd like some help with my custom print order.")}`;
   return (
     <a
-      href={buildWhatsAppLink(preset)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       data-testid="whatsapp-inline"
