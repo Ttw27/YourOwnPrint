@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Plus, Trash2, Sparkles } from "lucide-react";
 
@@ -52,6 +52,7 @@ export default function AdminProductSettings() {
         size_guide_table: p.size_guide_table || [],
         bulk_pricing_enabled: !!p.bulk_pricing_enabled,
         bulk_pricing_overrides: (p.bulk_pricing_overrides || []).length ? p.bulk_pricing_overrides : null,
+        allowed_placements: Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS,
       });
       toast.success(`${p.name} saved`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
@@ -127,6 +128,30 @@ export default function AdminProductSettings() {
                         ))}
                       </div>
                       <button data-testid={`aps-sg-add-${p.id}`} onClick={() => addRow(p.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={11} /> Add size row</button>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Allowed print placements</div>
+                      <div className="text-[11px] text-[#4b5563] mb-2">Tick which print locations are physically possible on this garment. Disallowed options are hidden from customers in the product page and designer.</div>
+                      <div className="flex flex-wrap gap-2" data-testid={`aps-placements-${p.id}`}>
+                        {ALL_PLACEMENTS.map((opt) => {
+                          const list = Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS;
+                          const on = list.includes(opt);
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => {
+                                const next = on ? list.filter((x) => x !== opt) : [...list, opt];
+                                update(p.id, { allowed_placements: next });
+                              }}
+                              className={`px-3 py-1 rounded-full text-xs font-nunito font-extrabold border-2 transition ${on ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#e5e7eb] text-[#4b5563] hover:border-[#7bc67e]"}`}
+                              data-testid={`aps-placement-${p.id}-${opt}`}
+                            >
+                              {on ? "✓ " : ""}{PLACEMENT_LABELS[opt]}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div>
                       <label className="inline-flex items-center gap-2 cursor-pointer">

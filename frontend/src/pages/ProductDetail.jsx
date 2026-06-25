@@ -6,7 +6,7 @@ import PricePromise from "../components/bold/PricePromise";
 import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
-import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers } from "../lib/api";
+import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion } from "../lib/api";
 import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X } from "lucide-react";
 
@@ -15,6 +15,11 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [placements, setPlacements] = useState([]);
+  const [allowedPlacements, setAllowedPlacements] = useState(null); // null => unrestricted
+  const [qa, setQA] = useState([]);
+  const [qaText, setQaText] = useState("");
+  const [qaName, setQaName] = useState("");
+  const [qaBusy, setQaBusy] = useState(false);
   const [aggregates, setAggregates] = useState({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
@@ -35,9 +40,13 @@ export default function ProductDetail() {
       api.get(`/products/${id}`).then(r => r.data),
       fetchPlacements().catch(() => []),
       fetchReviewsAggregate().catch(() => ({})),
+      fetchAllowedPlacements(id).then(r => r.allowed_placements).catch(() => null),
+      fetchProductQA(id).catch(() => []),
     ])
-      .then(([p, pl, ag]) => {
+      .then(([p, pl, ag, ap, qaList]) => {
         setProduct(p); setPlacements(pl); setAggregates(ag);
+        setAllowedPlacements(ap);
+        setQA(qaList || []);
         setColor((p.colors && p.colors[0]?.name) || null);
         setSizeQtys({});
         setPrintMode("custom");
@@ -51,6 +60,10 @@ export default function ProductDetail() {
   const blank = printMode === "blank";
   const agg = aggregates[id];
   const placementById = useMemo(() => Object.fromEntries(placements.map(p => [p.id, p])), [placements]);
+  const visiblePlacements = useMemo(() => {
+    if (!Array.isArray(allowedPlacements)) return placements;
+    return placements.filter(p => allowedPlacements.includes(p.id));
+  }, [placements, allowedPlacements]);
 
   const togglePlacement = (pid) => {
     if (blank) return;
@@ -328,7 +341,7 @@ export default function ProductDetail() {
                   {!blank && (
                     <>
                       <div className={`grid grid-cols-2 gap-2`} data-testid="placements-grid">
-                        {placements.map((p) => {
+                        {visiblePlacements.map((p) => {
                           const checked = selectedPlacements.includes(p.id);
                           const disabled = isPlacementDisabled(p.id);
                           return (
@@ -470,6 +483,30 @@ export default function ProductDetail() {
             </div>
 
             <ProductReviews productId={product.id} productName={product.name} />
+
+            <ProductQASection
+              productId={product.id}
+              qa={qa}
+              qaText={qaText}
+              qaName={qaName}
+              setQaText={setQaText}
+              setQaName={setQaName}
+              busy={qaBusy}
+              onSubmit={async () => {
+                const text = qaText.trim();
+                if (text.length < 5) { toast.error("Please write a slightly longer question."); return; }
+                setQaBusy(true);
+                try {
+                  const created = await postProductQuestion({ product_id: product.id, question: text, asker_name: qaName.trim() || "Customer" });
+                  setQA((prev) => [created, ...prev]);
+                  setQaText("");
+                  toast.success("Question posted — we'll answer soon.");
+                } catch (e) {
+                  const detail = e?.response?.data?.detail;
+                  toast.error(typeof detail === "string" ? detail : "Could not post your question");
+                } finally { setQaBusy(false); }
+              }}
+            />
           </>
         )}
       </div>
@@ -579,5 +616,83 @@ function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId }) {
       )}
       <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => onPick(e.target.files?.[0])} />
     </div>
+  );
+}
+
+
+// ---- Customer Q&A section on PDP ----
+function ProductQASection({ productId, qa, qaText, qaName, setQaText, setQaName, busy, onSubmit }) {
+  const list = qa || [];
+  return (
+    <section className="mt-12 max-w-3xl mx-auto" data-testid="pdp-qa-section">
+      <div className="flex items-baseline justify-between gap-3 mb-4">
+        <h2 className="font-nunito font-black text-2xl sm:text-3xl">Questions &amp; answers</h2>
+        <span className="text-xs text-[#4b5563]" data-testid="pdp-qa-count">{list.length} question{list.length === 1 ? "" : "s"}</span>
+      </div>
+
+      <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-3xl p-5 mb-6" data-testid="pdp-qa-ask">
+        <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-extrabold mb-2">Ask us anything</div>
+        <textarea
+          value={qaText}
+          onChange={(e) => setQaText(e.target.value)}
+          maxLength={500}
+          placeholder="e.g. 'Can I have the front print in white on a navy hoodie?'"
+          className="w-full bg-white border border-[#dcfce7] rounded-xl px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:border-[#7bc67e] resize-none"
+          data-testid="pdp-qa-question-input"
+        />
+        <div className="mt-2 flex flex-col sm:flex-row gap-2 sm:items-center">
+          <input
+            value={qaName}
+            onChange={(e) => setQaName(e.target.value)}
+            maxLength={60}
+            placeholder="Your name (optional)"
+            className="bg-white border border-[#dcfce7] rounded-xl px-3 py-2 text-sm flex-1 focus:outline-none focus:border-[#7bc67e]"
+            data-testid="pdp-qa-name-input"
+          />
+          <button
+            onClick={onSubmit}
+            disabled={busy}
+            className="bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold text-sm px-5 py-2.5 rounded-full"
+            data-testid="pdp-qa-submit"
+          >
+            {busy ? "Posting…" : "Post question"}
+          </button>
+        </div>
+        <div className="text-[11px] text-[#4b5563] mt-2">We typically reply within one working day. Your question will be visible to other shoppers.</div>
+      </div>
+
+      {list.length === 0 ? (
+        <div className="text-sm text-[#4b5563] text-center py-6" data-testid="pdp-qa-empty">No questions yet — be the first to ask.</div>
+      ) : (
+        <div className="space-y-3" data-testid="pdp-qa-list">
+          {list.map((q) => (
+            <article
+              key={q.id}
+              className="bg-white border border-[#e5e7eb] rounded-2xl p-4"
+              data-testid={`pdp-qa-item-${q.id}`}
+            >
+              <div className="flex items-start gap-2 mb-1">
+                <span className="text-xs font-nunito font-extrabold bg-[#1a1a1a] text-white px-1.5 py-0.5 rounded">Q</span>
+                <div className="flex-1">
+                  <div className="text-sm font-nunito font-extrabold">{q.question}</div>
+                  <div className="text-[11px] text-[#4b5563] mt-0.5">{q.asker_name || "Customer"} · {new Date(q.asked_at).toLocaleDateString("en-GB")}</div>
+                </div>
+              </div>
+              {q.answer ? (
+                <div className="flex items-start gap-2 mt-2 pl-2 border-l-2 border-[#7bc67e]" data-testid={`pdp-qa-answer-${q.id}`}>
+                  <span className="text-xs font-nunito font-extrabold bg-[#7bc67e] text-[#1a1a1a] px-1.5 py-0.5 rounded mt-0.5">A</span>
+                  <div className="flex-1">
+                    <div className="text-sm text-[#1a1a1a]">{q.answer}</div>
+                    <div className="text-[11px] text-[#4b5563] mt-0.5">Your Own Print · {new Date(q.answered_at).toLocaleDateString("en-GB")}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[12px] text-[#4b5563] italic mt-2 pl-7" data-testid={`pdp-qa-pending-${q.id}`}>Awaiting reply from the team…</div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

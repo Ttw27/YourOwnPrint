@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Header, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Header, Depends, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,7 +8,9 @@ from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Tuple
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import bcrypt
+import jwt
 
 from emergentintegrations.payments.stripe.checkout import (
     StripeCheckout,
@@ -25,6 +27,56 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
+JWT_SECRET = os.environ["JWT_SECRET"]
+JWT_ALGORITHM = "HS256"
+ADMIN_EMAIL = os.environ["ADMIN_EMAIL"]
+ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
+
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
+
+
+def _create_access_token(email: str) -> str:
+    payload = {
+        "sub": email,
+        "role": "admin",
+        "exp": datetime.now(timezone.utc) + timedelta(days=7),
+        "type": "access",
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+async def get_current_admin(request: Request) -> Dict:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    if payload.get("type") != "access" or payload.get("role") != "admin":
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = await db.users.find_one({"email": payload.get("sub")})
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=401, detail="Admin not found")
+    return {"email": user["email"], "role": user["role"], "name": user.get("name", "Admin")}
+
+
+require_admin = get_current_admin
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -662,7 +714,7 @@ async def list_brands(product_id: Optional[str] = None):
     return out
 
 
-@api_router.post("/team-kit-brands")
+@api_router.post("/team-kit-brands", dependencies=[Depends(require_admin)])
 async def create_brand(payload: TeamKitBrand):
     if payload.product_id not in PRODUCTS:
         raise HTTPException(400, "Unknown product_id")
@@ -673,7 +725,7 @@ async def create_brand(payload: TeamKitBrand):
     return {k: doc.get(k) for k in ["id", "product_id", "brand", "name", "price", "image", "description", "active"]}
 
 
-@api_router.put("/team-kit-brands/{brand_id}")
+@api_router.put("/team-kit-brands/{brand_id}", dependencies=[Depends(require_admin)])
 async def update_brand(brand_id: str, payload: TeamKitBrand):
     update = {k: v for k, v in payload.model_dump().items() if k != "id"}
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -683,7 +735,7 @@ async def update_brand(brand_id: str, payload: TeamKitBrand):
     return {"ok": True}
 
 
-@api_router.delete("/team-kit-brands/{brand_id}")
+@api_router.delete("/team-kit-brands/{brand_id}", dependencies=[Depends(require_admin)])
 async def delete_brand(brand_id: str):
     res = await db.team_kit_brands.delete_one({"id": brand_id})
     if res.deleted_count == 0:
@@ -976,7 +1028,7 @@ async def recent_reviews(limit: int = 12):
     return items
 
 
-@api_router.post("/reviews/import-judgeme")
+@api_router.post("/reviews/import-judgeme", dependencies=[Depends(require_admin)])
 async def import_judgeme(payload: JudgeMeImportRequest):
     """Accepts a paste/upload of Judge.me reviews JSON (one-off migration).
     Maps each review to one of our product IDs via product_id_map (judgeme key -> our id)
@@ -1038,6 +1090,9 @@ class DesignerSettings(BaseModel):
     use_cases: Optional[List[str]] = None
 
 
+ALLOWED_PLACEMENT_OPTIONS = ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label"]
+
+
 class ProductMeta(BaseModel):
     brand: Optional[str] = None
     sku: Optional[str] = None
@@ -1046,6 +1101,7 @@ class ProductMeta(BaseModel):
     size_guide_table: Optional[List[Dict]] = None
     bulk_pricing_enabled: bool = False
     bulk_pricing_overrides: Optional[List[Dict]] = None
+    allowed_placements: Optional[List[str]] = None
 
 
 class DesignerArtwork(BaseModel):
@@ -1120,7 +1176,7 @@ async def _merge_designer_overrides():
         pid = doc.get("product_id")
         if pid in PRODUCTS:
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
-                     "bulk_pricing_enabled", "bulk_pricing_overrides"):
+                     "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -1161,7 +1217,7 @@ async def list_use_cases():
     return USE_CASE_OPTIONS
 
 
-@api_router.get("/admin/designer-products")
+@api_router.get("/admin/designer-products", dependencies=[Depends(require_admin)])
 async def admin_list_designer_products():
     """Admin view — ALL products with their current designer settings."""
     out = []
@@ -1181,7 +1237,7 @@ async def admin_list_designer_products():
     return out
 
 
-@api_router.patch("/admin/designer-products/{product_id}")
+@api_router.patch("/admin/designer-products/{product_id}", dependencies=[Depends(require_admin)])
 async def update_designer_settings(product_id: str, payload: DesignerSettings):
     if product_id not in PRODUCTS:
         raise HTTPException(404, "Product not found")
@@ -1291,7 +1347,7 @@ async def get_bulk_defaults():
     return {"tiers": [{"min_qty": q, "pct": p} for q, p in tiers]}
 
 
-@api_router.patch("/admin/bulk-tiers/defaults")
+@api_router.patch("/admin/bulk-tiers/defaults", dependencies=[Depends(require_admin)])
 async def update_bulk_defaults(payload: Dict):
     tiers = payload.get("tiers")
     if not isinstance(tiers, list) or not tiers:
@@ -1346,7 +1402,7 @@ async def get_product_bulk_tiers(product_id: str):
 
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
-@api_router.get("/admin/products")
+@api_router.get("/admin/products", dependencies=[Depends(require_admin)])
 async def admin_list_all_products():
     """Admin overview of all products with editable meta fields."""
     out = []
@@ -1361,11 +1417,21 @@ async def admin_list_all_products():
             "size_guide_table": p.get("size_guide_table") or [],
             "bulk_pricing_enabled": bool(p.get("bulk_pricing_enabled")),
             "bulk_pricing_overrides": p.get("bulk_pricing_overrides") or [],
+            "allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS),
         })
     return out
 
 
-@api_router.patch("/admin/products/{product_id}/meta")
+@api_router.get("/products/{product_id}/allowed-placements")
+async def get_allowed_placements(product_id: str):
+    """Public endpoint — used by PDP and Designer to hide disallowed placements."""
+    p = PRODUCTS.get(product_id)
+    if not p:
+        raise HTTPException(404, "Product not found")
+    return {"allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS)}
+
+
+@api_router.patch("/admin/products/{product_id}/meta", dependencies=[Depends(require_admin)])
 async def update_product_meta(product_id: str, payload: ProductMeta):
     if product_id not in PRODUCTS:
         raise HTTPException(404, "Product not found")
@@ -1380,6 +1446,10 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
                 raise HTTPException(400, "min_qty must be int, pct must be number")
             if q < 1 or not (0 <= p <= 90):
                 raise HTTPException(400, "override min_qty >=1; pct 0-90")
+    if payload.allowed_placements is not None:
+        for pl in payload.allowed_placements:
+            if pl not in ALLOWED_PLACEMENT_OPTIONS:
+                raise HTTPException(400, f"unknown placement '{pl}'. Allowed: {ALLOWED_PLACEMENT_OPTIONS}")
     doc = {
         "product_id": product_id,
         "brand": payload.brand,
@@ -1389,11 +1459,12 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "size_guide_table": payload.size_guide_table,
         "bulk_pricing_enabled": bool(payload.bulk_pricing_enabled),
         "bulk_pricing_overrides": payload.bulk_pricing_overrides,
+        "allowed_placements": payload.allowed_placements,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
-              "bulk_pricing_enabled", "bulk_pricing_overrides"):
+              "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements"):
         v = doc.get(k)
         if v is not None or k == "bulk_pricing_enabled":
             PRODUCTS[product_id][k] = v
@@ -1570,6 +1641,156 @@ async def stripe_webhook(request: Request):
     except Exception as e:
         logger.error(f"Stripe webhook error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ---------- Admin Auth ----------
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+@api_router.post("/auth/login")
+async def admin_login(payload: LoginRequest, response: Response):
+    email = payload.email.lower().strip()
+    user = await db.users.find_one({"email": email})
+    if not user or not _verify_password(payload.password, user.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not an admin account")
+    token = _create_access_token(email)
+    response.set_cookie(
+        key="access_token", value=token, httponly=True, secure=False,
+        samesite="lax", max_age=7 * 24 * 3600, path="/",
+    )
+    return {"token": token, "user": {"email": email, "role": "admin", "name": user.get("name", "Admin")}}
+
+
+@api_router.post("/auth/logout")
+async def admin_logout(response: Response):
+    response.delete_cookie("access_token", path="/")
+    return {"ok": True}
+
+
+@api_router.get("/auth/me")
+async def admin_me(current=Depends(require_admin)):
+    return current
+
+
+# ---------- Customer Q&A ----------
+class QACreate(BaseModel):
+    product_id: str
+    question: str
+    asker_name: Optional[str] = "Customer"
+
+
+class QAAnswer(BaseModel):
+    answer: str
+
+
+@api_router.get("/qa/{product_id}")
+async def list_qa(product_id: str):
+    if product_id not in PRODUCTS:
+        raise HTTPException(404, "Product not found")
+    out = []
+    async for d in db.product_qa.find({"product_id": product_id}).sort("asked_at", -1):
+        out.append({
+            "id": d.get("id"),
+            "product_id": d.get("product_id"),
+            "question": d.get("question"),
+            "answer": d.get("answer"),
+            "asker_name": d.get("asker_name") or "Customer",
+            "asked_at": d.get("asked_at"),
+            "answered_at": d.get("answered_at"),
+        })
+    return out
+
+
+@api_router.post("/qa")
+async def create_qa(payload: QACreate):
+    if payload.product_id not in PRODUCTS:
+        raise HTTPException(400, "Unknown product_id")
+    question = (payload.question or "").strip()
+    if len(question) < 5:
+        raise HTTPException(400, "Question is too short")
+    if len(question) > 500:
+        raise HTTPException(400, "Question is too long (max 500 chars)")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "product_id": payload.product_id,
+        "question": question,
+        "answer": None,
+        "asker_name": (payload.asker_name or "Customer").strip()[:60] or "Customer",
+        "asked_at": datetime.now(timezone.utc).isoformat(),
+        "answered_at": None,
+    }
+    await db.product_qa.insert_one(doc)
+    return {k: doc[k] for k in ("id", "product_id", "question", "answer", "asker_name", "asked_at", "answered_at")}
+
+
+@api_router.post("/admin/qa/{qa_id}/answer", dependencies=[Depends(require_admin)])
+async def answer_qa(qa_id: str, payload: QAAnswer):
+    answer = (payload.answer or "").strip()
+    if len(answer) < 1:
+        raise HTTPException(400, "Answer cannot be empty")
+    res = await db.product_qa.update_one(
+        {"id": qa_id},
+        {"$set": {"answer": answer[:1000], "answered_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(404, "Q&A not found")
+    return {"ok": True}
+
+
+@api_router.delete("/admin/qa/{qa_id}", dependencies=[Depends(require_admin)])
+async def delete_qa(qa_id: str):
+    res = await db.product_qa.delete_one({"id": qa_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Q&A not found")
+    return {"ok": True}
+
+
+@api_router.get("/admin/qa", dependencies=[Depends(require_admin)])
+async def admin_list_all_qa():
+    """Admin overview — all questions across products, unanswered first."""
+    out = []
+    async for d in db.product_qa.find({}).sort("asked_at", -1):
+        out.append({
+            "id": d.get("id"),
+            "product_id": d.get("product_id"),
+            "product_name": PRODUCTS.get(d.get("product_id"), {}).get("name", d.get("product_id")),
+            "question": d.get("question"),
+            "answer": d.get("answer"),
+            "asker_name": d.get("asker_name") or "Customer",
+            "asked_at": d.get("asked_at"),
+            "answered_at": d.get("answered_at"),
+        })
+    out.sort(key=lambda x: (x["answer"] is not None, x["asked_at"] or ""), reverse=True)
+    # unanswered first, then most-recent answered
+    out.sort(key=lambda x: (x["answer"] is None, x["asked_at"] or ""), reverse=True)
+    return out
+
+
+@app.on_event("startup")
+async def _seed_admin_user():
+    try:
+        existing = await db.users.find_one({"email": ADMIN_EMAIL})
+        if existing is None:
+            await db.users.insert_one({
+                "email": ADMIN_EMAIL,
+                "password_hash": _hash_password(ADMIN_PASSWORD),
+                "name": "Admin",
+                "role": "admin",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+        elif not _verify_password(ADMIN_PASSWORD, existing.get("password_hash", "")):
+            await db.users.update_one(
+                {"email": ADMIN_EMAIL},
+                {"$set": {"password_hash": _hash_password(ADMIN_PASSWORD)}},
+            )
+        await db.users.create_index("email", unique=True)
+    except Exception as e:
+        # logger is configured further down — print as fallback
+        print(f"admin seed failed: {e}")
 
 
 app.include_router(api_router)

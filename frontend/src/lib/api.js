@@ -5,6 +5,37 @@ export const API = `${BACKEND_URL}/api`;
 
 export const api = axios.create({ baseURL: API });
 
+// ----- Admin auth (token in localStorage) -----
+export const ADMIN_TOKEN_KEY = "yop_admin_token";
+
+export function getAdminToken() {
+  try { return localStorage.getItem(ADMIN_TOKEN_KEY) || ""; } catch { return ""; }
+}
+export function setAdminToken(token) {
+  try { token ? localStorage.setItem(ADMIN_TOKEN_KEY, token) : localStorage.removeItem(ADMIN_TOKEN_KEY); } catch {}
+}
+export function clearAdminToken() { setAdminToken(""); }
+
+api.interceptors.request.use((config) => {
+  const token = getAdminToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+export async function adminLogin(email, password) {
+  const { data } = await api.post("/auth/login", { email, password });
+  if (data?.token) setAdminToken(data.token);
+  return data;
+}
+export async function adminLogout() {
+  clearAdminToken();
+  try { await api.post("/auth/logout"); } catch {}
+}
+export async function fetchAdminMe() {
+  const { data } = await api.get("/auth/me");
+  return data;
+}
+
 export async function fetchProducts(category) {
   const { data } = await api.get("/products", { params: category ? { category } : {} });
   return data;
@@ -165,3 +196,42 @@ export async function saveDesignerArtwork(payload) {
   const { data } = await api.post("/designer/artwork", payload);
   return data;
 }
+
+// ----- Allowed placements (public) -----
+export async function fetchAllowedPlacements(product_id) {
+  const { data } = await api.get(`/products/${product_id}/allowed-placements`);
+  return data; // { allowed_placements: [...] }
+}
+
+// ----- Customer Q&A -----
+export async function fetchProductQA(product_id) {
+  const { data } = await api.get(`/qa/${product_id}`);
+  return data;
+}
+export async function postProductQuestion(payload) {
+  const { data } = await api.post(`/qa`, payload);
+  return data;
+}
+export async function fetchAllAdminQA() {
+  const { data } = await api.get(`/admin/qa`);
+  return data;
+}
+export async function answerProductQuestion(qa_id, answer) {
+  const { data } = await api.post(`/admin/qa/${qa_id}/answer`, { answer });
+  return data;
+}
+export async function deleteProductQuestion(qa_id) {
+  const { data } = await api.delete(`/admin/qa/${qa_id}`);
+  return data;
+}
+
+export const PLACEMENT_LABELS = {
+  "left-breast": "Left breast",
+  "right-breast": "Right breast",
+  "full-front": "Full front",
+  "back-print": "Back print",
+  "left-sleeve": "Left sleeve",
+  "right-sleeve": "Right sleeve",
+  "neck-label": "Neck label",
+};
+export const ALL_PLACEMENTS = ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label"];

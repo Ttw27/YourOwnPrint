@@ -15,6 +15,9 @@ import AdminImport from "@/pages/AdminImport";
 import AdminTeamKits from "@/pages/AdminTeamKits";
 import AdminDesignerProducts from "@/pages/AdminDesignerProducts";
 import AdminProductSettings from "@/pages/AdminProductSettings";
+import AdminLogin from "@/pages/AdminLogin";
+import AdminQA from "@/pages/AdminQA";
+import RequireAdmin from "@/pages/RequireAdmin";
 import Sports from "@/pages/Sports";
 import TeamKits from "@/pages/TeamKits";
 import TeamKitBuilder from "@/pages/TeamKitBuilder";
@@ -46,10 +49,12 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/reviews" element={<ReviewsPage />} />
-          <Route path="/admin/import-reviews" element={<AdminImport />} />
-          <Route path="/admin/team-kits" element={<AdminTeamKits />} />
-          <Route path="/admin/designer-products" element={<AdminDesignerProducts />} />
-          <Route path="/admin/product-settings" element={<AdminProductSettings />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/import-reviews" element={<RequireAdmin><AdminImport /></RequireAdmin>} />
+          <Route path="/admin/team-kits" element={<RequireAdmin><AdminTeamKits /></RequireAdmin>} />
+          <Route path="/admin/designer-products" element={<RequireAdmin><AdminDesignerProducts /></RequireAdmin>} />
+          <Route path="/admin/product-settings" element={<RequireAdmin><AdminProductSettings /></RequireAdmin>} />
+          <Route path="/admin/qa" element={<RequireAdmin><AdminQA /></RequireAdmin>} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
         </Routes>
         {/* Site-wide WhatsApp FAB. Pages that already render their own FAB will overlap harmlessly,
