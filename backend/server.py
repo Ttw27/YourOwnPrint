@@ -1373,6 +1373,13 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         for t in payload.bulk_pricing_overrides:
             if "min_qty" not in t or "pct" not in t:
                 raise HTTPException(400, "each override needs min_qty + pct")
+            try:
+                q = int(t["min_qty"])
+                p = float(t["pct"])
+            except (TypeError, ValueError):
+                raise HTTPException(400, "min_qty must be int, pct must be number")
+            if q < 1 or not (0 <= p <= 90):
+                raise HTTPException(400, "override min_qty >=1; pct 0-90")
     doc = {
         "product_id": product_id,
         "brand": payload.brand,

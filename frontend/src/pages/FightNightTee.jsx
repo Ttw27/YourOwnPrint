@@ -210,10 +210,9 @@ export default function FightNightTee() {
             <h3 className="font-nunito font-extrabold">See the tee in action</h3>
             <span className="text-[10px] uppercase tracking-wider text-[#4b5563] font-nunito font-extrabold">Mockup gallery</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {[
               { src: "https://images.pexels.com/photos/8534124/pexels-photo-8534124.jpeg?auto=compress&w=700", label: "Front" },
-              { src: "https://images.pexels.com/photos/4761352/pexels-photo-4761352.jpeg?auto=compress&w=700", label: "Back full" },
               { src: "https://images.pexels.com/photos/8534119/pexels-photo-8534119.jpeg?auto=compress&w=700", label: "Sleeves" },
               { src: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg?auto=compress&w=700", label: "Worn" },
             ].map((g, i) => (

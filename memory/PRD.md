@@ -32,6 +32,18 @@
 - Sports CTA now → `/team-kits`
 - **50/50 backend tests** pass, 100% frontend e2e verified
 
+### Iter 13 — Product meta + generic bulk pricing + Fight Night gallery (Feb 2026)
+- **Brand + SKU + full description + size guide** per product (admin-managed). Size guide can be an image, a measurements table, or both. New `ProductMeta` model + `product_meta` MongoDB collection (overlaid at startup).
+- **Size guide modal** on PDP — opens from a "📏 Size guide" CTA next to the price. Shows image and/or measurement table (size · chest · length).
+- **Generic % bulk pricing** — admin sets default tiers (1-9 = 0%, 10+ = 10%, 25+ = 18%, 100+ = 28%, 200+ = 35%) via `/admin/bulk-tiers/defaults`. Per-product overrides supported. Prices snapped to nearest £.99 via `snap_to_99()`.
+- **Hybrid coexistence** — Fight Night & Leavers keep their existing absolute tier prices; all other products use the generic % system if `bulk_pricing_enabled` is ticked.
+- **PDP bulk tier ladder** — visible on every product with bulk enabled (`pdp-bulk-tiers` + `pdp-tier-{min_qty}` chips with "save £X" labels).
+- **PDP brand + SKU + full description** displayed under the title (`product-brand`, `product-sku`, `product-description-full`).
+- **Fight Night mockup gallery** — 3-up mockup figures (`fn-gallery-0..2`) + "send us your event photos" WhatsApp panel (`fn-share-photos`).
+- **New admin page `/admin/product-settings`** — per-product accordion with brand/SKU/description/size-guide rows/bulk-pricing toggle + per-product overrides. Plus a global "Default Bulk Tiers" editor at the top.
+- **Validation** — per-product override min_qty ≥ 1, pct 0–90 (matches the global validation).
+- **Testing**: 21/21 backend tests pass (test_iteration13.py); all critical frontend flows pass on live preview (iteration_13.json). 100% success rate.
+
 ### Iter 12 — Fight Night cleanup + Sports expansion + Leavers' group orders (Feb 2026)
 - **Fight Night Tee simplified** — removed back-mode sub-options (large vs sponsors); now a single full-back toggle with one upload slot. Cleaner UX matching what actually prints.
 - **Fight Night bulk pricing** — tiers 10+ £10.99/tee, 25+ £9.99/tee (base £11.99). Visible ladder + "add N more to drop to £X" nudge on the page; server-side via `FIGHT_NIGHT_BULK_TIERS` + `tier_unit_price()` helper.
