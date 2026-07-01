@@ -209,7 +209,7 @@ export default function LeaversStart() {
                     <span className="font-nunito font-extrabold">Front breast pocket</span>
                     <span className="ml-auto text-xs font-extrabold text-[#7bc67e]">Included</span>
                   </div>
-                  <div className="text-xs text-[#4b5563] mt-1.5">Neat, subtle logo/design on the left chest — the standard leavers' look.</div>
+                  <div className="text-xs text-[#4b5563] mt-1.5">Neat, subtle logo/design on the left chest — the standard leavers&apos; look.</div>
                 </button>
                 <button
                   type="button"
@@ -291,7 +291,7 @@ export default function LeaversStart() {
           {product && (
             <section data-testid="leavers-step-names">
               <h2 className="font-nunito font-black text-2xl mb-3"><span className="text-[#7bc67e]">6.</span> Student names</h2>
-              <p className="text-sm text-[#4b5563] mb-3">Only needed if your design lists names on the back. If you've uploaded your own artwork with names baked in, tick "we'll be in touch" — we may not need anything else.</p>
+              <p className="text-sm text-[#4b5563] mb-3">Only needed if your design lists names on the back. If you&apos;ve uploaded your own artwork with names baked in, tick &quot;we&apos;ll be in touch&quot; — we may not need anything else.</p>
               <div className="grid sm:grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -302,9 +302,9 @@ export default function LeaversStart() {
                   <div className="flex items-center gap-2">
                     <span className={`w-4 h-4 rounded-full border-2 ${namesMode === "we-will-contact" ? "border-[#7bc67e] bg-[#7bc67e]" : "border-[#e5e7eb]"}`} />
                     <Users size={16} className="text-[#7bc67e]" />
-                    <span className="font-nunito font-extrabold">We'll be in touch</span>
+                    <span className="font-nunito font-extrabold">We&apos;ll be in touch</span>
                   </div>
-                  <div className="text-xs text-[#4b5563] mt-1.5">After you check out, we'll email you a simple form to collect names — you have up to {config.names_deadline_days || 7} days.</div>
+                  <div className="text-xs text-[#4b5563] mt-1.5">After you check out, we&apos;ll email you a simple form to collect names — you have up to {config.names_deadline_days || 7} days.</div>
                 </button>
                 <button
                   type="button"
@@ -423,7 +423,7 @@ export default function LeaversStart() {
             <div className="mt-4 space-y-2 text-[11px] text-zinc-300" data-testid="ls-proof-block">
               <div className="flex items-start gap-2">
                 <ShieldCheck size={12} className="mt-0.5 flex-shrink-0 text-[#7bc67e]" />
-                <span><strong className="text-white">We'll send a proof</strong> — mock-up of the design (and names) within {config.proof_days || 2} working days. Nothing prints until you say yes.</span>
+                <span><strong className="text-white">We&apos;ll send a proof</strong> — mock-up of the design (and names) within {config.proof_days || 2} working days. Nothing prints until you say yes.</span>
               </div>
               {printPosition === "full_front" && (
                 <div className="flex items-start gap-2" data-testid="ls-summary-full-front-note">
@@ -434,13 +434,13 @@ export default function LeaversStart() {
               {namesMode === "we-will-contact" && (
                 <div className="flex items-start gap-2" data-testid="ls-summary-names-note">
                   <Users size={12} className="mt-0.5 flex-shrink-0 text-[#7bc67e]" />
-                  <span>Names — we'll email you a form after checkout to collect them.</span>
+                  <span>Names — we&apos;ll email you a form after checkout to collect them.</span>
                 </div>
               )}
               {namesMode === "upload" && namesFile && (
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2" data-testid="ls-summary-names-note">
                   <FileText size={12} className="mt-0.5 flex-shrink-0 text-[#7bc67e]" />
-                  <span>Names list uploaded — we'll double-check it on the proof.</span>
+                  <span>Names list uploaded — we&apos;ll double-check it on the proof.</span>
                 </div>
               )}
             </div>
@@ -503,7 +503,7 @@ function NamesFileDrop({ dataUrl, onChange }) {
           <div className="w-14 h-14 grid place-items-center bg-[#fff7ed] rounded-lg border border-[#fed7aa]"><FileText size={22} className="text-[#fbbf24]" /></div>
           <div className="text-xs flex-1">
             <div className="font-extrabold">Names list uploaded</div>
-            <div className="text-[#4b5563]">We'll confirm every name on the proof before printing.</div>
+            <div className="text-[#4b5563]">We&apos;ll confirm every name on the proof before printing.</div>
           </div>
           <button type="button" onClick={() => inputRef.current?.click()} className="text-xs font-extrabold underline" data-testid="ls-names-file-replace">Replace</button>
           <button type="button" onClick={() => onChange(null)} className="text-xs text-rose-500 hover:underline" data-testid="ls-names-file-remove">Remove</button>
