@@ -202,30 +202,38 @@ export default function TeamsSchools() {
       </section>
 
       {/* Recent group orders — portfolio carousel */}
-      {portfolio.length > 0 && (
-        <section className="max-w-7xl mx-auto px-6 pb-12" data-testid="ts-portfolio">
-          <div className="flex items-baseline justify-between mb-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold mb-1">Real orders</div>
-              <h2 className="font-black text-2xl lg:text-3xl">Recent group orders</h2>
-            </div>
-            <Link to="/portfolio" className="text-xs font-extrabold text-[#166534] hover:underline">See more &rarr;</Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="ts-portfolio-grid">
-            {portfolio.map((it) => (
-              <div key={it.id} className="group rounded-2xl overflow-hidden bg-white border-2 border-[#dcfce7]">
-                <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                  <img src={it.image_url} alt={it.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                </div>
-                <div className="p-3">
-                  <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{it.category}</div>
-                  <div className="text-xs font-extrabold truncate">{it.title}</div>
-                </div>
+      <section className="max-w-7xl mx-auto px-6 pb-12" data-testid="ts-portfolio">
+        {portfolio.length > 0 ? (
+          <>
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold mb-1">Real orders</div>
+                <h2 className="font-black text-2xl lg:text-3xl">Recent group orders</h2>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+              <Link to="/portfolio" className="text-xs font-extrabold text-[#166534] hover:underline">See more &rarr;</Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="ts-portfolio-grid">
+              {portfolio.map((it) => (
+                <div key={it.id} className="group rounded-2xl overflow-hidden bg-white border-2 border-[#dcfce7]">
+                  <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
+                    <img src={it.image_url} alt={it.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                  <div className="p-3">
+                    <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{it.category}</div>
+                    <div className="text-xs font-extrabold truncate">{it.title}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          !loading && (
+            <div className="text-xs text-[#4b5563] italic border-2 border-dashed border-[#dcfce7] rounded-2xl px-4 py-6 text-center">
+              Add featured items in <Link to="/admin/portfolio" className="underline text-[#166534] font-extrabold">Admin → Portfolio</Link> to showcase recent group orders here.
+            </div>
+          )
+        )}
+      </section>
 
       {/* Popular garments — quick jump */}
       <section className="max-w-7xl mx-auto px-6 pb-12" data-testid="ts-popular-garments">

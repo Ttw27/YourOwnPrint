@@ -895,6 +895,18 @@ async def create_quote_request(payload: QuoteRequest):
         "deadline": (payload.deadline or "")[:60],
         "message": (payload.message or "")[:5000],
         "artwork": artwork,
+        "attachments": [
+            {
+                "id": str(a.get("id") or "")[:60],
+                "url": str(a.get("url") or "")[:400],
+                "filename": str(a.get("filename") or "")[:200],
+                "purpose": str(a.get("purpose") or "")[:60],
+                "section": str(a.get("section") or "")[:80],
+                "size_bytes": int(a.get("size_bytes") or 0),
+            }
+            for a in (payload.attachments or [])[:12]
+            if isinstance(a, dict)
+        ],
         "roster": (payload.roster or [])[:300],
         "product_id": payload.product_id,
         "status": "new",
