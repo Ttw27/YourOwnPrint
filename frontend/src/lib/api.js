@@ -506,6 +506,10 @@ export async function adminUpdatePageCopy(slug, patch) {
   const { data } = await api.patch(`/admin/page-copy/${slug}`, patch);
   return data;
 }
+export async function adminDeletePageCopy(slug) {
+  const { data } = await api.delete(`/admin/page-copy/${slug}`);
+  return data;
+}
 export async function adminListPageCopySlugs() {
   const { data } = await api.get("/admin/page-copy-slugs");
   return data;

@@ -20,12 +20,12 @@ export default function usePageCopy(slug, defaults = {}) {
     return () => { live = false; };
   }, [slug]);
   if (!override) return { ...defaults };
-  // Only replace primitives + arrays the admin has explicitly set (not undefined).
+  // Only overwrite when admin has set a truthy value (empty strings mean "unset — use default").
   const merged = { ...defaults };
   Object.entries(override).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0 && !defaults[k])) {
-      merged[k] = v;
-    }
+    if (v === undefined || v === null || v === "") return;
+    if (Array.isArray(v) && v.length === 0) return;
+    merged[k] = v;
   });
   return merged;
 }

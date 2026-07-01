@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { fetchPageCopy, adminUpdatePageCopy } from "../lib/api";
+import { fetchPageCopy, adminUpdatePageCopy, adminDeletePageCopy } from "../lib/api";
 import { Loader2, Save, Plus, Trash2, RotateCcw } from "lucide-react";
 
 /**
@@ -64,9 +64,11 @@ export default function AdminPageCopy() {
 
   const revert = async () => {
     if (!window.confirm("Clear all admin overrides for this page and revert to code defaults?")) return;
-    await adminUpdatePageCopy(slug, { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "" });
-    toast.success("Reverted to code defaults");
-    load(slug);
+    try {
+      await adminDeletePageCopy(slug);
+      toast.success("Reverted to code defaults");
+      load(slug);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Revert failed"); }
   };
 
   const setBullet = (i, v) => setCopy((c) => ({ ...c, bullets: c.bullets.map((b, idx) => idx === i ? v : b) }));

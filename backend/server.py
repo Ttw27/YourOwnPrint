@@ -3833,13 +3833,15 @@ async def admin_update_sports_outfit_addons(payload: Dict):
                 cleaned[k] = round(float(values[k]), 2)
             except (TypeError, ValueError):
                 raise HTTPException(400, f"{k} must be a number")
+    existing = (await db.settings.find_one({"key": "sports_outfit_addons"}) or {}).get("values") or {}
+    merged = {**existing, **cleaned}
     await db.settings.update_one(
         {"key": "sports_outfit_addons"},
-        {"$set": {"key": "sports_outfit_addons", "values": cleaned,
+        {"$set": {"key": "sports_outfit_addons", "values": merged,
                   "updated_at": datetime.now(timezone.utc).isoformat()}},
         upsert=True,
     )
-    return {"ok": True, "values": cleaned}
+    return {"ok": True, "values": merged}
 
 
 @api_router.patch("/admin/full-squad/addons", dependencies=[Depends(require_admin)])
@@ -3848,19 +3850,23 @@ async def admin_update_full_squad_addons(payload: Dict):
     if not isinstance(values, dict):
         raise HTTPException(400, "values must be an object")
     cleaned: Dict = {}
-    for k in ("sleeve_print_price", "back_upload_print_price", "back_name_and_number_price"):
+    for k in ("sleeve_print_price", "back_upload_print_price",
+              "back_name_and_number_price", "gym_bag_addon_price"):
         if k in values:
             try:
                 cleaned[k] = round(float(values[k]), 2)
             except (TypeError, ValueError):
                 raise HTTPException(400, f"{k} must be a number")
+    # MERGE with existing values so saving one key doesn't wipe the others.
+    existing = (await db.settings.find_one({"key": "full_squad_addons"}) or {}).get("values") or {}
+    merged = {**existing, **cleaned}
     await db.settings.update_one(
         {"key": "full_squad_addons"},
-        {"$set": {"key": "full_squad_addons", "values": cleaned,
+        {"$set": {"key": "full_squad_addons", "values": merged,
                   "updated_at": datetime.now(timezone.utc).isoformat()}},
         upsert=True,
     )
-    return {"ok": True, "values": cleaned}
+    return {"ok": True, "values": merged}
 
 
 @api_router.patch("/admin/navigation", dependencies=[Depends(require_admin)])
@@ -4250,6 +4256,12 @@ def _apply_product_override(pid: str, ov: Dict) -> None:
         PRODUCTS[pid].pop("_hidden", None)
 
 
+# Snapshot the pristine hardcoded PRODUCTS entries so admin can fully revert an
+# override at runtime (without waiting for a supervisor restart).
+import copy as _copy
+_PRISTINE_PRODUCTS: Dict[str, Dict] = _copy.deepcopy(PRODUCTS)
+
+
 @app.on_event("startup")
 async def _load_product_overrides():
     try:
@@ -4280,9 +4292,13 @@ async def upsert_product_override(pid: str, patch: ProductOverride):
 @api_router.delete("/admin/products/{pid}/override", dependencies=[Depends(require_admin)])
 async def clear_product_override(pid: str):
     r = await db.product_overrides.delete_one({"product_id": pid})
-    # Note: we don't restore the in-memory PRODUCTS entry to the "pristine" hardcoded
-    # value at runtime — a supervisor restart clears the override cleanly.
-    return {"ok": True, "deleted": r.deleted_count, "note": "restart to fully revert to defaults"}
+    # Restore the in-memory PRODUCTS entry to its pristine hardcoded values so the
+    # site reflects the revert immediately (no restart needed).
+    if pid in _PRISTINE_PRODUCTS:
+        PRODUCTS[pid] = _copy.deepcopy(_PRISTINE_PRODUCTS[pid])
+    if r.deleted_count == 0:
+        return {"ok": True, "deleted": 0, "note": "no override existed"}
+    return {"ok": True, "deleted": r.deleted_count}
 
 
 @api_router.get("/admin/products/{pid}/override", dependencies=[Depends(require_admin)])
@@ -4346,6 +4362,14 @@ async def admin_update_page_copy(slug: str, patch: PageCopyPatch):
     up["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.settings.update_one({"key": up["key"]}, {"$set": up}, upsert=True)
     return {"ok": True, "slug": slug, "copy": {k: v for k, v in up.items() if k not in ("key", "slug", "updated_at")}}
+
+
+@api_router.delete("/admin/page-copy/{slug}", dependencies=[Depends(require_admin)])
+async def admin_delete_page_copy(slug: str):
+    if slug not in PAGE_COPY_SLUGS:
+        raise HTTPException(400, f"Slug must be one of: {PAGE_COPY_SLUGS}")
+    r = await db.settings.delete_one({"key": f"page_copy:{slug}"})
+    return {"ok": True, "deleted": r.deleted_count}
 
 
 @api_router.get("/admin/page-copy-slugs", dependencies=[Depends(require_admin)])
