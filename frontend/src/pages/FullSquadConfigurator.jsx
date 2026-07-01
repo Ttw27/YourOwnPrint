@@ -273,7 +273,7 @@ function SectionBuilder({ index, section, gymBagPrice, value, onChange }) {
                   variant_id: isChosen ? null : variant.id,
                   colour: isChosen ? null : (variant.colours?.[0]?.name || ""),
                   roster: isChosen ? [] : [{ name: "", number: "", top: "", bottom: "", sock: "" }],
-                  include_gym_bag: isChosen ? false : false,
+                  include_gym_bag: false,
                 })}
                 className="w-full text-left p-3 flex items-center gap-3"
               >
