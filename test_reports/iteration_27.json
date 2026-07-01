@@ -1,0 +1,49 @@
+{
+  "summary": "Iter27 tested — bulk product import feature. Backend: 11/13 pytest tests PASS. 2 failed tests document a legitimate bug: /api/shop/type/{slug} uses _garment_type_of() which ignores the imported product's stored `category` field and re-classifies purely by keyword-in-pid/name. Result: 'Running Vest' (auto-categorised to 't-shirts' at import time) never surfaces on /shop/t-shirts. Worse — its slugified id 'test-iter27-vst' doesn't contain 'vest' either, so it falls through _garment_type_of entirely and is INVISIBLE on every /shop/type/* endpoint despite being in PRODUCTS. All other requirements met: auto-cat hoodies/polos, markup 40% (8.99→12.59), skipped nameless rows, admin JWT gating, Coral facet appears on hoodies, list/patch/delete admin endpoints all work, patch active=false removes from PRODUCTS but keeps in admin list, direct GET /api/products/{id} works. Frontend: /admin/products-import loads with all 6 primary testids + 3 new nav testids. JSON paste → Load → Save flow works and product surfaces anonymously on /shop/polos. Manual row → auto-categorised as 'hoodies' → surfaces on /shop/hoodies. All test data cleaned up.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/shop/type/{slug} + _garment_type_of()",
+        "issue": "Imported product category is silently ignored by the shop-type filter. server.py:2209 _garment_type_of matches only by hardcoded keyword substrings in `pid` and `name`, never falling back to the doc's stored `category` field. Consequences: (1) Any imported product whose slug + name don't contain a recognised keyword (e.g. source_sku='VST' + name 'Running Vest' — 'vest' checked only against pid, not name) is INVISIBLE on every /shop/type/* endpoint. Verified live: bulk-imported 'Running Vest' with category='t-shirts' is present in /api/admin/products/imported and /api/products/{id} but appears in NEITHER /api/shop/type/t-shirts NOR /api/shop/type/hi-vis. (2) The review requirement 'Running Vest fallback to t-shirts' is unmet because _garment_type_of matches 'vest' pid-substring before falling through to 'tshirt/shirt'. Two independent bugs surface here: order of matching + not honouring stored category.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "_garment_type_of vest check",
+        "issue": "Vest check is `'vest' in pid` — misses 'vest' when it's only in the name. Either extend to `or 'vest' in name` OR (better) always prefer product['category'] when it's a valid catalogue slug."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AdminProductsImport preview row", "issues": ["Console warning: empty string passed to <img> src attribute (when preview row has no image yet). Guard <img src={r.image || undefined} /> or use a placeholder."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration27.py",
+    "/app/test_reports/pytest/iter27_results.xml"
+  ],
+  "action_items": [
+    "server.py:2209 _garment_type_of — prefer product.get('category') when it matches a GARMENT_TYPE_CATALOGUE slug BEFORE running the keyword heuristics. This aligns the bulk-import auto-categoriser with the storefront filter and is the root fix. Simple diff: at top of function add `cat = (product.get('category') or '').lower(); if cat in {t['slug'] for t in GARMENT_TYPE_CATALOGUE}: return cat`.",
+    "OR alternatively: fix vest matching to also check name ('vest' in name), and remove the entire hardcoded keyword pass in favour of the stored category. The current dual system (auto-category rules for import + separate hardcoded rules for shop filter) is inconsistent and will keep drifting.",
+    "AdminProductsImport.jsx — guard <img src={r.image || placeholder} /> to eliminate the empty-src console error on new rows."
+  ],
+  "critical_code_review_comments": [
+    "The bulk-import auto-categoriser (_AUTO_CATEGORY_RULES / _auto_category) and the storefront classifier (_garment_type_of) are two separate keyword systems with different rule sets and priorities. This will cause silent drift forever. Consolidate: import writes the category, shop filter reads it.",
+    "server.py has now grown to 4527 lines. Split urgently — this iteration adds an entire imports module (~200 lines) on top of a monolith flagged in every recent report.",
+    "bulk_import_products endpoint has no cap on payload.items length — an admin could accidentally POST 100k items and OOM the process. Add `if len(payload.items) > 5000: raise HTTPException(413, ...)`.",
+    "patch_imported_product accepts `Dict` (unvalidated) instead of a Pydantic model. Anyone with admin token could set `price: '<xss>'` which is then persisted. Wrap in a Pydantic model matching the `allow` set.",
+    "Two `@app.on_event('startup')` hooks are defined back-to-back (_load_imported_products at 4304, _seed_default_product_meta at 4424). FastAPI supports lifespan handlers now; deprecated in Starlette 0.27+. Non-critical but worth migrating."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration27.py"],
+  "success_rate": {"backend": "11/13 (85%) — the 2 failures document a real bug", "frontend": "100% (all 9 assertions pass: 6 primary testids + 3 nav testids + JSON import + manual import + anon shop verification for both polos and hoodies)"},
+  "test_credentials": "Admin: admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Created & fully cleaned: 5 imported_products rows across test runs (TEST_iter27 AWDis College Hoodie, AWDis Polo Shirt, Running Vest, Polo, Manual Hoodie). All deleted at end — verified /api/admin/products/imported has 0 TEST_ items remaining.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After the main agent fixes _garment_type_of to honour product['category'], re-run /app/backend/tests/test_iteration27.py — the two currently-failing tests (test_imported_product_fallback_in_tshirts and test_imported_running_vest_shows_up_somewhere) should both PASS once category is preferred. Note: the running_vest test currently asserts the item shows in hi-vis (current behaviour) — after fix it should be updated to expect /shop/t-shirts instead. Also note that admin nav for admin/team-kits still exists and is unchanged. Backend base URL is https://branded-workwear-lab.preview.emergentagent.com — NOT yop-toolkit.",
+  "rca of the issue": "Root cause: dual-classification system. _auto_category (import time, uses _AUTO_CATEGORY_RULES) and _garment_type_of (shop filter time, uses inline substring checks) are independent. _garment_type_of never reads product['category'] except for the special-case 'leavers'. When admin imports 'Running Vest' → _auto_category returns 't-shirts' (correct per rules) → doc stored with category='t-shirts' → hydrated into PRODUCTS with that category → but /api/shop/type/t-shirts runs _garment_type_of(p) which returns None for this product (because pid='test-iter27-vst' has no 'vest' or 'tee/shirt' substring and name has 'vest' but the vest check only inspects pid). Result: product exists in PRODUCTS but is filtered out of every shop-type endpoint. Fix: prefer product['category'] in _garment_type_of when it matches a catalogue slug."
+}

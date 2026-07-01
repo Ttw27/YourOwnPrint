@@ -37,6 +37,7 @@ import SportsOutfitConfigurator from "@/pages/SportsOutfitConfigurator";
 import AdminPortfolio from "@/pages/AdminPortfolio";
 import AdminBundleVariants from "@/pages/AdminBundleVariants";
 import AdminCollectionSeo from "@/pages/AdminCollectionSeo";
+import AdminProductsImport from "@/pages/AdminProductsImport";
 import AdminNavigation from "@/pages/AdminNavigation";
 import AdminIntegrations from "@/pages/AdminIntegrations";
 import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
@@ -73,6 +74,7 @@ function App() {
           <Route path="/admin/portfolio" element={<RequireAdmin><AdminPortfolio /></RequireAdmin>} />
           <Route path="/admin/bundle-variants" element={<RequireAdmin><AdminBundleVariants /></RequireAdmin>} />
           <Route path="/admin/collection-seo" element={<RequireAdmin><AdminCollectionSeo /></RequireAdmin>} />
+          <Route path="/admin/products-import" element={<RequireAdmin><AdminProductsImport /></RequireAdmin>} />
           <Route path="/admin/navigation" element={<RequireAdmin><AdminNavigation /></RequireAdmin>} />
           <Route path="/admin/integrations" element={<RequireAdmin><AdminIntegrations /></RequireAdmin>} />
           <Route path="/admin/leavers-templates" element={<RequireAdmin><AdminLeaversTemplates /></RequireAdmin>} />

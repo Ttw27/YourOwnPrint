@@ -4210,6 +4210,217 @@ async def _seed_leavers_templates():
         print(f"leavers templates seed failed: {e}")
 
 
+# ============================================================================
+# Imported products (one-off bulk import — PenCarrie / manual)
+# ============================================================================
+class ImportedProduct(BaseModel):
+    id: Optional[str] = None
+    name: str
+    price: float
+    category: Optional[str] = "t-shirts"
+    image: str
+    additional_images: Optional[List[str]] = None
+    description: Optional[str] = ""
+    gender_fit: Optional[str] = "unisex"
+    industry_tags: Optional[List[str]] = None
+    colors: Optional[List[Dict]] = None
+    sizes: Optional[List[str]] = None
+    size_upcharges: Optional[Dict[str, float]] = None
+    source: Optional[str] = "manual"
+    source_sku: Optional[str] = ""
+    brand: Optional[str] = ""
+    active: Optional[bool] = True
+
+
+# Keyword → internal category. First match wins. Falls back to "t-shirts".
+_AUTO_CATEGORY_RULES: List[Tuple[str, str]] = [
+    ("apron", "aprons"),
+    ("polo", "polos"),
+    ("hoodie", "hoodies"),
+    ("hoody", "hoodies"),
+    ("sweatshirt", "sweatshirts"),
+    ("sweat top", "sweatshirts"),
+    ("crew", "sweatshirts"),
+    ("jogger", "bottoms"),
+    ("legging", "bottoms"),
+    ("gym short", "bottoms"),
+    ("chino", "bottoms"),
+    ("trouser", "bottoms"),
+    ("cargo", "bottoms"),
+    ("jacket", "jackets"),
+    ("softshell", "jackets"),
+    ("gilet", "jackets"),
+    ("body warmer", "jackets"),
+    ("hi vis", "hi-vis"),
+    ("hi-vis", "hi-vis"),
+    ("hivis", "hi-vis"),
+    ("high visibility", "hi-vis"),
+    ("cap", "hats"),
+    ("beanie", "hats"),
+    ("hat", "hats"),
+    ("bag", "bags"),
+    ("rucksack", "bags"),
+    ("backpack", "bags"),
+    ("tote", "bags"),
+    ("sock", "socks"),
+    ("shirt", "t-shirts"),
+    ("tee", "t-shirts"),
+    ("t-shirt", "t-shirts"),
+]
+
+
+def _auto_category(name: str, description: str = "") -> str:
+    hay = f"{name} {description}".lower()
+    for keyword, category in _AUTO_CATEGORY_RULES:
+        if keyword in hay:
+            return category
+    return "t-shirts"
+
+
+def _apply_imported_product(doc: Dict) -> None:
+    """Merge an imported product doc into in-memory PRODUCTS so all endpoints see it."""
+    pid = doc.get("id")
+    if not pid:
+        return
+    PRODUCTS[pid] = {
+        "id": pid,
+        "name": doc.get("name", ""),
+        "price": float(doc.get("price") or 0),
+        "category": doc.get("category") or "t-shirts",
+        "image": doc.get("image") or "",
+        "additional_images": doc.get("additional_images") or [],
+        "description": doc.get("description") or "",
+        "gender_fit": doc.get("gender_fit") or "unisex",
+        "industry_tags": doc.get("industry_tags") or [],
+        "colors": doc.get("colors") or [],
+        "sizes": doc.get("sizes") or [],
+        "size_upcharges": doc.get("size_upcharges") or {},
+        "_imported": True,
+        "_source": doc.get("source") or "manual",
+        "_brand": doc.get("brand") or "",
+    }
+
+
+@app.on_event("startup")
+async def _load_imported_products():
+    """Hydrate PRODUCTS with any admin-imported products at boot."""
+    try:
+        count = 0
+        async for d in db.imported_products.find({"active": {"$ne": False}}):
+            _apply_imported_product(d)
+            count += 1
+        if count:
+            logging.info(f"Loaded {count} imported products from Mongo.")
+    except Exception as e:
+        logging.warning(f"Imported-product load skipped: {e}")
+
+
+def _slugify_source_sku(name: str, sku: str = "") -> str:
+    import re
+    src = sku or name or "product"
+    s = re.sub(r"[^a-z0-9]+", "-", src.lower()).strip("-")[:60]
+    return s or f"import-{uuid.uuid4().hex[:8]}"
+
+
+@api_router.get("/admin/products/imported", dependencies=[Depends(require_admin)])
+async def list_imported_products():
+    out = []
+    async for d in db.imported_products.find().sort("imported_at", -1):
+        out.append({k: d.get(k) for k in [
+            "id", "name", "price", "category", "image", "description",
+            "gender_fit", "industry_tags", "colors", "sizes", "size_upcharges",
+            "source", "source_sku", "brand", "active", "imported_at",
+        ]})
+    return {"items": out, "total": len(out)}
+
+
+class BulkImportPayload(BaseModel):
+    items: List[Dict]
+    default_source: Optional[str] = "manual"
+    default_brand: Optional[str] = ""
+    default_markup_pct: Optional[float] = 0.0
+    default_gender_fit: Optional[str] = "unisex"
+    dry_run: Optional[bool] = False
+
+
+@api_router.post("/admin/products/bulk-import", dependencies=[Depends(require_admin)])
+async def bulk_import_products(payload: BulkImportPayload):
+    now = datetime.now(timezone.utc).isoformat()
+    created: List[Dict] = []
+    skipped: List[Dict] = []
+    for raw in payload.items:
+        try:
+            name = str(raw.get("name") or "").strip()
+            if not name:
+                skipped.append({"reason": "missing name", "row": raw})
+                continue
+            source_sku = str(raw.get("source_sku") or "").strip()
+            pid = str(raw.get("id") or "").strip() or _slugify_source_sku(name, source_sku)
+            price = raw.get("price")
+            if price is None and raw.get("source_price") is not None:
+                sp = float(raw["source_price"])
+                markup = float(raw.get("markup_pct", payload.default_markup_pct or 0))
+                price = round(sp * (1 + markup / 100.0), 2)
+            price = float(price or 0)
+            category = raw.get("category") or _auto_category(name, raw.get("description") or "")
+            doc = {
+                "id": pid,
+                "name": name,
+                "price": price,
+                "category": category,
+                "image": str(raw.get("image") or "").strip(),
+                "additional_images": [str(u).strip() for u in (raw.get("additional_images") or []) if str(u).strip()],
+                "description": str(raw.get("description") or "").strip()[:4000],
+                "gender_fit": (raw.get("gender_fit") or payload.default_gender_fit or "unisex"),
+                "industry_tags": raw.get("industry_tags") or [],
+                "colors": [
+                    {"name": str(c.get("name") or c) if isinstance(c, dict) else str(c),
+                     "hex":  str((c.get("hex") if isinstance(c, dict) else "#cccccc") or "#cccccc")}
+                    for c in (raw.get("colors") or [])
+                ][:24],
+                "sizes": [str(s) for s in (raw.get("sizes") or [])],
+                "size_upcharges": raw.get("size_upcharges") or {},
+                "source": raw.get("source") or payload.default_source or "manual",
+                "source_sku": source_sku,
+                "brand": raw.get("brand") or payload.default_brand or "",
+                "active": bool(raw.get("active", True)),
+                "imported_at": now,
+            }
+            if not payload.dry_run:
+                await db.imported_products.update_one({"id": pid}, {"$set": doc}, upsert=True)
+                _apply_imported_product(doc)
+            created.append({"id": pid, "name": name, "category": category, "price": price})
+        except Exception as e:
+            skipped.append({"reason": str(e)[:200], "row": raw})
+    return {"ok": True, "created": created, "skipped": skipped, "dry_run": payload.dry_run}
+
+
+@api_router.patch("/admin/products/imported/{pid}", dependencies=[Depends(require_admin)])
+async def patch_imported_product(pid: str, patch: Dict):
+    existing = await db.imported_products.find_one({"id": pid})
+    if not existing:
+        raise HTTPException(404, "Imported product not found")
+    allow = {"name", "price", "category", "image", "additional_images", "description",
+             "gender_fit", "industry_tags", "colors", "sizes", "size_upcharges",
+             "source", "source_sku", "brand", "active"}
+    up = {k: v for k, v in patch.items() if k in allow}
+    if up:
+        await db.imported_products.update_one({"id": pid}, {"$set": up})
+        doc = await db.imported_products.find_one({"id": pid})
+        if doc.get("active"):
+            _apply_imported_product(doc)
+        else:
+            PRODUCTS.pop(pid, None)
+    return {"ok": True}
+
+
+@api_router.delete("/admin/products/imported/{pid}", dependencies=[Depends(require_admin)])
+async def delete_imported_product(pid: str):
+    r = await db.imported_products.delete_one({"id": pid})
+    PRODUCTS.pop(pid, None)
+    return {"ok": True, "deleted": r.deleted_count}
+
+
 @app.on_event("startup")
 async def _seed_default_product_meta():
     """Non-destructive: only fills empty/None fields. Admin overrides remain untouched.

@@ -464,3 +464,21 @@ export async function adminUpdateSockSizes(values) {
   const { data } = await api.patch("/admin/sock-sizes", { values });
   return data;
 }
+
+// ----- Product bulk import (PenCarrie / manual one-off) -----
+export async function fetchImportedProducts() {
+  const { data } = await api.get("/admin/products/imported");
+  return data;
+}
+export async function bulkImportProducts(payload) {
+  const { data } = await api.post("/admin/products/bulk-import", payload);
+  return data;
+}
+export async function patchImportedProduct(id, patch) {
+  const { data } = await api.patch(`/admin/products/imported/${id}`, patch);
+  return data;
+}
+export async function deleteImportedProduct(id) {
+  const { data } = await api.delete(`/admin/products/imported/${id}`);
+  return data;
+}
