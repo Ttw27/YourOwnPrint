@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 18 verification of 4 bug fixes. 3/4 bug fixes PASS (Workforce expand, Mobile menu contrast, Designer mobile + desktop). BUG FIX 1 (Specials PDP) PARTIALLY FAILS: specials-included-note is shown and print-mode-toggle/placements-grid are hidden as expected, BUT the artwork-grid (upload widget for left-breast placement) does NOT render on /product/personalised-tee because the auto-select useEffect never populates selectedPlacements. All backend regression tests PASS (7/7 — workforce/products.description, specials products, personalised-tee.specials_eligible=true, admin login, admin integrations, navigation).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProductDetail.jsx (Specials PDP)", "issue": "Section 4 'Upload your logo' with data-testid=artwork-grid does NOT render on /product/personalised-tee. The useEffect at line 74-78 is supposed to auto-select 'left-breast' when isSpecial=true, but on live page the placement is not selected, so `!blank && selectedPlacements.length > 0` is false and the artwork upload section is hidden entirely. Only Sections 1 (Colour), 2 (Sizes), 3 (Your breast logo) are present.", "selector": "[data-testid=artwork-grid]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iteration18.py", "/app/test_reports/pytest/iter18_results.xml"],
+  "action_items": [
+    "Fix the specials auto-select on /product/personalised-tee so that selectedPlacements=['left-breast'] is applied on mount, making the ArtworkSlot / [data-testid=artwork-grid] visible immediately. Likely cause: the load useEffect (line 38-59) resets setSelectedPlacements([]) AFTER the isSpecial useEffect has a chance to run, or the effect ordering / batching means the reset wins. Consider either: (a) applying the specials autoselect inside the load promise's .then when product.specials_eligible is true, or (b) removing the setSelectedPlacements([]) reset for specials products, or (c) computing initial selectedPlacements from the product itself and using product?.specials_eligible in the [id, product?.specials_eligible] dependency array."
+  ],
+  "critical_code_review_comments": [
+    "ProductDetail.jsx has a race between two useEffects that both write to selectedPlacements. Load effect (deps=[id]) always resets to [] on product load. Specials effect (deps=[isSpecial]) is intended to auto-select ['left-breast'] when isSpecial becomes true. In practice on personalised-tee (specials_eligible=true) the artwork-grid is never visible — meaning the specials effect either never fires or its state update is overwritten. Recommend moving the specials autoselect into the same load .then handler.",
+    "The review request said 'test /product/hoodie or /product/personalised-hoodie for non-specials regression' — but personalised-hoodie IS marked specials_eligible=true in the seed data (both hoodie and personalised-hoodie route to the same specials product). Tested school-hoodie instead as a genuine non-specials product; that page correctly shows print-mode-toggle + placements-grid and no specials note.",
+    "Workforce expand/collapse, per-size stepper, direct typing into qty input, and workforce-total-qty live update all working. Description text returned from /api/workforce/products and shown at workforce-description-{pid}."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration18.py"],
+  "success_rate": { "backend": "100% (7/7)", "frontend": "3/4 bug fixes fully pass; BUG FIX 1 partial (specials note ok + toggle/grid hidden ok, but artwork-grid missing)" },
+  "test_credentials": "admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA — used for /api/auth/login and /api/admin/integrations regression",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 18: Backend all green. Frontend: BUG FIX 1 (Specials PDP) has a subtle regression — the specials-included-note and hiding of print-mode-toggle/placements-grid work correctly, but the artwork-grid upload widget for the auto-selected 'left-breast' placement does NOT render because selectedPlacements stays empty. Need main agent to move the autoselect into the load .then or use a combined useEffect. Other three fixes (Workforce expand, Mobile menu contrast, Designer mobile/desktop order + Help FAB modal with contact CTA) all verified working. WhatsApp number is NOT set in /admin/integrations, so designer-help-contact renders (not designer-help-whatsapp).",
+  "rca of the issue": "ProductDetail.jsx: two useEffects mutate selectedPlacements. useEffect[isSpecial] tries to set ['left-breast'] but useEffect[id]'s async load .then resolves later and calls setSelectedPlacements([]) inside the batch, wiping the specials pre-selection. Because the load effect fires only when [id] deps change but its .then completes asynchronously, when isSpecial transitions false→true (after product loads), the specials effect fires and sets ['left-breast'], but then subsequent state updates (or React 18 double-invocation in dev) reset it. Mitigation: perform the specials autoselect atomically inside the load .then when product.specials_eligible is true, replacing the setSelectedPlacements([]) call."
+}

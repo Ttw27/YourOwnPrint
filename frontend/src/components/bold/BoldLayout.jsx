@@ -120,30 +120,30 @@ export function BoldNavbar() {
       {/* Mobile slide-over — rendered into document.body via portal to escape backdrop-blur containing block */}
       {mobileOpen && typeof document !== "undefined" && createPortal(
         <div className="md:hidden fixed inset-0 z-[100] bg-black/60" onClick={() => setMobileOpen(false)} data-testid="nav-mobile-overlay">
-          <div className="bg-white w-[88%] max-w-sm h-full p-6 overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white text-[#0a0a0a] w-[88%] max-w-sm h-full p-6 overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ color: "#0a0a0a" }}>
             <div className="flex items-center justify-between mb-6">
               <Link to="/" onClick={() => setMobileOpen(false)} className="inline-flex items-center"><img src="/logo.png" alt="Your Own Print" className="h-9 w-auto" /></Link>
-              <button onClick={() => setMobileOpen(false)} className="w-9 h-9 grid place-items-center rounded-full bg-[#f0fdf4]" data-testid="nav-mobile-close" aria-label="Close menu"><X size={18} /></button>
+              <button onClick={() => setMobileOpen(false)} className="w-9 h-9 grid place-items-center rounded-full bg-[#f0fdf4] text-[#0a0a0a]" data-testid="nav-mobile-close" aria-label="Close menu"><X size={18} /></button>
             </div>
             <div className="space-y-1">
               {menu.map((item) => (
                 <div key={item.key} className="border-b border-[#f0fdf4] last:border-b-0">
                   {item.columns ? (
                     <details className="group">
-                      <summary className="font-extrabold text-base py-3 cursor-pointer flex items-center justify-between list-none" data-testid={`nav-mobile-group-${item.key}`}>
-                        <span>{item.label}</span>
+                      <summary className="font-extrabold text-base py-3 cursor-pointer flex items-center justify-between list-none text-[#0a0a0a]" data-testid={`nav-mobile-group-${item.key}`}>
+                        <span className="text-[#0a0a0a]">{item.label}</span>
                         <ChevronDown size={18} className="text-[#7bc67e] group-open:rotate-180 transition-transform" />
                       </summary>
                       <ul className="pl-2 pb-3 space-y-1.5">
                         {item.columns.flatMap((c) => c.links.map((lnk) => ({ ...lnk, _heading: c.heading }))).map((lnk, i, arr) => (
                           <React.Fragment key={`${lnk.to}-${i}`}>
                             {(i === 0 || arr[i - 1]._heading !== lnk._heading) && (
-                              <li className="pt-2 pb-1 text-[10px] uppercase tracking-[0.2em] text-[#7bc67e] font-extrabold">{lnk._heading}</li>
+                              <li className="pt-2 pb-1 text-[10px] uppercase tracking-[0.2em] text-[#5eb062] font-extrabold">{lnk._heading}</li>
                             )}
                             <li>
-                              <Link to={lnk.to} onClick={() => setMobileOpen(false)} className="block text-sm py-1.5 text-[#1a1a1a] hover:text-[#7bc67e] font-bold" data-testid={`nav-mobile-link-${lnk.to.replace(/\W+/g, "-")}`}>
-                                {lnk.label}
-                                {lnk.badge && <span className="ml-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#1a1a1a]">{lnk.badge}</span>}
+                              <Link to={lnk.to} onClick={() => setMobileOpen(false)} className="block text-sm py-1.5 text-[#0a0a0a] hover:text-[#7bc67e] font-bold" style={{ color: "#0a0a0a" }} data-testid={`nav-mobile-link-${lnk.to.replace(/\W+/g, "-")}`}>
+                                <span className="text-[#0a0a0a]">{lnk.label}</span>
+                                {lnk.badge && <span className="ml-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#0a0a0a]">{lnk.badge}</span>}
                               </Link>
                             </li>
                           </React.Fragment>
@@ -151,7 +151,7 @@ export function BoldNavbar() {
                       </ul>
                     </details>
                   ) : (
-                    <Link to={item.to} onClick={() => setMobileOpen(false)} className={`block font-extrabold text-base py-3 ${item.cta ? "text-[#7bc67e]" : "text-[#1a1a1a]"}`} data-testid={`nav-mobile-${item.key}`}>
+                    <Link to={item.to} onClick={() => setMobileOpen(false)} className={`block font-extrabold text-base py-3 ${item.cta ? "text-[#5eb062]" : "text-[#0a0a0a]"}`} style={{ color: item.cta ? "#5eb062" : "#0a0a0a" }} data-testid={`nav-mobile-${item.key}`}>
                       {item.label}
                     </Link>
                   )}

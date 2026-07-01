@@ -59,15 +59,23 @@ export default function ProductDetail() {
   }, [id]);
 
   const blank = printMode === "blank";
+  const isSpecial = !!product?.specials_eligible;
   const agg = aggregates[id];
   const placementById = useMemo(() => Object.fromEntries(placements.map(p => [p.id, p])), [placements]);
   const visiblePlacements = useMemo(() => {
-    if (product?.specials_eligible) {
+    if (isSpecial) {
       return placements.filter((pl) => pl.id === "left-breast");
     }
     if (!Array.isArray(allowedPlacements)) return placements;
     return placements.filter(p => allowedPlacements.includes(p.id));
-  }, [placements, allowedPlacements, product]);
+  }, [placements, allowedPlacements, isSpecial]);
+
+  // Specials: auto-select left-breast + force custom mode (breast logo is included in the price)
+  useEffect(() => {
+    if (!isSpecial) return;
+    setPrintMode("custom");
+    setSelectedPlacements((prev) => (prev.includes("left-breast") ? prev : ["left-breast"]));
+  }, [isSpecial]);
 
   const togglePlacement = (pid) => {
     if (blank) return;
@@ -117,8 +125,12 @@ export default function ProductDetail() {
 
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
   const printCostPerGarment = useMemo(
-    () => (blank ? 0 : selectedPlacements.reduce((s, pid) => s + (placementById[pid]?.price || 0), 0)),
-    [blank, selectedPlacements, placementById]
+    () => {
+      if (blank) return 0;
+      if (isSpecial) return 0;    // breast logo print is included in the base price for Specials
+      return selectedPlacements.reduce((s, pid) => s + (placementById[pid]?.price || 0), 0);
+    },
+    [blank, selectedPlacements, placementById, isSpecial]
   );
   const lineTotal = useMemo(() => {
     if (!product) return 0;
@@ -300,76 +312,88 @@ export default function ProductDetail() {
                   </div>
                 </Section>
 
-                {/* PRINT MODE — prominent segmented choice */}
-                <Section title="3. Print options">
-                  <div className="grid grid-cols-2 gap-2 mb-4" data-testid="print-mode-toggle">
-                    <button
-                      data-testid="print-mode-custom"
-                      onClick={() => setPrintMode("custom")}
-                      className={`p-4 rounded-2xl border-2 text-left transition-all ${printMode === "custom" ? "border-[#7bc67e] bg-[#f0fdf4] shadow-md" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`w-4 h-4 rounded-full border-2 ${printMode === "custom" ? "border-[#7bc67e] bg-[#7bc67e]" : "border-[#e5e7eb]"}`} />
-                        <span className="font-nunito font-extrabold">Add Custom Print</span>
+                {/* PRINT MODE — prominent segmented choice (hidden for Specials, they include a breast print in the price) */}
+                {isSpecial ? (
+                  <Section title="3. Your breast logo">
+                    <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4 flex items-start gap-3" data-testid="specials-included-note">
+                      <div className="w-8 h-8 grid place-items-center bg-[#7bc67e] text-[#1a1a1a] rounded-full flex-shrink-0"><Check size={16} /></div>
+                      <div className="text-sm">
+                        <div className="font-nunito font-extrabold text-[#1a1a1a]">Left-breast logo print is included in the price</div>
+                        <div className="text-xs text-[#4b5563] mt-1">This is one of our Starter Specials — no MOQ, no setup, no upsell. Just upload your logo below and we'll print it neatly on the left breast of every garment.</div>
                       </div>
-                      <div className="text-xs text-[#4b5563] mt-1.5">Pick placements, upload your logo, free proof.</div>
-                    </button>
-                    <button
-                      data-testid="print-mode-blank"
-                      onClick={() => setPrintMode("blank")}
-                      className={`p-4 rounded-2xl border-2 text-left transition-all ${printMode === "blank" ? "border-[#1a1a1a] bg-[#1a1a1a] text-white shadow-md" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`w-4 h-4 rounded-full border-2 ${printMode === "blank" ? "border-white bg-white" : "border-[#e5e7eb]"}`} />
-                        <span className="font-nunito font-extrabold">Buy Blank — No Print</span>
-                      </div>
-                      <div className={`text-xs mt-1.5 ${printMode === "blank" ? "text-neutral-300" : "text-[#4b5563]"}`}>Plain garment, no decoration. Just the base price.</div>
-                    </button>
-                  </div>
-
-                  {!blank && (
-                    <>
-                      <div className={`grid grid-cols-2 gap-2`} data-testid="placements-grid">
-                        {visiblePlacements.map((p) => {
-                          const checked = selectedPlacements.includes(p.id);
-                          const disabled = isPlacementDisabled(p.id);
-                          return (
-                            <label
-                              key={p.id}
-                              data-testid={`placement-${p.id}`}
-                              className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${checked ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-                            >
-                              <input type="checkbox" checked={checked} disabled={disabled} onChange={() => togglePlacement(p.id)} className="w-4 h-4 accent-[#7bc67e]" data-testid={`placement-${p.id}-checkbox`} />
-                              <div className="flex-1">
-                                <div className="font-nunito font-extrabold text-sm">{p.label}</div>
-                                <div className="text-xs text-[#4b5563]">+£{p.price.toFixed(2)} / garment</div>
-                              </div>
-                              <Shirt size={16} className="text-[#7bc67e]" />
-                            </label>
-                          );
-                        })}
-                      </div>
-                      <div className="mt-3 text-xs text-[#4b5563] flex items-start gap-1.5">
-                        <Info size={12} className="mt-0.5 flex-shrink-0" />
-                        <span><strong>Full front replaces left/right breast.</strong> Pick any combination of front, back & sleeves.</span>
-                      </div>
-                    </>
-                  )}
-                  {blank && (
-                    <div className="bg-[#1a1a1a]/5 rounded-xl p-4 text-sm text-[#4b5563] flex items-start gap-2">
-                      <Info size={14} className="mt-0.5 text-[#1a1a1a]" />
-                      <span>You're buying <strong>blank garments only</strong> — no print, just the base price.</span>
                     </div>
-                  )}
-                </Section>
+                  </Section>
+                ) : (
+                  <Section title="3. Print options">
+                    <div className="grid grid-cols-2 gap-2 mb-4" data-testid="print-mode-toggle">
+                      <button
+                        data-testid="print-mode-custom"
+                        onClick={() => setPrintMode("custom")}
+                        className={`p-4 rounded-2xl border-2 text-left transition-all ${printMode === "custom" ? "border-[#7bc67e] bg-[#f0fdf4] shadow-md" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`w-4 h-4 rounded-full border-2 ${printMode === "custom" ? "border-[#7bc67e] bg-[#7bc67e]" : "border-[#e5e7eb]"}`} />
+                          <span className="font-nunito font-extrabold">Add Custom Print</span>
+                        </div>
+                        <div className="text-xs text-[#4b5563] mt-1.5">Pick placements, upload your logo, free proof.</div>
+                      </button>
+                      <button
+                        data-testid="print-mode-blank"
+                        onClick={() => setPrintMode("blank")}
+                        className={`p-4 rounded-2xl border-2 text-left transition-all ${printMode === "blank" ? "border-[#1a1a1a] bg-[#1a1a1a] text-white shadow-md" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`w-4 h-4 rounded-full border-2 ${printMode === "blank" ? "border-white bg-white" : "border-[#e5e7eb]"}`} />
+                          <span className="font-nunito font-extrabold">Buy Blank — No Print</span>
+                        </div>
+                        <div className={`text-xs mt-1.5 ${printMode === "blank" ? "text-neutral-300" : "text-[#4b5563]"}`}>Plain garment, no decoration. Just the base price.</div>
+                      </button>
+                    </div>
+
+                    {!blank && (
+                      <>
+                        <div className={`grid grid-cols-2 gap-2`} data-testid="placements-grid">
+                          {visiblePlacements.map((p) => {
+                            const checked = selectedPlacements.includes(p.id);
+                            const disabled = isPlacementDisabled(p.id);
+                            return (
+                              <label
+                                key={p.id}
+                                data-testid={`placement-${p.id}`}
+                                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${checked ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                              >
+                                <input type="checkbox" checked={checked} disabled={disabled} onChange={() => togglePlacement(p.id)} className="w-4 h-4 accent-[#7bc67e]" data-testid={`placement-${p.id}-checkbox`} />
+                                <div className="flex-1">
+                                  <div className="font-nunito font-extrabold text-sm">{p.label}</div>
+                                  <div className="text-xs text-[#4b5563]">+£{p.price.toFixed(2)} / garment</div>
+                                </div>
+                                <Shirt size={16} className="text-[#7bc67e]" />
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-3 text-xs text-[#4b5563] flex items-start gap-1.5">
+                          <Info size={12} className="mt-0.5 flex-shrink-0" />
+                          <span><strong>Full front replaces left/right breast.</strong> Pick any combination of front, back & sleeves.</span>
+                        </div>
+                      </>
+                    )}
+                    {blank && (
+                      <div className="bg-[#1a1a1a]/5 rounded-xl p-4 text-sm text-[#4b5563] flex items-start gap-2">
+                        <Info size={14} className="mt-0.5 text-[#1a1a1a]" />
+                        <span>You're buying <strong>blank garments only</strong> — no print, just the base price.</span>
+                      </div>
+                    )}
+                  </Section>
+                )}
 
                 {/* UPLOAD ARTWORK — visible only when custom + at least 1 placement */}
                 {!blank && selectedPlacements.length > 0 && (
                   <Section
-                    title="4. Upload your prints"
+                    title={isSpecial ? "4. Upload your logo" : "4. Upload your prints"}
                     right={
                       allArtworkUploaded
-                        ? <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e]"><Check size={14} /> All artwork uploaded</span>
+                        ? <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e]"><Check size={14} /> {isSpecial ? "Logo uploaded" : "All artwork uploaded"}</span>
                         : <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-rose-500"><Lock size={12} /> Required to checkout</span>
                     }
                   >

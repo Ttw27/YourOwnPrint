@@ -3,11 +3,12 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import PricePromise from "../components/bold/PricePromise";
 import { fetchWorkforceProducts, fetchWorkforceTiers, workforceCheckout, workforceQuote } from "../lib/api";
 import { toast } from "sonner";
-import { Plus, Minus, Trash2, ShieldCheck, Truck, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { Plus, Minus, Trash2, ShieldCheck, Truck, Sparkles, ArrowRight, Loader2, ChevronDown } from "lucide-react";
 export default function KitYourWorkforce() {
   const [products, setProducts] = useState([]);
   const [tiers, setTiers] = useState({ tiers: [], quote_threshold: 100, back_print_price: 3.5 });
   const [rows, setRows] = useState([]);   // [{ uid, product_id, size, qty, back_print }]
+  const [expandedId, setExpandedId] = useState(null);   // product tile expanded in the picker
   const [contact, setContact] = useState({ company: "", name: "", email: "", phone: "" });
   const [breastLogo, setBreastLogo] = useState(null); // data URL
   const [backPrint, setBackPrint] = useState(null);   // data URL
@@ -33,6 +34,40 @@ export default function KitYourWorkforce() {
   };
   const updateRow = (uid, patch) => setRows((r) => r.map(x => x.uid === uid ? { ...x, ...patch } : x));
   const removeRow = (uid) => setRows((r) => r.filter(x => x.uid !== uid));
+
+  // Per-product-per-size quantity helpers used by the expandable picker.
+  const qtyFor = (product_id, size) =>
+    rows.filter(r => r.product_id === product_id && r.size === size).reduce((s, r) => s + (Number(r.qty) || 0), 0);
+  const bumpSize = (product_id, size, delta) => {
+    setRows((prev) => {
+      const idx = prev.findIndex(r => r.product_id === product_id && r.size === size);
+      if (idx === -1) {
+        if (delta <= 0) return prev;
+        return [...prev, { uid: `${product_id}-${size}-${Date.now()}`, product_id, size, qty: delta, back_print: false }];
+      }
+      const next = [...prev];
+      const nq = Math.max(0, Math.min(5000, (Number(next[idx].qty) || 0) + delta));
+      if (nq === 0) { next.splice(idx, 1); return next; }
+      next[idx] = { ...next[idx], qty: nq };
+      return next;
+    });
+  };
+  const setSizeQty = (product_id, size, qty) => {
+    const n = Math.max(0, Math.min(5000, Number(qty) || 0));
+    setRows((prev) => {
+      const idx = prev.findIndex(r => r.product_id === product_id && r.size === size);
+      if (idx === -1) {
+        if (n === 0) return prev;
+        return [...prev, { uid: `${product_id}-${size}-${Date.now()}`, product_id, size, qty: n, back_print: false }];
+      }
+      const next = [...prev];
+      if (n === 0) { next.splice(idx, 1); return next; }
+      next[idx] = { ...next[idx], qty: n };
+      return next;
+    });
+  };
+  const productSubtotalQty = (product_id) =>
+    rows.filter(r => r.product_id === product_id).reduce((s, r) => s + (Number(r.qty) || 0), 0);
 
   const totalQty = useMemo(() => rows.reduce((s, r) => s + (Number(r.qty) || 0), 0), [rows]);
   const tierList = (tiers.tiers || []).slice().sort((a, b) => a.min_qty - b.min_qty);
@@ -143,22 +178,96 @@ export default function KitYourWorkforce() {
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 gap-3" data-testid="workforce-products-grid">
-                {products.map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => addRow(p.id)}
-                    className="text-left bg-white border-2 border-[#e5e7eb] hover:border-[#fbbf24] rounded-2xl p-3 transition flex items-center gap-3"
-                    data-testid={`workforce-add-${p.id}`}
-                  >
-                    <img src={p.image} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-extrabold text-sm truncate">{p.name}</div>
-                      <div className="text-xs text-[#4b5563]">From £{p.price.toFixed(2)} · {p.sizes?.length || 0} sizes</div>
+                {products.map(p => {
+                  const isOpen = expandedId === p.id;
+                  const itemQty = productSubtotalQty(p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      className={`bg-white border-2 rounded-2xl transition ${isOpen ? "border-[#fbbf24] shadow-md" : itemQty > 0 ? "border-[#7bc67e]" : "border-[#e5e7eb] hover:border-[#fbbf24]"}`}
+                      data-testid={`workforce-product-${p.id}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(isOpen ? null : p.id)}
+                        className="w-full text-left p-3 flex items-center gap-3"
+                        data-testid={`workforce-add-${p.id}`}
+                        aria-expanded={isOpen}
+                      >
+                        <img src={p.image} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-extrabold text-sm truncate">{p.name}</div>
+                          <div className="text-xs text-[#4b5563]">From £{p.price.toFixed(2)} · {p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
+                        </div>
+                        <div className={`w-8 h-8 grid place-items-center rounded-full transition-transform ${isOpen ? "bg-[#fbbf24] text-[#1a1a1a] rotate-180" : "bg-[#fef3c7] text-[#1a1a1a]"}`}>
+                          {isOpen ? <ChevronDown size={16} /> : <Plus size={16} />}
+                        </div>
+                      </button>
+
+                      {isOpen && (
+                        <div className="border-t-2 border-[#fef3c7] p-3 space-y-3" data-testid={`workforce-expanded-${p.id}`}>
+                          {p.description && (
+                            <p className="text-xs text-[#4b5563] leading-relaxed" data-testid={`workforce-description-${p.id}`}>{p.description}</p>
+                          )}
+                          <div>
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-[#fbbf24] font-extrabold mb-2">Pick sizes &amp; quantities</div>
+                            <div className="grid grid-cols-3 gap-2" data-testid={`workforce-sizes-${p.id}`}>
+                              {(p.sizes || []).map((sz) => {
+                                const q = qtyFor(p.id, sz);
+                                const up = p.size_upcharges?.[sz] || 0;
+                                return (
+                                  <div
+                                    key={sz}
+                                    className={`rounded-xl border-2 p-2 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}
+                                    data-testid={`workforce-size-cell-${p.id}-${sz}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-nunito font-extrabold text-xs">{sz}</span>
+                                      {up > 0 && <span className="text-[9px] text-[#4b5563]">+£{up.toFixed(2)}</span>}
+                                    </div>
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => bumpSize(p.id, sz, -1)}
+                                        disabled={q === 0}
+                                        className="w-6 h-6 grid place-items-center rounded-full bg-white border border-[#e5e7eb] disabled:opacity-40"
+                                        data-testid={`workforce-size-minus-${p.id}-${sz}`}
+                                      ><Minus size={10} /></button>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={q}
+                                        onChange={(e) => setSizeQty(p.id, sz, e.target.value)}
+                                        className="w-full text-center bg-transparent text-xs font-bold focus:outline-none"
+                                        data-testid={`workforce-size-qty-${p.id}-${sz}`}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => bumpSize(p.id, sz, 1)}
+                                        className="w-6 h-6 grid place-items-center rounded-full bg-[#fbbf24] text-[#1a1a1a] font-extrabold"
+                                        data-testid={`workforce-size-plus-${p.id}-${sz}`}
+                                      ><Plus size={10} /></button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          {itemQty > 0 && (
+                            <div className="flex items-center justify-between text-xs pt-1">
+                              <span className="text-[#4b5563]">{itemQty} of this item in your kit</span>
+                              <button
+                                onClick={() => setExpandedId(null)}
+                                className="text-[#7bc67e] font-extrabold hover:underline"
+                                data-testid={`workforce-collapse-${p.id}`}
+                              >Done ✓</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <Plus size={18} className="text-[#fbbf24]" />
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>

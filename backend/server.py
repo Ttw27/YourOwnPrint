@@ -1969,6 +1969,7 @@ async def list_workforce_products():
             out.append({
                 "id": p["id"], "name": p["name"], "price": float(p["price"]),
                 "image": p["image"],
+                "description": p.get("description") or "",
                 "sizes": p.get("sizes", []),
                 "size_upcharges": p.get("size_upcharges", {}),
                 "category": p["category"],
