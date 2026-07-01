@@ -435,7 +435,17 @@ export async function adminUpdateSportsOutfitAddons(values) {
   return data;
 }
 
-// ----- Sock sizes (admin editable) -----
+// ----- Artwork upload (Sports Outfit + Full Squad design attachments) -----
+export async function uploadArtwork({ dataUrl, filename, purpose }) {
+  const { data } = await api.post("/uploads/artwork", {
+    image_data_url: dataUrl,
+    filename: filename || "",
+    purpose: purpose || "artwork",
+  });
+  // data => { id, url, filename, size_bytes }
+  const backendBase = process.env.REACT_APP_BACKEND_URL || "";
+  return { ...data, absolute_url: `${backendBase}${data.url}` };
+}
 export async function fetchSockSizes() {
   const { data } = await api.get("/sock-sizes");
   return data;

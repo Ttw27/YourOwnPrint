@@ -1,33 +1,39 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchSportsOutfitConfig, submitQuoteRequest } from "../lib/api";
+import { fetchSportsOutfitConfig, submitQuoteRequest, uploadArtwork } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { toast } from "sonner";
 import {
   Plus, Minus, ShieldCheck, Truck, ArrowRight, Loader2, ChevronDown, Check, Info,
+  Upload, Image as ImageIcon, X,
 } from "lucide-react";
 
 /**
  * Sports Outfit Configurator — simpler builder for gyms, PTs, boxing/thai/kick gyms.
  *
  * Two "sets": Training (top + shorts) and Tracksuit (hoodie + joggers). User can select
- * either or both. Print options are mutually exclusive:
- *   - Unbranded
- *   - Breast logo (+£)
- *   - Back print (+£, tops only — shorts and joggers never receive back prints)
- *   - Full front (+£) — replaces the breast option
+ * either or both.
+ *
+ * Print options:
+ *   - FRONT (radio):  Unbranded (£0) | Breast logo (+£3) | Full front (+£6)
+ *   - BACK  (opt-in checkbox, tops only): +£4
+ *
+ * Front breast and full-front are mutually exclusive with each other, but front-of-any-kind
+ * can be combined with back. Shorts + joggers never receive back prints (server-side rule).
+ *
+ * File uploads: designs are uploaded on selection to /api/uploads/artwork (Emergent Object
+ * Storage) and the returned URLs are attached to the quote request submission.
  */
-const PRINT_MODES = [
-  { id: "unbranded", label: "Unbranded", key: "unbranded_price" },
-  { id: "breast", label: "Breast logo", key: "breast_print_price" },
-  { id: "back", label: "Back print (tops only)", key: "back_print_price" },
-  { id: "full_front", label: "Full front print (replaces breast)", key: "full_front_print_price" },
+const FRONT_MODES = [
+  { id: "unbranded",  label: "Unbranded",       key: "unbranded_price" },
+  { id: "breast",     label: "Breast logo",     key: "breast_print_price" },
+  { id: "full_front", label: "Full front print", key: "full_front_print_price" },
 ];
 
 export default function SportsOutfitConfigurator() {
   const [cfg, setCfg] = useState(null);
   const [team, setTeam] = useState({ name: "", contact_name: "", contact_email: "", contact_phone: "" });
-  const [state, setState] = useState({}); // { [sectionKey]: {variant_id, colour, sizes:{S:n,...}, print_mode} }
+  const [state, setState] = useState({}); // { [sectionKey]: {variant_id, colour, sizes, front_mode, back_on, front_artwork, back_artwork} }
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { fetchSportsOutfitConfig().then(setCfg).catch(() => setCfg(null)); }, []);
@@ -42,13 +48,19 @@ export default function SportsOutfitConfigurator() {
     }
     return Object.values(sizes).reduce((a, b) => a + Number(b || 0), 0);
   };
+  const printCostOf = (v) => {
+    if (!cfg) return 0;
+    const frontKey = FRONT_MODES.find((m) => m.id === (v.front_mode || "unbranded"))?.key || "unbranded_price";
+    const frontCost = Number(cfg.addons?.[frontKey] || 0);
+    const backCost = v.back_on ? Number(cfg.addons?.back_print_price || 0) : 0;
+    return frontCost + backCost;
+  };
   const totals = useMemo(() => {
     if (!cfg) return { subtotal: 0, totalQty: 0 };
     let subtotal = 0, totalQty = 0;
     activeSets.forEach(([, v]) => {
       const qty = qtyOf(v.sizes);
-      const printKey = PRINT_MODES.find((p) => p.id === (v.print_mode || "unbranded"))?.key || "unbranded_price";
-      const unit = Number(v.__unit_price || 0) + Number(cfg.addons?.[printKey] || 0);
+      const unit = Number(v.__unit_price || 0) + printCostOf(v);
       subtotal += unit * qty;
       totalQty += qty;
     });
@@ -72,21 +84,31 @@ export default function SportsOutfitConfigurator() {
     setBusy(true);
     try {
       const summaryLines = [];
+      const attachments = [];
       activeSets.forEach(([sectionKey, v]) => {
         const sec = sections.find((s) => s.key === sectionKey);
         const variant = sec?.variants.find((x) => x.id === v.variant_id);
         const brandLabel = `${variant?.brand ? variant.brand + " " : ""}${variant?.name || "Standard"}`.trim();
         const qty = qtyOf(v.sizes);
-        const printLabel = PRINT_MODES.find((p) => p.id === (v.print_mode || "unbranded"))?.label || "Unbranded";
-        const printKey = PRINT_MODES.find((p) => p.id === (v.print_mode || "unbranded"))?.key;
-        const unit = Number(variant?.price || 0) + Number(addons?.[printKey] || 0);
-        summaryLines.push(`[${sec.title}] ${brandLabel} — colour: ${v.colour || "n/a"} — print: ${printLabel} — ${qty} kits @ £${unit.toFixed(2)}`);
+        const frontLabel = FRONT_MODES.find((m) => m.id === (v.front_mode || "unbranded"))?.label || "Unbranded";
+        const unit = Number(variant?.price || 0) + printCostOf(v);
+        const printParts = [frontLabel];
+        if (v.back_on) printParts.push("Back print");
+        summaryLines.push(`[${sec.title}] ${brandLabel} — colour: ${v.colour || "n/a"} — print: ${printParts.join(" + ")} — ${qty} kits @ £${unit.toFixed(2)}`);
         const sizeParts = [];
         const sz = v.sizes || {};
         const splitOn = !!sz._split;
         Object.entries(sz.top || {}).forEach(([s, q]) => q > 0 && sizeParts.push(`${s}×${q}${splitOn ? " (top)" : ""}`));
         if (splitOn) Object.entries(sz.bottom || {}).forEach(([s, q]) => q > 0 && sizeParts.push(`${s}×${q} (bottom)`));
         if (sizeParts.length) summaryLines.push(`  · sizes: ${sizeParts.join(", ")}`);
+        if (v.front_artwork) {
+          summaryLines.push(`  · front artwork: ${v.front_artwork.filename} (${v.front_artwork.absolute_url})`);
+          attachments.push({ ...v.front_artwork, section: sec.title, purpose: "front-artwork" });
+        }
+        if (v.back_on && v.back_artwork) {
+          summaryLines.push(`  · back artwork: ${v.back_artwork.filename} (${v.back_artwork.absolute_url})`);
+          attachments.push({ ...v.back_artwork, section: sec.title, purpose: "back-artwork" });
+        }
       });
       await submitQuoteRequest({
         kind: "team_kit",
@@ -100,6 +122,7 @@ export default function SportsOutfitConfigurator() {
         deadline: "",
         message: `Sports Outfit Configurator quote — estimated subtotal £${totals.subtotal.toFixed(2)}.\n${summaryLines.join("\n")}`,
         roster: [],
+        attachments,
       });
       toast.success("Quote sent — we'll be in touch within 1 working day with a proof and price.");
     } catch (e) {
@@ -169,8 +192,7 @@ export default function SportsOutfitConfigurator() {
                 const sec = sections.find((s) => s.key === k);
                 const variant = sec?.variants.find((x) => x.id === v.variant_id);
                 const qty = qtyOf(v.sizes);
-                const printKey = PRINT_MODES.find((p) => p.id === (v.print_mode || "unbranded"))?.key;
-                const unit = Number(variant?.price || 0) + Number(addons?.[printKey] || 0);
+                const unit = Number(variant?.price || 0) + printCostOf(v);
                 return (
                   <div key={k} className="text-xs bg-white/5 rounded-lg p-2" data-testid={`soc-summary-${k}`}>
                     <div className="font-extrabold">{sec.title}</div>
@@ -226,9 +248,11 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
     const sizes = value.sizes || { _split: false, top: {}, bottom: {} };
     onChange({ sizes: { ...sizes, _split: !sizes._split } });
   };
-  const setPrintMode = (id) => onChange({ print_mode: id });
-  const currentPrintMode = value.print_mode || "unbranded";
-  const currentPrintCost = addons?.[PRINT_MODES.find((p) => p.id === currentPrintMode)?.key || "unbranded_price"] || 0;
+  const setPrintMode = (id) => onChange({ front_mode: id });
+  const toggleBack = () => onChange({ back_on: !value.back_on });
+  const currentFrontMode = value.front_mode || "unbranded";
+  const currentFrontCost = addons?.[FRONT_MODES.find((p) => p.id === currentFrontMode)?.key || "unbranded_price"] || 0;
+  const currentBackCost = value.back_on ? Number(addons?.back_print_price || 0) : 0;
 
   return (
     <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid={`soc-section-${section.key}`}>
@@ -260,7 +284,10 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
                   variant_id: isChosen ? null : variant.id,
                   colour: isChosen ? null : (variant.colours?.[0]?.name || ""),
                   sizes: isChosen ? null : { _split: false, top: {}, bottom: {} },
-                  print_mode: isChosen ? null : "unbranded",
+                  front_mode: isChosen ? null : "unbranded",
+                  back_on: isChosen ? false : false,
+                  front_artwork: null,
+                  back_artwork: null,
                 })}
                 className="w-full text-left p-3 flex items-center gap-3"
               >
@@ -324,16 +351,19 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
           )}
 
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Print</div>
+            <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Print — front &amp; back</div>
             <div className="text-xs text-[#4b5563] mb-2 flex items-start gap-1.5">
-              <Info size={12} className="mt-0.5" /> Choose one print style. Full-front replaces the breast option. Shorts &amp; joggers never receive back prints.
+              <Info size={12} className="mt-0.5" /> Pick a front option — breast and full-front are mutually exclusive with each other. Back print can be added on top of any front option (tops only — shorts &amp; joggers never receive back prints).
             </div>
-            <div className="grid sm:grid-cols-2 gap-2">
-              {PRINT_MODES.map((m) => {
-                const active = currentPrintMode === m.id;
+
+            {/* FRONT — radio */}
+            <div className="text-[11px] font-extrabold text-[#4b5563] mb-1">Front</div>
+            <div className="grid sm:grid-cols-3 gap-2">
+              {FRONT_MODES.map((m) => {
+                const active = currentFrontMode === m.id;
                 const cost = Number(addons?.[m.key] || 0);
                 return (
-                  <button key={m.id} type="button" onClick={() => setPrintMode(m.id)} className={`text-left rounded-xl border-2 p-3 flex items-start gap-2 ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`} data-testid={`soc-print-${section.key}-${m.id}`}>
+                  <button key={m.id} type="button" onClick={() => setPrintMode(m.id)} className={`text-left rounded-xl border-2 p-3 flex items-start gap-2 ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`} data-testid={`soc-front-${section.key}-${m.id}`}>
                     <span className={`w-4 h-4 rounded-full border-2 mt-0.5 grid place-items-center ${active ? "bg-[#7bc67e] border-[#7bc67e]" : "border-[#dcfce7]"}`}>
                       {active && <Check size={10} className="text-[#1a1a1a]" />}
                     </span>
@@ -345,8 +375,52 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
                 );
               })}
             </div>
-            {currentPrintCost > 0 && (
-              <div className="mt-2 text-[11px] text-[#166534] font-extrabold">Selected print: +£{currentPrintCost.toFixed(2)} per kit</div>
+
+            {/* Front artwork uploader — appears when front is not 'unbranded' */}
+            {currentFrontMode !== "unbranded" && (
+              <div className="mt-3">
+                <ArtworkUploader
+                  label={`Upload your ${currentFrontMode === "full_front" ? "full-front" : "breast-logo"} artwork`}
+                  helper="PNG/JPEG/PDF/AI/EPS/SVG up to 10 MB. High-res preferred. We'll come back with a proof."
+                  value={value.front_artwork}
+                  onChange={(next) => onChange({ front_artwork: next })}
+                  purpose="front-artwork"
+                  testid={`soc-front-upload-${section.key}`}
+                />
+              </div>
+            )}
+
+            {/* BACK — checkbox */}
+            <div className="text-[11px] font-extrabold text-[#4b5563] mt-4 mb-1">Back (tops only)</div>
+            <label className="flex items-start gap-2 rounded-xl border-2 border-dashed border-[#7bc67e] bg-[#f0fdf4] p-3 cursor-pointer" data-testid={`soc-back-${section.key}`}>
+              <input type="checkbox" checked={!!value.back_on} onChange={toggleBack} className="mt-0.5 accent-[#7bc67e]" data-testid={`soc-back-toggle-${section.key}`} />
+              <div className="flex-1 text-xs">
+                <div className="font-extrabold">Add a centred back print</div>
+                <div className="text-[#4b5563] mt-0.5">+£{Number(addons?.back_print_price || 0).toFixed(2)} per kit. Applied to the top — never the shorts or joggers.</div>
+              </div>
+            </label>
+
+            {/* Back artwork uploader */}
+            {value.back_on && (
+              <div className="mt-3">
+                <ArtworkUploader
+                  label="Upload your back print artwork"
+                  helper="PNG/JPEG/PDF/AI/EPS/SVG up to 10 MB. High-res preferred."
+                  value={value.back_artwork}
+                  onChange={(next) => onChange({ back_artwork: next })}
+                  purpose="back-artwork"
+                  testid={`soc-back-upload-${section.key}`}
+                />
+              </div>
+            )}
+
+            {(currentFrontCost > 0 || currentBackCost > 0) && (
+              <div className="mt-2 text-[11px] text-[#166534] font-extrabold">
+                Selected print: +£{(currentFrontCost + currentBackCost).toFixed(2)} per kit
+                {currentFrontCost > 0 && currentBackCost > 0 && (
+                  <span className="text-[#4b5563] font-normal"> (front £{currentFrontCost.toFixed(2)} + back £{currentBackCost.toFixed(2)})</span>
+                )}
+              </div>
             )}
           </div>
 
@@ -386,5 +460,66 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ---------- Artwork uploader (uploads on selection, shows thumbnail + filename) ----------
+function ArtworkUploader({ label, helper, value, onChange, purpose, testid }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef(null);
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10_000_000) { toast.error("File too large (max 10 MB)"); return; }
+    setUploading(true);
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      const uploaded = await uploadArtwork({ dataUrl, filename: file.name, purpose });
+      onChange({ ...uploaded, preview: dataUrl.startsWith("data:image/") ? dataUrl : null });
+      toast.success(`Uploaded ${file.name}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Upload failed — try a smaller file.");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const clear = () => onChange(null);
+
+  if (value) {
+    return (
+      <div className="rounded-xl border-2 border-[#7bc67e] bg-[#f0fdf4] p-3 flex items-center gap-3" data-testid={testid}>
+        <div className="w-14 h-14 rounded-lg overflow-hidden bg-white grid place-items-center flex-shrink-0">
+          {value.preview ? <img src={value.preview} alt="" className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-[#7bc67e]" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-extrabold truncate">{value.filename}</div>
+          <div className="text-[11px] text-[#4b5563]">Uploaded · {(value.size_bytes / 1024).toFixed(0)} KB</div>
+        </div>
+        <button type="button" onClick={clear} className="text-[#4b5563] hover:text-rose-500 rounded-full p-1" data-testid={`${testid}-remove`}>
+          <X size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <label className="rounded-xl border-2 border-dashed border-[#7bc67e] bg-[#f0fdf4] p-4 flex items-center gap-3 cursor-pointer hover:bg-[#dcfce7] transition" data-testid={testid}>
+      <input ref={inputRef} type="file" accept="image/*,.pdf,.ai,.eps,.svg" onChange={onFile} className="hidden" data-testid={`${testid}-input`} />
+      <div className="w-14 h-14 rounded-lg bg-white grid place-items-center flex-shrink-0">
+        {uploading ? <Loader2 size={20} className="animate-spin text-[#7bc67e]" /> : <Upload size={20} className="text-[#7bc67e]" />}
+      </div>
+      <div className="flex-1 text-xs">
+        <div className="font-extrabold">{label}</div>
+        <div className="text-[#4b5563] mt-0.5">{helper}</div>
+      </div>
+    </label>
   );
 }

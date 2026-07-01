@@ -720,6 +720,7 @@ class QuoteRequest(BaseModel):
     message: str
     # File metadata only — files referenced by data URL or external URL.
     artwork: Optional[List[str]] = None  # base64 data URLs; size-limited each
+    attachments: Optional[List[Dict]] = None  # [{id, url, filename, purpose}, ...] from /api/uploads/artwork
     roster: Optional[List[Dict]] = None  # [{name, number, size, qty}, ...]
     product_id: Optional[str] = None
 
@@ -3127,6 +3128,53 @@ async def portfolio_file(filename: str):
     doc = await db.portfolio.find_one({"id": item_id, "is_hidden": {"$ne": True}})
     if not doc or not doc.get("storage_path"):
         raise HTTPException(404, "File not found")
+    data, ct = _storage_get(doc["storage_path"])
+    return Response(content=data, media_type=doc.get("content_type") or ct)
+
+
+# ---------- Public artwork upload (for configurator design uploads) ----------
+class ArtworkUploadPayload(BaseModel):
+    image_data_url: str
+    filename: Optional[str] = ""
+    purpose: Optional[str] = "artwork"  # informational tag: 'front-artwork' | 'back-artwork' | etc.
+
+
+@api_router.post("/uploads/artwork")
+async def upload_artwork(payload: ArtworkUploadPayload):
+    """Public endpoint used by the configurators to attach print files to quote requests.
+    Stores the file in Emergent Object Storage and returns a public URL served via
+    /api/uploads/artwork/{filename} (auth-free since these are quote attachments)."""
+    raw, content_type, ext = _parse_data_url(payload.image_data_url, max_bytes=10_000_000)
+    item_id = str(uuid.uuid4())
+    storage_path = f"{_OBJ_APP_NAME}/artwork/{item_id}.{ext}"
+    try:
+        _storage_put(storage_path, raw, content_type)
+    except HTTPException:
+        raise HTTPException(500, "Artwork upload failed — storage not configured")
+    doc = {
+        "id": item_id,
+        "storage_path": storage_path,
+        "content_type": content_type,
+        "filename": (payload.filename or f"{item_id}.{ext}")[:200],
+        "purpose": (payload.purpose or "artwork")[:60],
+        "size_bytes": len(raw),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.artwork_uploads.insert_one(doc)
+    return {
+        "id": item_id,
+        "url": f"/api/uploads/artwork/{item_id}.{ext}",
+        "filename": doc["filename"],
+        "size_bytes": doc["size_bytes"],
+    }
+
+
+@api_router.get("/uploads/artwork/{filename}")
+async def get_artwork(filename: str):
+    item_id = filename.rsplit(".", 1)[0]
+    doc = await db.artwork_uploads.find_one({"id": item_id})
+    if not doc:
+        raise HTTPException(404, "Artwork not found")
     data, ct = _storage_get(doc["storage_path"])
     return Response(content=data, media_type=doc.get("content_type") or ct)
 
