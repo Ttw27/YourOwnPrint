@@ -251,6 +251,16 @@ export async function fetchShopByType(slug, opts = {}) {
   return data;
 }
 
+// ----- Collection SEO (admin editable) -----
+export async function fetchCollectionSeo(slug) {
+  const { data } = await api.get(`/admin/collection-seo/${slug}`);
+  return data;
+}
+export async function adminUpdateCollectionSeo(slug, payload) {
+  const { data } = await api.patch(`/admin/collection-seo/${slug}`, payload);
+  return data;
+}
+
 export const GENDER_FIT_VALUES = ["mens", "womens", "unisex", "kids"];
 export const INDUSTRY_SLUGS = ["trades", "hospitality", "healthcare", "beauty", "construction", "logistics", "fitness", "cleaning", "hair-beauty"];
 

@@ -2232,24 +2232,162 @@ async def list_shop_garment_types():
     return out
 
 
+def _collect_variant_field(prod: Dict, field: str) -> List:
+    """Extract a variant field (colors, sizes). Products merge variants flat via _VARIANT_MAP."""
+    v = prod.get(field)
+    if v is None:
+        nested = prod.get("variants") or {}
+        v = nested.get(field) or []
+    return v if isinstance(v, list) else []
+
+
+def _facets_from_products(products: List[Dict]) -> Dict:
+    """Compute auto-derived facets. Only facets with variance (>1 distinct value) are returned."""
+    from collections import Counter
+    gender_c: Counter = Counter()
+    colour_c: Counter = Counter()
+    size_c: Counter = Counter()
+    industry_c: Counter = Counter()
+    prices: List[float] = []
+    for p in products:
+        gender_c[p.get("gender_fit") or "unisex"] += 1
+        for c in _collect_variant_field(p, "colors"):
+            if isinstance(c, dict):
+                name = c.get("name")
+                if name:
+                    colour_c[name] += 1
+            elif isinstance(c, str):
+                colour_c[c] += 1
+        for s in _collect_variant_field(p, "sizes"):
+            if isinstance(s, str):
+                size_c[s] += 1
+        for t in p.get("industry_tags") or []:
+            industry_c[t] += 1
+        try:
+            prices.append(float(p.get("price") or 0))
+        except (TypeError, ValueError):
+            pass
+    facets: Dict = {}
+    if len(gender_c) > 1:
+        facets["gender_fit"] = [{"value": k, "count": v} for k, v in gender_c.most_common()]
+    if len(colour_c) > 1:
+        # Order colours by frequency and cap to 24 to keep the sidebar tidy.
+        facets["colour"] = [{"value": k, "count": v} for k, v in colour_c.most_common(24)]
+    if len(size_c) > 1:
+        # Preserve garment-industry natural size order when possible.
+        SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL",
+                      "3-4 yrs", "5-6 yrs", "7-8 yrs", "9-11 yrs", "12-13 yrs",
+                      "kids-S", "kids-M", "kids-L", "0-3M", "3-6M", "6-12M"]
+        keys = list(size_c.keys())
+        keys.sort(key=lambda k: (SIZE_ORDER.index(k) if k in SIZE_ORDER else 999, k))
+        facets["size"] = [{"value": k, "count": size_c[k]} for k in keys]
+    if len(industry_c) > 1:
+        facets["industry"] = [{"value": k, "count": v} for k, v in industry_c.most_common(20)]
+    if prices:
+        facets["price_range"] = {"min": round(min(prices), 2), "max": round(max(prices), 2)}
+    return facets
+
+
+async def _collection_seo_copy(slug: str) -> Dict:
+    """Return admin-editable SEO copy for a shop-type slug. Keys: intro, body, faq."""
+    doc = await db.settings.find_one({"key": f"collection_seo:{slug}"})
+    if not doc:
+        return {"intro": "", "body": "", "faq": []}
+    return {
+        "intro": doc.get("intro") or "",
+        "body": doc.get("body") or "",
+        "faq": doc.get("faq") or [],
+    }
+
+
 @api_router.get("/shop/type/{slug}")
-async def shop_by_garment_type(slug: str, gender_fit: Optional[str] = None):
+async def shop_by_garment_type(
+    slug: str,
+    gender_fit: Optional[str] = None,
+    colour: Optional[str] = None,     # comma-separated list of colour names
+    size: Optional[str] = None,        # comma-separated list of sizes
+    industry: Optional[str] = None,    # comma-separated list of industry tags
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+):
     meta = next((t for t in GARMENT_TYPE_CATALOGUE if t["slug"] == slug), None)
     if not meta:
         raise HTTPException(404, "Garment type not found")
-    items = []
-    for p in PRODUCTS.values():
-        if _garment_type_of(p) == slug:
-            if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
-                continue
-            items.append({
-                "id": p["id"], "name": p["name"], "price": float(p["price"]),
-                "image": p["image"], "category": p["category"],
-                "description": p.get("description") or "",
-                "gender_fit": p.get("gender_fit") or "unisex",
-            })
+    # All products in this collection (used to derive facets — before applying filters).
+    all_prods = [p for p in PRODUCTS.values() if _garment_type_of(p) == slug]
+    facets = _facets_from_products(all_prods)
+
+    colour_set = {c.strip() for c in (colour or "").split(",") if c.strip()}
+    size_set = {s.strip() for s in (size or "").split(",") if s.strip()}
+    industry_set = {i.strip() for i in (industry or "").split(",") if i.strip()}
+
+    def matches(p: Dict) -> bool:
+        if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
+            return False
+        if colour_set:
+            names = {(c.get("name") if isinstance(c, dict) else c) for c in _collect_variant_field(p, "colors")}
+            if not (colour_set & names):
+                return False
+        if size_set:
+            szs = set(_collect_variant_field(p, "sizes"))
+            if not (size_set & szs):
+                return False
+        if industry_set:
+            tags = set(p.get("industry_tags") or [])
+            if not (industry_set & tags):
+                return False
+        try:
+            price = float(p.get("price") or 0)
+        except (TypeError, ValueError):
+            price = 0.0
+        if price_min is not None and price < price_min:
+            return False
+        if price_max is not None and price > price_max:
+            return False
+        return True
+
+    items: List[Dict] = []
+    for p in all_prods:
+        if not matches(p):
+            continue
+        items.append({
+            "id": p["id"], "name": p["name"], "price": float(p["price"]),
+            "image": p["image"], "category": p["category"],
+            "description": p.get("description") or "",
+            "gender_fit": p.get("gender_fit") or "unisex",
+            "industry_tags": p.get("industry_tags") or [],
+        })
     items.sort(key=lambda x: x["price"])
-    return {**meta, "products": items}
+    seo = await _collection_seo_copy(slug)
+    return {**meta, "products": items, "facets": facets, "seo": seo, "total": len(all_prods)}
+
+
+@api_router.patch("/admin/collection-seo/{slug}", dependencies=[Depends(require_admin)])
+async def admin_update_collection_seo(slug: str, payload: Dict):
+    """Save admin-editable SEO block for a shop-type collection.
+    Body: {intro?: str, body?: str, faq?: [{q,a}]}"""
+    meta = next((t for t in GARMENT_TYPE_CATALOGUE if t["slug"] == slug), None)
+    if not meta:
+        raise HTTPException(404, "Unknown collection slug")
+    doc = {
+        "key": f"collection_seo:{slug}",
+        "slug": slug,
+        "intro": (payload.get("intro") or "")[:2000],
+        "body": (payload.get("body") or "")[:8000],
+        "faq": [
+            {"q": (f.get("q") or "")[:200], "a": (f.get("a") or "")[:1000]}
+            for f in (payload.get("faq") or [])[:20]
+            if isinstance(f, dict) and (f.get("q") or "").strip()
+        ],
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.settings.update_one({"key": doc["key"]}, {"$set": doc}, upsert=True)
+    return {"ok": True, **doc}
+
+
+@api_router.get("/admin/collection-seo/{slug}", dependencies=[Depends(require_admin)])
+async def admin_get_collection_seo(slug: str):
+    return await _collection_seo_copy(slug)
 
 
 @api_router.get("/industries/{slug}")

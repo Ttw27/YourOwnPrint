@@ -1,92 +1,252 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { Link, useParams, Navigate } from "react-router-dom";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { Link, useParams, useSearchParams, Navigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchShopByType } from "../lib/api";
-import { GENDER_FITS } from "../lib/data";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, X, ChevronDown } from "lucide-react";
+
+/**
+ * /shop/:slug — Collection page.
+ * Left sidebar auto-derives facets from the products in the collection (only shows a
+ * facet if there's variance). SEO copy block at the bottom (admin-editable).
+ */
+
+const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids: "Kids" };
 
 export default function ShopByType() {
   const { slug } = useParams();
+  const [params, setParams] = useSearchParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
-  const [gender, setGender] = useState("all");
 
-  useEffect(() => {
+  // Read filter state from URL so it's shareable / back-forward friendly.
+  const filters = useMemo(() => ({
+    gender_fit: params.get("gender_fit") || "",
+    colour: params.get("colour") || "",
+    size: params.get("size") || "",
+    industry: params.get("industry") || "",
+    price_min: params.get("price_min") || "",
+    price_max: params.get("price_max") || "",
+  }), [params]);
+
+  const fetch = useCallback(() => {
     setLoading(true); setErr(false);
-    fetchShopByType(slug).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
-  }, [slug]);
+    const opts = {};
+    Object.entries(filters).forEach(([k, v]) => { if (v) opts[k] = v; });
+    fetchShopByType(slug, opts).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
+  }, [slug, filters]);
 
-  const filtered = useMemo(() => {
-    if (!data) return [];
-    if (gender === "all") return data.products;
-    return data.products.filter((p) => (p.gender_fit || "unisex") === gender);
-  }, [data, gender]);
+  useEffect(() => { fetch(); }, [fetch]);
+
+  const patch = (patchObj) => {
+    const next = new URLSearchParams(params);
+    Object.entries(patchObj).forEach(([k, v]) => {
+      if (v === null || v === "" || v === undefined) next.delete(k);
+      else next.set(k, v);
+    });
+    setParams(next, { replace: true });
+  };
+
+  const toggleMulti = (key, value) => {
+    const current = new Set((params.get(key) || "").split(",").filter(Boolean));
+    if (current.has(value)) current.delete(value); else current.add(value);
+    patch({ [key]: current.size ? [...current].join(",") : "" });
+  };
+
+  const isChecked = (key, value) => new Set((params.get(key) || "").split(",").filter(Boolean)).has(value);
+
+  const clearAll = () => setParams({}, { replace: true });
+  const activeCount = ["gender_fit", "colour", "size", "industry", "price_min", "price_max"]
+    .reduce((n, k) => n + (params.get(k) ? 1 : 0), 0);
 
   if (err) return <Navigate to="/workwear" replace />;
-  if (loading || !data) return <div className="min-h-screen grid place-items-center bg-white" data-testid="shop-type-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
+  if (loading && !data) return <div className="min-h-screen grid place-items-center bg-white" data-testid="shop-type-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
+  if (!data) return null;
+
+  const { title, image, products, facets = {}, seo = {}, total } = data;
 
   return (
     <div className="bg-white min-h-screen text-[#1a1a1a] font-nunito" data-testid={`shop-type-${slug}`}>
       <BoldNavbar />
+
+      {/* Hero */}
       <header className="relative overflow-hidden bg-[#1a1a1a] text-white">
-        <div className="absolute inset-0 opacity-25"><img src={data.image} alt="" className="w-full h-full object-cover" /></div>
+        {image && <div className="absolute inset-0 opacity-25"><img src={image} alt="" className="w-full h-full object-cover" /></div>}
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/85 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-6 py-14">
-          <Link to="/" className="text-xs text-[#7bc67e] hover:underline" data-testid="shop-type-back">← Home</Link>
-          <h1 className="font-black text-5xl lg:text-6xl mt-3">{data.title}</h1>
-          <div className="text-zinc-300 mt-2">{data.products.length} option{data.products.length === 1 ? "" : "s"} ready to print</div>
+          <Link to="/" className="text-xs text-[#7bc67e] hover:underline" data-testid="shop-type-back">&larr; Home</Link>
+          <h1 className="font-black text-5xl lg:text-6xl mt-3">{title}</h1>
+          <div className="text-zinc-300 mt-2">
+            {products.length} of {total} {total === 1 ? "option" : "options"}
+            {activeCount > 0 && <span className="ml-2 inline-flex items-center gap-1 bg-white/10 rounded-full px-2 py-0.5 text-[10px] font-extrabold">{activeCount} filter{activeCount === 1 ? "" : "s"} active <button onClick={clearAll} className="ml-1 text-[#fbbf24] hover:underline">Clear</button></span>}
+          </div>
+          {seo.intro && (
+            <p className="mt-4 text-zinc-300 max-w-2xl">{seo.intro}</p>
+          )}
         </div>
       </header>
 
-      <section className="max-w-7xl mx-auto px-6 py-10">
-        <div className="flex flex-wrap items-center gap-2 mb-6" data-testid="shop-type-gender-filter">
-          <span className="text-xs uppercase tracking-[0.3em] text-[#4b5563] font-extrabold mr-2">Fit</span>
-          {GENDER_FITS.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => setGender(g.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-extrabold border transition ${gender === g.id ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#dcfce7] text-[#4b5563] hover:border-[#7bc67e]"}`}
-              data-testid={`shop-gender-${g.id}`}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
+      <section className="max-w-7xl mx-auto px-4 lg:px-6 py-8 grid lg:grid-cols-12 gap-6">
+        {/* Sidebar filters */}
+        <aside className="lg:col-span-3" data-testid="shop-type-sidebar">
+          <div className="sticky top-24 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold">Filter</h3>
+              {activeCount > 0 && <button onClick={clearAll} className="text-[11px] font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1" data-testid="shop-clear-filters"><X size={11} /> Clear</button>}
+            </div>
 
-        {filtered.length === 0 ? (
-          <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-5 text-sm" data-testid="shop-type-empty">
-            Nothing matches that fit. Try All or <Link to="/workwear" className="underline text-[#7bc67e]">browse workwear</Link>.
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="shop-type-grid">
-            {filtered.map((p) => (
-              <Link
-                key={p.id}
-                to={`/product/${p.id}`}
-                className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition-shadow hover:shadow-md"
-                data-testid={`shop-type-product-${p.id}`}
-              >
-                <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                  <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                </div>
-                <div className="p-4">
-                  <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{p.category}</div>
-                  <div className="font-extrabold text-base mt-0.5">{p.name}</div>
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
-                    <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">View <ArrowRight size={12} /></span>
+            {facets.gender_fit && (
+              <FacetBlock title="Fit" testid="facet-gender">
+                <label className="flex items-center gap-2 text-xs cursor-pointer" data-testid="facet-gender-all">
+                  <input type="radio" name="gender_fit" checked={!filters.gender_fit} onChange={() => patch({ gender_fit: "" })} className="accent-[#7bc67e]" />
+                  <span>All fits</span>
+                </label>
+                {facets.gender_fit.map((f) => (
+                  <label key={f.value} className="flex items-center gap-2 text-xs cursor-pointer" data-testid={`facet-gender-${f.value}`}>
+                    <input type="radio" name="gender_fit" checked={filters.gender_fit === f.value} onChange={() => patch({ gender_fit: f.value })} className="accent-[#7bc67e]" />
+                    <span className="flex-1">{GENDER_LABEL[f.value] || f.value}</span>
+                    <span className="text-[10px] text-[#4b5563]">{f.count}</span>
+                  </label>
+                ))}
+              </FacetBlock>
+            )}
+
+            {facets.colour && (
+              <FacetBlock title="Colour" testid="facet-colour" collapsibleThreshold={8} items={facets.colour}>
+                {(shown) => shown.map((f) => (
+                  <label key={f.value} className="flex items-center gap-2 text-xs cursor-pointer" data-testid={`facet-colour-${f.value}`}>
+                    <input type="checkbox" checked={isChecked("colour", f.value)} onChange={() => toggleMulti("colour", f.value)} className="accent-[#7bc67e]" />
+                    <span className="flex-1">{f.value}</span>
+                    <span className="text-[10px] text-[#4b5563]">{f.count}</span>
+                  </label>
+                ))}
+              </FacetBlock>
+            )}
+
+            {facets.size && (
+              <FacetBlock title="Size" testid="facet-size" collapsibleThreshold={8} items={facets.size}>
+                {(shown) => (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {shown.map((f) => {
+                      const active = isChecked("size", f.value);
+                      return (
+                        <button key={f.value} type="button" onClick={() => toggleMulti("size", f.value)} className={`text-xs px-2 py-1 rounded-full border-2 font-extrabold transition ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`} data-testid={`facet-size-${f.value}`}>
+                          {f.value}
+                        </button>
+                      );
+                    })}
                   </div>
+                )}
+              </FacetBlock>
+            )}
+
+            {facets.industry && (
+              <FacetBlock title="Industry" testid="facet-industry" collapsibleThreshold={5} items={facets.industry}>
+                {(shown) => shown.map((f) => (
+                  <label key={f.value} className="flex items-center gap-2 text-xs cursor-pointer capitalize" data-testid={`facet-industry-${f.value}`}>
+                    <input type="checkbox" checked={isChecked("industry", f.value)} onChange={() => toggleMulti("industry", f.value)} className="accent-[#7bc67e]" />
+                    <span className="flex-1">{String(f.value).replace(/-/g, " ")}</span>
+                    <span className="text-[10px] text-[#4b5563]">{f.count}</span>
+                  </label>
+                ))}
+              </FacetBlock>
+            )}
+
+            {facets.price_range && (
+              <FacetBlock title={`Price (£${facets.price_range.min} - £${facets.price_range.max})`} testid="facet-price">
+                <div className="flex items-center gap-1.5">
+                  <input type="number" min={facets.price_range.min} max={facets.price_range.max} placeholder={`£${facets.price_range.min}`} defaultValue={filters.price_min} onBlur={(e) => patch({ price_min: e.target.value })} className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[#dcfce7] focus:border-[#7bc67e] focus:outline-none" data-testid="facet-price-min" />
+                  <span className="text-xs text-[#4b5563]">to</span>
+                  <input type="number" min={facets.price_range.min} max={facets.price_range.max} placeholder={`£${facets.price_range.max}`} defaultValue={filters.price_max} onBlur={(e) => patch({ price_max: e.target.value })} className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[#dcfce7] focus:border-[#7bc67e] focus:outline-none" data-testid="facet-price-max" />
                 </div>
-              </Link>
-            ))}
+              </FacetBlock>
+            )}
           </div>
-        )}
+        </aside>
+
+        {/* Product grid */}
+        <div className="lg:col-span-9" data-testid="shop-type-results">
+          {products.length === 0 ? (
+            <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-6 text-sm" data-testid="shop-type-empty">
+              Nothing matches those filters. Try clearing them or <button onClick={clearAll} className="underline text-[#166534] font-extrabold">reset all</button>.
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="shop-type-grid">
+              {products.map((p) => (
+                <Link key={p.id} to={`/product/${p.id}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition-shadow hover:shadow-md" data-testid={`shop-type-product-${p.id}`}>
+                  <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
+                    <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                  <div className="p-4">
+                    <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{p.category}</div>
+                    <div className="font-extrabold text-base mt-0.5">{p.name}</div>
+                    <div className="mt-2 flex items-baseline justify-between">
+                      <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
+                      <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">View <ArrowRight size={12} /></span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
+
+      {/* SEO body & FAQ */}
+      {(seo.body || (seo.faq && seo.faq.length)) && (
+        <section className="border-t border-[#dcfce7] bg-[#f8fafc]">
+          <div className="max-w-4xl mx-auto px-6 py-12" data-testid="shop-type-seo">
+            {seo.body && (
+              <div className="prose prose-sm max-w-none">
+                <h2 className="font-black text-2xl mb-3">About our {title}</h2>
+                {seo.body.split("\n\n").map((para, i) => (
+                  <p key={i} className="text-[#374151] text-sm leading-relaxed mb-3">{para}</p>
+                ))}
+              </div>
+            )}
+            {seo.faq && seo.faq.length > 0 && (
+              <div className="mt-8">
+                <h3 className="font-black text-lg mb-3">Frequently asked</h3>
+                <div className="space-y-2">
+                  {seo.faq.map((f, i) => (
+                    <details key={i} className="group bg-white border-2 border-[#dcfce7] rounded-2xl px-4 py-3">
+                      <summary className="cursor-pointer font-extrabold text-sm flex items-center justify-between list-none">
+                        <span>{f.q}</span>
+                        <ArrowRight size={14} className="text-[#7bc67e] group-open:rotate-90 transition-transform" />
+                      </summary>
+                      <p className="mt-2 text-sm text-[#4b5563]">{f.a}</p>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <ToolsShowcase variant="compact" />
       <BoldFooter />
+    </div>
+  );
+}
+
+// ---------- Facet block wrapper with a "show more" affordance ----------
+function FacetBlock({ title, testid, children, collapsibleThreshold, items }) {
+  const [expanded, setExpanded] = useState(false);
+  const canCollapse = collapsibleThreshold && items && items.length > collapsibleThreshold;
+  const shown = canCollapse && !expanded ? items.slice(0, collapsibleThreshold) : (items || null);
+  return (
+    <div className="bg-white border-2 border-[#dcfce7] rounded-2xl p-3" data-testid={testid}>
+      <div className="text-xs font-extrabold mb-2">{title}</div>
+      <div className="space-y-1.5">
+        {typeof children === "function" ? children(shown) : children}
+      </div>
+      {canCollapse && (
+        <button type="button" onClick={() => setExpanded((x) => !x)} className="mt-2 text-[11px] font-extrabold text-[#166534] hover:underline inline-flex items-center gap-1" data-testid={`${testid}-toggle`}>
+          {expanded ? "Show less" : `Show all ${items.length}`} <ChevronDown size={11} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      )}
     </div>
   );
 }

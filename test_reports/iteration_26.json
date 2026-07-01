@@ -1,0 +1,63 @@
+{
+  "summary": "Iter26 tested. Backend 9/9 pytest pass. UI flows: /teams-schools (6 tiles + no &amp; entities + trust/faq/cta OK), /shop/hoodies (facets colour/size/industry/price, URL-driven filters, no gender_fit — correct), /admin/collection-seo (write→read via /shop/hoodies confirmed), Sports Outfit Configurator (front radio unbranded/breast/full_front + back checkbox + combined cost line '+£10.00 per kit (front £6.00 + back £4.00)' + uploaders both render). ONE CRITICAL BACKEND BUG: POST /api/quote-request accepts payload.attachments in the Pydantic model but the handler never writes it to Mongo. Verified via direct DB inspection: doc has no 'attachments' key even after submitting with attachments array. Two minor UI gaps also flagged.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/quote-request",
+        "issue": "payload.attachments is defined on QuoteRequest model (server.py:723) but the handler create_quote_request (server.py:881-904) never copies it into the Mongo doc — the persisted document has NO 'attachments' key. This breaks the whole ‘attach artwork uploads to quote request’ requirement for the Sports Outfit Configurator. Verified: submitted a quote with 2 attachments → DB doc missing the field entirely.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "TeamsSchools",
+        "issue": "data-testid 'ts-portfolio' not rendered — portfolio carousel section appears to be omitted or gated. All other testids from the review spec (ts-tile-*, ts-trust-bar, ts-popular-garments, ts-faq, ts-bottom-cta) are present.",
+        "selector": "[data-testid='ts-portfolio']",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "ShopByType.jsx t-shirts collection",
+        "issue": "Review spec expects /shop/t-shirts to expose a gender_fit facet because ‘kids-tee’ product provides variance. In practice the seeded 'Kids T-Shirt' product has gender_fit='unisex', so _facets_from_products correctly emits no gender_fit facet. Either fix the product seed data (Kids T-Shirt → gender_fit='kids') or update the review requirement. Backend behaviour is correct per its own logic.",
+        "selector": "/api/shop/type/t-shirts facets",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Sports Outfit quote submission with artwork attachments",
+        "issue": "UI-side upload → attach to state → POST /api/quote-request runs & returns 200 (toast fires) but the DB row does not preserve the attachments array. Admin will never see which artwork was uploaded against a quote. Root cause is the backend handler bug above (server.py:881-904).",
+        "affected_selectors": ["soc-front-upload-training", "soc-back-upload-training", "soc-submit"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration26.py",
+    "/app/test_reports/pytest/iter26_results.xml"
+  ],
+  "action_items": [
+    "server.py:882-904 — copy payload.attachments into the persisted doc, e.g. `attachments: [{...} for a in (payload.attachments or [])[:12]]`. Add trivial pydantic-level validation (id/url/filename/purpose strings, size cap).",
+    "TeamsSchools.jsx — either add the missing `data-testid=\\\"ts-portfolio\\\"` wrapper on the portfolio carousel or remove that testid from the review spec if section was intentionally dropped.",
+    "Seed data — set 'Kids T-Shirt' product's gender_fit to 'kids' so /shop/t-shirts actually exposes the gender_fit facet as the review requirement expects."
+  ],
+  "critical_code_review_comments": [
+    "server.py has grown to 4305 lines — repeat feedback from iter20-25 to split into modules (uploads, shop, admin_seo, quote_requests, checkout, auth). This iteration added ~120 more lines on top of the existing monolith.",
+    "In shop_by_garment_type the frontend passes price_min/price_max as strings via URL params but the pydantic signature is Optional[float]. FastAPI coerces cleanly; still, add explicit >=0 constraint to reject negative prices which would currently silently include all products.",
+    "_facets_from_products emits gender_fit only when len(gender_c)>1. Combined with the seed-data issue on Kids T-Shirt, no collection currently emits a gender_fit facet — worth a smoke test in CI once seed data is corrected.",
+    "upload_artwork endpoint has NO auth. A public POST that writes to Emergent Object Storage with a 10 MB cap and no rate limit is a light-weight abuse vector. Consider a per-IP or per-hour cap, or gate behind a session/CSRF token even for anon users.",
+    "SportsOutfitConfigurator.jsx (526 lines) — the ArtworkUploader component is defined in-file; extract to a shared component so the future 'Full Squad artwork upload' story can reuse it."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration26.py (new — 9 tests, all pass)"
+  ],
+  "success_rate": {"backend": "9/9 (100%) via HTTP; but 1 CRITICAL persistence bug detected via direct DB inspection", "frontend": "~95% (all core flows pass; ts-portfolio testid missing)"},
+  "test_credentials": "Admin: admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (from /app/memory/test_credentials.md). Login + admin SEO save round-trip verified.",
+  "seed_data_creation": "Created & cleaned: 2 artwork_uploads rows (TEST_iter26_front.png, TEST_iter26_back.png), 1 quote_requests row (TEST_iter26 QA), 1 settings row (collection_seo:hoodies). All 4 deleted in teardown.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iter26 added: POST /api/uploads/artwork + GET /api/uploads/artwork/{filename} (public, no auth), _facets_from_products helper (variance-only), /api/shop/type/{slug} extended with facets + filter params (gender_fit, colour, size, industry, price_min, price_max, all comma-separated for multi-select) + seo block, /api/admin/collection-seo/{slug} PATCH+GET (require_admin), QuoteRequest.attachments field (BROKEN — never persisted, see action items). Frontend testids to remember: ts-tile-{leavers|full-squad|sports-outfit|groups|dance|bespoke}, ts-trust-bar, ts-popular-garments, ts-faq, ts-bottom-cta (ts-portfolio absent!). ShopByType: shop-type-sidebar, facet-{colour|size|industry|price}, facet-colour-{value}, facet-size-{value}, shop-clear-filters (renders only when filters active), shop-type-seo (renders only when body or faq non-empty). AdminCollectionSeo: acs-slug (SELECT), acs-intro, acs-body, acs-save, acs-faq-{i}-q, acs-faq-{i}-a (FAQ rows require clicking Add FAQ first — testing flow: pick slug → maybe click Add FAQ → fill → save). SportsOutfitConfigurator: FRONT_MODES ids are unbranded / breast / full_front (underscore, not hyphen); soc-front-{section}-{mode}, soc-back-{section}, soc-back-toggle-{section}, soc-front-upload-{section}, soc-back-upload-{section}. Old iter25 testid soc-print-{section}-{mode} is GONE.",
+  "rca of the issue": "QuoteRequest attachments persistence bug — root cause: create_quote_request builder (server.py:885-902) enumerates a hardcoded whitelist of fields (kind/name/email/phone/company/sport/kit_type/quantity/deadline/message/artwork/roster/product_id/status/created_at) and never references payload.attachments. Pydantic accepts the field so the client sees 200 OK, but the Mongo doc silently drops it. Reproduction: POST /api/quote-request with attachments=[{'id':'x','url':'/api/uploads/artwork/y.png','filename':'y.png','purpose':'front-artwork'}] returns {ok:true,id:...}; subsequent `db.quote_requests.find_one({id:...})` shows NO 'attachments' key. Mitigation: add `\"attachments\": [dict(a) for a in (payload.attachments or [])[:12] if isinstance(a, dict)],` into the doc dict."
+}
