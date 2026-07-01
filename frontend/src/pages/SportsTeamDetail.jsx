@@ -73,9 +73,18 @@ export default function SportsTeamDetail() {
           <h1 className="font-black text-4xl lg:text-6xl mt-1 leading-tight max-w-3xl">{data.h1}</h1>
           <p className="text-zinc-300 mt-4 max-w-2xl leading-relaxed">{data.intro}</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/team-kits" className="px-5 py-3 bg-[#7bc67e] text-[#1a1a1a] rounded-full font-extrabold inline-flex items-center gap-2 hover:bg-white transition" data-testid="sports-team-cta-configure">
-              Configure your kit <ArrowRight size={16} />
-            </Link>
+            {(() => {
+              // Football / Rugby (team sports) → Full Squad Configurator.
+              // Gyms / PTs / Boxing / Thai / Kick / Dance → Sports Outfit Configurator (simpler).
+              const teamSlugs = ["football", "rugby"];
+              const cfgTo = teamSlugs.includes(slug) ? "/full-squad-configurator" : "/sports-outfit-configurator";
+              const cfgLabel = teamSlugs.includes(slug) ? "Full Squad Configurator" : "Sports Outfit Configurator";
+              return (
+                <Link to={cfgTo} className="px-5 py-3 bg-[#7bc67e] text-[#1a1a1a] rounded-full font-extrabold inline-flex items-center gap-2 hover:bg-white transition" data-testid="sports-team-cta-configure">
+                  {cfgLabel} <ArrowRight size={16} />
+                </Link>
+              );
+            })()}
             <Link to="/contact" className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full font-extrabold inline-flex items-center gap-2 transition" data-testid="sports-team-cta-quote">
               Get a free mock-up
             </Link>

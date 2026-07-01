@@ -424,3 +424,23 @@ export async function adminUpdateFullSquadAddons(values) {
   const { data } = await api.patch("/admin/full-squad/addons", { values });
   return data;
 }
+
+// ----- Sports Outfit Configurator (Gyms / PTs / Boxing / Thai / Kick) -----
+export async function fetchSportsOutfitConfig() {
+  const { data } = await api.get("/sports-outfit/config");
+  return data;
+}
+export async function adminUpdateSportsOutfitAddons(values) {
+  const { data } = await api.patch("/admin/sports-outfit/addons", { values });
+  return data;
+}
+
+// ----- Sock sizes (admin editable) -----
+export async function fetchSockSizes() {
+  const { data } = await api.get("/sock-sizes");
+  return data;
+}
+export async function adminUpdateSockSizes(values) {
+  const { data } = await api.patch("/admin/sock-sizes", { values });
+  return data;
+}

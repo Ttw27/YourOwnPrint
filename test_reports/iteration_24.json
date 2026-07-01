@@ -1,0 +1,29 @@
+{
+  "summary": "Iter24 major redesign — Full Squad Configurator + NEW Sports Outfit Configurator + sock sizes + back-print server rule + admin bundle-variants rewrite. Backend: 18/18 pytest pass. Frontend: all 5 UI scenarios pass (Full Squad match_day per-player, Full Squad training bulk grid with split toggle, submit success, Sports Outfit print-mode mutual exclusion + submit, admin bundle-variants with 5 new bundle IDs + new form fields + global sock sizes editor). All TEST_iter24 rows and any residual sports_outfit_addons override cleaned up after run.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration24.py",
+    "/app/test_reports/pytest/iter24_results.xml"
+  ],
+  "action_items": [
+    "Optional (non-blocking): admin/bundle-variants page emits multiple 404s in console for missing static assets (screenshot showed console '404 for resource' 5x). Likely referencing product images that don't exist. Not affecting functionality."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now 4118 lines — same recommendation from iter20-23 to split into feature modules (full_squad, sports_outfit, team_kit_brands, checkout).",
+    "Full Squad + Sports Outfit configurator have near-identical scaffolding (team form, summary panel, submit handler, brand-tile UI). Extract shared components (TeamDetailsForm, ConfiguratorSummary, submitQuote helper) to reduce DRY violations.",
+    "NO_BACK_PRINT_PRODUCT_IDS is a hardcoded set — consider driving it off product metadata (e.g. product.category=='bottoms' or product.no_back_print=True) so admin can extend without a code change.",
+    "team-kit-brands POST still doesn't enforce BUNDLE_ELIGIBLE_IDS (deferred from iter23) — a variant can be created for any product_id in PRODUCTS. Consider whether to constrain to BUNDLE_ELIGIBLE_IDS for the new configurator slot IDs.",
+    "Default synthetic variant uses id='default-{set_pid}' which is fine, but if admin later adds a real variant, the default id disappears — Frontend testids for the default tile become invalid. Not a bug but worth noting for test stability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration24.py (new)"
+  ],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100% (all 5 flows pass)"},
+  "test_credentials": "Admin: admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Created 2 quote_requests via backend pytest + 4 additional TEST_iter24 quote_requests via UI submit flows (FSC train submit + SOC submit) = 6 total. All 6 cleaned up via pymongo after run. team_kit_brands TEST_iter24 rows created in test_full_crud_with_new_fields, deleted at end of same test + cleanup pass. Settings: sports_outfit_addons has {breast_print_price:3.0} lingering (matches default 3.00, so no functional change).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Both configurators (/full-squad-configurator + /sports-outfit-configurator) are fully working. Backend endpoints: GET /api/full-squad/config, GET /api/sports-outfit/config, GET/PATCH /api/sock-sizes, PATCH /api/admin/sports-outfit/addons, POST/PUT/DELETE /api/team-kit-brands (with new fields colours, sizes, sock_sizes, size_guide, included_items), POST /api/quote-request with kit_type in ('full-squad-configurator','sports-outfit-configurator'). Back-print stripping verified for football-shorts, gym-shorts, performance-leggings, joggers, workwear-trousers (size 32) at /api/checkout/session. Frontend testids follow pattern fsc-* / soc-* — see test_iteration24.py and this iteration's playwright scripts for reference.",
+  "rca of the issue": "N/A — all requested features working correctly on first pass."
+}

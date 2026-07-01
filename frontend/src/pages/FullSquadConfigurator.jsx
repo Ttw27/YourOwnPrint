@@ -1,85 +1,82 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchFullSquadConfig, submitQuoteRequest } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { toast } from "sonner";
-import { Plus, Minus, Trash2, ShieldCheck, Truck, ArrowRight, Loader2, Upload, Info } from "lucide-react";
+import {
+  Plus, Minus, Trash2, ShieldCheck, Truck, ArrowRight, Loader2,
+  Info, ChevronDown, Check,
+} from "lucide-react";
 
-/** Full Squad Configurator — mix match-day + training + tracksuit sets in one order,
- * each item independently priced. Player roster at top applied to match-day items.
- * Non-match-day items can OPT IN to a back print upload (adds a fee).
+/**
+ * Full Squad Configurator — team-focused (Football / Rugby / kit sports).
+ *
+ * Three "sets" managed by admin as bundle brand variants (see /admin/bundle-variants):
+ *   - Match Day  (Shirt + Shorts + Socks, per-player roster with split Top/Bottom/Sock sizes)
+ *   - Training   (Top + Shorts + Socks, bulk grid + optional split-size toggle)
+ *   - Tracksuit  (Hoodie/Jacket + Joggers, bulk grid + optional split-size toggle)
+ *
+ * For each set the customer picks ONE brand tile, then a colour, then sizes.
+ * Submits as a QuoteRequest — the whole build lives in the message + roster fields.
  */
 export default function FullSquadConfigurator() {
   const [cfg, setCfg] = useState(null);
-  const [team, setTeam] = useState({ name: "", contact_name: "", contact_email: "", contact_phone: "", badge: null });
-  const [roster, setRoster] = useState([{ name: "", number: "" }]);
-  // items map: { [sectionKey_productId]: { section, product, sizes:{S:n,M:n...}, back_upload_data, sleeve_print:bool }}
-  const [items, setItems] = useState({});
+  const [team, setTeam] = useState({ name: "", contact_name: "", contact_email: "", contact_phone: "" });
+  const [state, setState] = useState({}); // { [sectionKey]: { variant_id, colour, roster, bulk } }
+
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { fetchFullSquadConfig().then(setCfg).catch(() => setCfg(null)); }, []);
 
-  const addons = cfg?.addons || {};
-  const linePriceOfItem = (it) => {
-    const qty = Object.values(it.sizes).reduce((a, b) => a + Number(b || 0), 0);
-    let unit = Number(it.product.price || 0);
-    if (it.sleeve_print) unit += Number(addons.sleeve_print_price || 0);
-    if (it.back_upload_data && !it.section.supports_names_numbers) unit += Number(addons.back_upload_print_price || 0);
-    return { unit, total: unit * qty, qty };
-  };
+  const activeSets = useMemo(() => Object.entries(state).filter(([, v]) => v?.variant_id), [state]);
   const totals = useMemo(() => {
     let subtotal = 0, totalQty = 0;
-    Object.values(items).forEach((it) => {
-      const l = linePriceOfItem(it);
-      subtotal += l.total;
-      totalQty += l.qty;
+    activeSets.forEach(([, v]) => {
+      subtotal += (v.__unit_price || 0) * (v.__qty || 0);
+      totalQty += (v.__qty || 0);
     });
     return { subtotal, totalQty };
-  }, [items, addons]);
+  }, [activeSets]);
 
   if (!cfg) {
     return <div className="min-h-screen grid place-items-center bg-white"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   }
   const { sections, proof_days } = cfg;
 
-  const keyFor = (section, product) => `${section.key}_${product.id}`;
-  const upsertItem = (section, product, patch) => {
-    const k = keyFor(section, product);
-    setItems((prev) => ({
-      ...prev,
-      [k]: { section, product, sizes: {}, back_upload_data: null, sleeve_print: false, ...(prev[k] || {}), ...patch },
-    }));
-  };
-  const removeItem = (k) => setItems((prev) => { const n = { ...prev }; delete n[k]; return n; });
-  const bumpSize = (k, sz, d) => setItems((prev) => {
-    const it = prev[k];
-    if (!it) return prev;
-    const cur = Number(it.sizes[sz] || 0);
-    const nq = Math.max(0, cur + d);
-    const sizes = { ...it.sizes, [sz]: nq };
-    if (nq === 0) delete sizes[sz];
-    return { ...prev, [k]: { ...it, sizes } };
-  });
-
-  const qtyOfItem = (it) => Object.values(it.sizes).reduce((a, b) => a + Number(b || 0), 0);
-
-  const bumpPlayer = (i, patch) => setRoster((r) => r.map((row, j) => j === i ? { ...row, ...patch } : row));
-  const addPlayer = () => setRoster((r) => [...r, { name: "", number: "" }]);
-  const removePlayer = (i) => setRoster((r) => r.filter((_, j) => j !== i));
-
-  const canSubmit = team.name.trim() && team.contact_email.trim() && totals.totalQty > 0 &&
-    Object.values(items).every((it) => qtyOfItem(it) > 0);
+  const patchSection = (key, patch) => setState((s) => ({ ...s, [key]: { ...(s[key] || {}), ...patch } }));
 
   const onSubmit = async () => {
-    if (!canSubmit) { toast.error("Fill team name + email and add at least one item."); return; }
+    if (!team.name.trim() || !team.contact_email.trim()) {
+      toast.error("Please fill in team name and email."); return;
+    }
+    if (!activeSets.length || totals.totalQty === 0) {
+      toast.error("Pick a brand and add at least one player."); return;
+    }
     setBusy(true);
     try {
-      const summary = Object.values(items).map((it) => {
-        const sizes = Object.entries(it.sizes).map(([s, q]) => `${s}×${q}`).join(", ");
-        return `[${it.section.title}] ${it.product.name} — ${sizes}${it.sleeve_print ? " +sleeve" : ""}${it.back_upload_data ? " +back-upload" : ""}`;
-      }).join(" | ");
-      const rosterList = roster.filter((r) => r.name.trim());
+      // Build a rich message summary + a merged roster list.
+      const summaryLines = [];
+      const mergedRoster = [];
+      activeSets.forEach(([sectionKey, v]) => {
+        const sec = sections.find((s) => s.key === sectionKey);
+        const variant = sec?.variants.find((x) => x.id === v.variant_id);
+        const brandLabel = `${variant?.brand ? variant.brand + " " : ""}${variant?.name || "Standard"}`.trim();
+        summaryLines.push(`[${sec.title}] ${brandLabel} — colour: ${v.colour || "n/a"} — ${v.__qty} kits @ £${(v.__unit_price || 0).toFixed(2)}`);
+        if (sec.requires_per_player_roster) {
+          (v.roster || []).filter((r) => r.name || r.number || r.top || r.bottom || r.sock).forEach((r) => {
+            mergedRoster.push({ set: sec.title, ...r });
+            summaryLines.push(`  • #${r.number || "-"} ${r.name || "-"} — top ${r.top || "-"} / bottom ${r.bottom || "-"} / sock ${r.sock || "-"}`);
+          });
+        } else if (v.bulk) {
+          const bulkParts = [];
+          const tops = v.bulk.top || {};
+          const bottoms = v.bulk.bottom || {};
+          const splitOn = v.bulk._split;
+          Object.entries(tops).forEach(([sz, q]) => q > 0 && bulkParts.push(`${sz}×${q}${splitOn ? " (top)" : ""}`));
+          if (splitOn) Object.entries(bottoms).forEach(([sz, q]) => q > 0 && bulkParts.push(`${sz}×${q} (bottom)`));
+          if (bulkParts.length) summaryLines.push(`  · sizes: ${bulkParts.join(", ")}`);
+        }
+      });
       await submitQuoteRequest({
         kind: "team_kit",
         name: team.contact_name?.trim() || team.name.trim(),
@@ -90,8 +87,8 @@ export default function FullSquadConfigurator() {
         kit_type: "full-squad-configurator",
         quantity: totals.totalQty,
         deadline: "",
-        message: `Full Squad quote — Roster: ${rosterList.length} players. Items: ${summary}. Estimated subtotal £${totals.subtotal.toFixed(2)}.`,
-        roster: rosterList,
+        message: `Full Squad Configurator quote — estimated subtotal £${totals.subtotal.toFixed(2)}.\n${summaryLines.join("\n")}`,
+        roster: mergedRoster,
       });
       toast.success("Quote sent — we'll be in touch within 1 working day with a proof and price.");
     } catch (e) {
@@ -114,7 +111,7 @@ export default function FullSquadConfigurator() {
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Full squad configurator</span>
           <h1 className="font-black text-4xl lg:text-6xl mt-2">Match day, training and tracksuit — one order.</h1>
-          <p className="text-zinc-300 mt-3 max-w-2xl">Build the whole squad&apos;s setup at once. Match-day gets names + numbers on the back. Training and tracksuit stay clean — or add a back print upload for a small upgrade.</p>
+          <p className="text-zinc-300 mt-3 max-w-2xl">Pick a kit brand for each set, choose your colour and sizes. Match Day comes with names + numbers on the back — Training and Tracksuit stay clean.</p>
         </div>
       </header>
 
@@ -124,97 +121,22 @@ export default function FullSquadConfigurator() {
           <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="fsc-team">
             <h2 className="font-nunito font-black text-2xl mb-3"><span className="text-[#7bc67e]">1.</span> Team details</h2>
             <div className="grid sm:grid-cols-2 gap-3">
-              <input value={team.name} onChange={(e) => setTeam({ ...team, name: e.target.value })} placeholder="Team / club name *" className="input" data-testid="fsc-team-name" />
-              <input value={team.contact_name} onChange={(e) => setTeam({ ...team, contact_name: e.target.value })} placeholder="Your name" className="input" data-testid="fsc-contact-name" />
-              <input value={team.contact_email} onChange={(e) => setTeam({ ...team, contact_email: e.target.value })} placeholder="Email *" className="input" data-testid="fsc-contact-email" />
-              <input value={team.contact_phone} onChange={(e) => setTeam({ ...team, contact_phone: e.target.value })} placeholder="Phone (optional)" className="input" data-testid="fsc-contact-phone" />
+              <input value={team.name} onChange={(e) => setTeam({ ...team, name: e.target.value })} placeholder="Team / club name *" className="fsc-input" data-testid="fsc-team-name" />
+              <input value={team.contact_name} onChange={(e) => setTeam({ ...team, contact_name: e.target.value })} placeholder="Your name" className="fsc-input" data-testid="fsc-contact-name" />
+              <input value={team.contact_email} onChange={(e) => setTeam({ ...team, contact_email: e.target.value })} placeholder="Email *" className="fsc-input" data-testid="fsc-contact-email" />
+              <input value={team.contact_phone} onChange={(e) => setTeam({ ...team, contact_phone: e.target.value })} placeholder="Phone (optional)" className="fsc-input" data-testid="fsc-contact-phone" />
             </div>
           </div>
 
-          {/* 2. Roster (applied to match-day) */}
-          <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="fsc-roster">
-            <h2 className="font-nunito font-black text-2xl mb-1"><span className="text-[#7bc67e]">2.</span> Player roster</h2>
-            <div className="text-xs text-[#4b5563] mb-3 flex items-start gap-1.5"><Info size={12} className="mt-0.5" />Names & numbers only apply to <strong>match-day</strong> items. Training and tracksuit stay clean.</div>
-            <div className="space-y-1.5">
-              {roster.map((r, i) => (
-                <div key={i} className="grid grid-cols-12 gap-2 items-center bg-[#f0fdf4] border border-[#dcfce7] rounded-xl p-2" data-testid={`fsc-player-${i}`}>
-                  <input value={r.name} onChange={(e) => bumpPlayer(i, { name: e.target.value })} placeholder="Name" className="col-span-8 bg-transparent px-2 py-1 text-sm focus:outline-none" data-testid={`fsc-player-${i}-name`} />
-                  <input value={r.number} onChange={(e) => bumpPlayer(i, { number: e.target.value })} placeholder="No." className="col-span-3 bg-transparent px-2 py-1 text-sm text-center focus:outline-none border-l border-[#dcfce7]" data-testid={`fsc-player-${i}-number`} />
-                  <button onClick={() => removePlayer(i)} className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center" data-testid={`fsc-player-${i}-remove`}><Trash2 size={14} /></button>
-                </div>
-              ))}
-            </div>
-            <button onClick={addPlayer} className="mt-2 inline-flex items-center gap-1.5 text-sm font-nunito font-extrabold text-[#7bc67e] hover:underline" data-testid="fsc-add-player"><Plus size={14} /> Add player</button>
-          </div>
-
-          {/* 3-5. Sections: match day / training / tracksuit */}
+          {/* 2+. Sections */}
           {sections.map((section, idx) => (
-            <div key={section.key} className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid={`fsc-section-${section.key}`}>
-              <h2 className="font-nunito font-black text-2xl mb-1"><span className="text-[#7bc67e]">{idx + 3}.</span> {section.title}</h2>
-              <p className="text-xs text-[#4b5563] mb-3">{section.subtitle}</p>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {section.garments.map((product) => {
-                  const k = keyFor(section, product);
-                  const it = items[k];
-                  const active = !!it;
-                  return (
-                    <div key={product.id} className={`rounded-2xl border-2 transition ${active ? "border-[#7bc67e] shadow-md" : "border-[#dcfce7] hover:border-[#7bc67e]"}`} data-testid={`fsc-product-${section.key}-${product.id}`}>
-                      <button
-                        type="button"
-                        onClick={() => active ? removeItem(k) : upsertItem(section, product, {})}
-                        className="w-full text-left p-3 flex items-center gap-3"
-                      >
-                        <img src={product.image} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-extrabold text-sm truncate">{product.name}</div>
-                          <div className="text-xs text-[#4b5563]">From £{product.price.toFixed(2)}</div>
-                        </div>
-                        {active
-                          ? <span className="w-8 h-8 grid place-items-center rounded-full bg-[#7bc67e] text-[#1a1a1a]"><Trash2 size={14} /></span>
-                          : <span className="w-8 h-8 grid place-items-center rounded-full bg-[#f0fdf4] text-[#1a1a1a]"><Plus size={16} /></span>}
-                      </button>
-                      {active && (
-                        <div className="border-t-2 border-[#dcfce7] p-3 space-y-3">
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Sizes &amp; qty</div>
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {(product.sizes || []).map((sz) => {
-                                const q = Number(it.sizes[sz] || 0);
-                                return (
-                                  <div key={sz} className={`rounded-lg border-2 p-1.5 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`} data-testid={`fsc-size-${section.key}-${product.id}-${sz}`}>
-                                    <div className="text-[10px] font-extrabold text-center">{sz}</div>
-                                    <div className="flex items-center justify-between mt-0.5">
-                                      <button onClick={() => bumpSize(k, sz, -1)} className="w-5 h-5 grid place-items-center rounded-full bg-white border" data-testid={`fsc-size-minus-${section.key}-${product.id}-${sz}`}><Minus size={9} /></button>
-                                      <span className="text-xs font-bold min-w-[16px] text-center">{q}</span>
-                                      <button onClick={() => bumpSize(k, sz, 1)} className="w-5 h-5 grid place-items-center rounded-full bg-[#fbbf24]" data-testid={`fsc-size-plus-${section.key}-${product.id}-${sz}`}><Plus size={9} /></button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          <div className="grid sm:grid-cols-2 gap-2 text-xs">
-                            <label className="inline-flex items-center gap-2 bg-[#f0fdf4] rounded-xl p-2 cursor-pointer">
-                              <input type="checkbox" checked={!!it.sleeve_print} onChange={(e) => upsertItem(section, product, { sleeve_print: e.target.checked })} data-testid={`fsc-sleeve-${section.key}-${product.id}`} />
-                              <span className="flex-1"><strong>Sleeve print</strong> <span className="text-[#4b5563]">+£{Number(addons.sleeve_print_price).toFixed(2)}/kit</span></span>
-                            </label>
-                            {!section.supports_names_numbers && (
-                              <label className="inline-flex items-center gap-2 bg-[#fff7ed] rounded-xl p-2 cursor-pointer">
-                                <input type="checkbox" checked={!!it.back_upload_data} onChange={(e) => upsertItem(section, product, { back_upload_data: e.target.checked ? "pending-upload" : null })} data-testid={`fsc-backprint-${section.key}-${product.id}`} />
-                                <span className="flex-1"><strong>Back print</strong> <span className="text-[#4b5563]">+£{Number(addons.back_upload_print_price).toFixed(2)}/kit — you&apos;ll upload on the proof email</span></span>
-                              </label>
-                            )}
-                          </div>
-                          {section.supports_names_numbers && (
-                            <div className="text-xs text-[#4b5563] bg-[#f0fdf4] rounded-xl p-2 inline-flex items-start gap-1.5"><Info size={12} className="mt-0.5" /> Names + numbers <strong className="mx-1">included</strong> — taken from the roster above.</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <SectionBuilder
+              key={section.key}
+              index={idx + 2}
+              section={section}
+              value={state[section.key] || {}}
+              onChange={(patch) => patchSection(section.key, patch)}
+            />
           ))}
 
           <NeedHelpCTA
@@ -231,22 +153,23 @@ export default function FullSquadConfigurator() {
           <div className="bg-[#1a1a1a] text-white rounded-3xl p-5 sticky top-24">
             <div className="text-[#7bc67e] text-xs uppercase tracking-[0.3em] font-extrabold">Full squad summary</div>
             <div className="mt-2 text-3xl font-black">£{totals.subtotal.toFixed(2)}</div>
-            <div className="text-xs text-zinc-400">{totals.totalQty} garments across {Object.keys(items).length} lines</div>
+            <div className="text-xs text-zinc-400">{totals.totalQty} kits across {activeSets.length} set{activeSets.length === 1 ? "" : "s"}</div>
             <div className="mt-4 space-y-2 max-h-64 overflow-y-auto pr-1">
-              {Object.entries(items).map(([k, it]) => {
-                const l = linePriceOfItem(it);
+              {activeSets.map(([k, v]) => {
+                const sec = sections.find((s) => s.key === k);
+                const variant = sec?.variants.find((x) => x.id === v.variant_id);
                 return (
                   <div key={k} className="text-xs bg-white/5 rounded-lg p-2" data-testid={`fsc-summary-${k}`}>
-                    <div className="font-extrabold">{it.product.name}</div>
-                    <div className="text-zinc-400">{it.section.title} · {l.qty} × £{l.unit.toFixed(2)} = <span className="text-white font-extrabold">£{l.total.toFixed(2)}</span></div>
+                    <div className="font-extrabold">{sec.title}</div>
+                    <div className="text-zinc-400">{variant?.brand} {variant?.name} · {v.colour || "colour tbc"} · {v.__qty} × £{(v.__unit_price || 0).toFixed(2)}</div>
                   </div>
                 );
               })}
-              {Object.keys(items).length === 0 && <div className="text-xs text-zinc-500">Pick garments from the sections to build your squad.</div>}
+              {activeSets.length === 0 && <div className="text-xs text-zinc-500">Pick a kit brand under Match Day / Training / Tracksuit to start.</div>}
             </div>
             <button
               onClick={onSubmit}
-              disabled={!canSubmit || busy}
+              disabled={busy}
               className="mt-4 w-full bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-40 text-[#1a1a1a] font-extrabold py-3 rounded-xl inline-flex items-center justify-center gap-2"
               data-testid="fsc-submit"
             >
@@ -259,7 +182,308 @@ export default function FullSquadConfigurator() {
           </div>
         </aside>
       </div>
+
+      <style>{`
+        .fsc-input { width: 100%; padding: 0.65rem 0.9rem; border-radius: 0.85rem; border: 2px solid #dcfce7; background: white; font-size: 0.875rem; }
+        .fsc-input:focus { outline: none; border-color: #7bc67e; }
+        .fsc-select { appearance: none; padding: 0.4rem 1.6rem 0.4rem 0.6rem; border-radius: 0.6rem; border: 1.5px solid #dcfce7; background: white; font-size: 0.75rem; font-weight: 700; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%237bc67e' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.5rem center; }
+        .fsc-select:focus { outline: none; border-color: #7bc67e; }
+      `}</style>
       <BoldFooter />
+    </div>
+  );
+}
+
+// ============================================================================
+// SectionBuilder — one card per set (Match Day / Training / Tracksuit)
+// ============================================================================
+function SectionBuilder({ index, section, value, onChange }) {
+  const [detailsOpen, setDetailsOpen] = useState({}); // { [variant_id]: true }
+  const chosenVariant = section.variants.find((v) => v.id === value.variant_id) || null;
+  const hasVariant = !!chosenVariant;
+
+  // Recompute qty + unit price whenever inputs change.
+  useEffect(() => {
+    if (!hasVariant) {
+      if (value.__qty || value.__unit_price) onChange({ __qty: 0, __unit_price: 0 });
+      return;
+    }
+    let qty = 0;
+    if (section.requires_per_player_roster) {
+      qty = (value.roster || []).filter((r) => r?.name?.trim() || r?.number?.trim()).length;
+    } else {
+      const bulk = value.bulk || {};
+      const sum = (obj) => Object.values(obj || {}).reduce((a, b) => a + Number(b || 0), 0);
+      qty = bulk._split ? Math.max(sum(bulk.top), sum(bulk.bottom)) : sum(bulk.top);
+    }
+    const unit = Number(chosenVariant.price || 0);
+    if (value.__qty !== qty || value.__unit_price !== unit) {
+      onChange({ __qty: qty, __unit_price: unit });
+    }
+  }, [value.roster, value.bulk, value.variant_id]);
+
+  const setRoster = (idx, patch) => {
+    const cur = value.roster || [];
+    const next = cur.map((r, i) => (i === idx ? { ...r, ...patch } : r));
+    onChange({ roster: next });
+  };
+  const addRosterRow = () => onChange({ roster: [...(value.roster || []), { name: "", number: "", top: "", bottom: "", sock: "" }] });
+  const removeRosterRow = (idx) => onChange({ roster: (value.roster || []).filter((_, i) => i !== idx) });
+
+  const setBulk = (kind, sz, delta) => {
+    const bulk = value.bulk || { _split: false, top: {}, bottom: {} };
+    const cur = Number(bulk[kind]?.[sz] || 0);
+    const nq = Math.max(0, cur + delta);
+    const next = { ...bulk, [kind]: { ...(bulk[kind] || {}), [sz]: nq } };
+    if (nq === 0) delete next[kind][sz];
+    onChange({ bulk: next });
+  };
+  const toggleSplit = () => {
+    const bulk = value.bulk || { _split: false, top: {}, bottom: {} };
+    onChange({ bulk: { ...bulk, _split: !bulk._split } });
+  };
+
+  return (
+    <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid={`fsc-section-${section.key}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-nunito font-black text-2xl"><span className="text-[#7bc67e]">{index}.</span> {section.title}</h2>
+          <p className="text-xs text-[#4b5563] mt-0.5">{section.subtitle}</p>
+        </div>
+        {(section.included_items || []).length > 0 && (
+          <div className="hidden sm:flex flex-wrap gap-1 justify-end max-w-[45%]">
+            {section.included_items.map((it) => (
+              <span key={it} className="text-[10px] uppercase tracking-wider font-extrabold bg-[#f0fdf4] text-[#166534] rounded-full px-2 py-0.5">
+                {it} included
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Brand tiles */}
+      <div className="mt-4 grid sm:grid-cols-2 gap-3" data-testid={`fsc-brands-${section.key}`}>
+        {section.variants.map((variant) => {
+          const isChosen = value.variant_id === variant.id;
+          const isOpen = detailsOpen[variant.id] || false;
+          return (
+            <div
+              key={variant.id}
+              className={`rounded-2xl border-2 transition ${isChosen ? "border-[#7bc67e] shadow-md bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`}
+              data-testid={`fsc-brand-${section.key}-${variant.id}`}
+            >
+              <button
+                type="button"
+                onClick={() => onChange({
+                  variant_id: isChosen ? null : variant.id,
+                  colour: isChosen ? null : (variant.colours?.[0]?.name || ""),
+                  roster: isChosen ? [] : (section.requires_per_player_roster ? [{ name: "", number: "", top: "", bottom: "", sock: "" }] : []),
+                  bulk: isChosen ? null : { _split: false, top: {}, bottom: {} },
+                })}
+                className="w-full text-left p-3 flex items-center gap-3"
+              >
+                {variant.image
+                  ? <img src={variant.image} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                  : <div className="w-16 h-16 rounded-xl bg-[#dcfce7] grid place-items-center flex-shrink-0"><Check size={22} className="text-[#7bc67e]" /></div>}
+                <div className="flex-1 min-w-0">
+                  <div className="font-extrabold text-sm truncate">{variant.brand} {variant.name}</div>
+                  <div className="text-xs text-[#4b5563]">£{Number(variant.price).toFixed(2)} per kit</div>
+                </div>
+                <span className={`w-8 h-8 grid place-items-center rounded-full ${isChosen ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-[#f0fdf4]"}`}>
+                  {isChosen ? <Check size={14} /> : <Plus size={16} />}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDetailsOpen((d) => ({ ...d, [variant.id]: !d[variant.id] }))}
+                className="w-full px-3 pb-2 pt-0.5 flex items-center justify-between text-[11px] font-extrabold text-[#4b5563] hover:text-[#1a1a1a]"
+                data-testid={`fsc-brand-details-${section.key}-${variant.id}`}
+              >
+                <span>Details, sizes &amp; description</span>
+                <ChevronDown size={12} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isOpen && (
+                <div className="border-t-2 border-[#dcfce7] p-3 text-xs space-y-2 bg-white rounded-b-2xl">
+                  {variant.description && <p className="text-[#4b5563]">{variant.description}</p>}
+                  {(variant.included_items || []).length > 0 && (
+                    <div><strong className="text-[#166534]">Includes:</strong> {(variant.included_items).join(", ")}</div>
+                  )}
+                  {(variant.colours || []).length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <strong>Colours:</strong>
+                      {(variant.colours || []).map((c) => (
+                        <span key={c.name} className="inline-flex items-center gap-1 bg-[#f0fdf4] rounded-full px-2 py-0.5">
+                          <span className="w-2.5 h-2.5 rounded-full border border-white shadow-inner" style={{ background: c.hex }} /> {c.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {(variant.sizes || []).length > 0 && (
+                    <div><strong>Available sizes:</strong> {(variant.sizes).join(" · ")}</div>
+                  )}
+                  {variant.size_guide && (
+                    <div className="mt-2 p-2 rounded-lg bg-[#f8fafc] whitespace-pre-wrap text-[11px] text-[#374151]">
+                      {variant.size_guide}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Colour + sizing appear once a brand is chosen */}
+      {hasVariant && (
+        <div className="mt-4 space-y-4 border-t-2 border-[#dcfce7] pt-4" data-testid={`fsc-config-${section.key}`}>
+          {(chosenVariant.colours || []).length > 0 && (
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Colour</div>
+              <div className="flex flex-wrap gap-2">
+                {(chosenVariant.colours || []).map((c) => {
+                  const active = value.colour === c.name;
+                  return (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => onChange({ colour: c.name })}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs font-extrabold transition ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`}
+                      data-testid={`fsc-colour-${section.key}-${c.name}`}
+                    >
+                      <span className="w-3 h-3 rounded-full border border-white shadow-inner" style={{ background: c.hex }} />
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {section.requires_per_player_roster ? (
+            <RosterEditor
+              sectionKey={section.key}
+              roster={value.roster || []}
+              sizes={chosenVariant.sizes || []}
+              sockSizes={chosenVariant.sock_sizes || []}
+              onAdd={addRosterRow}
+              onPatch={setRoster}
+              onRemove={removeRosterRow}
+            />
+          ) : (
+            <BulkSizeGrid
+              sectionKey={section.key}
+              bulk={value.bulk || { _split: false, top: {}, bottom: {} }}
+              sizes={chosenVariant.sizes || []}
+              onBump={setBulk}
+              onToggleSplit={toggleSplit}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Per-player Roster (Match Day) ----------
+function RosterEditor({ sectionKey, roster, sizes, sockSizes, onAdd, onPatch, onRemove }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Squad roster</div>
+      <div className="text-xs text-[#4b5563] mb-2 flex items-start gap-1.5">
+        <Info size={12} className="mt-0.5" /> Each row = one player. Top / bottom / sock sizes can differ per player.
+      </div>
+      <div className="hidden md:grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-[#4b5563] font-extrabold mb-1 px-2">
+        <div className="col-span-4">Name</div>
+        <div className="col-span-1">#</div>
+        <div className="col-span-2">Top</div>
+        <div className="col-span-2">Bottom</div>
+        <div className="col-span-2">Sock</div>
+        <div className="col-span-1"></div>
+      </div>
+      <div className="space-y-1.5">
+        {roster.map((r, i) => (
+          <div key={i} className="grid grid-cols-12 gap-2 items-center bg-[#f0fdf4] border border-[#dcfce7] rounded-xl p-2" data-testid={`fsc-player-${sectionKey}-${i}`}>
+            <input
+              value={r.name || ""} onChange={(e) => onPatch(i, { name: e.target.value })}
+              placeholder="Name" data-testid={`fsc-player-${sectionKey}-${i}-name`}
+              className="col-span-12 md:col-span-4 bg-transparent px-2 py-1 text-sm focus:outline-none"
+            />
+            <input
+              value={r.number || ""} onChange={(e) => onPatch(i, { number: e.target.value })}
+              placeholder="#" data-testid={`fsc-player-${sectionKey}-${i}-number`}
+              className="col-span-3 md:col-span-1 bg-transparent px-2 py-1 text-sm md:text-center focus:outline-none md:border-l md:border-[#dcfce7]"
+            />
+            <select
+              value={r.top || ""} onChange={(e) => onPatch(i, { top: e.target.value })} className="col-span-3 md:col-span-2 fsc-select"
+              data-testid={`fsc-player-${sectionKey}-${i}-top`}
+            >
+              <option value="">Top</option>
+              {sizes.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select
+              value={r.bottom || ""} onChange={(e) => onPatch(i, { bottom: e.target.value })} className="col-span-3 md:col-span-2 fsc-select"
+              data-testid={`fsc-player-${sectionKey}-${i}-bottom`}
+            >
+              <option value="">Bottom</option>
+              {sizes.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select
+              value={r.sock || ""} onChange={(e) => onPatch(i, { sock: e.target.value })} className="col-span-2 md:col-span-2 fsc-select"
+              data-testid={`fsc-player-${sectionKey}-${i}-sock`}
+            >
+              <option value="">Sock</option>
+              {sockSizes.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button
+              onClick={() => onRemove(i)} type="button"
+              className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center justify-self-end"
+              data-testid={`fsc-player-${sectionKey}-${i}-remove`}
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={onAdd} className="mt-2 inline-flex items-center gap-1.5 text-sm font-nunito font-extrabold text-[#7bc67e] hover:underline" data-testid={`fsc-add-player-${sectionKey}`}>
+        <Plus size={14} /> Add player
+      </button>
+    </div>
+  );
+}
+
+// ---------- Bulk size grid (Training / Tracksuit) ----------
+function BulkSizeGrid({ sectionKey, bulk, sizes, onBump, onToggleSplit }) {
+  const splitOn = !!bulk._split;
+  const rows = splitOn ? [{ key: "top", label: "Tops" }, { key: "bottom", label: "Bottoms" }] : [{ key: "top", label: "Kits" }];
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">Sizes &amp; quantities</div>
+        <label className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#4b5563] cursor-pointer" data-testid={`fsc-split-toggle-${sectionKey}`}>
+          <input type="checkbox" checked={splitOn} onChange={onToggleSplit} />
+          Different sizes for tops &amp; bottoms?
+        </label>
+      </div>
+      {rows.map((row) => (
+        <div key={row.key} className="mb-2">
+          {splitOn && <div className="text-[11px] font-extrabold text-[#4b5563] mb-1">{row.label}</div>}
+          <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5" data-testid={`fsc-bulk-${sectionKey}-${row.key}`}>
+            {sizes.map((sz) => {
+              const q = Number(bulk[row.key]?.[sz] || 0);
+              return (
+                <div key={sz} className={`rounded-lg border-2 p-1.5 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
+                  <div className="text-[10px] font-extrabold text-center">{sz}</div>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <button onClick={() => onBump(row.key, sz, -1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-white border" data-testid={`fsc-bulk-minus-${sectionKey}-${row.key}-${sz}`}><Minus size={9} /></button>
+                    <span className="text-xs font-bold min-w-[16px] text-center">{q}</span>
+                    <button onClick={() => onBump(row.key, sz, 1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-[#fbbf24]" data-testid={`fsc-bulk-plus-${sectionKey}-${row.key}-${sz}`}><Plus size={9} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

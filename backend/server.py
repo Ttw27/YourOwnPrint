@@ -382,6 +382,36 @@ PRODUCTS: Dict[str, Dict] = {
         "image": "https://images.pexels.com/photos/1618200/pexels-photo-1618200.jpeg",
         "description": "Generic sports team kit bundle — pick a brand from the variant list (Nike / AWD / Umbro) and we'll build your club's set to spec.",
     },
+
+    # ----- Full Squad Configurator "set" slots -----
+    # These act as bundle IDs for admin-managed brand variants. Each represents a whole set
+    # (shirt + shorts + socks / hoodie + joggers / etc). Not sold as individual SKUs — they're
+    # entry points for /full-squad-configurator and /sports-outfit-configurator.
+    "full-squad-match-day": {
+        "id": "full-squad-match-day", "name": "Match Day Set", "price": 34.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
+        "description": "Complete match-day set — shirt, shorts and socks. Names + numbers on the back included. Pick your brand and colours.",
+    },
+    "full-squad-training": {
+        "id": "full-squad-training", "name": "Training Set", "price": 24.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/6740803/pexels-photo-6740803.jpeg",
+        "description": "Complete training set — top, shorts and socks. Clean front badge print. Pick your brand and colours.",
+    },
+    "full-squad-tracksuit": {
+        "id": "full-squad-tracksuit", "name": "Tracksuit Set", "price": 39.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/6740053/pexels-photo-6740053.jpeg",
+        "description": "Full tracksuit — hoodie/jacket and joggers. Match-day arrival, warm-up, or squad travel wear.",
+    },
+    "sports-outfit-training": {
+        "id": "sports-outfit-training", "name": "Training Kit (top + shorts)", "price": 19.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/6551070/pexels-photo-6551070.jpeg",
+        "description": "Simple training kit for gyms, PTs and combat sports — top and shorts, no socks. Add breast, back or full-front print.",
+    },
+    "sports-outfit-tracksuit": {
+        "id": "sports-outfit-tracksuit", "name": "Tracksuit (hoodie + joggers)", "price": 34.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/6740053/pexels-photo-6740053.jpeg",
+        "description": "Comfortable tracksuit set for gyms, PTs and combat sports — hoodie and joggers. Add breast, back or full-front print.",
+    },
     "bib-apron": {
         "id": "bib-apron", "name": "Bib Apron", "price": 9.99, "category": "workwear",
         "image": "https://images.pexels.com/photos/4252136/pexels-photo-4252136.jpeg",
@@ -495,6 +525,12 @@ _VARIANT_MAP = {
     "leavers-drawstring-bag":      {"colors": COLOURS_GARMENT, "sizes": ["One Size"],              "size_upcharges": {}},
     # Sports team generic bundle
     "sports-team-bundle":          {"colors": COLOURS_GARMENT, "sizes": KIDS_SIZES + DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    # Full Squad Configurator "set" slots
+    "full-squad-match-day":        {"colors": COLOURS_GARMENT, "sizes": KIDS_SIZES + DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "full-squad-training":         {"colors": COLOURS_GARMENT, "sizes": KIDS_SIZES + DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "full-squad-tracksuit":        {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "sports-outfit-training":      {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "sports-outfit-tracksuit":     {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     # Aprons
     "bib-apron":                   {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Burgundy", "hex": "#7f1d1d"}, {"name": "Khaki", "hex": "#8b7355"}, {"name": "White", "hex": "#ffffff"}], "sizes": ["One Size"], "size_upcharges": {}},
     "waist-apron":                 {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Burgundy", "hex": "#7f1d1d"}], "sizes": ["One Size"], "size_upcharges": {}},
@@ -749,13 +785,20 @@ async def list_team_kit_addons():
 # ---------- Team-kit brands (admin-editable) ----------
 class TeamKitBrand(BaseModel):
     id: Optional[str] = None
-    product_id: str  # links to one of the team-kits products
+    product_id: str  # links to one of the team-kits products OR a full-squad "set" slot
     brand: str
     name: str
     price: float
     image: Optional[str] = ""
     description: Optional[str] = ""
     active: bool = True
+    # New optional fields for the Full Squad + Sports Outfit configurators
+    colours: Optional[List[Dict]] = None       # [{name, hex}, ...] — kit colour choices per variant
+    sizes: Optional[List[str]] = None          # available body sizes (overrides product default when set)
+    sock_sizes: Optional[List[str]] = None     # per-variant sock size options (falls back to global settings)
+    size_guide: Optional[str] = ""              # free-form markdown/table shown in dropdown
+    included_items: Optional[List[str]] = None  # e.g. ["Shirt", "Shorts", "Socks"] — displayed on the tile
+    display_order: Optional[int] = 0
 
 
 @api_router.get("/team-kit-brands")
@@ -764,8 +807,10 @@ async def list_brands(product_id: Optional[str] = None):
     if product_id:
         q["product_id"] = product_id
     out = []
-    async for d in db.team_kit_brands.find(q).sort("price", 1):
-        out.append({k: d.get(k) for k in ["id", "product_id", "brand", "name", "price", "image", "description", "active"]})
+    _fields = ["id", "product_id", "brand", "name", "price", "image", "description", "active",
+               "colours", "sizes", "sock_sizes", "size_guide", "included_items", "display_order"]
+    async for d in db.team_kit_brands.find(q).sort([("display_order", 1), ("price", 1)]):
+        out.append({k: d.get(k) for k in _fields})
     return out
 
 
@@ -793,7 +838,9 @@ async def create_brand(payload: TeamKitBrand):
             pass    # fall back to inline data URL
     doc["created_at"] = datetime.now(timezone.utc).isoformat()
     await db.team_kit_brands.insert_one(doc)
-    return {k: doc.get(k) for k in ["id", "product_id", "brand", "name", "price", "image", "description", "active"]}
+    _fields = ["id", "product_id", "brand", "name", "price", "image", "description", "active",
+               "colours", "sizes", "sock_sizes", "size_guide", "included_items", "display_order"]
+    return {k: doc.get(k) for k in _fields}
 
 
 @api_router.put("/team-kit-brands/{brand_id}", dependencies=[Depends(require_admin)])
@@ -866,6 +913,11 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
     base_price = float(product["price"])
     size_upcharges: Dict[str, float] = product.get("size_upcharges", {}) or {}
     allowed_sizes = set(product.get("sizes", []))
+
+    # Global rule: shorts / bottoms / joggers / trousers / leggings cannot receive a back print.
+    # Silently strip any back-print placement rather than 400, so upstream builders can be lazy.
+    if payload.product_id in NO_BACK_PRINT_PRODUCT_IDS and payload.placements:
+        payload.placements = [p for p in payload.placements if "back" not in (p or "").lower()]
 
     # Resolve placements (blank wins). Special override for fight-night tee.
     if payload.blank:
@@ -3125,6 +3177,7 @@ DEFAULT_NAV_CONFIG = {
                     {"label": "Full Squad Configurator", "to": "/full-squad-configurator", "badge": "New"},
                 ]},
                 {"heading": "Fitness", "links": [
+                    {"label": "Sports Outfit Configurator", "to": "/sports-outfit-configurator", "badge": "New"},
                     {"label": "Gyms", "to": "/sports-teams/gyms"},
                     {"label": "Personal Trainers", "to": "/sports-teams/personal-trainers"},
                     {"label": "Boxing Gyms", "to": "/sports-teams/boxing-gyms"},
@@ -3189,6 +3242,10 @@ BUNDLE_ELIGIBLE_IDS = {
     "rugby-kit-bundle", "rugby-kit-front-only",
     "training-tracksuit", "training-tee", "training-pack-bundle", "training-pack-front-only",
     "sports-team-bundle",
+    # Full Squad Configurator set slots
+    "full-squad-match-day", "full-squad-training", "full-squad-tracksuit",
+    # Sports Outfit Configurator set slots (gyms/PTs/boxing)
+    "sports-outfit-training", "sports-outfit-tracksuit",
 }
 
 
@@ -3358,56 +3415,226 @@ FULL_SQUAD_SECTIONS: List[Dict] = [
     {
         "key": "match_day",
         "title": "Match Day set",
-        "subtitle": "Jerseys & shorts — names and numbers on the back",
-        "included_prints": ["front_badge", "back_name_and_number"],
+        "subtitle": "Shirt + shorts + socks — names & numbers on the back, included in the price.",
+        "set_product_id": "full-squad-match-day",     # bundle_product_id used for brand variants
+        "included_items": ["Shirt", "Shorts", "Socks"],
         "supports_names_numbers": True,
-        "default_product_ids": ["football-jersey", "football-shorts", "rugby-shirt"],
+        "requires_per_player_roster": True,   # per-player: Name / Number / Top / Bottom / Sock
     },
     {
         "key": "training",
         "title": "Training set",
-        "subtitle": "Training tees, shorts & leggings — clean front print",
-        "included_prints": ["front_badge"],
+        "subtitle": "Top + shorts + socks — clean front badge print, no names/numbers.",
+        "set_product_id": "full-squad-training",
+        "included_items": ["Top", "Shorts", "Socks"],
         "supports_names_numbers": False,
-        "default_product_ids": ["training-tee", "sports-tee", "gym-shorts", "performance-leggings"],
+        "requires_per_player_roster": False,
     },
     {
         "key": "tracksuit",
         "title": "Tracksuit set",
-        "subtitle": "Full tracksuit — jacket + trousers",
-        "included_prints": ["front_badge"],
+        "subtitle": "Hoodie/jacket + joggers — warm-up, travel, arrivals.",
+        "set_product_id": "full-squad-tracksuit",
+        "included_items": ["Hoodie/Jacket", "Joggers"],
         "supports_names_numbers": False,
-        "default_product_ids": ["training-tracksuit", "joggers", "personalised-hoodie"],
+        "requires_per_player_roster": False,
     },
 ]
 
-# Optional add-on print upcharges (£) — admin can override at settings.full_squad_config later.
+# Sports Outfit Configurator (Gyms/PTs/Boxing/Thai/Kick) — a simpler, socks-less two-set builder.
+SPORTS_OUTFIT_SECTIONS: List[Dict] = [
+    {
+        "key": "training",
+        "title": "Training kit",
+        "subtitle": "Top + shorts — perfect for gyms, PTs and combat sports.",
+        "set_product_id": "sports-outfit-training",
+        "included_items": ["Top", "Shorts"],
+    },
+    {
+        "key": "tracksuit",
+        "title": "Tracksuit",
+        "subtitle": "Hoodie + joggers — arrivals, warm-up, seminars.",
+        "set_product_id": "sports-outfit-tracksuit",
+        "included_items": ["Hoodie", "Joggers"],
+    },
+]
+
+# Optional add-on print upcharges (£) — admin can override at settings.full_squad_addons.
 FULL_SQUAD_ADDON_DEFAULTS = {
     "sleeve_print_price": 2.00,
     "back_upload_print_price": 4.00,
     "back_name_and_number_price": 6.00,   # only relevant on non-match-day items if they opt in
 }
 
+# Sports Outfit print add-ons — mutually exclusive on the customer side.
+SPORTS_OUTFIT_ADDON_DEFAULTS = {
+    "unbranded_price": 0.00,          # no print
+    "breast_print_price": 3.00,        # small left-breast logo
+    "back_print_price": 4.00,          # centred back print (tops only)
+    "full_front_print_price": 6.00,    # large front print — replaces breast option
+    # Global rule: shorts / joggers / bottoms NEVER get back-print orders.
+}
+
+# Default sock size options (UK shoe-size ranges). Admin can edit via /api/admin/sock-sizes.
+DEFAULT_SOCK_SIZES = ["3–5", "6–8", "9–11", "12–14"]
+
+# Global rule: product IDs (or category matches) that CANNOT receive a back print.
+NO_BACK_PRINT_PRODUCT_IDS = {
+    "football-shorts", "gym-shorts", "performance-leggings",
+    "joggers", "workwear-trousers",
+}
+
+
+async def _brand_variants_for(product_id: str) -> List[Dict]:
+    """Return active brand variants for a set slot product ID, sorted by display_order then price."""
+    out: List[Dict] = []
+    _fields = ["id", "product_id", "brand", "name", "price", "image", "description", "active",
+               "colours", "sizes", "sock_sizes", "size_guide", "included_items", "display_order"]
+    async for d in db.team_kit_brands.find({"product_id": product_id, "active": True}) \
+            .sort([("display_order", 1), ("price", 1)]):
+        out.append({k: d.get(k) for k in _fields})
+    return out
+
+
+async def _get_sock_sizes() -> List[str]:
+    doc = await db.settings.find_one({"key": "sock_size_options"})
+    if doc and isinstance(doc.get("values"), list) and doc["values"]:
+        return [str(s) for s in doc["values"]]
+    return list(DEFAULT_SOCK_SIZES)
+
 
 @api_router.get("/full-squad/config")
 async def get_full_squad_config():
-    """Return the config for the Full Squad Configurator — sections + eligible garments + prices."""
+    """Return the config for the Full Squad Configurator — sections + brand variants + prices."""
     doc = await db.settings.find_one({"key": "full_squad_addons"}) or {}
     addons = {**FULL_SQUAD_ADDON_DEFAULTS, **(doc.get("values") or {})}
+    sock_sizes = await _get_sock_sizes()
     sections: List[Dict] = []
     for sec in FULL_SQUAD_SECTIONS:
-        garments = []
-        for pid in sec["default_product_ids"]:
-            p = PRODUCTS.get(pid)
-            if not p:
-                continue
-            garments.append({
-                "id": p["id"], "name": p["name"], "price": float(p["price"]),
-                "image": p["image"], "description": p.get("description") or "",
-                "sizes": p.get("sizes") or [], "size_upcharges": p.get("size_upcharges") or {},
-            })
-        sections.append({**sec, "garments": garments})
+        set_pid = sec["set_product_id"]
+        base_product = PRODUCTS.get(set_pid, {})
+        variants = await _brand_variants_for(set_pid)
+        # If admin hasn't added any variants for this set slot yet, expose a synthetic "default"
+        # variant so the configurator still works out-of-the-box.
+        if not variants and base_product:
+            variants = [{
+                "id": f"default-{set_pid}",
+                "product_id": set_pid,
+                "brand": "Standard",
+                "name": base_product.get("name", set_pid),
+                "price": float(base_product.get("price", 0)),
+                "image": base_product.get("image", ""),
+                "description": base_product.get("description", ""),
+                "colours": base_product.get("colors") or [],
+                "sizes": base_product.get("sizes") or [],
+                "sock_sizes": sock_sizes,
+                "size_guide": "",
+                "included_items": sec.get("included_items", []),
+                "display_order": 0,
+                "active": True,
+                "is_default": True,
+            }]
+        else:
+            # Fill in fallbacks (colours / sizes / sock_sizes / included_items) from the product record
+            # so admin doesn't have to duplicate them on every variant.
+            for v in variants:
+                if not v.get("colours"):
+                    v["colours"] = base_product.get("colors") or []
+                if not v.get("sizes"):
+                    v["sizes"] = base_product.get("sizes") or []
+                if not v.get("sock_sizes"):
+                    v["sock_sizes"] = sock_sizes
+                if not v.get("included_items"):
+                    v["included_items"] = sec.get("included_items", [])
+        sections.append({**sec, "variants": variants})
+    return {
+        "sections": sections,
+        "addons": addons,
+        "sock_sizes": sock_sizes,
+        "proof_days": 2,
+    }
+
+
+@api_router.get("/sports-outfit/config")
+async def get_sports_outfit_config():
+    """Config for the simpler Gyms/PTs/Boxing sports outfit configurator."""
+    doc = await db.settings.find_one({"key": "sports_outfit_addons"}) or {}
+    addons = {**SPORTS_OUTFIT_ADDON_DEFAULTS, **(doc.get("values") or {})}
+    sections: List[Dict] = []
+    for sec in SPORTS_OUTFIT_SECTIONS:
+        set_pid = sec["set_product_id"]
+        base_product = PRODUCTS.get(set_pid, {})
+        variants = await _brand_variants_for(set_pid)
+        if not variants and base_product:
+            variants = [{
+                "id": f"default-{set_pid}",
+                "product_id": set_pid,
+                "brand": "Standard",
+                "name": base_product.get("name", set_pid),
+                "price": float(base_product.get("price", 0)),
+                "image": base_product.get("image", ""),
+                "description": base_product.get("description", ""),
+                "colours": base_product.get("colors") or [],
+                "sizes": base_product.get("sizes") or [],
+                "size_guide": "",
+                "included_items": sec.get("included_items", []),
+                "display_order": 0,
+                "active": True,
+                "is_default": True,
+            }]
+        else:
+            for v in variants:
+                if not v.get("colours"):
+                    v["colours"] = base_product.get("colors") or []
+                if not v.get("sizes"):
+                    v["sizes"] = base_product.get("sizes") or []
+                if not v.get("included_items"):
+                    v["included_items"] = sec.get("included_items", [])
+        sections.append({**sec, "variants": variants})
     return {"sections": sections, "addons": addons, "proof_days": 2}
+
+
+@api_router.get("/sock-sizes")
+async def get_sock_sizes():
+    return {"sock_sizes": await _get_sock_sizes()}
+
+
+@api_router.patch("/admin/sock-sizes", dependencies=[Depends(require_admin)])
+async def admin_update_sock_sizes(payload: Dict):
+    values = payload.get("values")
+    if not isinstance(values, list):
+        raise HTTPException(400, "values must be a list of strings")
+    cleaned = [str(v).strip()[:24] for v in values if str(v).strip()][:12]
+    if not cleaned:
+        raise HTTPException(400, "At least one sock size is required")
+    await db.settings.update_one(
+        {"key": "sock_size_options"},
+        {"$set": {"key": "sock_size_options", "values": cleaned,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "values": cleaned}
+
+
+@api_router.patch("/admin/sports-outfit/addons", dependencies=[Depends(require_admin)])
+async def admin_update_sports_outfit_addons(payload: Dict):
+    values = payload.get("values") or {}
+    if not isinstance(values, dict):
+        raise HTTPException(400, "values must be an object")
+    cleaned: Dict = {}
+    for k in ("unbranded_price", "breast_print_price", "back_print_price", "full_front_print_price"):
+        if k in values:
+            try:
+                cleaned[k] = round(float(values[k]), 2)
+            except (TypeError, ValueError):
+                raise HTTPException(400, f"{k} must be a number")
+    await db.settings.update_one(
+        {"key": "sports_outfit_addons"},
+        {"$set": {"key": "sports_outfit_addons", "values": cleaned,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "values": cleaned}
 
 
 @api_router.patch("/admin/full-squad/addons", dependencies=[Depends(require_admin)])
