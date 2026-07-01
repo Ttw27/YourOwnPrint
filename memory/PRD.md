@@ -34,8 +34,11 @@ UK custom print + workwear e-commerce site at yourownprint.co.uk. Standalone (no
 - ✅ **Admin Integrations page** — `/admin/integrations` stores Stripe / Resend / remove.bg / Cutout.pro / Judge.me / WhatsApp / Contact email keys (DB-first, env-fallback). Stripe key hot-applies to running process.
 - ✅ **Logo swap** — uploaded PNG logo replaces text wordmark in navbar/footer/favicon.
 - ✅ **WhatsApp FAB** — now reads `/api/site/whatsapp`; hides when no number configured.
-- ✅ **Full Squad Configurator** (Feb 2026) — public `/full-squad-configurator` builds match-day + training + tracksuit sets in one order with per-size steppers, sleeve-print & back-print upcharges, roster (match-day only), sticky summary; submits to `/api/quote-request` as `kind='team_kit'`, `kit_type='full-squad-configurator'`. Fully e2e tested.
-- ✅ **Admin Bundle Variants** (Feb 2026) — `/admin/bundle-variants` CRUD for team-kit brand tiers (AWD / Nike / Umbro etc) per bundle, incl. the new generic `sports-team-bundle`.
+- ✅ **Full Squad Configurator** (Feb 2026, redesigned) — public `/full-squad-configurator`. Brand-tile driven: for each of Match Day / Training / Tracksuit sets, customer picks ONE brand tile (managed via Admin Bundle Variants), then a colour, then sizing. Match Day = per-player roster with split Top/Bottom/Sock sizes. Training + Tracksuit = bulk size grid with a "Different sizes for tops & bottoms?" split toggle. Sock sizes default to UK shoe-size ranges (admin-editable). Backing endpoints: GET /api/full-squad/config, POST /api/quote-request.
+- ✅ **Sports Outfit Configurator** (Feb 2026, NEW) — public `/sports-outfit-configurator`. Simpler variant for gyms/PTs/boxing/thai/kick/dance. Pick Training kit and/or Tracksuit; print modes mutually exclusive (Unbranded / Breast logo / Back print / Full front — shorts & joggers never get back prints). Backing endpoint: GET /api/sports-outfit/config.
+- ✅ **Global back-print rule** — server-side strip at /api/checkout/session for `football-shorts / gym-shorts / performance-leggings / joggers / workwear-trousers` (NO_BACK_PRINT_PRODUCT_IDS).
+- ✅ **Sock sizes admin** — GET /api/sock-sizes + PATCH /api/admin/sock-sizes. Editable inline on `/admin/bundle-variants` (top panel).
+- ✅ **Admin Bundle Variants** (Feb 2026, rewritten) — `/admin/bundle-variants` supports the 5 new set slot IDs, colour picker (name+hex), sizes chip list, sock sizes override, included_items chips, and a size_guide free-text field. Fully e2e tested (iter24 — 18/18 backend + 5/5 frontend flows).
 
 ## Key API endpoints (added this iteration)
 - `GET /api/portfolio?category=&featured_only=&limit=`
