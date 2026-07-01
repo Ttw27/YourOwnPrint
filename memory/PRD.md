@@ -34,6 +34,8 @@ UK custom print + workwear e-commerce site at yourownprint.co.uk. Standalone (no
 - ✅ **Admin Integrations page** — `/admin/integrations` stores Stripe / Resend / remove.bg / Cutout.pro / Judge.me / WhatsApp / Contact email keys (DB-first, env-fallback). Stripe key hot-applies to running process.
 - ✅ **Logo swap** — uploaded PNG logo replaces text wordmark in navbar/footer/favicon.
 - ✅ **WhatsApp FAB** — now reads `/api/site/whatsapp`; hides when no number configured.
+- ✅ **Full Squad Configurator** (Feb 2026) — public `/full-squad-configurator` builds match-day + training + tracksuit sets in one order with per-size steppers, sleeve-print & back-print upcharges, roster (match-day only), sticky summary; submits to `/api/quote-request` as `kind='team_kit'`, `kit_type='full-squad-configurator'`. Fully e2e tested.
+- ✅ **Admin Bundle Variants** (Feb 2026) — `/admin/bundle-variants` CRUD for team-kit brand tiers (AWD / Nike / Umbro etc) per bundle, incl. the new generic `sports-team-bundle`.
 
 ## Key API endpoints (added this iteration)
 - `GET /api/portfolio?category=&featured_only=&limit=`
