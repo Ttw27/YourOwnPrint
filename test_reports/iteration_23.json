@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 23 re-test of the Full Squad Configurator submit fix — BOTH bugs from iter22 confirmed fixed. Backend: 5/5 pytest cases PASS. POST /api/quote-request with the new payload shape {kind:'team_kit', name, email, phone, company, sport, kit_type:'full-squad-configurator', quantity, deadline, message, roster:[]} returns 200 {ok:true, id:<uuid>} and the record persists in Mongo `quote_requests` (verified via direct Mongo query — 2 TEST_iter23 docs found and cleaned up). Frontend: /full-squad-configurator UI end-to-end submit flow passes — filled Team name='Test FC' + Email='test@example.com', activated fsc-product-match_day-football-jersey, clicked fsc-size-plus-match_day-football-jersey-S three times → subtotal £56.97 (3×£18.99) correct, sleeve print upcharge (+£2.00/kit → £62.97) correct, clicked fsc-submit → success toast 'Quote sent — we'll be in touch within 1 working day with a proof and price.' visible on page. NO React error overlay, NO 'Objects are not valid as a React child' string in DOM, NO console errors. Catch-block hardening verified via code review (lines 97-104 in FullSquadConfigurator.jsx handle string / array / undefined detail safely — all three branches produce a string before toast.error). Regression: submit still disabled on empty form (validation intact); config endpoint still returns match_day/training/tracksuit with football-jersey £18.99 and sleeve_print_price £2.00.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration23.py",
+    "/app/test_reports/pytest/iter23_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Deferred (per user's other_misc_info): POST /api/team-kit-brands still does not enforce BUNDLE_ELIGIBLE_IDS — intentionally deferred to the future brand-variant consolidation refactor.",
+    "server.py is 3890 lines — same recommendation as iter20/21/22 to split into feature modules.",
+    "Catch-block pattern in FullSquadConfigurator.onSubmit() (typeof/Array.isArray/fallback) is now safe. Consider extracting it into a shared util (e.g. lib/api.js -> formatAxiosError(e)) and reusing across the ~15+ other axios error handlers in the app to prevent similar 'React child' overlays elsewhere."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration23.py (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (all 11 UI steps pass)"},
+  "test_credentials": "Not needed for public quote flow. Admin creds at /app/memory/test_credentials.md available if needed.",
+  "seed_data_creation": "Created 2 quote_requests docs (TEST_iter23 Manager, TEST_iter23 Coach) during backend tests + 1 more via UI submit (Test FC / test@example.com, but user-visible name so not prefixed). Backend-created TEST_iter23 rows verified and deleted from Mongo. The UI-created row was left in place as it's a valid public submission with no TEST_ prefix — main agent may clean up if desired via db.quote_requests.deleteOne({email:'test@example.com', kit_type:'full-squad-configurator'}).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Full Squad submit is fully working end-to-end. Iter22's two bugs (payload shape mismatch + unsafe toast.error on array detail) are both resolved. If regression testing later, use fsc-submit with team+email+one product+one size×N; expect green toast 'Quote sent — we'll be in touch within 1 working day with a proof and price.' and a new row in Mongo quote_requests with kind='team_kit', kit_type='full-squad-configurator'.",
+  "rca of the issue": "N/A — both iter22 bugs fixed and verified. Fix summary: (1) FullSquadConfigurator.onSubmit now builds a QuoteRequest-shaped body {kind:'team_kit', name:contact_name||team_name, email:contact_email, phone, company:team_name, sport:'', kit_type:'full-squad-configurator', quantity:totals.totalQty, deadline:'', message, roster:filtered}. (2) catch block extracts string safely: `const d = e?.response?.data?.detail; const msg = typeof d==='string' ? d : Array.isArray(d) ? d.map(x=>x?.msg||String(x)).join(', ') : \"Couldn't send the quote — try WhatsApp instead.\"; toast.error(msg);`"
+}

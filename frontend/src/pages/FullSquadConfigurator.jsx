@@ -79,17 +79,29 @@ export default function FullSquadConfigurator() {
         const sizes = Object.entries(it.sizes).map(([s, q]) => `${s}×${q}`).join(", ");
         return `[${it.section.title}] ${it.product.name} — ${sizes}${it.sleeve_print ? " +sleeve" : ""}${it.back_upload_data ? " +back-upload" : ""}`;
       }).join(" | ");
+      const rosterList = roster.filter((r) => r.name.trim());
       await submitQuoteRequest({
-        flow: "full-squad-configurator",
-        team_name: team.name,
-        contact_name: team.contact_name,
-        contact_email: team.contact_email,
-        contact_phone: team.contact_phone,
-        message: `Full Squad quote — Roster: ${roster.filter(r => r.name.trim()).length} players. Items: ${summary}. Estimated subtotal £${totals.subtotal.toFixed(2)}.`,
+        kind: "team_kit",
+        name: team.contact_name?.trim() || team.name.trim(),
+        email: team.contact_email.trim(),
+        phone: team.contact_phone || "",
+        company: team.name.trim(),
+        sport: "",
+        kit_type: "full-squad-configurator",
+        quantity: totals.totalQty,
+        deadline: "",
+        message: `Full Squad quote — Roster: ${rosterList.length} players. Items: ${summary}. Estimated subtotal £${totals.subtotal.toFixed(2)}.`,
+        roster: rosterList,
       });
       toast.success("Quote sent — we'll be in touch within 1 working day with a proof and price.");
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Couldn't send the quote — try WhatsApp instead.");
+      const d = e?.response?.data?.detail;
+      const msg = typeof d === "string"
+        ? d
+        : Array.isArray(d)
+          ? d.map((x) => x?.msg || String(x)).join(", ")
+          : "Couldn't send the quote — try WhatsApp instead.";
+      toast.error(msg);
     } finally { setBusy(false); }
   };
 
