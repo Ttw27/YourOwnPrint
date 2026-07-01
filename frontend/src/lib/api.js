@@ -178,6 +178,14 @@ export async function deleteTeamKitBrand(id) {
   const { data } = await api.delete(`/team-kit-brands/${id}`);
   return data;
 }
+export async function updateTeamKitBrand(id, payload) {
+  const { data } = await api.put(`/team-kit-brands/${id}`, payload);
+  return data;
+}
+export async function deleteTeamKitBrand(id) {
+  const { data } = await api.delete(`/team-kit-brands/${id}`);
+  return data;
+}
 
 // ----- Designer (Design Your Own) -----
 export async function fetchDesignerProducts() {
@@ -390,5 +398,37 @@ export async function adminUpdateIntegrations(values) {
 }
 export async function fetchSiteWhatsApp() {
   const { data } = await api.get("/site/whatsapp");
+  return data;
+}
+
+// ----- Bundle variants -----
+export async function fetchBundleVariants(bundleId) {
+  const { data } = await api.get(`/bundles/${bundleId}/variants`);
+  return data;
+}
+export async function adminListBundleVariants(bundleId) {
+  const { data } = await api.get("/admin/bundle-variants", { params: bundleId ? { bundle_id: bundleId } : {} });
+  return data;
+}
+export async function adminCreateBundleVariant(payload) {
+  const { data } = await api.post("/admin/bundle-variants", payload);
+  return data;
+}
+export async function adminUpdateBundleVariant(id, payload) {
+  const { data } = await api.patch(`/admin/bundle-variants/${id}`, payload);
+  return data;
+}
+export async function adminDeleteBundleVariant(id) {
+  const { data } = await api.delete(`/admin/bundle-variants/${id}`);
+  return data;
+}
+
+// ----- Full Squad Configurator -----
+export async function fetchFullSquadConfig() {
+  const { data } = await api.get("/full-squad/config");
+  return data;
+}
+export async function adminUpdateFullSquadAddons(values) {
+  const { data } = await api.patch("/admin/full-squad/addons", { values });
   return data;
 }

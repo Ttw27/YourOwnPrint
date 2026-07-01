@@ -6,7 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Any
 import uuid
 from datetime import datetime, timezone, timedelta
 import bcrypt
@@ -377,6 +377,11 @@ PRODUCTS: Dict[str, Dict] = {
     },
 
     # ----- Aprons -----
+    "sports-team-bundle": {
+        "id": "sports-team-bundle", "name": "Sports Team Kit Bundle", "price": 21.99, "category": "team-kits",
+        "image": "https://images.pexels.com/photos/1618200/pexels-photo-1618200.jpeg",
+        "description": "Generic sports team kit bundle — pick a brand from the variant list (Nike / AWD / Umbro) and we'll build your club's set to spec.",
+    },
     "bib-apron": {
         "id": "bib-apron", "name": "Bib Apron", "price": 9.99, "category": "workwear",
         "image": "https://images.pexels.com/photos/4252136/pexels-photo-4252136.jpeg",
@@ -488,6 +493,8 @@ _VARIANT_MAP = {
     "varsity-jacket":              {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "leavers-sweatshirt":          {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "leavers-drawstring-bag":      {"colors": COLOURS_GARMENT, "sizes": ["One Size"],              "size_upcharges": {}},
+    # Sports team generic bundle
+    "sports-team-bundle":          {"colors": COLOURS_GARMENT, "sizes": KIDS_SIZES + DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     # Aprons
     "bib-apron":                   {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Burgundy", "hex": "#7f1d1d"}, {"name": "Khaki", "hex": "#8b7355"}, {"name": "White", "hex": "#ffffff"}], "sizes": ["One Size"], "size_upcharges": {}},
     "waist-apron":                 {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Burgundy", "hex": "#7f1d1d"}], "sizes": ["One Size"], "size_upcharges": {}},
@@ -768,6 +775,22 @@ async def create_brand(payload: TeamKitBrand):
         raise HTTPException(400, "Unknown product_id")
     doc = payload.model_dump()
     doc["id"] = str(uuid.uuid4())
+    # Support data-URL images — persist to object storage and swap in a stable URL
+    if doc.get("image") and doc["image"].startswith("data:"):
+        try:
+            raw, content_type, ext = _parse_data_url(doc["image"])
+            storage_path = f"{_OBJ_APP_NAME}/team-kit-brands/{doc['id']}.{ext}"
+            _storage_put(storage_path, raw, content_type)
+            doc["image"] = f"/api/portfolio/file/{doc['id']}.{ext}"
+            await db.portfolio.insert_one({
+                "id": doc["id"], "title": f"{payload.brand} {payload.name}".strip(),
+                "category": "other", "image_url": doc["image"], "storage_path": storage_path,
+                "content_type": content_type, "size_bytes": len(raw),
+                "display_order": 9999, "featured": False, "is_hidden": True,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except HTTPException:
+            pass    # fall back to inline data URL
     doc["created_at"] = datetime.now(timezone.utc).isoformat()
     await db.team_kit_brands.insert_one(doc)
     return {k: doc.get(k) for k in ["id", "product_id", "brand", "name", "price", "image", "description", "active"]}
@@ -776,6 +799,22 @@ async def create_brand(payload: TeamKitBrand):
 @api_router.put("/team-kit-brands/{brand_id}", dependencies=[Depends(require_admin)])
 async def update_brand(brand_id: str, payload: TeamKitBrand):
     update = {k: v for k, v in payload.model_dump().items() if k != "id"}
+    # Data-URL image → object storage
+    if update.get("image") and update["image"].startswith("data:"):
+        try:
+            raw, content_type, ext = _parse_data_url(update["image"])
+            storage_path = f"{_OBJ_APP_NAME}/team-kit-brands/{brand_id}.{ext}"
+            _storage_put(storage_path, raw, content_type)
+            update["image"] = f"/api/portfolio/file/{brand_id}.{ext}"
+            await db.portfolio.update_one(
+                {"id": brand_id},
+                {"$set": {"id": brand_id, "image_url": update["image"], "storage_path": storage_path,
+                          "content_type": content_type, "size_bytes": len(raw),
+                          "is_hidden": True, "category": "other"}},
+                upsert=True,
+            )
+        except HTTPException:
+            pass
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
     res = await db.team_kit_brands.update_one({"id": brand_id}, {"$set": update})
     if res.matched_count == 0:
@@ -3135,6 +3174,260 @@ async def get_navigation():
     if doc and doc.get("config"):
         return doc["config"]
     return DEFAULT_NAV_CONFIG
+
+
+# ============================================================================
+# Bundle variants — admin-defined brand/tier options for kit bundle products
+# (e.g. AWD / Nike / Umbro / Pro / Standard). Each variant carries its own
+# price, image, description, size guide + display order.
+# ============================================================================
+
+BUNDLE_ELIGIBLE_IDS = {
+    "football-kit-bundle", "football-premium-bundle",
+    "football-kit-front-only", "football-premium-front-only",
+    "rugby-kit-bundle", "rugby-kit-front-only",
+    "training-tracksuit", "training-tee", "training-pack-bundle", "training-pack-front-only",
+    "sports-team-bundle",
+}
+
+
+class BundleVariantIn(BaseModel):
+    bundle_product_id: str
+    brand: str = ""
+    name: str
+    description: str = ""
+    price: float
+    image: Optional[str] = None      # data-URL or existing image_url
+    size_guide_table: Optional[List[Dict[str, Any]]] = None
+    display_order: int = 0
+    is_active: bool = True
+
+
+class BundleVariantPatch(BaseModel):
+    brand: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    image: Optional[str] = None
+    size_guide_table: Optional[List[Dict[str, Any]]] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+def _serialise_variant(d: Dict) -> Dict:
+    return {
+        "id": d["id"],
+        "bundle_product_id": d["bundle_product_id"],
+        "brand": d.get("brand", ""),
+        "name": d.get("name", ""),
+        "description": d.get("description", ""),
+        "price": float(d.get("price") or 0),
+        "image": d.get("image"),
+        "size_guide_table": d.get("size_guide_table") or [],
+        "display_order": int(d.get("display_order") or 0),
+        "is_active": bool(d.get("is_active", True)),
+    }
+
+
+@api_router.get("/bundles/{bundle_id}/variants")
+async def list_bundle_variants(bundle_id: str):
+    """Public — variants shown to customers on the configurator."""
+    out: List[Dict] = []
+    async for d in db.bundle_variants.find({"bundle_product_id": bundle_id, "is_active": True}):
+        out.append(_serialise_variant(d))
+    out.sort(key=lambda x: (x["display_order"], x["price"]))
+    return out
+
+
+@api_router.get("/admin/bundle-variants", dependencies=[Depends(require_admin)])
+async def admin_list_bundle_variants(bundle_id: Optional[str] = None):
+    q: Dict = {}
+    if bundle_id:
+        q["bundle_product_id"] = bundle_id
+    out: List[Dict] = []
+    async for d in db.bundle_variants.find(q):
+        item = _serialise_variant(d)
+        item["created_at"] = d.get("created_at")
+        out.append(item)
+    out.sort(key=lambda x: (x["bundle_product_id"], x["display_order"], x["price"]))
+    # Return meta about eligible bundles too so the admin UI can show a dropdown
+    return {"eligible_bundles": sorted([{"id": pid, "name": PRODUCTS[pid]["name"]} for pid in BUNDLE_ELIGIBLE_IDS if pid in PRODUCTS], key=lambda x: x["name"]), "variants": out}
+
+
+@api_router.post("/admin/bundle-variants", dependencies=[Depends(require_admin)])
+async def admin_create_bundle_variant(payload: BundleVariantIn):
+    if payload.bundle_product_id not in PRODUCTS:
+        raise HTTPException(400, f"Unknown bundle product '{payload.bundle_product_id}'")
+    if payload.bundle_product_id not in BUNDLE_ELIGIBLE_IDS:
+        raise HTTPException(400, f"'{payload.bundle_product_id}' isn't a bundle-eligible product")
+    if payload.price < 0.5:
+        raise HTTPException(400, "Price must be at least £0.50 (Stripe minimum)")
+
+    variant_id = str(uuid.uuid4())
+    image_url = payload.image
+    # If a data-URL was uploaded, store it on the R2/object-storage and return a stable URL
+    if image_url and image_url.startswith("data:"):
+        raw, content_type, ext = _parse_data_url(image_url)
+        storage_path = f"{_OBJ_APP_NAME}/bundle-variants/{variant_id}.{ext}"
+        try:
+            _storage_put(storage_path, raw, content_type)
+            image_url = f"/api/portfolio/file/{variant_id}.{ext}"
+            # We reuse the portfolio.file endpoint — store a portfolio doc so it can serve
+            await db.portfolio.insert_one({
+                "id": variant_id,
+                "title": f"{payload.brand} {payload.name}".strip() or "Bundle variant",
+                "category": "other", "caption": "Bundle variant image", "alt_text": payload.name,
+                "image_url": image_url, "storage_path": storage_path,
+                "content_type": content_type, "size_bytes": len(raw),
+                "display_order": 9999, "featured": False, "is_hidden": True,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except HTTPException:
+            # Object storage not configured — keep the data-URL inline (works fine, just bigger payload)
+            pass
+
+    doc = {
+        "id": variant_id,
+        "bundle_product_id": payload.bundle_product_id,
+        "brand": payload.brand.strip()[:60],
+        "name": payload.name.strip()[:80] or "Variant",
+        "description": (payload.description or "").strip()[:800],
+        "price": round(float(payload.price), 2),
+        "image": image_url,
+        "size_guide_table": payload.size_guide_table or [],
+        "display_order": int(payload.display_order or 0),
+        "is_active": bool(payload.is_active),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.bundle_variants.insert_one(doc)
+    return _serialise_variant(doc)
+
+
+@api_router.patch("/admin/bundle-variants/{variant_id}", dependencies=[Depends(require_admin)])
+async def admin_update_bundle_variant(variant_id: str, payload: BundleVariantPatch):
+    existing = await db.bundle_variants.find_one({"id": variant_id})
+    if not existing:
+        raise HTTPException(404, "Variant not found")
+    patch: Dict = {}
+    for k in ("brand", "name", "description", "display_order", "is_active", "size_guide_table"):
+        v = getattr(payload, k)
+        if v is not None:
+            patch[k] = v
+    if payload.price is not None:
+        if payload.price < 0.5:
+            raise HTTPException(400, "Price must be at least £0.50")
+        patch["price"] = round(float(payload.price), 2)
+    if payload.image is not None:
+        img = payload.image
+        if img.startswith("data:"):
+            raw, content_type, ext = _parse_data_url(img)
+            storage_path = f"{_OBJ_APP_NAME}/bundle-variants/{variant_id}.{ext}"
+            try:
+                _storage_put(storage_path, raw, content_type)
+                img = f"/api/portfolio/file/{variant_id}.{ext}"
+                await db.portfolio.update_one(
+                    {"id": variant_id},
+                    {"$set": {"id": variant_id, "image_url": img, "storage_path": storage_path,
+                              "content_type": content_type, "size_bytes": len(raw),
+                              "is_hidden": True, "category": "other"}},
+                    upsert=True,
+                )
+            except HTTPException:
+                pass
+        patch["image"] = img
+    patch["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.bundle_variants.update_one({"id": variant_id}, {"$set": patch})
+    return {"ok": True}
+
+
+@api_router.delete("/admin/bundle-variants/{variant_id}", dependencies=[Depends(require_admin)])
+async def admin_delete_bundle_variant(variant_id: str):
+    res = await db.bundle_variants.delete_one({"id": variant_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Variant not found")
+    return {"ok": True}
+
+
+# ============================================================================
+# Full Squad Configurator — generic multi-set builder (match-day + training + tracksuit)
+# ============================================================================
+
+# Which garments show up under each section. Admin can override via the products catalogue.
+FULL_SQUAD_SECTIONS: List[Dict] = [
+    {
+        "key": "match_day",
+        "title": "Match Day set",
+        "subtitle": "Jerseys & shorts — names and numbers on the back",
+        "included_prints": ["front_badge", "back_name_and_number"],
+        "supports_names_numbers": True,
+        "default_product_ids": ["football-jersey", "football-shorts", "rugby-shirt"],
+    },
+    {
+        "key": "training",
+        "title": "Training set",
+        "subtitle": "Training tees, shorts & leggings — clean front print",
+        "included_prints": ["front_badge"],
+        "supports_names_numbers": False,
+        "default_product_ids": ["training-tee", "sports-tee", "gym-shorts", "performance-leggings"],
+    },
+    {
+        "key": "tracksuit",
+        "title": "Tracksuit set",
+        "subtitle": "Full tracksuit — jacket + trousers",
+        "included_prints": ["front_badge"],
+        "supports_names_numbers": False,
+        "default_product_ids": ["training-tracksuit", "joggers", "personalised-hoodie"],
+    },
+]
+
+# Optional add-on print upcharges (£) — admin can override at settings.full_squad_config later.
+FULL_SQUAD_ADDON_DEFAULTS = {
+    "sleeve_print_price": 2.00,
+    "back_upload_print_price": 4.00,
+    "back_name_and_number_price": 6.00,   # only relevant on non-match-day items if they opt in
+}
+
+
+@api_router.get("/full-squad/config")
+async def get_full_squad_config():
+    """Return the config for the Full Squad Configurator — sections + eligible garments + prices."""
+    doc = await db.settings.find_one({"key": "full_squad_addons"}) or {}
+    addons = {**FULL_SQUAD_ADDON_DEFAULTS, **(doc.get("values") or {})}
+    sections: List[Dict] = []
+    for sec in FULL_SQUAD_SECTIONS:
+        garments = []
+        for pid in sec["default_product_ids"]:
+            p = PRODUCTS.get(pid)
+            if not p:
+                continue
+            garments.append({
+                "id": p["id"], "name": p["name"], "price": float(p["price"]),
+                "image": p["image"], "description": p.get("description") or "",
+                "sizes": p.get("sizes") or [], "size_upcharges": p.get("size_upcharges") or {},
+            })
+        sections.append({**sec, "garments": garments})
+    return {"sections": sections, "addons": addons, "proof_days": 2}
+
+
+@api_router.patch("/admin/full-squad/addons", dependencies=[Depends(require_admin)])
+async def admin_update_full_squad_addons(payload: Dict):
+    values = payload.get("values") or {}
+    if not isinstance(values, dict):
+        raise HTTPException(400, "values must be an object")
+    cleaned: Dict = {}
+    for k in ("sleeve_print_price", "back_upload_print_price", "back_name_and_number_price"):
+        if k in values:
+            try:
+                cleaned[k] = round(float(values[k]), 2)
+            except (TypeError, ValueError):
+                raise HTTPException(400, f"{k} must be a number")
+    await db.settings.update_one(
+        {"key": "full_squad_addons"},
+        {"$set": {"key": "full_squad_addons", "values": cleaned,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "values": cleaned}
 
 
 @api_router.patch("/admin/navigation", dependencies=[Depends(require_admin)])
