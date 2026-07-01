@@ -4217,6 +4217,157 @@ async def _seed_leavers_templates():
 
 
 # ============================================================================
+# Product overrides — admin can edit ANY hardcoded product's name/price/etc.
+# Overrides live in Mongo `product_overrides` and are applied on startup +
+# on write.
+# ============================================================================
+class ProductOverride(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    description: Optional[str] = None
+    image: Optional[str] = None
+    additional_images: Optional[List[str]] = None
+    category: Optional[str] = None
+    gender_fit: Optional[str] = None
+    industry_tags: Optional[List[str]] = None
+    colors: Optional[List[Dict]] = None
+    sizes: Optional[List[str]] = None
+    active: Optional[bool] = None
+
+
+def _apply_product_override(pid: str, ov: Dict) -> None:
+    """Apply an override doc onto the in-memory PRODUCTS entry (skips None values)."""
+    if pid not in PRODUCTS or not ov:
+        return
+    for field in ("name", "price", "description", "image", "additional_images",
+                  "category", "gender_fit", "industry_tags", "colors", "sizes"):
+        val = ov.get(field)
+        if val is not None:
+            PRODUCTS[pid][field] = val
+    if ov.get("active") is False:
+        PRODUCTS[pid]["_hidden"] = True
+    elif ov.get("active") is True:
+        PRODUCTS[pid].pop("_hidden", None)
+
+
+@app.on_event("startup")
+async def _load_product_overrides():
+    try:
+        count = 0
+        async for d in db.product_overrides.find():
+            _apply_product_override(d["product_id"], d)
+            count += 1
+        if count:
+            logging.info(f"Applied {count} product overrides.")
+    except Exception as e:
+        logging.warning(f"Product-override load skipped: {e}")
+
+
+@api_router.patch("/admin/products/{pid}/override", dependencies=[Depends(require_admin)])
+async def upsert_product_override(pid: str, patch: ProductOverride):
+    if pid not in PRODUCTS:
+        raise HTTPException(404, "Product not found")
+    up = patch.model_dump(exclude_none=True)
+    if not up:
+        return {"ok": True, "unchanged": True}
+    up["product_id"] = pid
+    up["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.product_overrides.update_one({"product_id": pid}, {"$set": up}, upsert=True)
+    _apply_product_override(pid, up)
+    return {"ok": True, "override": up}
+
+
+@api_router.delete("/admin/products/{pid}/override", dependencies=[Depends(require_admin)])
+async def clear_product_override(pid: str):
+    r = await db.product_overrides.delete_one({"product_id": pid})
+    # Note: we don't restore the in-memory PRODUCTS entry to the "pristine" hardcoded
+    # value at runtime — a supervisor restart clears the override cleanly.
+    return {"ok": True, "deleted": r.deleted_count, "note": "restart to fully revert to defaults"}
+
+
+@api_router.get("/admin/products/{pid}/override", dependencies=[Depends(require_admin)])
+async def get_product_override(pid: str):
+    doc = await db.product_overrides.find_one({"product_id": pid})
+    if not doc:
+        return {"product_id": pid, "override": None}
+    doc.pop("_id", None)
+    return {"product_id": pid, "override": doc}
+
+
+# ============================================================================
+# Page copy CMS — override any page's hero title / subtitle / bullets / FAQ.
+# Consumed via a public GET; edited via an admin PATCH.
+# ============================================================================
+class PageCopyPatch(BaseModel):
+    title: Optional[str] = None
+    subtitle: Optional[str] = None
+    body: Optional[str] = None                 # long-form paragraphs (blank-line separated)
+    bullets: Optional[List[str]] = None        # feature bullets
+    faq: Optional[List[Dict]] = None            # [{q, a}, ...]
+    cta_label: Optional[str] = None
+    cta_link: Optional[str] = None
+    extras: Optional[Dict] = None              # free-form { key: value } for page-specific fields
+
+
+# Allow-list of page slugs — keeps admin UI focused + prevents typos.
+PAGE_COPY_SLUGS = [
+    "home", "contact", "sports", "workwear", "portfolio", "reviews",
+    "teams-schools", "specials", "fight-night", "leavers-hoodies",
+    "kit-your-workforce", "design-your-own", "full-squad-configurator",
+    "sports-outfit-configurator", "team-kits", "team-kit-builder",
+]
+
+
+@api_router.get("/page-copy/{slug}")
+async def get_page_copy(slug: str):
+    """Public — returns admin-editable copy for a page, or {} if never edited."""
+    if slug not in PAGE_COPY_SLUGS:
+        raise HTTPException(404, "Unknown page slug")
+    doc = await db.settings.find_one({"key": f"page_copy:{slug}"})
+    if not doc:
+        return {}
+    return {k: doc.get(k) for k in ("title", "subtitle", "body", "bullets", "faq",
+                                     "cta_label", "cta_link", "extras") if doc.get(k) is not None}
+
+
+@api_router.patch("/admin/page-copy/{slug}", dependencies=[Depends(require_admin)])
+async def admin_update_page_copy(slug: str, patch: PageCopyPatch):
+    if slug not in PAGE_COPY_SLUGS:
+        raise HTTPException(400, f"Slug must be one of: {PAGE_COPY_SLUGS}")
+    up = patch.model_dump(exclude_none=True)
+    if up.get("faq") is not None:
+        up["faq"] = [
+            {"q": (f.get("q") or "")[:200], "a": (f.get("a") or "")[:1000]}
+            for f in up["faq"][:30]
+            if isinstance(f, dict) and (f.get("q") or "").strip()
+        ]
+    up["key"] = f"page_copy:{slug}"
+    up["slug"] = slug
+    up["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.settings.update_one({"key": up["key"]}, {"$set": up}, upsert=True)
+    return {"ok": True, "slug": slug, "copy": {k: v for k, v in up.items() if k not in ("key", "slug", "updated_at")}}
+
+
+@api_router.get("/admin/page-copy-slugs", dependencies=[Depends(require_admin)])
+async def admin_list_page_copy_slugs():
+    return {"slugs": PAGE_COPY_SLUGS}
+
+
+# ============================================================================
+# Configurator addons — expose the existing settings via a single admin GET/PATCH
+# so the admin UI can round-trip them.
+# ============================================================================
+@api_router.get("/admin/configurator-settings", dependencies=[Depends(require_admin)])
+async def admin_get_configurator_settings():
+    fs = (await db.settings.find_one({"key": "full_squad_addons"}) or {}).get("values") or {}
+    so = (await db.settings.find_one({"key": "sports_outfit_addons"}) or {}).get("values") or {}
+    return {
+        "full_squad": {**FULL_SQUAD_ADDON_DEFAULTS, **fs},
+        "sports_outfit": {**SPORTS_OUTFIT_ADDON_DEFAULTS, **so},
+    }
+
+
+# ============================================================================
 # Imported products (one-off bulk import — PenCarrie / manual)
 # ============================================================================
 class ImportedProduct(BaseModel):

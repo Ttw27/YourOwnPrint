@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
+import usePageCopy from "../hooks/usePageCopy";
 import { Trophy, Users, Zap, ArrowRight, Sparkles } from "lucide-react";
 
 const SPORT_GROUPS = [
@@ -26,6 +27,10 @@ export default function Sports() {
   }, []);
 
   const productsById = Object.fromEntries(products.map(p => [p.id, p]));
+  const copy = usePageCopy("sports", {
+    title: "Kit out your crew.",
+    subtitle: "Match-day jerseys, fight-night sponsor tees, training tracksuits — names, numbers, sponsors, badges. Big team or solo athlete, we've got you.",
+  });
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
@@ -42,10 +47,9 @@ export default function Sports() {
               <Sparkles size={14} className="text-[#7bc67e]" /> Football · Rugby · Boxing · MMA · PT
             </div>
             <h1 className="font-nunito font-black text-5xl lg:text-7xl mt-3 leading-[1.02]">
-              Kit out your <span className="relative inline-block"><span className="relative z-10">crew.</span><span className="absolute left-0 right-0 bottom-1 h-3 bg-[#7bc67e] -z-0 rounded-full" /></span>
+              {copy.title || <>Kit out your <span className="relative inline-block"><span className="relative z-10">crew.</span><span className="absolute left-0 right-0 bottom-1 h-3 bg-[#7bc67e] -z-0 rounded-full" /></span></>}
             </h1>
-            <p className="text-[#4b5563] mt-4 text-lg max-w-lg">Match-day jerseys, fight-night sponsor tees, training tracksuits — names, numbers, sponsors, badges.
-              Big team or solo athlete, we've got you.</p>
+            <p className="text-[#4b5563] mt-4 text-lg max-w-lg">{copy.subtitle}</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link to="/full-squad-configurator" data-testid="sports-full-squad-cta" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md hover:-translate-y-1 transition-transform">
                 Full Squad Configurator <ArrowRight size={16} />

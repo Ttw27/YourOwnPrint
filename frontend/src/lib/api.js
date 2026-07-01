@@ -482,3 +482,37 @@ export async function deleteImportedProduct(id) {
   const { data } = await api.delete(`/admin/products/imported/${id}`);
   return data;
 }
+
+// ----- Product overrides (edit hardcoded catalogue products) -----
+export async function patchProductOverride(pid, patch) {
+  const { data } = await api.patch(`/admin/products/${pid}/override`, patch);
+  return data;
+}
+export async function clearProductOverride(pid) {
+  const { data } = await api.delete(`/admin/products/${pid}/override`);
+  return data;
+}
+export async function fetchProductOverride(pid) {
+  const { data } = await api.get(`/admin/products/${pid}/override`);
+  return data;
+}
+
+// ----- Page copy CMS -----
+export async function fetchPageCopy(slug) {
+  try { const { data } = await api.get(`/page-copy/${slug}`); return data || {}; }
+  catch { return {}; }
+}
+export async function adminUpdatePageCopy(slug, patch) {
+  const { data } = await api.patch(`/admin/page-copy/${slug}`, patch);
+  return data;
+}
+export async function adminListPageCopySlugs() {
+  const { data } = await api.get("/admin/page-copy-slugs");
+  return data;
+}
+
+// ----- Configurator settings (addon prices) -----
+export async function adminGetConfiguratorSettings() {
+  const { data } = await api.get("/admin/configurator-settings");
+  return data;
+}

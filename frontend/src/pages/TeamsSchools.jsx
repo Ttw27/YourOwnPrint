@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchPortfolio, fetchReviewsAggregate } from "../lib/api";
+import usePageCopy from "../hooks/usePageCopy";
 import {
   GraduationCap, Dumbbell, Music2, Shirt, MessageSquare, ArrowRight,
   ShieldCheck, Truck, MessageCircle, Loader2, Sparkles, Star, Users, Trophy,
@@ -137,6 +138,12 @@ export default function TeamsSchools() {
   const overallCount = Object.values(aggs || {}).reduce((sum, r) => sum + (r?.count || 0), 0);
   const avg = overallCount > 0 ? overallAvg / overallCount : null;
 
+  // CMS-editable hero copy (falls back to code defaults when admin hasn't overridden).
+  const copy = usePageCopy("teams-schools", {
+    title: "Whatever you're kitting out, we've got a flow for it.",
+    subtitle: "Leavers hoodies, sports squads, gym crews, dance troupes, church youth groups — each with a tailored builder so you don't have to fight a spreadsheet. Pick your world below.",
+  });
+
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen" data-testid="teams-schools-page">
       <BoldNavbar />
@@ -146,8 +153,8 @@ export default function TeamsSchools() {
         <div className="absolute inset-0 opacity-25 bg-gradient-to-br from-[#7bc67e] via-[#fbcfe8] to-[#fbbf24]" />
         <div className="relative max-w-7xl mx-auto px-6 py-16 lg:py-20">
           <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold">Teams, Schools &amp; Clubs</div>
-          <h1 className="font-black text-4xl lg:text-6xl mt-3">Whatever you&apos;re kitting out, we&apos;ve got a flow for it.</h1>
-          <p className="text-zinc-300 mt-4 max-w-2xl text-lg">Leavers hoodies, sports squads, gym crews, dance troupes, church youth groups &mdash; each with a tailored builder so you don&apos;t have to fight a spreadsheet. Pick your world below.</p>
+          <h1 className="font-black text-4xl lg:text-6xl mt-3">{copy.title}</h1>
+          <p className="text-zinc-300 mt-4 max-w-2xl text-lg">{copy.subtitle}</p>
           {avg && (
             <div className="mt-5 inline-flex items-center gap-2 text-xs bg-white/10 rounded-full px-3 py-1.5">
               <Star size={12} className="fill-[#fbbf24] text-[#fbbf24]" />

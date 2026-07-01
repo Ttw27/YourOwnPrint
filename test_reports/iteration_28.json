@@ -1,0 +1,77 @@
+{
+  "summary": "Iter28 tested — foundational CMS (page copy, product overrides, configurator settings). Backend: 15/16 pytest tests PASS. Frontend: all admin pages load, all 8+ testids present, both nav testids present, override→visible on /teams-schools verified, /sports fallback works, all regression pages OK. Two real bugs surfaced: (1) PATCH /admin/full-squad/addons whitelist at server.py:3851 EXCLUDES 'gym_bag_addon_price' — the admin UI writes it, the /api/full-squad/config reads it, but the PATCH endpoint silently drops it. Result: admin can 'Save' a new gym bag price in the UI, get a success toast, but the value never changes. (2) The 'Revert to code defaults' button in /admin/page-copy sends empty strings via PATCH instead of DELETE-ing the doc — backend stores {title:''} — usePageCopy hook (line 26) treats empty strings as valid overrides and merges them onto defaults, blanking the H1. Cleanup: all TEST_ data cleaned from Mongo (verified via direct query + backend restart) — /teams-schools H1 shows default, /api/full-squad/config gym_bag_addon_price=4.0, personalised-hoodie back to £14.99.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "PATCH /api/admin/full-squad/addons",
+        "issue": "Whitelist at server.py:3851 is ('sleeve_print_price','back_upload_print_price','back_name_and_number_price') — MISSING 'gym_bag_addon_price'. Also missing sports_outfit_addons parallel: /api/admin/sports-outfit/addons has all 4 SPORTS_OUTFIT keys, so this is a one-off omission in full-squad only. Result: admin UI (/admin/configurator-settings) sends {values:{gym_bag_addon_price:5.5}} → endpoint returns 200 with 'ok:true' but persists ONLY the keys that survive the whitelist — since gym_bag is filtered out, cleaned={} → the DB write overwrites the whole full_squad_addons doc with an empty values object. Also side-effect bug: because PATCH REPLACES `values` instead of $set-ing individual keys, saving gym_bag_addon_price also WIPES any previously-saved sleeve/back overrides. Data-loss risk.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "DELETE /api/admin/products/{pid}/override",
+        "issue": "Only removes the Mongo doc; the in-memory PRODUCTS entry keeps the override until a supervisor restart. Comment at server.py:4283-4284 acknowledges this. UX: an admin who clears an override sees the product still overridden on the storefront until restart. Suggested fix: keep a snapshot of the pristine hardcoded PRODUCTS at startup (deepcopy) and restore from it on DELETE."
+      },
+      {
+        "endpoint": "PATCH /api/admin/full-squad/addons and /api/admin/sports-outfit/addons",
+        "issue": "The endpoints REPLACE the entire `values` doc with the cleaned payload. If admin saves ONLY gym_bag_addon_price, any previously-persisted sleeve/back keys are erased. Should be $set: {'values.<key>': v} per key or merge with existing doc."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminPageCopy.jsx / usePageCopy.js",
+        "issue": "'Revert to code defaults' PATCHes {title:'', subtitle:'', ...} instead of DELETE-ing the settings doc. Backend stores the empty strings (patch.model_dump(exclude_none=True) keeps empty strings). Then usePageCopy hook line 26 merges empty strings over code defaults (empty string passes `v !== undefined && v !== null`). Result: H1 becomes '' after revert instead of falling back to code default. Two possible fixes: (a) usePageCopy — treat empty string as unset: change condition to `if (v && !(Array.isArray(v) && v.length === 0))`; OR (b) add DELETE /api/admin/page-copy/{slug} endpoint and have the Revert button call it; OR (c) server-side strip empty strings before persisting.",
+        "selector": "[data-testid='apc-revert']",
+        "priority": "HIGH"
+      },
+      {
+        "component": "AdminConfiguratorSettings.jsx",
+        "issue": "Save button shows 'Configurator prices saved' toast even when the backend silently drops gym_bag_addon_price (see backend bug). No indication of partial save. Consider verifying by re-GETing settings and diffing against submitted payload.",
+        "selector": "[data-testid='acs-save']",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Configurator settings → Full-Squad configurator hero chip",
+        "issue": "The review requirement 'change gym_bag_addon_price to 5, save, verify /full-squad-configurator hero chip shows £5' is UNMET because of the backend whitelist bug. After save, /api/full-squad/config still returns 4.0 and the hero chip still shows £4.",
+        "affected_selectors": ["[data-testid='acs-fs-gym_bag_addon_price'] input", "[data-testid='acs-save']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration28.py",
+    "/app/test_reports/pytest/iter28_results.xml"
+  ],
+  "action_items": [
+    "server.py:3851 — add 'gym_bag_addon_price' to the PATCH /admin/full-squad/addons whitelist tuple. One-line fix.",
+    "server.py:3845 and :3824 — change the PATCH endpoints from REPLACE-values to MERGE-values (fetch existing doc, update it, upsert). Prevents data loss when admin saves only one field.",
+    "usePageCopy.js line 26 — treat empty string as 'unset' so Revert to code defaults actually reverts. OR add a DELETE /api/admin/page-copy/{slug} endpoint and wire the Revert button to it (cleaner).",
+    "server.py:4280 clear_product_override — restore the pristine in-memory PRODUCTS entry on DELETE (deep-copy defaults at startup, restore on delete) so admin doesn't need a restart to fully revert."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now 4702 lines — split urgently. This iteration adds page-copy + product-override + configurator-settings modules (~200 lines) inside a monolith flagged for 5 consecutive iterations.",
+    "PageCopyPatch has no length limits on `body` (long-form) or `title`. An admin could POST a 10MB body and OOM the response. Add reasonable length caps (title 200, subtitle 400, body 20000).",
+    "PageCopyPatch.extras is `Optional[Dict]` — unvalidated arbitrary object passed straight to Mongo. Add depth/size guard or drop the field.",
+    "clear_product_override returns {'deleted': r.deleted_count} which is 0 when nothing existed — the endpoint says 200 in both cases. Consider 404 when nothing was deleted (or return {'deleted': 0} as-is and document it).",
+    "Two @app.on_event('startup') hooks (deprecated in Starlette 0.27+) still present. Migrate to FastAPI lifespan.",
+    "AdminPageCopy.jsx line 67 — Revert calls PATCH with empty strings; should be a dedicated DELETE endpoint. Current implementation actually stores the empty overrides in Mongo (visible as {title:'',subtitle:'',...} rows in db.settings) which pollutes the collection permanently unless someone cleans it up."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration28.py"
+  ],
+  "success_rate": {
+    "backend": "15/16 (94%) — the 1 failure documents the gym_bag_addon_price whitelist bug",
+    "frontend": "100% loading/testid — but 2 integration flows fail (revert-to-default + gym_bag_addon_price save)"
+  },
+  "test_credentials": "Admin: admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Created & fully cleaned via direct Mongo delete + backend restart: page_copy:home, page_copy:teams-schools, full_squad_addons. Verified post-cleanup: /api/page-copy/teams-schools returns {}, /api/full-squad/config gym_bag_addon_price=4.0 (default), /api/products/personalised-hoodie name='Personalised Hoodie' price=14.99. NO iter28 residue remains.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After main agent fixes: (1) add 'gym_bag_addon_price' to line 3851 whitelist — rerun test_patch_full_squad_addons_persists_to_config, should PASS; (2) fix usePageCopy or add DELETE /admin/page-copy/{slug} — retest /admin/page-copy revert flow via Playwright; (3) fix PATCH-values to merge instead of replace — retest by saving one addon key at a time and verifying other keys survive. Backend base URL: https://branded-workwear-lab.preview.emergentagent.com. All existing test files are additive — test_iteration28.py stands alone.",
+  "rca of the issue": "gym_bag_addon_price bug: the FULL_SQUAD_ADDON_DEFAULTS dict (server.py:3667) has 4 keys, and AdminConfiguratorSettings.jsx UI renders all 4. But the PATCH endpoint (server.py:3851) only iterates the first 3. When the UI POSTs {values:{gym_bag_addon_price:5.5}}, the loop `for k in ('sleeve...','back_upload...','back_name...')` skips over gym_bag entirely, so cleaned={}, and the DB write stores an empty values object. The endpoint returns {'ok':true,'values':{}} — no error, no clue. usePageCopy revert bug: the button in AdminPageCopy.jsx line 67 sends `{title:'',subtitle:'',body:'',bullets:[],faq:[],cta_label:'',cta_link:''}`. server.py:4337 does `patch.model_dump(exclude_none=True)` — empty strings survive that filter (they're not None). The doc is upserted with all empty strings. Then usePageCopy line 26 merges — the condition `v !== undefined && v !== null && !(isArray && length===0 && !defaults[k])` is true for empty strings, so they overwrite the code defaults. Net: revert wipes the H1 instead of restoring the default."
+}

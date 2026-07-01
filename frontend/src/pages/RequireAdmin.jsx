@@ -57,6 +57,8 @@ function AdminTopBar({ email }) {
         <a href="/admin/bundle-variants" className="hover:text-amber-300" data-testid="admin-nav-bundle-variants">Bundle variants</a>
         <a href="/admin/products-import" className="hover:text-amber-300" data-testid="admin-nav-products-import">Import</a>
         <a href="/admin/collection-seo" className="hover:text-amber-300" data-testid="admin-nav-collection-seo">SEO copy</a>
+        <a href="/admin/page-copy" className="hover:text-amber-300" data-testid="admin-nav-page-copy">Page copy</a>
+        <a href="/admin/configurator-settings" className="hover:text-amber-300" data-testid="admin-nav-configurator-settings">Configurator £</a>
         <a href="/admin/qa" className="hover:text-amber-300" data-testid="admin-nav-qa">Q&amp;A</a>
         <a href="/admin/leavers-templates" className="hover:text-amber-300" data-testid="admin-nav-leavers-templates">Leavers</a>
         <a href="/admin/import-reviews" className="hover:text-amber-300" data-testid="admin-nav-import">Reviews import</a>
