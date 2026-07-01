@@ -1705,12 +1705,38 @@ async def get_leavers_tiers():
     }
 
 
+# Full-front print upgrade for Leavers — replaces the standard breast pocket print
+LEAVERS_FULL_FRONT_UPCHARGE = 2.50
+# Products that can NOT accept a full-front print (varsity jackets stay chest-panel only)
+LEAVERS_NO_FULL_FRONT_IDS = {"leavers-varsity", "varsity-jacket"}
+
+
+@api_router.get("/leavers/config")
+async def get_leavers_config():
+    """Public config for the Leavers order flow — pricing & rules used by the UI."""
+    return {
+        "full_front_upcharge": LEAVERS_FULL_FRONT_UPCHARGE,
+        "bag_price": LEAVERS_BAG_PRICE,
+        "bulk_tiers": [{"min_qty": t, "unit_price": p} for t, p in LEAVERS_BULK_TIERS_DEFAULT],
+        "no_full_front_product_ids": sorted(LEAVERS_NO_FULL_FRONT_IDS),
+        "proof_days": 2,
+        "names_deadline_days": 7,
+        "design_libraries": {
+            "front_breast": "leavers-front-designs",
+            "back": "leavers-back-designs",
+            "full_front": "leavers-full-front-designs",
+        },
+    }
+
+
 @api_router.get("/leavers/products")
 async def list_leavers_products():
     out = []
     for p in PRODUCTS.values():
         if p.get("category") == "leavers":
-            out.append({k: p.get(k) for k in ("id", "name", "price", "image", "description", "sizes")})
+            item = {k: p.get(k) for k in ("id", "name", "price", "image", "description", "sizes")}
+            item["allows_full_front"] = p["id"] not in LEAVERS_NO_FULL_FRONT_IDS
+            out.append(item)
     return out
 
 
@@ -1797,7 +1823,17 @@ class LeaversCheckoutRequest(BaseModel):
     product_id: str
     template_id: Optional[str] = None
     template_title: Optional[str] = None
-    custom_design_data_url: Optional[str] = None
+    # Custom uploads (optional — user can also pick from the design library)
+    custom_design_data_url: Optional[str] = None            # legacy: front design (breast pocket)
+    custom_back_design_data_url: Optional[str] = None       # back print artwork
+    # Design library picks (portfolio ids from PORTFOLIO_CATEGORIES leavers-front/back/full-front-designs)
+    front_design_id: Optional[str] = None
+    back_design_id: Optional[str] = None
+    # Print position — "breast" (default, included) OR "full_front" (+£2.50 upcharge, not allowed on varsity)
+    print_position: str = "breast"
+    # Names — either the customer uploads a file OR they tick to be contacted after purchase
+    names_file_data_url: Optional[str] = None
+    names_collection_mode: str = "upload"                   # "upload" | "we-will-contact"
     sizes: List[LeaversSizeQty]
     add_drawstring_bag: bool = False
     origin_url: str
@@ -1822,22 +1858,48 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         line_summary.append(f"{s.size}×{s.qty}")
     if total_qty < 1:
         raise HTTPException(400, "Add at least one item")
+
+    # Validate print position
+    if payload.print_position not in ("breast", "full_front"):
+        raise HTTPException(400, "print_position must be 'breast' or 'full_front'")
+    if payload.print_position == "full_front" and payload.product_id in LEAVERS_NO_FULL_FRONT_IDS:
+        raise HTTPException(400, f"{p['name']} does not support a full-front print — please choose the breast option.")
+    full_front_upcharge = LEAVERS_FULL_FRONT_UPCHARGE if payload.print_position == "full_front" else 0.0
+
     base = float(p["price"])
-    unit = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base, total_qty)
+    unit = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base, total_qty) + full_front_upcharge
     bag_each = LEAVERS_BAG_PRICE if payload.add_drawstring_bag else 0.0
     per_unit = unit + bag_each
     total_amount = round(per_unit * total_qty, 2)
     if total_amount < 0.5:
         raise HTTPException(400, "Total below Stripe minimum (£0.50)")
 
-    # Require either a template or a custom upload
-    if not payload.template_id and not payload.custom_design_data_url:
-        raise HTTPException(400, "Pick a design template or upload your own artwork")
-    if payload.custom_design_data_url:
-        if not payload.custom_design_data_url.startswith("data:image/"):
-            raise HTTPException(400, "Custom design must be an image data URL")
-        if len(payload.custom_design_data_url) > 8 * 1024 * 1024:
-            raise HTTPException(400, "Custom design image too large (max ~6 MB)")
+    # Require SOME kind of design — either a template, a picked design from the library, or a custom upload
+    has_design = any([
+        payload.template_id,
+        payload.front_design_id,
+        payload.back_design_id,
+        payload.custom_design_data_url,
+        payload.custom_back_design_data_url,
+    ])
+    if not has_design:
+        raise HTTPException(400, "Pick a design (front or back) or upload your own artwork")
+
+    # Validate data-URL uploads
+    for label, du in (
+        ("front", payload.custom_design_data_url),
+        ("back", payload.custom_back_design_data_url),
+        ("names", payload.names_file_data_url),
+    ):
+        if not du:
+            continue
+        if not (du.startswith("data:image/") or du.startswith("data:application/")):
+            raise HTTPException(400, f"{label} upload must be an image or file data URL")
+        if len(du) > 8 * 1024 * 1024:
+            raise HTTPException(400, f"{label} upload too large (max ~6 MB)")
+
+    if payload.names_collection_mode not in ("upload", "we-will-contact"):
+        raise HTTPException(400, "names_collection_mode must be 'upload' or 'we-will-contact'")
 
     host_url = str(http_request.base_url)
     webhook_url = f"{host_url}api/webhook/stripe"
@@ -1855,6 +1917,10 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "product_id": payload.product_id,
         "template_id": payload.template_id or "custom",
         "template_title": (payload.template_title or "")[:80],
+        "print_position": payload.print_position,
+        "front_design_id": (payload.front_design_id or "")[:60],
+        "back_design_id": (payload.back_design_id or "")[:60],
+        "names_mode": payload.names_collection_mode,
         "total_qty": str(total_qty),
         "unit_price": f"{unit:.2f}",
         "bag_each": f"{bag_each:.2f}",
@@ -1869,12 +1935,14 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
 
     artwork_id = None
-    if payload.custom_design_data_url:
+    if any([payload.custom_design_data_url, payload.custom_back_design_data_url, payload.names_file_data_url]):
         artwork_id = str(uuid.uuid4())
         await db.leavers_artwork.insert_one({
             "id": artwork_id,
             "session_id": session.session_id,
-            "custom_design": payload.custom_design_data_url,
+            "custom_design": payload.custom_design_data_url,               # front
+            "custom_back_design": payload.custom_back_design_data_url,     # back
+            "names_file": payload.names_file_data_url,                     # names list
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
 
@@ -1890,11 +1958,16 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "product_id": payload.product_id,
         "template_id": payload.template_id,
         "template_title": payload.template_title,
+        "front_design_id": payload.front_design_id,
+        "back_design_id": payload.back_design_id,
+        "print_position": payload.print_position,
+        "names_collection_mode": payload.names_collection_mode,
         "custom_design_artwork_id": artwork_id,
         "sizes": [s.model_dump() for s in payload.sizes if s.qty > 0],
         "add_drawstring_bag": bool(payload.add_drawstring_bag),
         "total_quantity": total_qty,
         "unit_price": unit,
+        "full_front_upcharge": full_front_upcharge,
         "amount": total_amount,
         "currency": "gbp",
         "metadata": metadata,
@@ -2787,6 +2860,11 @@ async def _startup_init_storage():
 PORTFOLIO_CATEGORIES = [
     "workwear", "team-kits", "leavers", "sports", "fitness", "hospitality",
     "schools", "events", "beauty", "barbering", "other",
+    # Carousels / design libraries — same admin CRUD, but consumed by specific pages
+    "fight-night-action",
+    "leavers-front-designs",
+    "leavers-back-designs",
+    "leavers-full-front-designs",
 ]
 
 

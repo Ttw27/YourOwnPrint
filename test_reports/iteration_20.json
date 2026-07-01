@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 20 (Fight Night carousel + universal Need-Help CTA + Leavers overhaul) — backend 13/13 tests PASS, frontend UI checks PASS. All specified data-testids render as designed, print position + varsity restriction + names step + design-library empty states all behave correctly. One minor UI observation: [ls-summary-names-note] testid isn't emitted in the summary sidebar (the note text IS present, just missing its data-testid).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LeaversFlow summary sidebar", "issue": "The sidebar 'Names — we'll email you a form after checkout to collect them.' / upload-mode note is rendered but is missing data-testid=\"ls-summary-names-note\" — automation cannot key off it. Text content is present.", "selector": "[data-testid=ls-summary-names-note]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration20.py",
+    "/app/test_reports/pytest/iter20_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Add data-testid=\"ls-summary-names-note\" to the names-mode note element inside the Leavers summary sidebar so the UI contract in the review spec is fully honoured."
+  ],
+  "critical_code_review_comments": [
+    "server.py has grown past 3500 lines — recommend splitting Leavers/Portfolio/Sports catalogues into feature modules for maintainability.",
+    "Leavers checkout stores full data-URL uploads in db.leavers_artwork (up to ~6 MB each) — fine for now but consider offloading to object storage if volume grows.",
+    "/api/leavers/checkout accepts arbitrary front_design_id/back_design_id strings without verifying they exist in db.portfolio — this is lenient by design but could accept junk IDs. Not blocking."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration20.py (new)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "~95% (all critical flows pass; 1 missing testid)"},
+  "test_credentials": "admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (loaded from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Tests create TEST_-prefixed portfolio items via /api/admin/portfolio for fight-night-action + all 3 new leavers-* categories and soft-delete them in the finally block. Leavers checkout tests create real payment_transactions rows with a live Stripe test key — these accumulate in the DB but are marked payment_status=pending.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend endpoints from iteration 20 verified end-to-end: /api/leavers/config, /api/leavers/products (allows_full_front), /api/leavers/checkout (breast, full_front upcharge, varsity 400, invalid position, invalid names_mode, no-design 400, back-only OK, names file persisted to db.leavers_artwork). Portfolio: 4 new categories accepted and rendered on public listing. Frontend: /fight-night-tee replaces old fn-gallery with fn-portfolio-carousel-empty state (WhatsApp copy present, no live link because no admin uploads seeded on this env). /leavers-hoodies/start renders steps 3-7 with all specified testids after picking a garment; full-front toggle updates sidebar note; varsity auto-reverts + toast; front/back design libraries show ls-front-design-empty / ls-back-design-empty; names upload switches to file-block. /design shows designer-need-help; /product/personalised-tee shows specials-need-help; /product/school-hoodie correctly OMITS specials-need-help.",
+  "rca of the issue": "No RCA needed — all critical paths pass."
+}

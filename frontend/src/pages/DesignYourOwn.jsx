@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
+import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { fetchDesignerProducts, createCheckout, saveDesignerArtwork } from "../lib/api";
 import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info } from "lucide-react";
@@ -732,6 +733,17 @@ export default function DesignYourOwn() {
               <div className="text-[10px] text-[#4b5563] mt-3 font-bold text-center">Test mode — no real charge<br /><ImageIcon size={9} className="inline" /> transparent PNG sent to production on checkout</div>
             </Panel>
           </aside>
+        </div>
+
+        {/* Full-width "let us do it for you" CTA below the designer */}
+        <div className="mt-8">
+          <NeedHelpCTA
+            title="Don't want to fiddle with the designer? Let us set it up for you."
+            body="Send us your logo or idea over WhatsApp — we'll clean up the artwork, mock it on your chosen garment, and reply with a proof to approve. Same price, zero faff."
+            presetMessage="Hi! I want to order custom prints but would prefer you set the design up for me — can I send you my logo?"
+            testid="designer-need-help"
+            variant="banner"
+          />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import RelatedProductsStrip from "../components/bold/RelatedProductsStrip";
 import PricePromise from "../components/bold/PricePromise";
 import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
+import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
 import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
 import { toast } from "sonner";
@@ -308,15 +309,24 @@ export default function ProductDetail() {
 
                 {/* PRINT MODE — prominent segmented choice (hidden for Specials, they include a breast print in the price) */}
                 {isSpecial ? (
-                  <Section title="3. Your breast logo">
-                    <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4 flex items-start gap-3" data-testid="specials-included-note">
-                      <div className="w-8 h-8 grid place-items-center bg-[#7bc67e] text-[#1a1a1a] rounded-full flex-shrink-0"><Check size={16} /></div>
-                      <div className="text-sm">
-                        <div className="font-nunito font-extrabold text-[#1a1a1a]">Left-breast logo print is included in the price</div>
-                        <div className="text-xs text-[#4b5563] mt-1">This is one of our Starter Specials — no MOQ, no setup, no upsell. Just upload your logo below and we'll print it neatly on the left breast of every garment.</div>
+                  <>
+                    <Section title="3. Your breast logo">
+                      <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4 flex items-start gap-3" data-testid="specials-included-note">
+                        <div className="w-8 h-8 grid place-items-center bg-[#7bc67e] text-[#1a1a1a] rounded-full flex-shrink-0"><Check size={16} /></div>
+                        <div className="text-sm">
+                          <div className="font-nunito font-extrabold text-[#1a1a1a]">Left-breast logo print is included in the price</div>
+                          <div className="text-xs text-[#4b5563] mt-1">This is one of our Starter Specials — no MOQ, no setup, no upsell. Just upload your logo below and we'll print it neatly on the left breast of every garment.</div>
+                        </div>
                       </div>
-                    </div>
-                  </Section>
+                    </Section>
+                    <NeedHelpCTA
+                      title="Not confident with your logo file? Send it to us."
+                      body="Send your logo (even a phone screenshot) and we'll clean it up, vectorise it, and prep it for print — no cost, no upsell."
+                      presetMessage="Hi! I've bought Specials and my logo needs some love — can you sort it?"
+                      testid="specials-need-help"
+                      variant="banner"
+                    />
+                  </>
                 ) : (
                   <Section title="3. Print options">
                     <div className="grid grid-cols-2 gap-2 mb-4" data-testid="print-mode-toggle">
