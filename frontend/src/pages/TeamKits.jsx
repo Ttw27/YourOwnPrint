@@ -54,6 +54,9 @@ export default function TeamKits() {
               <a href="#bundles" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md transition-transform hover:-translate-y-1">
                 Browse kit bundles <ArrowRight size={16} />
               </a>
+              <Link to="/full-squad-configurator" data-testid="team-kits-full-squad-cta" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md transition-transform hover:-translate-y-1">
+                Full Squad Configurator <ArrowRight size={16} />
+              </Link>
               <WhatsAppInline preset="Hi! I need team kits for my club — can you advise?" label="WhatsApp the team" />
             </div>
           </div>

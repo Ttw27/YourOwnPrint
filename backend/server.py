@@ -3122,6 +3122,7 @@ DEFAULT_NAV_CONFIG = {
                     {"label": "Football Kits", "to": "/sports-teams/football"},
                     {"label": "Rugby Kits", "to": "/sports-teams/rugby"},
                     {"label": "Team Kits configurator", "to": "/team-kits"},
+                    {"label": "Full Squad Configurator", "to": "/full-squad-configurator", "badge": "New"},
                 ]},
                 {"heading": "Fitness", "links": [
                     {"label": "Gyms", "to": "/sports-teams/gyms"},
