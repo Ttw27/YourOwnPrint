@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 21 (front-only kit bundles + ScrollToTop + placement seed) verified end-to-end. All 11 review bullets PASS. Backend: 12/12 pytest cases pass — the 4 *-front-only bundles return allowed_placements=['left-breast','right-breast','full-front','left-sleeve','right-sleeve'] (no back-print/neck-label), the 2 regular bundles return allowed_placements=null (unrestricted), and /api/quote-request accepts both front-only and regular team-kit submissions. Frontend: /product/{football,rugby,football-premium,training-pack}-front-only render row-0-size + row-0-qty ONLY (no row-0-name, no row-0-number) and show [data-testid=front-only-note] with the exact spec copy 'no names or numbers on the back'; /product/{football-kit,rugby-kit}-bundle regressions retain row-0-name + row-0-number and OMIT front-only-note. ScrollToTop verified from / → /portfolio, /design, /team-kits, /workwear — after 2000px scroll + nav-link click, window.scrollY and document.scrollingElement.scrollTop both reset to 0.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "TeamKitConfigurator (all product pages)", "issues": ["Dev-mode React hydration warning: <span> cannot be a child of <option> — caused by the visual-edit tooling wrapping every mapped <option> child in a <span data-ve-dynamic>. Not a real bug in the app source (TeamKitConfigurator.jsx L221 is a clean {n} expression). Only visible in the preview build's console; harmless in production, but noisy for automation logs. Consider disabling the visual-edit wrapper inside <option> children."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration21.py",
+    "/app/test_reports/pytest/iter21_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is now ~3597 lines — same recommendation as iter20 to split into feature modules (products/team-kits/leavers/portfolio/quote).",
+    "FRONT_ONLY_BUNDLE_IDS is duplicated conceptually between backend (server.py:3536) and frontend (isFrontOnly = product.id.endsWith('-front-only') in TeamKitConfigurator.jsx:23). The frontend uses a suffix rule, the backend uses an explicit set — they happen to agree today. Consider exposing the flag from the product payload (e.g. product.front_only: true) so both sides read from a single source.",
+    "The seed marker key 'front_only_placements_seed_v1' skips re-seeding forever after the first run — if a new *-front-only bundle is added later, it won't be seeded. Consider making the seed idempotent per-pid rather than a global one-shot."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration21.py (new)"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% (6/6 roster variants + 4/4 scroll-to-top routes)"},
+  "test_credentials": "admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (not required this iteration — all endpoints tested are public)",
+  "seed_data_creation": "Backend quote-submission tests POST 2 TEST_-prefixed rows to db.quote_requests (company='TEST_iter21_football-kit-front-only' and 'TEST_iter21_football-kit-bundle'). These persist; safe to leave or purge with `db.quote_requests.delete_many({'company': /^TEST_iter21/})`.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 21 targets three quick-wins and all pass. Backend: server.py:3536 defines FRONT_ONLY_BUNDLE_IDS = {football-kit-front-only, football-premium-front-only, rugby-kit-front-only, training-pack-front-only}; _seed_front_only_bundle_placements() writes ['left-breast','right-breast','full-front','left-sleeve','right-sleeve'] into db.product_meta for each on startup (guarded by settings.front_only_placements_seed_v1 marker). Frontend: TeamKitConfigurator.jsx:23 uses isFrontOnly = product.id.endsWith('-front-only') to branch between Size+Qty and Name+No.+Size+Qty roster rows; [data-testid=front-only-note] appears only on front-only variants. ScrollToTop.jsx mounted in App.js inside <BrowserRouter> uses useLocation() + window.scrollTo({top:0, behavior:'instant'}) and also resets document.scrollingElement.scrollTop. Next roadmap card is the Full Squad Configurator refactor + variant pickers within the 3 regular bundles.",
+  "rca of the issue": "No RCA needed — no bugs found."
+}

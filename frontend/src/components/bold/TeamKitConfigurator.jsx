@@ -222,23 +222,42 @@ export default function TeamKitConfigurator({ product }) {
           </select>
         </div>
         {isFrontOnly && (
-          <div className="text-xs text-[#4b5563] mb-2 italic">Front-print-only variant — names & numbers are not included. Names/numbers below are for your reference only.</div>
+          <div className="text-xs text-[#4b5563] mb-2 italic" data-testid="front-only-note">Front-print-only variant — no names or numbers on the back. Just tell us the sizes and how many.</div>
         )}
         <div className="space-y-1.5">
-          <div className="hidden sm:grid grid-cols-12 gap-2 text-[10px] font-nunito font-bold uppercase tracking-wider text-[#4b5563] px-2">
-            <span className="col-span-5">Name on back</span><span className="col-span-2 text-center">No.</span><span className="col-span-2">Size</span><span className="col-span-2 text-center">Qty</span><span className="col-span-1" />
-          </div>
-          {roster.map((r, j) => (
-            <div key={j} data-testid={`row-${j}`} className="grid grid-cols-12 gap-2 items-center bg-white border border-[#dcfce7] rounded-xl p-2">
-              <input data-testid={`row-${j}-name`} value={r.name} onChange={(e) => updateRoster(j, { name: e.target.value })} placeholder="Name" className="col-span-5 bg-transparent px-2 py-1 text-sm focus:outline-none" />
-              <input data-testid={`row-${j}-number`} value={r.number} onChange={(e) => updateRoster(j, { number: e.target.value })} placeholder="No." className="col-span-2 bg-transparent px-2 py-1 text-sm text-center focus:outline-none border-l border-[#dcfce7]" />
-              <select data-testid={`row-${j}-size`} value={r.size} onChange={(e) => updateRoster(j, { size: e.target.value })} className="col-span-2 bg-transparent text-sm focus:outline-none">
-                {(product.sizes || []).map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <input data-testid={`row-${j}-qty`} type="number" min={1} value={r.qty} onChange={(e) => updateRoster(j, { qty: e.target.value })} className="col-span-2 bg-transparent text-sm text-center focus:outline-none border-l border-[#dcfce7]" />
-              <button data-testid={`row-${j}-remove`} onClick={() => removeRow(j)} className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center"><Trash2 size={14} /></button>
-            </div>
-          ))}
+          {isFrontOnly ? (
+            <>
+              <div className="hidden sm:grid grid-cols-12 gap-2 text-[10px] font-nunito font-bold uppercase tracking-wider text-[#4b5563] px-2">
+                <span className="col-span-7">Size</span><span className="col-span-4 text-center">Qty</span><span className="col-span-1" />
+              </div>
+              {roster.map((r, j) => (
+                <div key={j} data-testid={`row-${j}`} className="grid grid-cols-12 gap-2 items-center bg-white border border-[#dcfce7] rounded-xl p-2">
+                  <select data-testid={`row-${j}-size`} value={r.size} onChange={(e) => updateRoster(j, { size: e.target.value })} className="col-span-7 bg-transparent text-sm px-2 focus:outline-none">
+                    {(product.sizes || []).map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <input data-testid={`row-${j}-qty`} type="number" min={1} value={r.qty} onChange={(e) => updateRoster(j, { qty: e.target.value })} className="col-span-4 bg-transparent text-sm text-center focus:outline-none border-l border-[#dcfce7]" />
+                  <button data-testid={`row-${j}-remove`} onClick={() => removeRow(j)} className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center"><Trash2 size={14} /></button>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="hidden sm:grid grid-cols-12 gap-2 text-[10px] font-nunito font-bold uppercase tracking-wider text-[#4b5563] px-2">
+                <span className="col-span-5">Name on back</span><span className="col-span-2 text-center">No.</span><span className="col-span-2">Size</span><span className="col-span-2 text-center">Qty</span><span className="col-span-1" />
+              </div>
+              {roster.map((r, j) => (
+                <div key={j} data-testid={`row-${j}`} className="grid grid-cols-12 gap-2 items-center bg-white border border-[#dcfce7] rounded-xl p-2">
+                  <input data-testid={`row-${j}-name`} value={r.name} onChange={(e) => updateRoster(j, { name: e.target.value })} placeholder="Name" className="col-span-5 bg-transparent px-2 py-1 text-sm focus:outline-none" />
+                  <input data-testid={`row-${j}-number`} value={r.number} onChange={(e) => updateRoster(j, { number: e.target.value })} placeholder="No." className="col-span-2 bg-transparent px-2 py-1 text-sm text-center focus:outline-none border-l border-[#dcfce7]" />
+                  <select data-testid={`row-${j}-size`} value={r.size} onChange={(e) => updateRoster(j, { size: e.target.value })} className="col-span-2 bg-transparent text-sm focus:outline-none">
+                    {(product.sizes || []).map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <input data-testid={`row-${j}-qty`} type="number" min={1} value={r.qty} onChange={(e) => updateRoster(j, { qty: e.target.value })} className="col-span-2 bg-transparent text-sm text-center focus:outline-none border-l border-[#dcfce7]" />
+                  <button data-testid={`row-${j}-remove`} onClick={() => removeRow(j)} className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center"><Trash2 size={14} /></button>
+                </div>
+              ))}
+            </>
+          )}
         </div>
         <button data-testid="add-row" onClick={addRow} className="mt-2 inline-flex items-center gap-1.5 text-sm font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={14} /> Add player</button>
       </div>

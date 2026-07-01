@@ -3531,6 +3531,49 @@ async def _seed_default_product_meta():
         print(f"product-meta seed failed: {e}")
 
 
+# Kit bundle categorisation — used by the PDP to swap UI (e.g. hide back-print options on
+# front-only bundles) and by admin listings. Keeps things declarative.
+FRONT_ONLY_BUNDLE_IDS = {
+    "football-kit-front-only", "football-premium-front-only",
+    "rugby-kit-front-only", "training-pack-front-only",
+}
+
+
+@app.on_event("startup")
+async def _seed_front_only_bundle_placements():
+    """One-time seed: locks all *-front-only kit bundles to front placements only —
+    no back-print, no back-name/number. Admin overrides win afterwards."""
+    try:
+        marker = await db.settings.find_one({"key": "front_only_placements_seed_v1"})
+        if marker is not None:
+            return
+        FRONT_ONLY_PLACEMENTS = ["left-breast", "right-breast", "full-front", "left-sleeve", "right-sleeve"]
+        for pid in FRONT_ONLY_BUNDLE_IDS:
+            if pid not in PRODUCTS:
+                continue
+            existing = await db.product_meta.find_one({"product_id": pid}) or {}
+            if existing.get("allowed_placements"):
+                # Admin already set explicit placements — respect that.
+                continue
+            await db.product_meta.update_one(
+                {"product_id": pid},
+                {"$set": {
+                    "product_id": pid,
+                    "allowed_placements": FRONT_ONLY_PLACEMENTS,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }},
+                upsert=True,
+            )
+            PRODUCTS[pid]["allowed_placements"] = FRONT_ONLY_PLACEMENTS
+        await db.settings.update_one(
+            {"key": "front_only_placements_seed_v1"},
+            {"$set": {"key": "front_only_placements_seed_v1", "ran_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+    except Exception as e:
+        print(f"front-only placements seed failed: {e}")
+
+
 app.include_router(api_router)
 
 app.add_middleware(

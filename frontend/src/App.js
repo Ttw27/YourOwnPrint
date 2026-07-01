@@ -36,11 +36,13 @@ import AdminPortfolio from "@/pages/AdminPortfolio";
 import AdminNavigation from "@/pages/AdminNavigation";
 import AdminIntegrations from "@/pages/AdminIntegrations";
 import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
+import ScrollToTop from "@/components/bold/ScrollToTop";
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
+        <ScrollToTop />
         <Toaster position="top-center" richColors />
         <Routes>
           <Route path="/" element={<Home />} />
