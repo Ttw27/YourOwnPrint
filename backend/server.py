@@ -2207,9 +2207,15 @@ GARMENT_TYPE_CATALOGUE = [
 
 
 def _garment_type_of(product: Dict) -> Optional[str]:
+    # Prefer the product's explicit `category` when it matches a catalogue slug.
+    # This lets bulk-imported products land in the collection admin chose at import
+    # time without depending on fragile name-substring heuristics.
+    cat = (product.get("category") or "").lower()
+    _catalogue_slugs = {t["slug"] for t in GARMENT_TYPE_CATALOGUE}
+    if cat in _catalogue_slugs:
+        return cat
     pid = product["id"].lower()
     name = (product.get("name") or "").lower()
-    cat = (product.get("category") or "").lower()
     if "apron" in pid or "apron" in name:
         return "aprons"
     if "legging" in pid or "trouser" in pid or "jogger" in pid or "legging" in name or "trouser" in name or "jogger" in name:
@@ -2218,7 +2224,7 @@ def _garment_type_of(product: Dict) -> Optional[str]:
         return "shorts"
     if "jacket" in pid or "jacket" in name or "varsity" in pid or "softshell" in pid:
         return "jackets"
-    if "vest" in pid or "hi-vis" in pid or "hi vis" in name:
+    if "vest" in pid or "vest" in name or "hi-vis" in pid or "hi vis" in name:
         return "hi-vis"
     if "polo" in pid or "polo" in name:
         return "polos"
@@ -4345,6 +4351,8 @@ class BulkImportPayload(BaseModel):
 
 @api_router.post("/admin/products/bulk-import", dependencies=[Depends(require_admin)])
 async def bulk_import_products(payload: BulkImportPayload):
+    if len(payload.items) > 5000:
+        raise HTTPException(413, "Too many items in one request (max 5000).")
     now = datetime.now(timezone.utc).isoformat()
     created: List[Dict] = []
     skipped: List[Dict] = []
@@ -4395,15 +4403,30 @@ async def bulk_import_products(payload: BulkImportPayload):
     return {"ok": True, "created": created, "skipped": skipped, "dry_run": payload.dry_run}
 
 
+class ImportedProductPatch(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+    image: Optional[str] = None
+    additional_images: Optional[List[str]] = None
+    description: Optional[str] = None
+    gender_fit: Optional[str] = None
+    industry_tags: Optional[List[str]] = None
+    colors: Optional[List[Dict]] = None
+    sizes: Optional[List[str]] = None
+    size_upcharges: Optional[Dict[str, float]] = None
+    source: Optional[str] = None
+    source_sku: Optional[str] = None
+    brand: Optional[str] = None
+    active: Optional[bool] = None
+
+
 @api_router.patch("/admin/products/imported/{pid}", dependencies=[Depends(require_admin)])
-async def patch_imported_product(pid: str, patch: Dict):
+async def patch_imported_product(pid: str, patch: ImportedProductPatch):
     existing = await db.imported_products.find_one({"id": pid})
     if not existing:
         raise HTTPException(404, "Imported product not found")
-    allow = {"name", "price", "category", "image", "additional_images", "description",
-             "gender_fit", "industry_tags", "colors", "sizes", "size_upcharges",
-             "source", "source_sku", "brand", "active"}
-    up = {k: v for k, v in patch.items() if k in allow}
+    up = {k: v for k, v in patch.model_dump(exclude_none=True).items()}
     if up:
         await db.imported_products.update_one({"id": pid}, {"$set": up})
         doc = await db.imported_products.find_one({"id": pid})
