@@ -51,7 +51,8 @@ export default function ProductDetail() {
         setColor((p.colors && p.colors[0]?.name) || null);
         setSizeQtys({});
         setPrintMode("custom");
-        setSelectedPlacements([]);
+        // Specials products auto-select left-breast so the upload widget is visible immediately
+        setSelectedPlacements(p?.specials_eligible ? ["left-breast"] : []);
         setArtwork({});
       })
       .catch((e) => setErr(e?.response?.status === 404 ? "Product not found" : "Could not load product"))
@@ -69,13 +70,6 @@ export default function ProductDetail() {
     if (!Array.isArray(allowedPlacements)) return placements;
     return placements.filter(p => allowedPlacements.includes(p.id));
   }, [placements, allowedPlacements, isSpecial]);
-
-  // Specials: auto-select left-breast + force custom mode (breast logo is included in the price)
-  useEffect(() => {
-    if (!isSpecial) return;
-    setPrintMode("custom");
-    setSelectedPlacements((prev) => (prev.includes("left-breast") ? prev : ["left-breast"]));
-  }, [isSpecial]);
 
   const togglePlacement = (pid) => {
     if (blank) return;
