@@ -20,10 +20,28 @@ export default function FullSquadConfigurator() {
 
   useEffect(() => { fetchFullSquadConfig().then(setCfg).catch(() => setCfg(null)); }, []);
 
+  const addons = cfg?.addons || {};
+  const linePriceOfItem = (it) => {
+    const qty = Object.values(it.sizes).reduce((a, b) => a + Number(b || 0), 0);
+    let unit = Number(it.product.price || 0);
+    if (it.sleeve_print) unit += Number(addons.sleeve_print_price || 0);
+    if (it.back_upload_data && !it.section.supports_names_numbers) unit += Number(addons.back_upload_print_price || 0);
+    return { unit, total: unit * qty, qty };
+  };
+  const totals = useMemo(() => {
+    let subtotal = 0, totalQty = 0;
+    Object.values(items).forEach((it) => {
+      const l = linePriceOfItem(it);
+      subtotal += l.total;
+      totalQty += l.qty;
+    });
+    return { subtotal, totalQty };
+  }, [items, addons]);
+
   if (!cfg) {
     return <div className="min-h-screen grid place-items-center bg-white"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   }
-  const { sections, addons, proof_days } = cfg;
+  const { sections, proof_days } = cfg;
 
   const keyFor = (section, product) => `${section.key}_${product.id}`;
   const upsertItem = (section, product, patch) => {
@@ -45,22 +63,6 @@ export default function FullSquadConfigurator() {
   });
 
   const qtyOfItem = (it) => Object.values(it.sizes).reduce((a, b) => a + Number(b || 0), 0);
-  const linePriceOfItem = (it) => {
-    const qty = qtyOfItem(it);
-    let unit = Number(it.product.price || 0);
-    if (it.sleeve_print) unit += Number(addons.sleeve_print_price || 0);
-    if (it.back_upload_data && !it.section.supports_names_numbers) unit += Number(addons.back_upload_print_price || 0);
-    return { unit, total: unit * qty, qty };
-  };
-  const totals = useMemo(() => {
-    let subtotal = 0, totalQty = 0;
-    Object.values(items).forEach((it) => {
-      const l = linePriceOfItem(it);
-      subtotal += l.total;
-      totalQty += l.qty;
-    });
-    return { subtotal, totalQty };
-  }, [items, addons]);
 
   const bumpPlayer = (i, patch) => setRoster((r) => r.map((row, j) => j === i ? { ...row, ...patch } : row));
   const addPlayer = () => setRoster((r) => [...r, { name: "", number: "" }]);
@@ -100,7 +102,7 @@ export default function FullSquadConfigurator() {
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Full squad configurator</span>
           <h1 className="font-black text-4xl lg:text-6xl mt-2">Match day, training and tracksuit — one order.</h1>
-          <p className="text-zinc-300 mt-3 max-w-2xl">Build the whole squad's setup at once. Match-day gets names + numbers on the back. Training and tracksuit stay clean — or add a back print upload for a small upgrade.</p>
+          <p className="text-zinc-300 mt-3 max-w-2xl">Build the whole squad&apos;s setup at once. Match-day gets names + numbers on the back. Training and tracksuit stay clean — or add a back print upload for a small upgrade.</p>
         </div>
       </header>
 
@@ -187,7 +189,7 @@ export default function FullSquadConfigurator() {
                             {!section.supports_names_numbers && (
                               <label className="inline-flex items-center gap-2 bg-[#fff7ed] rounded-xl p-2 cursor-pointer">
                                 <input type="checkbox" checked={!!it.back_upload_data} onChange={(e) => upsertItem(section, product, { back_upload_data: e.target.checked ? "pending-upload" : null })} data-testid={`fsc-backprint-${section.key}-${product.id}`} />
-                                <span className="flex-1"><strong>Back print</strong> <span className="text-[#4b5563]">+£{Number(addons.back_upload_print_price).toFixed(2)}/kit — you'll upload on the proof email</span></span>
+                                <span className="flex-1"><strong>Back print</strong> <span className="text-[#4b5563]">+£{Number(addons.back_upload_print_price).toFixed(2)}/kit — you&apos;ll upload on the proof email</span></span>
                               </label>
                             )}
                           </div>
@@ -239,7 +241,7 @@ export default function FullSquadConfigurator() {
               {busy ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />} Get a proof &amp; final quote
             </button>
             <div className="mt-3 space-y-1 text-[11px] text-zinc-300">
-              <div className="inline-flex items-start gap-1.5"><ShieldCheck size={11} className="mt-0.5 text-[#7bc67e]" /><span>We'll send a full proof within {proof_days} working days.</span></div>
+              <div className="inline-flex items-start gap-1.5"><ShieldCheck size={11} className="mt-0.5 text-[#7bc67e]" /><span>We&apos;ll send a full proof within {proof_days} working days.</span></div>
               <div className="inline-flex items-start gap-1.5"><Truck size={11} className="mt-0.5 text-[#7bc67e]" /><span>UK printed · low minimums · one point of contact.</span></div>
             </div>
           </div>

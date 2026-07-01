@@ -66,7 +66,9 @@ function App() {
           <Route path="/leavers-hoodies" element={<LeaversHoodies />} />
           <Route path="/leavers-hoodies/start" element={<LeaversStart />} />
           <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/full-squad-configurator" element={<FullSquadConfigurator />} />
           <Route path="/admin/portfolio" element={<RequireAdmin><AdminPortfolio /></RequireAdmin>} />
+          <Route path="/admin/bundle-variants" element={<RequireAdmin><AdminBundleVariants /></RequireAdmin>} />
           <Route path="/admin/navigation" element={<RequireAdmin><AdminNavigation /></RequireAdmin>} />
           <Route path="/admin/integrations" element={<RequireAdmin><AdminIntegrations /></RequireAdmin>} />
           <Route path="/admin/leavers-templates" element={<RequireAdmin><AdminLeaversTemplates /></RequireAdmin>} />

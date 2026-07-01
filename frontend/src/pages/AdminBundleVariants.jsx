@@ -107,7 +107,7 @@ export default function AdminBundleVariants() {
     <div className="min-h-screen bg-[#f8fafc] font-nunito" data-testid="admin-bundle-variants">
       <div className="max-w-6xl mx-auto px-6 py-10">
         <h1 className="font-black text-3xl mb-1">Bundle variants</h1>
-        <p className="text-sm text-[#4b5563] mb-6">Add brand/tier options for each kit bundle (e.g. AWD, Nike, Umbro, Pro tier). Each variant shows up as a "Pick your kit" tile on the customer configurator with its own photo, description, size guide and price.</p>
+        <p className="text-sm text-[#4b5563] mb-6">Add brand/tier options for each kit bundle (e.g. AWD, Nike, Umbro, Pro tier). Each variant shows up as a &ldquo;Pick your kit&rdquo; tile on the customer configurator with its own photo, description, size guide and price.</p>
 
         {/* Add */}
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5 mb-8" data-testid="admin-bundle-variants-create">
@@ -171,7 +171,7 @@ export default function AdminBundleVariants() {
           <div className="py-20 grid place-items-center"><Loader2 className="animate-spin text-[#7bc67e]" /></div>
         ) : Object.keys(grouped).length === 0 ? (
           <div className="bg-white border-2 border-[#dcfce7] rounded-2xl p-10 text-center text-sm text-[#4b5563]" data-testid="abv-empty">
-            No variants yet — add one above and it'll show up on the corresponding bundle page instantly.
+            No variants yet — add one above and it&apos;ll show up on the corresponding bundle page instantly.
           </div>
         ) : (
           <div className="space-y-8">

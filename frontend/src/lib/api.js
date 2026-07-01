@@ -178,14 +178,6 @@ export async function deleteTeamKitBrand(id) {
   const { data } = await api.delete(`/team-kit-brands/${id}`);
   return data;
 }
-export async function updateTeamKitBrand(id, payload) {
-  const { data } = await api.put(`/team-kit-brands/${id}`, payload);
-  return data;
-}
-export async function deleteTeamKitBrand(id) {
-  const { data } = await api.delete(`/team-kit-brands/${id}`);
-  return data;
-}
 
 // ----- Designer (Design Your Own) -----
 export async function fetchDesignerProducts() {

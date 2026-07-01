@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 22 focused on the two new pages: /full-squad-configurator and /admin/bundle-variants + backing endpoints. Backend: 11/12 pytest cases PASS. The only failure is the Full Squad submit shape — the frontend's submitQuoteRequest() sends {flow, team_name, contact_name, contact_email, contact_phone, message} but backend POST /api/quote-request (QuoteRequest model at server.py:673) requires {kind, name, email, message} — so the submit ALWAYS returns 422 and NO quote is stored. This also triggers a React runtime crash (see integration bug below). Frontend: /full-squad-configurator renders, all 3 sections + H1 + roster + summary math (£56.97 for 3×£18.99, £62.97 with sleeve print +£2.00) work correctly. match_day hides back-print opt-in; training/tracksuit show it. Submit is disabled with empty form (validation works). /admin/bundle-variants correctly redirects unauth users to /admin/login, lists all 11 eligible bundles incl. 'Sports Team Kit Bundle (generic)', and CRUD (create AWD 'TEST_iter22 Just Cool Kit' £24.99 → shown grouped under sports-team-bundle → deleted) works end-to-end. Regressions /portfolio, /admin/portfolio, /admin/navigation still load.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/quote-request", "issue": "Called by FullSquadConfigurator submit. Frontend body is {flow, team_name, contact_name, contact_email, contact_phone, message} but Pydantic QuoteRequest (server.py:673) requires kind (str), name (str), email (EmailStr) — returns 422 with detail=[{loc:[body,kind],msg:Field required}, ...]. Every Full Squad submit fails.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/team-kit-brands", "issue": "Does NOT enforce BUNDLE_ELIGIBLE_IDS — accepts any product_id that exists in PRODUCTS (e.g. a plain t-shirt). Admin UI hardcodes the 11-bundle list on the frontend but the backend would happily accept a non-bundle brand variant. The newer /api/admin/bundle-variants correctly enforces BUNDLE_ELIGIBLE_IDS, but the AdminBundleVariants.jsx page hits the older /team-kit-brands endpoints, so the enforcement is effectively client-side only."},
+      {"endpoint": "GET /api/quote-request", "issue": "No shape alignment for the 'flow' field. If backend is meant to accept the Full Squad flow, either the frontend payload must be reshaped to {kind:'team_kit', name:contact_name||team_name, email:contact_email, company:team_name, message, phone:contact_phone} OR the QuoteRequest model must be extended to accept the alternate keys."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Full Squad submit", "issue": "After the 422 from /api/quote-request, the toast handler does toast.error(e.response?.data?.detail || \"...\"). Pydantic's 422 detail is a LIST of error objects (with type/loc/msg/input/url keys). Passing this to toast.error(...) → sonner tries to render an object as a React child → 'Uncaught runtime errors: Objects are not valid as a React child (found: object with keys {type, loc, msg, input, url})' appears as a red overlay on the page. Fix by extracting a string message (e.g. Array.isArray(detail) ? detail.map(d=>d.msg).join(', ') : detail).", "affected_selectors": ["[data-testid=\"fsc-submit\"]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration22.py",
+    "/app/test_reports/pytest/iter22_results.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Fix FullSquadConfigurator submit — either (a) reshape payload in onSubmit() to {kind:'team_kit', name:team.contact_name||team.name, email:team.contact_email, phone:team.contact_phone, company:team.name, message}, or (b) extend backend QuoteRequest to also accept flow/team_name/contact_name/contact_email/contact_phone as aliases.",
+    "CRITICAL: Harden the catch block in FullSquadConfigurator.onSubmit — the 422 currently causes a React 'Objects are not valid as a React child' crash overlay because detail can be an array. Extract a string before toast.error.",
+    "MINOR: Add BUNDLE_ELIGIBLE_IDS enforcement to POST /api/team-kit-brands (or migrate AdminBundleVariants.jsx to use /api/admin/bundle-variants which already enforces it)."
+  ],
+  "critical_code_review_comments": [
+    "Two duplicated brand-variant systems exist in the codebase: (a) the legacy /api/team-kit-brands (server.py:761, uses fields product_id/brand/name/price/image/description/active) and (b) the newer /api/admin/bundle-variants (server.py:3242, uses bundle_product_id/is_active/size_guide_table/display_order + enforces BUNDLE_ELIGIBLE_IDS + supports storing image to object storage properly). The AdminBundleVariants.jsx page mixes concepts — it imports ELIGIBLE_BUNDLES manually from the newer set but calls the older endpoints. Consolidate into one API.",
+    "server.py is now 3890 lines — same recommendation as iter20/21 to split into feature modules.",
+    "FullSquadConfigurator.jsx L92: `toast.error(e.response?.data?.detail || \"Couldn't send the quote — try WhatsApp instead.\")` is unsafe for Pydantic-shaped 422 responses. This pattern likely exists elsewhere too — audit other axios error handlers.",
+    "AdminBundleVariants.jsx L16-28: ELIGIBLE_BUNDLES is a client-side duplicate of the server's BUNDLE_ELIGIBLE_IDS. Server exposes eligible_bundles via GET /api/admin/bundle-variants — the page could fetch this instead of hardcoding it."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration22.py (new)"
+  ],
+  "success_rate": {"backend": "92% (11/12 pytest — 1 failure is a real bug)", "frontend": "90% (UI + math + validation + admin CRUD all work; only the actual submit round-trip is broken)"},
+  "test_credentials": "admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (used for /admin/bundle-variants + /api/team-kit-brands CRUD)",
+  "seed_data_creation": "Test iteration created and cleaned up one team_kit_brand (TEST_iter22 Just Cool Kit under sports-team-bundle) — verified deleted at end. No lingering TEST_ data left behind.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The Full Squad Configurator's UI is solid (H1, sections, pricing math, sleeve print upcharge, back-print visibility rule, roster, validation, submit-disabled state all pass). The bug is the POST payload shape and the 422 error-toast handler. AdminBundleVariants.jsx is fully wired to /api/team-kit-brands (older endpoints); the newer /api/admin/bundle-variants is unused by the UI. When re-testing, verify (a) POST /api/quote-request accepts the fixed frontend shape (or the frontend sends the accepted shape), (b) that no React 'Objects are not valid as a React child' overlay appears on 422, (c) the fsc-submit success toast 'Quote sent…' shows on a valid submit.",
+  "rca of the issue": "RCA: Someone building FullSquadConfigurator.jsx invented a new submit payload shape without checking the QuoteRequest Pydantic model. Reproduction: visit /full-squad-configurator, fill team name + email, add a match-day football-jersey with qty>=1, click 'Get a proof & final quote' — the request POST /api/quote-request returns 422 (missing kind/name/email) and the page shows a red 'Objects are not valid as a React child' error overlay because sonner tries to render the Pydantic detail array. Mitigation options: (1) simplest — in onSubmit() build a QuoteRequest-shaped body: {kind:'team_kit', name: team.contact_name || team.name, email: team.contact_email, phone: team.contact_phone, company: team.name, message: `... existing summary ...`, quantity: totals.totalQty, roster: roster.filter(r=>r.name.trim())}. (2) also fix the catch: `const d = e.response?.data?.detail; toast.error(typeof d === 'string' ? d : Array.isArray(d) ? d.map(x=>x.msg).join(', ') : \"Couldn't send…\")`."
+}
