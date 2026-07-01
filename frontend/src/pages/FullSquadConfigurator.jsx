@@ -5,7 +5,7 @@ import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { toast } from "sonner";
 import {
   Plus, Minus, Trash2, ShieldCheck, Truck, ArrowRight, Loader2,
-  Info, ChevronDown, Check,
+  Info, ChevronDown, Check, ShoppingBag,
 } from "lucide-react";
 
 /**
@@ -29,14 +29,19 @@ export default function FullSquadConfigurator() {
   useEffect(() => { fetchFullSquadConfig().then(setCfg).catch(() => setCfg(null)); }, []);
 
   const activeSets = useMemo(() => Object.entries(state).filter(([, v]) => v?.variant_id), [state]);
+  const gymBagPrice = Number(cfg?.addons?.gym_bag_addon_price || 0);
   const totals = useMemo(() => {
-    let subtotal = 0, totalQty = 0;
+    let subtotal = 0, totalQty = 0, gymBags = 0;
     activeSets.forEach(([, v]) => {
       subtotal += (v.__unit_price || 0) * (v.__qty || 0);
       totalQty += (v.__qty || 0);
+      if (v.include_gym_bag) {
+        gymBags += (v.__qty || 0);
+        subtotal += gymBagPrice * (v.__qty || 0);
+      }
     });
-    return { subtotal, totalQty };
-  }, [activeSets]);
+    return { subtotal, totalQty, gymBags };
+  }, [activeSets, gymBagPrice]);
 
   if (!cfg) {
     return <div className="min-h-screen grid place-items-center bg-white"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
@@ -62,19 +67,13 @@ export default function FullSquadConfigurator() {
         const variant = sec?.variants.find((x) => x.id === v.variant_id);
         const brandLabel = `${variant?.brand ? variant.brand + " " : ""}${variant?.name || "Standard"}`.trim();
         summaryLines.push(`[${sec.title}] ${brandLabel} — colour: ${v.colour || "n/a"} — ${v.__qty} kits @ £${(v.__unit_price || 0).toFixed(2)}`);
-        if (sec.requires_per_player_roster) {
-          (v.roster || []).filter((r) => r.name || r.number || r.top || r.bottom || r.sock).forEach((r) => {
-            mergedRoster.push({ set: sec.title, ...r });
-            summaryLines.push(`  • #${r.number || "-"} ${r.name || "-"} — top ${r.top || "-"} / bottom ${r.bottom || "-"} / sock ${r.sock || "-"}`);
-          });
-        } else if (v.bulk) {
-          const bulkParts = [];
-          const tops = v.bulk.top || {};
-          const bottoms = v.bulk.bottom || {};
-          const splitOn = v.bulk._split;
-          Object.entries(tops).forEach(([sz, q]) => q > 0 && bulkParts.push(`${sz}×${q}${splitOn ? " (top)" : ""}`));
-          if (splitOn) Object.entries(bottoms).forEach(([sz, q]) => q > 0 && bulkParts.push(`${sz}×${q} (bottom)`));
-          if (bulkParts.length) summaryLines.push(`  · sizes: ${bulkParts.join(", ")}`);
+        (v.roster || []).filter((r) => r.name || r.number || r.top || r.bottom || r.sock).forEach((r) => {
+          mergedRoster.push({ set: sec.title, ...r });
+          const numPart = sec.supports_names_numbers ? ` #${r.number || "-"}` : "";
+          summaryLines.push(`  •${numPart} ${r.name || "-"} — top ${r.top || "-"} / bottom ${r.bottom || "-"}${r.sock ? " / sock " + r.sock : ""}`);
+        });
+        if (v.include_gym_bag) {
+          summaryLines.push(`  · +Printed gym bag with badge & player name: ${v.__qty} × £${gymBagPrice.toFixed(2)}`);
         }
       });
       await submitQuoteRequest({
@@ -111,7 +110,18 @@ export default function FullSquadConfigurator() {
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Full squad configurator</span>
           <h1 className="font-black text-4xl lg:text-6xl mt-2">Match day, training and tracksuit — one order.</h1>
-          <p className="text-zinc-300 mt-3 max-w-2xl">Pick a kit brand for each set, choose your colour and sizes. Match Day comes with names + numbers on the back — Training and Tracksuit stay clean.</p>
+          <p className="text-zinc-300 mt-3 max-w-2xl">Pick a kit brand for each set, choose your colour and sizes. <strong className="text-white">Every kit is labelled with the player&apos;s name</strong> — no more mix-ups in the changing room. Match Day comes with names + numbers on the back.</p>
+          <div className="mt-5 flex flex-wrap gap-2 text-[11px]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 font-extrabold">
+              <Check size={12} className="text-[#7bc67e]" /> Free per-player name label on every kit
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 font-extrabold">
+              <ShoppingBag size={12} className="text-[#fbbf24]" /> Add a printed gym bag with badge + name from £4
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 font-extrabold">
+              <ShieldCheck size={12} className="text-[#7bc67e]" /> UK printed · proof in 2 days
+            </span>
+          </div>
         </div>
       </header>
 
@@ -134,6 +144,7 @@ export default function FullSquadConfigurator() {
               key={section.key}
               index={idx + 2}
               section={section}
+              gymBagPrice={gymBagPrice}
               value={state[section.key] || {}}
               onChange={(patch) => patchSection(section.key, patch)}
             />
@@ -153,7 +164,7 @@ export default function FullSquadConfigurator() {
           <div className="bg-[#1a1a1a] text-white rounded-3xl p-5 sticky top-24">
             <div className="text-[#7bc67e] text-xs uppercase tracking-[0.3em] font-extrabold">Full squad summary</div>
             <div className="mt-2 text-3xl font-black">£{totals.subtotal.toFixed(2)}</div>
-            <div className="text-xs text-zinc-400">{totals.totalQty} kits across {activeSets.length} set{activeSets.length === 1 ? "" : "s"}</div>
+            <div className="text-xs text-zinc-400">{totals.totalQty} kits across {activeSets.length} set{activeSets.length === 1 ? "" : "s"}{totals.gymBags > 0 ? ` · +${totals.gymBags} gym bag${totals.gymBags === 1 ? "" : "s"}` : ""}</div>
             <div className="mt-4 space-y-2 max-h-64 overflow-y-auto pr-1">
               {activeSets.map(([k, v]) => {
                 const sec = sections.find((s) => s.key === k);
@@ -162,6 +173,9 @@ export default function FullSquadConfigurator() {
                   <div key={k} className="text-xs bg-white/5 rounded-lg p-2" data-testid={`fsc-summary-${k}`}>
                     <div className="font-extrabold">{sec.title}</div>
                     <div className="text-zinc-400">{variant?.brand} {variant?.name} · {v.colour || "colour tbc"} · {v.__qty} × £{(v.__unit_price || 0).toFixed(2)}</div>
+                    {v.include_gym_bag && v.__qty > 0 && (
+                      <div className="text-[10px] text-[#fbbf24] mt-0.5 inline-flex items-center gap-1"><ShoppingBag size={9} /> +{v.__qty} gym bag{v.__qty === 1 ? "" : "s"} · £{(v.__qty * gymBagPrice).toFixed(2)}</div>
+                    )}
                   </div>
                 );
               })}
@@ -197,7 +211,7 @@ export default function FullSquadConfigurator() {
 // ============================================================================
 // SectionBuilder — one card per set (Match Day / Training / Tracksuit)
 // ============================================================================
-function SectionBuilder({ index, section, value, onChange }) {
+function SectionBuilder({ index, section, gymBagPrice, value, onChange }) {
   const [detailsOpen, setDetailsOpen] = useState({}); // { [variant_id]: true }
   const chosenVariant = section.variants.find((v) => v.id === value.variant_id) || null;
   const hasVariant = !!chosenVariant;
@@ -209,18 +223,12 @@ function SectionBuilder({ index, section, value, onChange }) {
       return;
     }
     let qty = 0;
-    if (section.requires_per_player_roster) {
-      qty = (value.roster || []).filter((r) => r?.name?.trim() || r?.number?.trim()).length;
-    } else {
-      const bulk = value.bulk || {};
-      const sum = (obj) => Object.values(obj || {}).reduce((a, b) => a + Number(b || 0), 0);
-      qty = bulk._split ? Math.max(sum(bulk.top), sum(bulk.bottom)) : sum(bulk.top);
-    }
+    qty = (value.roster || []).filter((r) => r?.name?.trim() || r?.number?.trim()).length;
     const unit = Number(chosenVariant.price || 0);
     if (value.__qty !== qty || value.__unit_price !== unit) {
       onChange({ __qty: qty, __unit_price: unit });
     }
-  }, [value.roster, value.bulk, value.variant_id]);
+  }, [value.roster, value.variant_id]);
 
   const setRoster = (idx, patch) => {
     const cur = value.roster || [];
@@ -229,19 +237,6 @@ function SectionBuilder({ index, section, value, onChange }) {
   };
   const addRosterRow = () => onChange({ roster: [...(value.roster || []), { name: "", number: "", top: "", bottom: "", sock: "" }] });
   const removeRosterRow = (idx) => onChange({ roster: (value.roster || []).filter((_, i) => i !== idx) });
-
-  const setBulk = (kind, sz, delta) => {
-    const bulk = value.bulk || { _split: false, top: {}, bottom: {} };
-    const cur = Number(bulk[kind]?.[sz] || 0);
-    const nq = Math.max(0, cur + delta);
-    const next = { ...bulk, [kind]: { ...(bulk[kind] || {}), [sz]: nq } };
-    if (nq === 0) delete next[kind][sz];
-    onChange({ bulk: next });
-  };
-  const toggleSplit = () => {
-    const bulk = value.bulk || { _split: false, top: {}, bottom: {} };
-    onChange({ bulk: { ...bulk, _split: !bulk._split } });
-  };
 
   return (
     <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid={`fsc-section-${section.key}`}>
@@ -277,8 +272,8 @@ function SectionBuilder({ index, section, value, onChange }) {
                 onClick={() => onChange({
                   variant_id: isChosen ? null : variant.id,
                   colour: isChosen ? null : (variant.colours?.[0]?.name || ""),
-                  roster: isChosen ? [] : (section.requires_per_player_roster ? [{ name: "", number: "", top: "", bottom: "", sock: "" }] : []),
-                  bulk: isChosen ? null : { _split: false, top: {}, bottom: {} },
+                  roster: isChosen ? [] : [{ name: "", number: "", top: "", bottom: "", sock: "" }],
+                  include_gym_bag: isChosen ? false : false,
                 })}
                 className="w-full text-left p-3 flex items-center gap-3"
               >
@@ -365,78 +360,123 @@ function SectionBuilder({ index, section, value, onChange }) {
               roster={value.roster || []}
               sizes={chosenVariant.sizes || []}
               sockSizes={chosenVariant.sock_sizes || []}
+              showNumbers={!!section.supports_names_numbers}
+              includeSocks={(section.included_items || []).some((i) => i.toLowerCase().includes("sock"))}
               onAdd={addRosterRow}
               onPatch={setRoster}
               onRemove={removeRosterRow}
             />
-          ) : (
-            <BulkSizeGrid
-              sectionKey={section.key}
-              bulk={value.bulk || { _split: false, top: {}, bottom: {} }}
-              sizes={chosenVariant.sizes || []}
-              onBump={setBulk}
-              onToggleSplit={toggleSplit}
-            />
-          )}
+          ) : null}
+
+          {/* Optional printed gym bag +£X per player, badge + player name */}
+          <GymBagOptIn
+            sectionKey={section.key}
+            checked={!!value.include_gym_bag}
+            price={gymBagPrice}
+            qty={value.__qty || 0}
+            onChange={(next) => onChange({ include_gym_bag: next })}
+          />
         </div>
       )}
     </div>
   );
 }
 
+// ---------- Gym Bag opt-in ----------
+function GymBagOptIn({ sectionKey, checked, price, qty, onChange }) {
+  return (
+    <label className="flex items-start gap-2 rounded-xl bg-[#f0fdf4] border-2 border-dashed border-[#7bc67e] p-3 cursor-pointer" data-testid={`fsc-gym-bag-${sectionKey}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 accent-[#7bc67e]"
+        data-testid={`fsc-gym-bag-toggle-${sectionKey}`}
+      />
+      <div className="flex-1 text-xs">
+        <div className="font-extrabold flex items-center gap-2 flex-wrap">
+          <ShoppingBag size={12} className="text-[#166534]" />
+          Add a printed drawstring gym bag per player
+          <span className="inline-flex bg-[#fef3c7] text-[#78350f] rounded-full px-2 py-0.5 text-[10px] font-extrabold">+£{price.toFixed(2)} each</span>
+        </div>
+        <div className="text-[#4b5563] mt-0.5">Badge + player name printed on the bag — perfect for match day kit, training gear or travel. {qty > 0 && checked ? <span className="font-extrabold text-[#166534]">{qty} bag{qty === 1 ? "" : "s"} · £{(qty * price).toFixed(2)}</span> : null}</div>
+      </div>
+    </label>
+  );
+}
+
 // ---------- Per-player Roster (Match Day) ----------
-function RosterEditor({ sectionKey, roster, sizes, sockSizes, onAdd, onPatch, onRemove }) {
+function RosterEditor({ sectionKey, roster, sizes, sockSizes, showNumbers = false, includeSocks = true, onAdd, onPatch, onRemove }) {
+  // Static tailwind class combos (Tailwind can't compile dynamic `col-span-${n}` at build time).
+  // Layouts:
+  //   showNumbers + includeSocks : name-4 · #-1 · top-2 · bottom-2 · sock-2 · del-1  (total 12)
+  //   showNumbers, no socks       : name-5 · #-1 · top-3 · bottom-2 · del-1          (total 12)
+  //   no #, includeSocks          : name-5 · top-2 · bottom-2 · sock-2 · del-1        (total 12)  (11 → +1 gap absorbed)
+  //   no # + no socks             : name-6 · top-2 · bottom-3 · del-1                  (total 12)
+  const cls = showNumbers && includeSocks
+    ? { name: "md:col-span-4", num: "md:col-span-1", top: "md:col-span-2", bottom: "md:col-span-2", sock: "md:col-span-2" }
+    : showNumbers && !includeSocks
+      ? { name: "md:col-span-5", num: "md:col-span-1", top: "md:col-span-3", bottom: "md:col-span-2" }
+      : !showNumbers && includeSocks
+        ? { name: "md:col-span-5", top: "md:col-span-2", bottom: "md:col-span-2", sock: "md:col-span-2" }
+        : { name: "md:col-span-6", top: "md:col-span-2", bottom: "md:col-span-3" };
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Squad roster</div>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">Squad roster · labelled by name</div>
+      </div>
       <div className="text-xs text-[#4b5563] mb-2 flex items-start gap-1.5">
-        <Info size={12} className="mt-0.5" /> Each row = one player. Top / bottom / sock sizes can differ per player.
+        <Info size={12} className="mt-0.5" /> Each row = one player. Every kit is labelled with the player&apos;s name — top / bottom{includeSocks ? " / sock" : ""} sizes can differ per player.
       </div>
       <div className="hidden md:grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-[#4b5563] font-extrabold mb-1 px-2">
-        <div className="col-span-4">Name</div>
-        <div className="col-span-1">#</div>
-        <div className="col-span-2">Top</div>
-        <div className="col-span-2">Bottom</div>
-        <div className="col-span-2">Sock</div>
-        <div className="col-span-1"></div>
+        <div className={cls.name}>Name</div>
+        {showNumbers && <div className={cls.num}>#</div>}
+        <div className={cls.top}>Top</div>
+        <div className={cls.bottom}>Bottom</div>
+        {includeSocks && <div className={cls.sock}>Sock</div>}
+        <div className="md:col-span-1"></div>
       </div>
       <div className="space-y-1.5">
         {roster.map((r, i) => (
           <div key={i} className="grid grid-cols-12 gap-2 items-center bg-[#f0fdf4] border border-[#dcfce7] rounded-xl p-2" data-testid={`fsc-player-${sectionKey}-${i}`}>
             <input
               value={r.name || ""} onChange={(e) => onPatch(i, { name: e.target.value })}
-              placeholder="Name" data-testid={`fsc-player-${sectionKey}-${i}-name`}
-              className="col-span-12 md:col-span-4 bg-transparent px-2 py-1 text-sm focus:outline-none"
+              placeholder="Player name" data-testid={`fsc-player-${sectionKey}-${i}-name`}
+              className={`col-span-12 ${cls.name} bg-transparent px-2 py-1 text-sm focus:outline-none`}
             />
-            <input
-              value={r.number || ""} onChange={(e) => onPatch(i, { number: e.target.value })}
-              placeholder="#" data-testid={`fsc-player-${sectionKey}-${i}-number`}
-              className="col-span-3 md:col-span-1 bg-transparent px-2 py-1 text-sm md:text-center focus:outline-none md:border-l md:border-[#dcfce7]"
-            />
+            {showNumbers && (
+              <input
+                value={r.number || ""} onChange={(e) => onPatch(i, { number: e.target.value })}
+                placeholder="#" data-testid={`fsc-player-${sectionKey}-${i}-number`}
+                className={`col-span-3 ${cls.num} bg-transparent px-2 py-1 text-sm md:text-center focus:outline-none md:border-l md:border-[#dcfce7]`}
+              />
+            )}
             <select
-              value={r.top || ""} onChange={(e) => onPatch(i, { top: e.target.value })} className="col-span-3 md:col-span-2 fsc-select"
+              value={r.top || ""} onChange={(e) => onPatch(i, { top: e.target.value })} className={`col-span-3 ${cls.top} fsc-select`}
               data-testid={`fsc-player-${sectionKey}-${i}-top`}
             >
               <option value="">Top</option>
               {sizes.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <select
-              value={r.bottom || ""} onChange={(e) => onPatch(i, { bottom: e.target.value })} className="col-span-3 md:col-span-2 fsc-select"
+              value={r.bottom || ""} onChange={(e) => onPatch(i, { bottom: e.target.value })} className={`col-span-3 ${cls.bottom} fsc-select`}
               data-testid={`fsc-player-${sectionKey}-${i}-bottom`}
             >
               <option value="">Bottom</option>
               {sizes.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-            <select
-              value={r.sock || ""} onChange={(e) => onPatch(i, { sock: e.target.value })} className="col-span-2 md:col-span-2 fsc-select"
-              data-testid={`fsc-player-${sectionKey}-${i}-sock`}
-            >
-              <option value="">Sock</option>
-              {sockSizes.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            {includeSocks && (
+              <select
+                value={r.sock || ""} onChange={(e) => onPatch(i, { sock: e.target.value })} className={`col-span-2 ${cls.sock} fsc-select`}
+                data-testid={`fsc-player-${sectionKey}-${i}-sock`}
+              >
+                <option value="">Sock</option>
+                {sockSizes.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
             <button
               onClick={() => onRemove(i)} type="button"
-              className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center justify-self-end"
+              className="col-span-1 md:col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center justify-self-end"
               data-testid={`fsc-player-${sectionKey}-${i}-remove`}
             >
               <Trash2 size={14} />
@@ -451,39 +491,4 @@ function RosterEditor({ sectionKey, roster, sizes, sockSizes, onAdd, onPatch, on
   );
 }
 
-// ---------- Bulk size grid (Training / Tracksuit) ----------
-function BulkSizeGrid({ sectionKey, bulk, sizes, onBump, onToggleSplit }) {
-  const splitOn = !!bulk._split;
-  const rows = splitOn ? [{ key: "top", label: "Tops" }, { key: "bottom", label: "Bottoms" }] : [{ key: "top", label: "Kits" }];
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">Sizes &amp; quantities</div>
-        <label className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#4b5563] cursor-pointer" data-testid={`fsc-split-toggle-${sectionKey}`}>
-          <input type="checkbox" checked={splitOn} onChange={onToggleSplit} />
-          Different sizes for tops &amp; bottoms?
-        </label>
-      </div>
-      {rows.map((row) => (
-        <div key={row.key} className="mb-2">
-          {splitOn && <div className="text-[11px] font-extrabold text-[#4b5563] mb-1">{row.label}</div>}
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5" data-testid={`fsc-bulk-${sectionKey}-${row.key}`}>
-            {sizes.map((sz) => {
-              const q = Number(bulk[row.key]?.[sz] || 0);
-              return (
-                <div key={sz} className={`rounded-lg border-2 p-1.5 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
-                  <div className="text-[10px] font-extrabold text-center">{sz}</div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <button onClick={() => onBump(row.key, sz, -1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-white border" data-testid={`fsc-bulk-minus-${sectionKey}-${row.key}-${sz}`}><Minus size={9} /></button>
-                    <span className="text-xs font-bold min-w-[16px] text-center">{q}</span>
-                    <button onClick={() => onBump(row.key, sz, 1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-[#fbbf24]" data-testid={`fsc-bulk-plus-${sectionKey}-${row.key}-${sz}`}><Plus size={9} /></button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+// ---------- Bulk size grid removed — Full Squad is now roster-only across all sets.

@@ -1,0 +1,27 @@
+{
+  "summary": "Iter25 verified — Full Squad Configurator now uses per-player roster across all 3 sections, gym-bag opt-in works per section at £4.00, Sports Outfit Configurator has working split-sizes toggle (top vs bottom). Backend: 6/6 pytest pass. Frontend: all 3 flows pass (Full Squad hero + roster shape per section + submit with gym-bag, Sports Outfit split-toggle max qty + submit, admin/portfolio/home regression). All TEST_iter25 rows cleaned up (2 backend + 2 UI = 4 total deleted).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration25.py",
+    "/app/test_reports/pytest/iter25_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py still ~4119 lines — repeated feedback across iterations 20-25 to split into feature modules (auth, full_squad, sports_outfit, quote_request, checkout, admin). Consider blocking this in an upcoming refactor iteration.",
+    "FullSquadConfigurator.jsx (495 lines) and SportsOutfitConfigurator.jsx (391 lines) share ~70% scaffolding (BoldNavbar wrapper, team-details block, brand-tile UI, sticky summary aside, submit handler shape). Extract shared TeamDetailsForm + ConfiguratorSummary + submitQuote helper to eliminate DRY violations.",
+    "Frontend submit path uses POST /api/quote-request with kind='team_kit' + a big serialised text 'message' — kit-specific structure (per-player roster, split sizes {_split, top, bottom}, include_gym_bag flag) is only preserved as free text in message, not as structured DB columns. Admin can't easily query 'quotes with gym bags' or 'quotes with split sizes'. Consider a structured 'selections' JSON field on QuoteRequest for future admin filtering.",
+    "In FullSquadConfigurator.jsx line 276, the ternary `include_gym_bag: isChosen ? false : false` always evaluates to false regardless of branch — dead code, could just be `include_gym_bag: false` (harmless but misleading).",
+    "RosterEditor grid layout uses hand-tuned col-span classes across 4 permutations of (showNumbers, includeSocks) via a `cls` map (lines 416-421). Fragile — a 5th combination (e.g. numbers with no socks and no bottom) would silently mis-align. Prefer CSS grid-template-columns driven by an array of visible-column keys."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration25.py (new)"
+  ],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% (all 3 flows pass)"},
+  "test_credentials": "Admin: admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (from /app/memory/test_credentials.md). Admin bundle-variants login verified.",
+  "seed_data_creation": "2 backend + 2 UI quote_requests created & auto-cleaned. No leftover TEST_iter25 rows in DB. team_kit_brands untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iter25 stabilised the two configurator flows. Key testids: /full-squad-configurator → fsc-brand-{section}-{variant_id} (button inside is the click target), fsc-player-{section}-{idx}-{name|number|top|bottom|sock}, fsc-gym-bag-toggle-{section}, fsc-submit, fsc-summary, fsc-summary-{section}. /sports-outfit-configurator → soc-brand-{section}-{variant_id}, soc-sizes-{section}-{top|bottom}, soc-size-plus/minus-{section}-{row}-{size}, soc-split-toggle-{section}, soc-submit. Quote submission payload requires (kind, name, email, message) per QuoteRequest pydantic model at server.py:709. Both configurators serialise their state into the 'message' text field. FULL_SQUAD_SECTIONS: match_day (roster + names/numbers + socks), training (roster + socks, no numbers), tracksuit (roster, no socks, no numbers). addons.gym_bag_addon_price=4.00. iter24 BulkSizeGrid has been fully removed — do not attempt to test bulk-grid on Full Squad any more.",
+  "rca of the issue": "N/A — all iter25 acceptance criteria pass on first pass. Only test-side fix required was adjusting the pytest payload to match the actual QuoteRequest schema (kind/name/email/message) instead of the guessed shape."
+}

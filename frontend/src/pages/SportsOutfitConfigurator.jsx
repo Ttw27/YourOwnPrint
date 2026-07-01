@@ -33,11 +33,20 @@ export default function SportsOutfitConfigurator() {
   useEffect(() => { fetchSportsOutfitConfig().then(setCfg).catch(() => setCfg(null)); }, []);
 
   const activeSets = useMemo(() => Object.entries(state).filter(([, v]) => v?.variant_id), [state]);
+  // Helper: given a v.sizes state (either {S:n,M:n} legacy or {_split, top:{}, bottom:{}}), compute qty.
+  const qtyOf = (sizes) => {
+    if (!sizes) return 0;
+    if ("top" in sizes || "bottom" in sizes) {
+      const sum = (obj) => Object.values(obj || {}).reduce((a, b) => a + Number(b || 0), 0);
+      return sizes._split ? Math.max(sum(sizes.top), sum(sizes.bottom)) : sum(sizes.top);
+    }
+    return Object.values(sizes).reduce((a, b) => a + Number(b || 0), 0);
+  };
   const totals = useMemo(() => {
     if (!cfg) return { subtotal: 0, totalQty: 0 };
     let subtotal = 0, totalQty = 0;
     activeSets.forEach(([, v]) => {
-      const qty = Object.values(v.sizes || {}).reduce((a, b) => a + Number(b || 0), 0);
+      const qty = qtyOf(v.sizes);
       const printKey = PRINT_MODES.find((p) => p.id === (v.print_mode || "unbranded"))?.key || "unbranded_price";
       const unit = Number(v.__unit_price || 0) + Number(cfg.addons?.[printKey] || 0);
       subtotal += unit * qty;
@@ -67,13 +76,16 @@ export default function SportsOutfitConfigurator() {
         const sec = sections.find((s) => s.key === sectionKey);
         const variant = sec?.variants.find((x) => x.id === v.variant_id);
         const brandLabel = `${variant?.brand ? variant.brand + " " : ""}${variant?.name || "Standard"}`.trim();
-        const qty = Object.values(v.sizes || {}).reduce((a, b) => a + Number(b || 0), 0);
+        const qty = qtyOf(v.sizes);
         const printLabel = PRINT_MODES.find((p) => p.id === (v.print_mode || "unbranded"))?.label || "Unbranded";
         const printKey = PRINT_MODES.find((p) => p.id === (v.print_mode || "unbranded"))?.key;
         const unit = Number(variant?.price || 0) + Number(addons?.[printKey] || 0);
         summaryLines.push(`[${sec.title}] ${brandLabel} — colour: ${v.colour || "n/a"} — print: ${printLabel} — ${qty} kits @ £${unit.toFixed(2)}`);
         const sizeParts = [];
-        Object.entries(v.sizes || {}).forEach(([sz, q]) => q > 0 && sizeParts.push(`${sz}×${q}`));
+        const sz = v.sizes || {};
+        const splitOn = !!sz._split;
+        Object.entries(sz.top || {}).forEach(([s, q]) => q > 0 && sizeParts.push(`${s}×${q}${splitOn ? " (top)" : ""}`));
+        if (splitOn) Object.entries(sz.bottom || {}).forEach(([s, q]) => q > 0 && sizeParts.push(`${s}×${q} (bottom)`));
         if (sizeParts.length) summaryLines.push(`  · sizes: ${sizeParts.join(", ")}`);
       });
       await submitQuoteRequest({
@@ -156,7 +168,7 @@ export default function SportsOutfitConfigurator() {
               {activeSets.map(([k, v]) => {
                 const sec = sections.find((s) => s.key === k);
                 const variant = sec?.variants.find((x) => x.id === v.variant_id);
-                const qty = Object.values(v.sizes || {}).reduce((a, b) => a + Number(b || 0), 0);
+                const qty = qtyOf(v.sizes);
                 const printKey = PRINT_MODES.find((p) => p.id === (v.print_mode || "unbranded"))?.key;
                 const unit = Number(variant?.price || 0) + Number(addons?.[printKey] || 0);
                 return (
@@ -202,12 +214,17 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
     if (value.__unit_price !== unit) onChange({ __unit_price: unit });
   }, [value.variant_id]);
 
-  const bumpSize = (sz, delta) => {
-    const sizes = { ...(value.sizes || {}) };
-    const cur = Number(sizes[sz] || 0);
+  const bumpSize = (kind, sz, delta) => {
+    const sizes = value.sizes || { _split: false, top: {}, bottom: {} };
+    const cur = Number(sizes[kind]?.[sz] || 0);
     const nq = Math.max(0, cur + delta);
-    if (nq === 0) delete sizes[sz]; else sizes[sz] = nq;
-    onChange({ sizes });
+    const next = { ...sizes, [kind]: { ...(sizes[kind] || {}), [sz]: nq } };
+    if (nq === 0) delete next[kind][sz];
+    onChange({ sizes: next });
+  };
+  const toggleSplit = () => {
+    const sizes = value.sizes || { _split: false, top: {}, bottom: {} };
+    onChange({ sizes: { ...sizes, _split: !sizes._split } });
   };
   const setPrintMode = (id) => onChange({ print_mode: id });
   const currentPrintMode = value.print_mode || "unbranded";
@@ -242,7 +259,7 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
                 onClick={() => onChange({
                   variant_id: isChosen ? null : variant.id,
                   colour: isChosen ? null : (variant.colours?.[0]?.name || ""),
-                  sizes: isChosen ? {} : {},
+                  sizes: isChosen ? null : { _split: false, top: {}, bottom: {} },
                   print_mode: isChosen ? null : "unbranded",
                 })}
                 className="w-full text-left p-3 flex items-center gap-3"
@@ -334,22 +351,37 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
           </div>
 
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Sizes &amp; quantities</div>
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5" data-testid={`soc-sizes-${section.key}`}>
-              {(chosenVariant.sizes || []).map((sz) => {
-                const q = Number(value.sizes?.[sz] || 0);
-                return (
-                  <div key={sz} className={`rounded-lg border-2 p-1.5 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
-                    <div className="text-[10px] font-extrabold text-center">{sz}</div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <button onClick={() => bumpSize(sz, -1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-white border" data-testid={`soc-size-minus-${section.key}-${sz}`}><Minus size={9} /></button>
-                      <span className="text-xs font-bold min-w-[16px] text-center">{q}</span>
-                      <button onClick={() => bumpSize(sz, 1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-[#fbbf24]" data-testid={`soc-size-plus-${section.key}-${sz}`}><Plus size={9} /></button>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">Sizes &amp; quantities</div>
+              <label className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#4b5563] cursor-pointer" data-testid={`soc-split-toggle-${section.key}`}>
+                <input type="checkbox" checked={!!(value.sizes?._split)} onChange={toggleSplit} />
+                Different sizes for tops &amp; bottoms?
+              </label>
             </div>
+            {(() => {
+              const splitOn = !!(value.sizes?._split);
+              const rows = splitOn ? [{ key: "top", label: "Tops" }, { key: "bottom", label: "Bottoms" }] : [{ key: "top", label: "Kits" }];
+              return rows.map((row) => (
+                <div key={row.key} className="mb-2">
+                  {splitOn && <div className="text-[11px] font-extrabold text-[#4b5563] mb-1">{row.label}</div>}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5" data-testid={`soc-sizes-${section.key}-${row.key}`}>
+                    {(chosenVariant.sizes || []).map((sz) => {
+                      const q = Number(value.sizes?.[row.key]?.[sz] || 0);
+                      return (
+                        <div key={sz} className={`rounded-lg border-2 p-1.5 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
+                          <div className="text-[10px] font-extrabold text-center">{sz}</div>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <button onClick={() => bumpSize(row.key, sz, -1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-white border" data-testid={`soc-size-minus-${section.key}-${row.key}-${sz}`}><Minus size={9} /></button>
+                            <span className="text-xs font-bold min-w-[16px] text-center">{q}</span>
+                            <button onClick={() => bumpSize(row.key, sz, 1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-[#fbbf24]" data-testid={`soc-size-plus-${section.key}-${row.key}-${sz}`}><Plus size={9} /></button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         </div>
       )}

@@ -3419,25 +3419,25 @@ FULL_SQUAD_SECTIONS: List[Dict] = [
         "set_product_id": "full-squad-match-day",     # bundle_product_id used for brand variants
         "included_items": ["Shirt", "Shorts", "Socks"],
         "supports_names_numbers": True,
-        "requires_per_player_roster": True,   # per-player: Name / Number / Top / Bottom / Sock
+        "requires_per_player_roster": True,
     },
     {
         "key": "training",
         "title": "Training set",
-        "subtitle": "Top + shorts + socks — clean front badge print, no names/numbers.",
+        "subtitle": "Top + shorts + socks — clean front badge, each kit labelled with the player's name.",
         "set_product_id": "full-squad-training",
         "included_items": ["Top", "Shorts", "Socks"],
         "supports_names_numbers": False,
-        "requires_per_player_roster": False,
+        "requires_per_player_roster": True,
     },
     {
         "key": "tracksuit",
         "title": "Tracksuit set",
-        "subtitle": "Hoodie/jacket + joggers — warm-up, travel, arrivals.",
+        "subtitle": "Hoodie/jacket + joggers — arrival, warm-up and travel wear, labelled per player.",
         "set_product_id": "full-squad-tracksuit",
         "included_items": ["Hoodie/Jacket", "Joggers"],
         "supports_names_numbers": False,
-        "requires_per_player_roster": False,
+        "requires_per_player_roster": True,
     },
 ]
 
@@ -3464,6 +3464,7 @@ FULL_SQUAD_ADDON_DEFAULTS = {
     "sleeve_print_price": 2.00,
     "back_upload_print_price": 4.00,
     "back_name_and_number_price": 6.00,   # only relevant on non-match-day items if they opt in
+    "gym_bag_addon_price": 4.00,          # printed drawstring gym bag with badge + player name
 }
 
 # Sports Outfit print add-ons — mutually exclusive on the customer side.
