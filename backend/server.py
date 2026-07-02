@@ -892,114 +892,40 @@ async def create_quote_request(payload: QuoteRequest):
 # ---------- Stripe Checkout ----------
 @api_router.post("/checkout/session", response_model=CheckoutResponse)
 async def create_checkout(payload: CheckoutRequest, http_request: Request):
-    if payload.product_id not in PRODUCTS:
-        raise HTTPException(400, "Invalid product")
-
-    product = PRODUCTS[payload.product_id]
-    base_price = float(product["price"])
-    size_upcharges: Dict[str, float] = product.get("size_upcharges", {}) or {}
-    allowed_sizes = set(product.get("sizes", []))
-
-    # Global rule: shorts / bottoms / joggers / trousers / leggings cannot receive a back print.
-    # Silently strip any back-print placement rather than 400, so upstream builders can be lazy.
-    if payload.product_id in NO_BACK_PRINT_PRODUCT_IDS and payload.placements:
-        payload.placements = [p for p in payload.placements if "back" not in (p or "").lower()]
-
-    # Resolve placements (blank wins). Special override for fight-night tee.
-    if payload.blank:
-        placements_clean: List[str] = []
-        print_cost = 0.0
-    elif payload.product_id == "boxing-fight-tee":
-        # Fight night addons use bespoke pricing
-        placements_clean = [p for p in (payload.placements or []) if p in FIGHT_NIGHT_ADDONS]
-        print_cost = round(sum(FIGHT_NIGHT_ADDONS[p]["price"] for p in placements_clean), 2)
-    elif product.get("category") == "team-kits":
-        # Team-kit addons (sleeves + back print). Front sponsor is free & not a placement.
-        placements_clean = [p for p in (payload.placements or []) if p in TEAM_KIT_ADDONS]
-        print_cost = round(sum(TEAM_KIT_ADDONS[p]["price"] for p in placements_clean), 2)
-    elif product.get("category") == "leavers":
-        # Leavers flow — only optional addon is drawstring-bag (+£3.99/garment)
-        wanted = set(payload.placements or [])
-        placements_clean = ["drawstring-bag"] if "drawstring-bag" in wanted else []
-        print_cost = LEAVERS_BAG_PRICE if "drawstring-bag" in wanted else 0.0
-    elif (payload.design_meta or {}).get("flow") == "designer":
-        # Designer flow: back-print = 60% of unit price rounded to nearest £.99 (£0.99 floor).
-        #                neck-label = flat NECK_LABEL_PRICE per garment.
-        wanted = set(payload.placements or [])
-        placements_clean = []
-        extra = 0.0
-        if "back-print" in wanted:
-            placements_clean.append("back-print")
-            extra += designer_back_print_price(base_price)
-        if "neck-label" in wanted:
-            placements_clean.append("neck-label")
-            extra += NECK_LABEL_PRICE
-        print_cost = round(extra, 2)
-    else:
-        placements_clean = _validate_placements(payload.placements or [])
-        print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
-
-    # Resolve size quantities (new path preferred, legacy fallback)
-    size_qtys: Dict[str, int] = {}
+    # Normalise legacy {size, quantity} → {size_qtys} so the shared helper can price it
     if payload.size_qtys:
-        for sz, q in payload.size_qtys.items():
-            try:
-                q_int = int(q)
-            except (TypeError, ValueError):
-                continue
-            if q_int <= 0:
-                continue
-            if allowed_sizes and sz not in allowed_sizes:
-                raise HTTPException(400, f"Size '{sz}' not available for this product")
-            size_qtys[sz] = q_int
+        size_qtys = dict(payload.size_qtys)
     else:
-        # Legacy: single size + quantity
         sz = payload.size or "M"
         q_int = int(payload.quantity) if payload.quantity is not None else 1
         if q_int < 1:
             raise HTTPException(400, "Quantity must be ≥ 1")
+        product = PRODUCTS.get(payload.product_id) or {}
+        allowed_sizes = set(product.get("sizes") or [])
         if allowed_sizes and sz not in allowed_sizes:
             sz = next(iter(allowed_sizes)) if allowed_sizes else sz
-        size_qtys[sz] = q_int
+        size_qtys = {sz: q_int}
 
-    if not size_qtys:
-        raise HTTPException(400, "Select at least one size with quantity ≥ 1")
-
-    total_qty = sum(size_qtys.values())
-    if total_qty < 1 or total_qty > 5000:
-        raise HTTPException(400, "Total quantity must be 1-5000")
-
-    # Bulk-tier pricing (override base_price for matching flows)
-    if payload.product_id == "boxing-fight-tee":
-        base_price = tier_unit_price(FIGHT_NIGHT_BULK_TIERS, base_price, total_qty)
-    elif product.get("category") == "leavers" and payload.product_id != "leavers-drawstring-bag":
-        base_price = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base_price, total_qty)
-    elif product.get("bulk_pricing_enabled"):
-        # Generic % tier pricing — use per-product overrides if present, else global defaults
-        ovr = product.get("bulk_pricing_overrides")
-        if ovr:
-            tiers_pct = sorted(
-                [(int(t["min_qty"]), float(t["pct"])) for t in ovr if "min_qty" in t and "pct" in t],
-                key=lambda x: -x[0],
-            )
-        else:
-            doc = await db.settings.find_one({"key": SETTINGS_KEY_BULK_DEFAULTS})
-            tiers_pct = doc["tiers"] if doc and "tiers" in doc else DEFAULT_BULK_TIERS_PCT
-            tiers_pct = sorted([(int(t[0]), float(t[1])) for t in tiers_pct], key=lambda x: -x[0])
-        base_price = apply_bulk_tier_pct(base_price, total_qty, tiers_pct)
-
-    # Compute total server-side
-    total_amount = 0.0
-    line_breakdown = []
-    for sz, q in size_qtys.items():
-        unit = base_price + float(size_upcharges.get(sz, 0.0)) + print_cost
-        line = round(unit * q, 2)
-        total_amount += line
-        line_breakdown.append(f"{sz}×{q}@£{unit:.2f}")
-    total_amount = round(total_amount, 2)
+    priced = await _resolve_line_pricing(
+        product_id=payload.product_id,
+        size_qtys=size_qtys,
+        placements=payload.placements,
+        blank=payload.blank,
+        color=payload.color,
+        design_meta=payload.design_meta,
+    )
+    product = priced["product"]
+    placements_clean = priced["placements_clean"]
+    size_qtys = priced["size_qtys"]
+    total_qty = priced["total_qty"]
+    total_amount = priced["line_total"]
+    line_breakdown = priced["breakdown"]
+    print_cost = priced["print_cost"]
 
     if total_amount < 0.5:
         raise HTTPException(400, "Total below Stripe minimum (£0.50)")
+
+    _assert_origin_ok(payload.origin_url)
 
     host_url = str(http_request.base_url)
     webhook_url = f"{host_url}api/webhook/stripe"
@@ -1013,7 +939,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         "product_id": payload.product_id,
         "product_name": product["name"],
         "color": (payload.color or "")[:60],
-        "blank": "true" if payload.blank or not placements_clean else "false",
+        "blank": "true" if priced["blank"] else "false",
         "placements": ",".join(placements_clean)[:400],
         "sizes": ",".join(line_breakdown)[:400],
         "total_qty": str(total_qty),
@@ -1043,7 +969,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
             "product_name": product["name"],
             "color": payload.color,
             "placements": placements_clean,
-            "blank": bool(payload.blank or not placements_clean),
+            "blank": priced["blank"],
             "size_qtys": size_qtys,
             "total_quantity": total_qty,
             "amount": total_amount,
@@ -1106,27 +1032,41 @@ class CartCheckoutRequest(BaseModel):
     origin_url: str
 
 
-async def _price_line_item(item: CartLineItem) -> Dict:
-    """Price a single cart line server-side. Returns {product, base_price, print_cost,
-    size_qtys, placements_clean, line_total, total_qty}. Mirrors the logic in
-    POST /checkout/session so pricing is identical."""
-    if item.product_id not in PRODUCTS:
-        raise HTTPException(400, f"Invalid product: {item.product_id}")
-    product = PRODUCTS[item.product_id]
+async def _resolve_line_pricing(
+    *,
+    product_id: str,
+    size_qtys: Dict[str, int],
+    placements: Optional[List[str]] = None,
+    blank: bool = False,
+    color: Optional[str] = None,
+    design_meta: Optional[Dict] = None,
+) -> Dict:
+    """Canonical per-line pricing — called by both single-item /checkout/session
+    and multi-line /checkout/cart-session so bulk-tier + upcharge maths is
+    guaranteed identical.
+
+    Returns:
+        {product, product_id, base_price, size_upcharges, size_qtys (validated),
+         placements_clean, print_cost, blank, color, total_qty, line_total,
+         breakdown, design_meta}
+    """
+    if product_id not in PRODUCTS:
+        raise HTTPException(400, f"Invalid product: {product_id}")
+    product = PRODUCTS[product_id]
     base_price = float(product["price"])
     size_upcharges: Dict[str, float] = product.get("size_upcharges", {}) or {}
     allowed_sizes = set(product.get("sizes", []))
 
     # Strip back-print for bottoms / shorts / joggers etc.
-    placements = list(item.placements or [])
-    if item.product_id in NO_BACK_PRINT_PRODUCT_IDS and placements:
+    placements = list(placements or [])
+    if product_id in NO_BACK_PRINT_PRODUCT_IDS and placements:
         placements = [p for p in placements if "back" not in (p or "").lower()]
 
-    # Resolve print cost using exactly the same rules as /checkout/session
-    if item.blank:
+    # Resolve print cost using the same rules across every flow
+    if blank:
         placements_clean: List[str] = []
         print_cost = 0.0
-    elif item.product_id == "boxing-fight-tee":
+    elif product_id == "boxing-fight-tee":
         placements_clean = [p for p in placements if p in FIGHT_NIGHT_ADDONS]
         print_cost = round(sum(FIGHT_NIGHT_ADDONS[p]["price"] for p in placements_clean), 2)
     elif product.get("category") == "team-kits":
@@ -1136,7 +1076,7 @@ async def _price_line_item(item: CartLineItem) -> Dict:
         wanted = set(placements)
         placements_clean = ["drawstring-bag"] if "drawstring-bag" in wanted else []
         print_cost = LEAVERS_BAG_PRICE if "drawstring-bag" in wanted else 0.0
-    elif (item.design_meta or {}).get("flow") == "designer":
+    elif (design_meta or {}).get("flow") == "designer":
         wanted = set(placements)
         placements_clean = []
         extra = 0.0
@@ -1151,9 +1091,9 @@ async def _price_line_item(item: CartLineItem) -> Dict:
         placements_clean = _validate_placements(placements)
         print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
 
-    # Sizes / qtys
-    size_qtys: Dict[str, int] = {}
-    for sz, q in (item.size_qtys or {}).items():
+    # Validate sizes/qtys
+    resolved_qtys: Dict[str, int] = {}
+    for sz, q in (size_qtys or {}).items():
         try:
             q_int = int(q)
         except (TypeError, ValueError):
@@ -1161,19 +1101,19 @@ async def _price_line_item(item: CartLineItem) -> Dict:
         if q_int <= 0:
             continue
         if allowed_sizes and sz not in allowed_sizes:
-            raise HTTPException(400, f"Size '{sz}' not available for {item.product_id}")
-        size_qtys[sz] = q_int
-    if not size_qtys:
-        raise HTTPException(400, f"{item.product_id}: select at least one size")
+            raise HTTPException(400, f"Size '{sz}' not available for {product_id}")
+        resolved_qtys[sz] = q_int
+    if not resolved_qtys:
+        raise HTTPException(400, f"{product_id}: select at least one size")
 
-    total_qty = sum(size_qtys.values())
+    total_qty = sum(resolved_qtys.values())
     if total_qty < 1 or total_qty > 5000:
-        raise HTTPException(400, f"{item.product_id}: qty must be 1–5000")
+        raise HTTPException(400, f"{product_id}: qty must be 1–5000")
 
     # Bulk-tier pricing
-    if item.product_id == "boxing-fight-tee":
+    if product_id == "boxing-fight-tee":
         base_price = tier_unit_price(FIGHT_NIGHT_BULK_TIERS, base_price, total_qty)
-    elif product.get("category") == "leavers" and item.product_id != "leavers-drawstring-bag":
+    elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
         base_price = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base_price, total_qty)
     elif product.get("bulk_pricing_enabled"):
         ovr = product.get("bulk_pricing_overrides")
@@ -1190,7 +1130,7 @@ async def _price_line_item(item: CartLineItem) -> Dict:
 
     line_total = 0.0
     breakdown: List[str] = []
-    for sz, q in size_qtys.items():
+    for sz, q in resolved_qtys.items():
         unit = base_price + float(size_upcharges.get(sz, 0.0)) + print_cost
         line_total += round(unit * q, 2)
         breakdown.append(f"{sz}×{q}@£{unit:.2f}")
@@ -1198,17 +1138,32 @@ async def _price_line_item(item: CartLineItem) -> Dict:
 
     return {
         "product": product,
-        "product_id": item.product_id,
-        "size_qtys": size_qtys,
+        "product_id": product_id,
+        "base_price": base_price,
+        "size_upcharges": size_upcharges,
+        "size_qtys": resolved_qtys,
         "placements_clean": placements_clean,
-        "blank": item.blank or not placements_clean,
-        "color": item.color,
-        "line_total": line_total,
-        "total_qty": total_qty,
         "print_cost": print_cost,
+        "blank": blank or not placements_clean,
+        "color": color,
+        "total_qty": total_qty,
+        "line_total": line_total,
         "breakdown": breakdown,
-        "design_meta": item.design_meta or {},
+        "design_meta": design_meta or {},
     }
+
+
+async def _price_line_item(item: CartLineItem) -> Dict:
+    """Backwards-compatible wrapper — resolves the pricing for one CartLineItem
+    by delegating to the shared `_resolve_line_pricing()` helper."""
+    return await _resolve_line_pricing(
+        product_id=item.product_id,
+        size_qtys=item.size_qtys or {},
+        placements=item.placements,
+        blank=item.blank,
+        color=item.color,
+        design_meta=item.design_meta,
+    )
 
 
 
@@ -4074,58 +4029,9 @@ async def admin_update_sock_sizes(payload: Dict):
     return {"ok": True, "values": cleaned}
 
 
-@api_router.patch("/admin/sports-outfit/addons", dependencies=[Depends(require_admin)])
-async def admin_update_sports_outfit_addons(payload: Dict):
-    values = payload.get("values") or {}
-    if not isinstance(values, dict):
-        raise HTTPException(400, "values must be an object")
-    cleaned: Dict = {}
-    for k in ("unbranded_price", "breast_print_price", "back_print_price", "full_front_print_price"):
-        if k in values:
-            try:
-                v = round(float(values[k]), 2)
-            except (TypeError, ValueError):
-                raise HTTPException(400, f"{k} must be a number")
-            if v < 0 or v > 999:
-                raise HTTPException(400, f"{k} must be between 0 and 999")
-            cleaned[k] = v
-    existing = (await db.settings.find_one({"key": "sports_outfit_addons"}) or {}).get("values") or {}
-    merged = {**existing, **cleaned}
-    await db.settings.update_one(
-        {"key": "sports_outfit_addons"},
-        {"$set": {"key": "sports_outfit_addons", "values": merged,
-                  "updated_at": datetime.now(timezone.utc).isoformat()}},
-        upsert=True,
-    )
-    return {"ok": True, "values": merged}
-
-
-@api_router.patch("/admin/full-squad/addons", dependencies=[Depends(require_admin)])
-async def admin_update_full_squad_addons(payload: Dict):
-    values = payload.get("values") or {}
-    if not isinstance(values, dict):
-        raise HTTPException(400, "values must be an object")
-    cleaned: Dict = {}
-    for k in ("sleeve_print_price", "back_upload_print_price",
-              "back_name_and_number_price", "gym_bag_addon_price"):
-        if k in values:
-            try:
-                v = round(float(values[k]), 2)
-            except (TypeError, ValueError):
-                raise HTTPException(400, f"{k} must be a number")
-            if v < 0 or v > 999:
-                raise HTTPException(400, f"{k} must be between 0 and 999")
-            cleaned[k] = v
-    # MERGE with existing values so saving one key doesn't wipe the others.
-    existing = (await db.settings.find_one({"key": "full_squad_addons"}) or {}).get("values") or {}
-    merged = {**existing, **cleaned}
-    await db.settings.update_one(
-        {"key": "full_squad_addons"},
-        {"$set": {"key": "full_squad_addons", "values": merged,
-                  "updated_at": datetime.now(timezone.utc).isoformat()}},
-        upsert=True,
-    )
-    return {"ok": True, "values": merged}
+# Configurator addons — extracted to /app/backend/routers/configurator_addons.py.
+# The following endpoints now live there: PATCH /admin/sports-outfit/addons,
+# PATCH /admin/full-squad/addons, GET /admin/configurator-settings.
 
 
 @api_router.patch("/admin/navigation", dependencies=[Depends(require_admin)])
@@ -4560,84 +4466,16 @@ async def get_product_override(pid: str):
 
 
 # ============================================================================
-# Page copy CMS — override any page's hero title / subtitle / bullets / FAQ.
-# Consumed via a public GET; edited via an admin PATCH.
+# Page copy CMS — extracted to /app/backend/routers/cms_page_copy.py
+# The `PAGE_COPY_SLUGS` allow-list, `PageCopyPatch` model, and CRUD endpoints
+# all live there now.
 # ============================================================================
-class PageCopyPatch(BaseModel):
-    title: Optional[str] = Field(default=None, max_length=200)
-    subtitle: Optional[str] = Field(default=None, max_length=400)
-    body: Optional[str] = Field(default=None, max_length=20000)                 # long-form paragraphs (blank-line separated)
-    bullets: Optional[List[str]] = None        # feature bullets
-    faq: Optional[List[Dict]] = None            # [{q, a}, ...]
-    cta_label: Optional[str] = Field(default=None, max_length=80)
-    cta_link: Optional[str] = Field(default=None, max_length=500)
-    extras: Optional[Dict] = None              # free-form { key: value } for page-specific fields
-
-
-# Allow-list of page slugs — keeps admin UI focused + prevents typos.
-PAGE_COPY_SLUGS = [
-    "home", "contact", "sports", "workwear", "portfolio", "reviews",
-    "teams-schools", "specials", "fight-night", "leavers-hoodies",
-    "kit-your-workforce", "design-your-own", "full-squad-configurator",
-    "sports-outfit-configurator", "team-kits", "team-kit-builder",
-]
-
-
-@api_router.get("/page-copy/{slug}")
-async def get_page_copy(slug: str):
-    """Public — returns admin-editable copy for a page, or {} if never edited."""
-    if slug not in PAGE_COPY_SLUGS:
-        raise HTTPException(404, "Unknown page slug")
-    doc = await db.settings.find_one({"key": f"page_copy:{slug}"})
-    if not doc:
-        return {}
-    return {k: doc.get(k) for k in ("title", "subtitle", "body", "bullets", "faq",
-                                     "cta_label", "cta_link", "extras") if doc.get(k) is not None}
-
-
-@api_router.patch("/admin/page-copy/{slug}", dependencies=[Depends(require_admin)])
-async def admin_update_page_copy(slug: str, patch: PageCopyPatch):
-    if slug not in PAGE_COPY_SLUGS:
-        raise HTTPException(400, f"Slug must be one of: {PAGE_COPY_SLUGS}")
-    up = patch.model_dump(exclude_none=True)
-    if up.get("faq") is not None:
-        up["faq"] = [
-            {"q": (f.get("q") or "")[:200], "a": (f.get("a") or "")[:1000]}
-            for f in up["faq"][:30]
-            if isinstance(f, dict) and (f.get("q") or "").strip()
-        ]
-    up["key"] = f"page_copy:{slug}"
-    up["slug"] = slug
-    up["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.settings.update_one({"key": up["key"]}, {"$set": up}, upsert=True)
-    return {"ok": True, "slug": slug, "copy": {k: v for k, v in up.items() if k not in ("key", "slug", "updated_at")}}
-
-
-@api_router.delete("/admin/page-copy/{slug}", dependencies=[Depends(require_admin)])
-async def admin_delete_page_copy(slug: str):
-    if slug not in PAGE_COPY_SLUGS:
-        raise HTTPException(400, f"Slug must be one of: {PAGE_COPY_SLUGS}")
-    r = await db.settings.delete_one({"key": f"page_copy:{slug}"})
-    return {"ok": True, "deleted": r.deleted_count}
-
-
-@api_router.get("/admin/page-copy-slugs", dependencies=[Depends(require_admin)])
-async def admin_list_page_copy_slugs():
-    return {"slugs": PAGE_COPY_SLUGS}
+from routers.cms_page_copy import PAGE_COPY_SLUGS, PageCopyPatch  # noqa: F401 — re-exported for legacy imports
 
 
 # ============================================================================
-# Configurator addons — expose the existing settings via a single admin GET/PATCH
-# so the admin UI can round-trip them.
+# Configurator addons — extracted to /app/backend/routers/configurator_addons.py
 # ============================================================================
-@api_router.get("/admin/configurator-settings", dependencies=[Depends(require_admin)])
-async def admin_get_configurator_settings():
-    fs = (await db.settings.find_one({"key": "full_squad_addons"}) or {}).get("values") or {}
-    so = (await db.settings.find_one({"key": "sports_outfit_addons"}) or {}).get("values") or {}
-    return {
-        "full_squad": {**FULL_SQUAD_ADDON_DEFAULTS, **fs},
-        "sports_outfit": {**SPORTS_OUTFIT_ADDON_DEFAULTS, **so},
-    }
 
 
 # ============================================================================
@@ -4956,6 +4794,8 @@ async def _seed_front_only_bundle_placements():
 # Router modules (split out from this monolith — see /app/backend/routers/)
 # ============================================================================
 import routers.designer_ai  # noqa: F401 — registers /designer/remove-bg, /designer/ai-effect, /admin/test-email
+import routers.cms_page_copy  # noqa: F401 — registers /page-copy/*, /admin/page-copy/*
+import routers.configurator_addons  # noqa: F401 — registers /admin/full-squad/addons, /admin/sports-outfit/addons, /admin/configurator-settings
 
 # Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
