@@ -50,6 +50,18 @@ UK custom print + workwear e-commerce site at yourownprint.co.uk. Standalone (no
 - ✅ **Sock sizes admin** — GET /api/sock-sizes + PATCH /api/admin/sock-sizes. Editable inline on `/admin/bundle-variants` (top panel).
 - ✅ **Admin Bundle Variants** (Feb 2026, rewritten) — `/admin/bundle-variants` supports the 5 new set slot IDs, colour picker (name+hex), sizes chip list, sock sizes override, included_items chips, and a size_guide free-text field. Fully e2e tested (iter24 — 18/18 backend + 5/5 frontend flows).
 
+## Feb 2026 — Iter 31 changelog
+- 🧑‍💼 **Customer accounts shipped end-to-end** (30/30 backend + 100% frontend, one crash fixed post-review):
+  - Register / login / logout / me + brute-force lockout (5 tries → 15min).
+  - Password reset via Resend (1-hour token, `secrets.token_urlsafe(32)`). Never leaks whether an email exists.
+  - Server-side cart persistence with **merge-on-login** — guest localStorage cart + server cart line-ids are matched by `product+colour+placements+design_meta` and size_qtys are SUMMED (verified: M:2 guest + M:3 server = 5).
+  - Order history reads `payment_transactions` matching `customer_email` — the checkout endpoints now capture it when a logged-in customer buys.
+  - Address book + saved DYO designs (create / list / delete).
+  - JWT `role="customer"` — admin tokens rejected by `/customer/me`, customer tokens rejected by `/admin/*`. Cross-customer data isolation verified.
+- 🧱 **server.py refactor continued**: extracted `cms_page_copy.py` (page-copy CRUD), `configurator_addons.py` (Full Squad + Sports Outfit addons + configurator-settings GET), `customer_auth.py` (all customer endpoints). server.py: 5,017 → **4,844** lines (-173, -3.4%).
+- 🧮 **Shared pricing helper** `_resolve_line_pricing()` — single implementation of bulk-tier + placement-cost + size-upcharge maths used by both `/checkout/session` (legacy single-item) and `/cart/price` + `/checkout/cart-session` (multi-cart). Verified: identical £34.95 for 5×tee blank across both paths.
+- 🐛 **Post-review fix**: `/reset-password` no longer crashes on invalid tokens — moved token length validation into the handler so all errors return HTTP 400 with a plain-string `detail`. Frontend also defensively stringifies pydantic array errors. `_line_id()` now uses `json.dumps(sort_keys=True)` for canonical hashing. Bearer header preferred over cookie in `get_current_customer`. `YOP_APP_ORIGIN` env var used as password-reset link fallback when Origin header is missing.
+
 ## Feb 2026 — Iter 30 changelog
 - 🛒 **Multi-product cart shipped end-to-end** (backend + frontend, 100% tests pass):
   - `POST /api/cart/price` reprices any cart server-side (bulk tiers + size upcharges + print upcharges — identical to `/checkout/session`).

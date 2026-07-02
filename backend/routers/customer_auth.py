@@ -16,6 +16,7 @@ Design decisions:
 """
 from __future__ import annotations
 
+import json
 import re
 import secrets
 import uuid
@@ -48,7 +49,7 @@ _PASSWORD_HAS_NUMBER = re.compile(r"[0-9]")
 # ---------------------------------------------------------------------------
 class CustomerRegister(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=_MIN_PASSWORD_LEN, max_length=200)
+    password: str = Field(min_length=1, max_length=200)  # strength checked in handler → clean 400 error
     name: str = Field(min_length=1, max_length=120)
 
 
@@ -70,8 +71,8 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str = Field(min_length=8, max_length=200)
-    new_password: str = Field(min_length=_MIN_PASSWORD_LEN, max_length=200)
+    token: str = Field(min_length=1, max_length=200)     # length checked in handler → clean 400 error
+    new_password: str = Field(min_length=1, max_length=200)
 
 
 class CartLineItemModel(BaseModel):
@@ -151,11 +152,14 @@ def _serialise_customer(doc: Dict) -> Dict:
 
 
 async def get_current_customer(request: Request) -> Dict:
-    token = request.cookies.get("customer_access_token")
+    # Prefer Bearer header over cookie — API clients using explicit tokens shouldn't
+    # be shadowed by a stale cookie from a previous session on the same origin.
+    token = None
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
     if not token:
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
+        token = request.cookies.get("customer_access_token")
     if not token:
         raise HTTPException(401, "Not authenticated")
     try:
@@ -283,7 +287,11 @@ async def customer_forgot_password(payload: ForgotPasswordRequest, request: Requ
             "used": False,
         })
         origin = request.headers.get("origin") or request.headers.get("referer", "").rsplit("/", 1)[0]
-        origin = (origin or "").rstrip("/") or "https://yourownprint.co.uk"
+        origin = (origin or "").rstrip("/")
+        if not origin:
+            # Fallback for server-to-server calls without an Origin header.
+            import os
+            origin = (os.environ.get("YOP_APP_ORIGIN") or "https://yourownprint.co.uk").rstrip("/")
         reset_link = f"{origin}/reset-password?token={token}"
         body = email_wrap(
             "Reset your password",
@@ -304,6 +312,8 @@ async def customer_forgot_password(payload: ForgotPasswordRequest, request: Requ
 
 @api_router.post("/customer/reset-password")
 async def customer_reset_password(payload: ResetPasswordRequest, response: Response):
+    if len(payload.token) < 8:
+        raise HTTPException(400, "Reset link is invalid or already used")
     _validate_password_strength(payload.new_password)
     tok = await db.password_reset_tokens.find_one({"token": payload.token})
     if not tok or tok.get("used"):
@@ -332,9 +342,10 @@ async def customer_reset_password(payload: ResetPasswordRequest, response: Respo
 # Cart persistence
 # ---------------------------------------------------------------------------
 def _line_id(line: Dict) -> str:
-    """Stable identity for a cart line — same product+colour+placements+design → same id."""
+    """Stable identity for a cart line — same product+colour+placements+design → same id.
+    Uses canonical JSON for design_meta so dict ordering doesn't affect the hash."""
     placements = ",".join(sorted(line.get("placements") or []))
-    dm = str(line.get("design_meta") or "")
+    dm = json.dumps(line.get("design_meta") or {}, sort_keys=True)
     return f"{line['product_id']}::{line.get('color') or ''}::{placements}::{dm}"
 
 

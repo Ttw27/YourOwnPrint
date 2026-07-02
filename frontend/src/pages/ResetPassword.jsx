@@ -24,8 +24,16 @@ export default function ResetPassword() {
       toast.success("Password updated! You're signed in.");
       setTimeout(() => navigate("/account"), 1500);
     } catch (e2) {
-      setErr(e2?.response?.data?.detail || e2?.message || "Reset failed");
+      setErr(formatErr(e2?.response?.data?.detail) || e2?.message || "Reset failed");
     } finally { setBusy(false); }
+  }
+
+  function formatErr(detail) {
+    if (detail == null) return "";
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) return detail.map((d) => d?.msg || JSON.stringify(d)).join(" ");
+    if (detail?.msg) return detail.msg;
+    return String(detail);
   }
 
   return (
