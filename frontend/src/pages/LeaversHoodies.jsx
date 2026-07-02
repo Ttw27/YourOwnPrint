@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversBespoke } from "../lib/api";
+import usePageCopy from "../hooks/usePageCopy";
 import { Sparkles, GraduationCap, Users, CalendarDays, Mail, Truck, ShieldCheck, Star, Package, ArrowRight, ChevronLeft, ChevronRight, Brush } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,6 +21,11 @@ export default function LeaversHoodies() {
   }, []);
   const tiersAsc = [...(tiers.tiers || [])].sort((a, b) => a.min_qty - b.min_qty);
 
+  const copy = usePageCopy("leavers-hoodies", {
+    title: "",
+    subtitle: "Pullover hoodies, zip hoodies, varsity jackets — printed in the UK in 7–10 days. Fill in your details, pick your garment and design, choose sizes, and we'll get cracking. Free proof before we print a thing.",
+  });
+
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen" data-testid="leavers-page">
       <BoldNavbar />
@@ -34,14 +40,10 @@ export default function LeaversHoodies() {
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#f0fdf4] text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs">
               <GraduationCap size={14} className="text-[#7bc67e]" /> Class of 2026 · Year 11 · Year 13 · College
             </div>
-            <h1 className="font-nunito font-black text-5xl lg:text-7xl mt-3 leading-[1.02]">
-              Leavers&apos; hoodies <span className="relative inline-block"><span className="relative z-10">done right.</span><span className="absolute left-0 right-0 bottom-1 h-3 bg-[#7bc67e] -z-0 rounded-full" /></span>
+            <h1 className="font-nunito font-black text-5xl lg:text-7xl mt-3 leading-[1.02]" data-testid="leavers-hero-title">
+              {copy.title ? copy.title : (<>Leavers&apos; hoodies <span className="relative inline-block"><span className="relative z-10">done right.</span><span className="absolute left-0 right-0 bottom-1 h-3 bg-[#7bc67e] -z-0 rounded-full" /></span></>)}
             </h1>
-            <p className="text-[#4b5563] mt-4 text-lg max-w-lg">
-              Pullover hoodies, zip hoodies, varsity jackets — printed in the UK in 7–10 days.
-              Fill in your details, pick your garment and design, choose sizes, and we&apos;ll get
-              cracking. <strong>Free proof before we print a thing.</strong>
-            </p>
+            <p className="text-[#4b5563] mt-4 text-lg max-w-lg" data-testid="leavers-hero-subtitle">{copy.subtitle}</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 data-testid="leavers-start-cta"

@@ -3,11 +3,17 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { submitContact } from "../lib/api";
 import { toast } from "sonner";
 import { SECTORS } from "../lib/data";
+import usePageCopy from "../hooks/usePageCopy";
 import { Phone, Mail, MessageSquare, Send, Sparkles } from "lucide-react";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "", quantity: "", sector: "" });
   const [submitting, setSubmitting] = useState(false);
+
+  const copy = usePageCopy("contact", {
+    title: "",
+    subtitle: "Tell us what you need — we'll come back with a tailored quote, fabric advice and free logo design ideas.",
+  });
 
   const update = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -41,8 +47,10 @@ export default function Contact() {
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#f0fdf4] text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs">
               <Sparkles size={14} className="text-[#7bc67e]" /> No pressure · No hard sell
             </div>
-            <h1 className="font-nunito font-black text-4xl lg:text-6xl mt-4 leading-tight">Get a Quote.<br />Talk to a real human.</h1>
-            <p className="text-[#4b5563] mt-5 max-w-md">Tell us what you need — we'll come back with a tailored quote, fabric advice and free logo design ideas.</p>
+            <h1 className="font-nunito font-black text-4xl lg:text-6xl mt-4 leading-tight" data-testid="contact-hero-title">
+              {copy.title ? copy.title : (<>Get a Quote.<br />Talk to a real human.</>)}
+            </h1>
+            <p className="text-[#4b5563] mt-5 max-w-md" data-testid="contact-hero-subtitle">{copy.subtitle}</p>
             <div className="mt-8 space-y-4">
               {[
                 { icon: Phone, label: "Chat to a real human", val: "Mon–Fri · UK based" },

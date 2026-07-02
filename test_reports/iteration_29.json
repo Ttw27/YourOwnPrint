@@ -1,0 +1,57 @@
+{
+  "summary": "Iter29 verified all 3 CMS bugs from iter28 are fixed and the 3 new integrations work as designed. Backend: 26/26 pytest tests PASS on the new /app/backend/tests/test_iteration29.py — full-squad and sports-outfit PATCH endpoints now merge instead of replace; page-copy DELETE endpoint revokes overrides; product-override DELETE restores from _PRISTINE_PRODUCTS deepcopy without a restart; /designer/remove-bg + /designer/ai-effect return the expected 503/400 error paths; /admin/test-email returns {ok:false, error:'... not configured'} with a 200 body; /leavers/bespoke succeeds (200) with no Resend key configured. Frontend: all 8 hero titles render with the correct data-testid (home, workwear, specials, contact, leavers, fight-night, workforce, dyo). Regression pages (/full-squad-configurator, /sports-outfit-configurator, /teams-schools) render with h1 and zero error boundaries. New Basic-override inline UI at /admin/product-settings works end-to-end: expand row -> edit price -> aps-override-save-personalised-hoodie -> PATCH /api/admin/products/personalised-hoodie/override -> price 77.77 visible on /product/personalised-hoodie -> aps-override-revert-personalised-hoodie -> DELETE -> immediate GET returns 14.99 (pristine restore verified without restart). AdminPageCopy Revert button now correctly calls DELETE /api/admin/page-copy/home (fixed from iter28). Cleanup: all TEST_* data purged via DELETE endpoints; addons reset to defaults; product override cleared; page_copy:home doc deleted.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "PATCH /api/admin/page-copy/{slug}",
+        "issue": "Body has no length caps — an admin could POST a very large `body`/`title` and bloat the settings collection. Consider caps (title<=200, subtitle<=400, body<=20000)."
+      },
+      {
+        "endpoint": "PATCH /api/admin/full-squad/addons and /admin/sports-outfit/addons",
+        "issue": "Merge is correct BUT there is no server-side range validation on prices (e.g. accepting -999 or 1e9). Should clamp to a sensible 0..999 range."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "AdminProductSettings inline override panel",
+        "issues": ["Active override badge (aps-override-badge) uses accent green on light background — legible but no visible focus ring on the checkbox at aps-override-active-<id>. Minor accessibility polish."]
+      },
+      {
+        "screen": "DesignYourOwn hero and various pages",
+        "issues": ["A handful of 404 network requests observed in console on several pages (likely optional image assets) — not blocking, but pollutes the browser console for real customers. Consider removing/hosting the missing assets."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration29.py",
+    "/app/test_reports/pytest/iter29_results.xml"
+  ],
+  "action_items": [
+    "Add length caps (title<=200, subtitle<=400, body<=20000) to PageCopyPatch to harden the admin CMS endpoints.",
+    "Clamp addon prices to 0..999 in admin_update_full_squad_addons / admin_update_sports_outfit_addons.",
+    "Fix the console 404s on public pages (missing image assets) — not blocking but pollutes DevTools."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now 4951 lines — still a monolith. Splitting into routers (admin, designer, checkout, cms) remains overdue.",
+    "designer_remove_bg and designer_ai_effect duplicate the same base64 decode + httpx timeout+error boilerplate — extract a helper `_call_third_party_image_api(url, headers, files, key_name)` to DRY these two endpoints (~30 lines duplicated).",
+    "_PRISTINE_PRODUCTS deepcopy snapshot is captured at module import (server.py:4315) — this is the correct fix for the iter28 restart bug. Confirmed working via /product/personalised-hoodie API immediately after DELETE."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration29.py"
+  ],
+  "success_rate": {
+    "backend": "26/26 (100%)",
+    "frontend": "100% — all 8 hero-title testids, all inline override testids, apc-revert DELETE flow, regression pages all render"
+  },
+  "test_credentials": "Admin: admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "All test data cleaned via DELETE endpoints at end of each test. Reset states verified: /api/full-squad/config gym_bag=4.0 sleeve=3.5, /api/sports-outfit/config addons at defaults, /api/products/personalised-hoodie price=14.99, /api/page-copy/home = {} (all 8 slugs cleared).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter28 blockers all resolved. Backend base URL: https://branded-workwear-lab.preview.emergentagent.com. Test file /app/backend/tests/test_iteration29.py is additive — safe to keep as regression suite. Follow-ups suggested (non-blocking): add length caps to PageCopyPatch, price clamps on addon PATCH endpoints, fix ambient console 404s on public pages, split server.py into routers.",
+  "rca of the issue": "Not applicable — this iteration is a verification pass, no new bugs to RCA. The three iter28 root causes have been correctly patched: (1) PATCH full-squad addons now includes 'gym_bag_addon_price' in the whitelist AND merges via `merged = {**existing, **cleaned}` at server.py:3914-3915; (2) PATCH sports-outfit addons uses the same merge pattern at server.py:3889-3890; (3) new DELETE /api/admin/page-copy/{slug} endpoint at server.py:4420 + AdminPageCopy.jsx line 68 uses adminDeletePageCopy(slug) instead of PATCH with empty strings; (4) product-override DELETE restores from _PRISTINE_PRODUCTS at server.py:4350-4351 so the in-memory PRODUCTS entry is restored without a supervisor restart."
+}

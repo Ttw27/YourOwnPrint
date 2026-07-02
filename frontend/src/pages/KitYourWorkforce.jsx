@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import PricePromise from "../components/bold/PricePromise";
 import { fetchWorkforceProducts, fetchWorkforceTiers, workforceCheckout, workforceQuote } from "../lib/api";
+import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Plus, Minus, Trash2, ShieldCheck, Truck, Sparkles, ArrowRight, Loader2, ChevronDown } from "lucide-react";
 export default function KitYourWorkforce() {
@@ -14,6 +15,11 @@ export default function KitYourWorkforce() {
   const [backPrint, setBackPrint] = useState(null);   // data URL
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const copy = usePageCopy("kit-your-workforce", {
+    title: "",
+    subtitle: "One breast-logo print across every garment, optional back print on whichever items you choose, and bulk pricing that drops the more you buy — mix and match T-shirts, sweats, jackets and hi-vis.",
+  });
 
   useEffect(() => {
     Promise.all([fetchWorkforceProducts().catch(() => []), fetchWorkforceTiers().catch(() => null)])
@@ -148,13 +154,10 @@ export default function KitYourWorkforce() {
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 80% 30%, #fbbf24 0%, transparent 50%)" }} />
         <div className="max-w-6xl mx-auto px-6 py-16 relative">
           <div className="text-xs uppercase tracking-[0.3em] text-[#fbbf24] font-extrabold">Workwear · Bulk · DTF</div>
-          <h1 className="font-black text-4xl sm:text-5xl lg:text-6xl mt-3 leading-tight">
-            Kit your<br /><span className="text-[#fbbf24]">workforce.</span> Sorted.
+          <h1 className="font-black text-4xl sm:text-5xl lg:text-6xl mt-3 leading-tight" data-testid="workforce-hero-title">
+            {copy.title ? copy.title : (<>Kit your<br /><span className="text-[#fbbf24]">workforce.</span> Sorted.</>)}
           </h1>
-          <p className="text-zinc-300 mt-4 text-base sm:text-lg max-w-2xl">
-            One breast-logo print across every garment, optional back print on whichever items you choose,
-            and bulk pricing that drops the more you buy — mix and match T-shirts, sweats, jackets and hi-vis.
-          </p>
+          <p className="text-zinc-300 mt-4 text-base sm:text-lg max-w-2xl" data-testid="workforce-hero-subtitle">{copy.subtitle}</p>
           <div className="mt-6 flex flex-wrap gap-3 text-xs">
             {tierList.map(t => (
               <span key={t.min_qty} className={`px-3 py-1.5 rounded-full font-extrabold ${totalQty >= t.min_qty ? "bg-[#fbbf24] text-[#1a1a1a]" : "bg-zinc-800 text-zinc-300"}`} data-testid={`workforce-tier-chip-${t.min_qty}`}>

@@ -753,6 +753,27 @@ async def get_product(product_id: str):
 async def submit_contact(payload: ContactRequest):
     record = ContactRecord(**payload.model_dump())
     await db.contact_submissions.insert_one(record.model_dump())
+    # Fire Resend notification to the shop — non-blocking. Failures don't affect the response.
+    try:
+        shop_to = await _shop_notification_recipient()
+        if shop_to:
+            body = _email_wrap(
+                f"New quote enquiry — {payload.name}",
+                f"""
+                <p><strong>{payload.name}</strong> {'(' + payload.company + ')' if payload.company else ''} has submitted the /contact form.</p>
+                <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
+                  <tr><td style="color:#4b5563"><strong>Email</strong></td><td>{payload.email}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{payload.phone or '—'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Sector</strong></td><td>{payload.sector or '—'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Est. qty</strong></td><td>{payload.quantity or '—'}</td></tr>
+                  <tr><td style="color:#4b5563" valign="top"><strong>Message</strong></td><td>{(payload.message or '—').replace(chr(10),'<br>')}</td></tr>
+                </table>
+                """,
+            )
+            await _send_email(to=[shop_to], subject=f"[Quote] {payload.name} — {payload.company or 'no company'}",
+                              html=body, reply_to=payload.email)
+    except Exception as e:
+        logging.warning(f"contact email dispatch skipped: {e}")
     return {"ok": True, "id": record.id}
 
 
@@ -2109,6 +2130,38 @@ async def leavers_bespoke(payload: LeaversBespokeRequest):
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.quote_requests.insert_one(doc)
+
+    # Fire-and-forget email notifications via Resend. Failures don't block the response.
+    shop_to = await _shop_notification_recipient()
+    body_shop = _email_wrap(
+        "New bespoke leavers quote",
+        f"""
+        <p><strong>{payload.contact_name}</strong> from {payload.school} ({payload.year_group}) has asked for a bespoke leavers' hoodies quote.</p>
+        <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
+          <tr><td style="color:#4b5563"><strong>Estimated qty</strong></td><td>{payload.estimated_qty}</td></tr>
+          <tr><td style="color:#4b5563"><strong>Email</strong></td><td>{payload.contact_email}</td></tr>
+          <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{payload.contact_phone or '—'}</td></tr>
+          <tr><td style="color:#4b5563" valign="top"><strong>Notes</strong></td><td>{(payload.notes or '—').replace(chr(10),'<br>')}</td></tr>
+        </table>
+        <p style="margin-top:16px;color:#4b5563;font-size:12px">Reply to this email to reach the customer directly.</p>
+        """,
+    )
+    if shop_to:
+        await _send_email(to=[shop_to], subject=f"[Leavers] {payload.school} — {payload.estimated_qty} hoodies",
+                          html=body_shop, reply_to=payload.contact_email)
+    # Confirmation to customer
+    body_cust = _email_wrap(
+        "Got it — we're on the case!",
+        f"""
+        <p>Hi {payload.contact_name.split(' ')[0]},</p>
+        <p>Thanks for your bespoke leavers' hoodies enquiry for <strong>{payload.school}</strong> ({payload.year_group}). A real human will be in touch within 1 working day with fabric options, a design proof and pricing.</p>
+        <p style="color:#4b5563">In the meantime, feel free to reply to this email with any extra details or mock-up ideas.</p>
+        <p style="margin-top:16px">— The Your Own Print team</p>
+        """,
+    )
+    reply_to = shop_to or None
+    await _send_email(to=[payload.contact_email], subject="Your bespoke leavers' hoodies enquiry",
+                      html=body_cust, reply_to=reply_to)
     return {"ok": True, "id": doc["id"]}
 
 
@@ -4701,6 +4754,178 @@ async def _seed_front_only_bundle_placements():
         )
     except Exception as e:
         print(f"front-only placements seed failed: {e}")
+
+
+# ============================================================================
+# Resend (transactional email) — used for bespoke leavers quote notifications.
+# Key resolved via _get_integration_value("resend_api_key") (DB first, env fallback).
+# Sender email uses SENDER_EMAIL env (default: onboarding@resend.dev — Resend's shared sandbox).
+# Reply-to is the `contact_email` integration setting so replies land in the shop inbox.
+# ============================================================================
+import asyncio as _asyncio
+import base64 as _b64lib
+import resend as _resend
+import httpx as _httpx
+
+
+async def _send_email(*, to: List[str], subject: str, html: str, reply_to: Optional[str] = None) -> Dict:
+    """Non-blocking Resend send. Returns {ok, id?, error?}. Never raises — caller shouldn't
+    fail form submission just because the notification email couldn't be dispatched."""
+    api_key = await _get_integration_value("resend_api_key")
+    if not api_key:
+        return {"ok": False, "error": "Resend API key not configured (paste it in /admin/integrations)"}
+    _resend.api_key = api_key
+    sender = os.environ.get("SENDER_EMAIL") or "Your Own Print <onboarding@resend.dev>"
+    params = {"from": sender, "to": to, "subject": subject, "html": html}
+    if reply_to:
+        params["reply_to"] = reply_to
+    try:
+        res = await _asyncio.to_thread(_resend.Emails.send, params)
+        return {"ok": True, "id": (res or {}).get("id")}
+    except Exception as e:
+        logging.warning(f"Resend email failed: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+async def _shop_notification_recipient() -> Optional[str]:
+    return (await _get_integration_value("contact_email")) or None
+
+
+def _email_wrap(title: str, body_html: str) -> str:
+    """Very simple inline-CSS wrapper — works across Gmail/Outlook."""
+    return f"""
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px;font-family:Arial,sans-serif;color:#1a1a1a">
+      <tr><td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;border:2px solid #dcfce7;overflow:hidden">
+          <tr><td style="background:#7bc67e;padding:16px 24px;font-weight:900;font-size:18px;color:#1a1a1a">Your Own Print</td></tr>
+          <tr><td style="padding:24px">
+            <h2 style="margin:0 0 12px 0;font-size:22px;font-weight:900">{title}</h2>
+            {body_html}
+          </td></tr>
+          <tr><td style="background:#f0fdf4;padding:12px 24px;font-size:11px;color:#4b5563">yourownprint.co.uk — no minimums, free artwork proofs, UK printed</td></tr>
+        </table>
+      </td></tr>
+    </table>
+    """
+
+
+@api_router.post("/admin/test-email", dependencies=[Depends(require_admin)])
+async def admin_test_email(payload: Dict):
+    """Admin helper — POST {to} to send a Resend test email using the saved key."""
+    to = (payload.get("to") or "").strip()
+    if not to:
+        raise HTTPException(400, "`to` required")
+    res = await _send_email(
+        to=[to],
+        subject="Your Own Print — Resend test email",
+        html=_email_wrap("Resend is wired up ✅",
+                         "<p>This is a test email from your Your Own Print admin dashboard. If you're seeing this, your Resend API key is working.</p>"),
+    )
+    return res
+
+
+# ============================================================================
+# remove.bg — background removal used by the Design Your Own canvas
+# ============================================================================
+@api_router.post("/designer/remove-bg")
+async def designer_remove_bg(payload: Dict):
+    """Accepts {image_base64} (data URL or raw base64) and returns {image_base64: 'data:image/png;base64,...'}
+    with the background stripped. Falls back to the original image + a warning if the API key isn't set."""
+    img = (payload.get("image_base64") or "").strip()
+    if not img:
+        raise HTTPException(400, "image_base64 required")
+    # accept both data URLs and raw base64
+    b64 = img.split(",", 1)[1] if img.startswith("data:") else img
+    try:
+        raw = _b64lib.b64decode(b64, validate=True)
+    except Exception:
+        raise HTTPException(400, "image_base64 is not valid base64")
+    if len(raw) > 22 * 1024 * 1024:
+        raise HTTPException(413, "Image exceeds 22MB (remove.bg limit)")
+    api_key = await _get_integration_value("removebg_api_key")
+    if not api_key:
+        raise HTTPException(503, "remove.bg API key not configured — paste it in /admin/integrations")
+    try:
+        async with _httpx.AsyncClient(timeout=45.0) as http:
+            resp = await http.post(
+                "https://api.remove.bg/v1.0/removebg",
+                files={"image_file": ("upload.png", raw, "image/png")},
+                data={"size": "auto"},
+                headers={"X-Api-Key": api_key},
+            )
+    except _httpx.TimeoutException:
+        raise HTTPException(504, "remove.bg timed out — try a smaller image")
+    except Exception as e:
+        raise HTTPException(502, f"remove.bg error: {e}")
+    if resp.status_code != 200:
+        detail = ""
+        try:
+            detail = resp.json().get("errors", [{}])[0].get("title") or resp.text[:180]
+        except Exception:
+            detail = resp.text[:180]
+        raise HTTPException(resp.status_code, f"remove.bg: {detail}")
+    out_b64 = _b64lib.b64encode(resp.content).decode("ascii")
+    return {"image_base64": f"data:image/png;base64,{out_b64}"}
+
+
+# ============================================================================
+# Cutout.pro — AI image effects for the designer (sketch / poster / caricature)
+# ============================================================================
+@api_router.post("/designer/ai-effect")
+async def designer_ai_effect(payload: Dict):
+    """Applies a Cutout.pro effect to a base64 image.
+    payload: {image_base64, effect} where effect ∈ {"sketch","cartoon","poster","enhance"}."""
+    img = (payload.get("image_base64") or "").strip()
+    effect = (payload.get("effect") or "cartoon").strip().lower()
+    EFFECT_MAP = {
+        # Cutout.pro effect endpoints — see https://www.cutout.pro/api-doc
+        "sketch": "https://www.cutout.pro/api/v1/photoEnhance/sketchImage",
+        "cartoon": "https://www.cutout.pro/api/v1/photoEnhance/aiCartoon",
+        "poster": "https://www.cutout.pro/api/v1/photoEnhance/poster",
+        "enhance": "https://www.cutout.pro/api/v1/matting/photoEnhance",
+    }
+    if effect not in EFFECT_MAP:
+        raise HTTPException(400, f"effect must be one of {list(EFFECT_MAP)}")
+    if not img:
+        raise HTTPException(400, "image_base64 required")
+    b64 = img.split(",", 1)[1] if img.startswith("data:") else img
+    try:
+        raw = _b64lib.b64decode(b64, validate=True)
+    except Exception:
+        raise HTTPException(400, "image_base64 is not valid base64")
+    api_key = await _get_integration_value("cutoutpro_api_key")
+    if not api_key:
+        raise HTTPException(503, "Cutout.pro API key not configured — paste it in /admin/integrations")
+    try:
+        async with _httpx.AsyncClient(timeout=60.0) as http:
+            resp = await http.post(
+                EFFECT_MAP[effect],
+                files={"file": ("upload.png", raw, "image/png")},
+                headers={"APIKEY": api_key},
+            )
+    except _httpx.TimeoutException:
+        raise HTTPException(504, "Cutout.pro timed out — try a smaller image")
+    except Exception as e:
+        raise HTTPException(502, f"Cutout.pro error: {e}")
+    if resp.status_code != 200:
+        raise HTTPException(resp.status_code, f"Cutout.pro: {resp.text[:180]}")
+    # Cutout.pro returns JSON with {code, data:{imageUrl|resultImageUrl|imageBase64}} — normalise it
+    try:
+        j = resp.json()
+        d = j.get("data") or {}
+        out_b64 = d.get("imageBase64")
+        out_url = d.get("imageUrl") or d.get("resultImageUrl")
+        if out_b64:
+            return {"image_base64": f"data:image/png;base64,{out_b64}"}
+        if out_url:
+            return {"image_url": out_url}
+        raise HTTPException(502, f"Cutout.pro unexpected response: {str(j)[:180]}")
+    except HTTPException:
+        raise
+    except Exception:
+        # Some endpoints return raw image bytes on success
+        out_b64 = _b64lib.b64encode(resp.content).decode("ascii")
+        return {"image_base64": f"data:image/png;base64,{out_b64}"}
 
 
 app.include_router(api_router)

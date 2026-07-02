@@ -6,6 +6,7 @@ import PortfolioStrip from "../components/bold/PortfolioStrip";
 import PricePromise from "../components/bold/PricePromise";
 import { SECTORS, REVIEWS as STATIC_REVIEWS, RATING } from "../lib/data";
 import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews } from "../lib/api";
+import usePageCopy from "../hooks/usePageCopy";
 import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera } from "lucide-react";
 
 export default function Home() {
@@ -18,6 +19,11 @@ export default function Home() {
     fetchReviewsAggregate().then(setAggregates);
     fetchRecentReviews(6).then(setRecentReviews).catch(() => {});
   }, []);
+
+  const copy = usePageCopy("home", {
+    title: "",
+    subtitle: "No minimums. No setup fees. Free logo design. UK based & friendly.",
+  });
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
@@ -33,14 +39,16 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#f0fdf4] text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs">
               <Sparkles size={14} className="text-[#7bc67e]" /> Made for schools, sports, dance & teams
             </div>
-            <h1 className="mt-5 font-nunito font-black text-5xl sm:text-6xl lg:text-7xl text-[#1a1a1a] leading-[1.02]">
-              Your Brand. <br /> Your Clothing. <br />
-              <span className="relative inline-block">
-                <span className="relative z-10">Your Own Print.</span>
-                <span className="absolute left-0 right-0 bottom-1 h-3 bg-[#7bc67e] -z-0 rounded-full" />
-              </span>
+            <h1 className="mt-5 font-nunito font-black text-5xl sm:text-6xl lg:text-7xl text-[#1a1a1a] leading-[1.02]" data-testid="home-hero-title">
+              {copy.title ? copy.title : (<>
+                Your Brand. <br /> Your Clothing. <br />
+                <span className="relative inline-block">
+                  <span className="relative z-10">Your Own Print.</span>
+                  <span className="absolute left-0 right-0 bottom-1 h-3 bg-[#7bc67e] -z-0 rounded-full" />
+                </span>
+              </>)}
             </h1>
-            <p className="mt-5 text-lg text-[#4b5563] max-w-lg">No minimums. No setup fees. Free logo design. UK based & friendly.</p>
+            <p className="mt-5 text-lg text-[#4b5563] max-w-lg" data-testid="home-hero-subtitle">{copy.subtitle}</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link to="/workwear" data-testid="hero-cta-shop" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md hover:-translate-y-1 transition-transform">
                 Shop Workwear <ArrowRight size={16} />

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase } from "lucide-react";
+import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw } from "lucide-react";
 
 export default function AdminProductSettings() {
   const [products, setProducts] = useState([]);
@@ -153,6 +153,7 @@ export default function AdminProductSettings() {
                 </button>
                 {openId === p.id && (
                   <div className="mt-4 space-y-3 border-t border-[#dcfce7] pt-4">
+                    <ProductOverridePanel product={p} onSaved={reload} />
                     <div className="grid sm:grid-cols-2 gap-2">
                       <Lab label="Brand"><input data-testid={`aps-brand-${p.id}`} value={p.brand || ""} onChange={(e) => update(p.id, { brand: e.target.value })} className={ic} /></Lab>
                       <Lab label="SKU"><input data-testid={`aps-sku-${p.id}`} value={p.sku || ""} onChange={(e) => update(p.id, { sku: e.target.value })} className={ic} /></Lab>
@@ -400,6 +401,108 @@ function ImageGalleryEditor({ productId, urls, onChange }) {
           className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full"
           data-testid={`aps-gallery-${productId}-add`}
         >+ Add</button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Inline "edit the hardcoded catalogue" panel — sits at the top of every
+ * expanded product row. Writes go to PATCH /admin/products/{pid}/override
+ * (persisted in Mongo + hot-applied to the in-memory PRODUCTS registry).
+ *
+ * Revert (DELETE /admin/products/{pid}/override) removes the doc and restores
+ * the pristine hardcoded values immediately — no restart needed.
+ */
+function ProductOverridePanel({ product, onSaved }) {
+  const [draft, setDraft] = React.useState({
+    name: product.name || "",
+    price: product.price ?? 0,
+    description: product.description || "",
+    image: product.image || "",
+    active: product._hidden ? false : true,
+  });
+  const [override, setOverride] = React.useState(null);
+  const [busy, setBusy] = React.useState(false);
+  const [loaded, setLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    fetchProductOverride(product.id).then((d) => {
+      setOverride(d?.override || null);
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, [product.id]);
+
+  const dirty = (
+    draft.name !== product.name ||
+    Number(draft.price) !== Number(product.price) ||
+    draft.description !== (product.description || "") ||
+    draft.image !== (product.image || "") ||
+    draft.active !== (product._hidden ? false : true)
+  );
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await patchProductOverride(product.id, {
+        name: draft.name?.trim() || null,
+        price: Number(draft.price) || null,
+        description: draft.description || null,
+        image: draft.image || null,
+        active: draft.active,
+      });
+      toast.success(`${draft.name} — override saved`);
+      onSaved && onSaved();
+    } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setBusy(false); }
+  };
+
+  const revert = async () => {
+    if (!window.confirm(`Revert "${product.name}" to code defaults? This clears all custom name / price / description / image overrides.`)) return;
+    setBusy(true);
+    try {
+      await clearProductOverride(product.id);
+      toast.success("Reverted to code defaults");
+      onSaved && onSaved();
+    } catch (e) { toast.error(e?.response?.data?.detail || "Revert failed"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4 space-y-3" data-testid={`aps-override-${product.id}`}>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wider font-extrabold text-[#166534]">
+          <Pencil size={12} /> Basic catalogue override
+          {loaded && override && <span className="ml-2 px-2 py-0.5 rounded-full bg-[#7bc67e] text-[#1a1a1a] text-[10px]" data-testid={`aps-override-badge-${product.id}`}>ACTIVE OVERRIDE</span>}
+        </div>
+        {loaded && override && (
+          <button type="button" onClick={revert} disabled={busy} className="text-[11px] font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1 disabled:opacity-50" data-testid={`aps-override-revert-${product.id}`}>
+            <RotateCcw size={11} /> Revert to code defaults
+          </button>
+        )}
+      </div>
+      <div className="grid sm:grid-cols-2 gap-2">
+        <Lab label="Product name (H1)">
+          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={ic} data-testid={`aps-override-name-${product.id}`} />
+        </Lab>
+        <Lab label="Price (£)">
+          <input type="number" step="0.01" min="0" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} className={ic} data-testid={`aps-override-price-${product.id}`} />
+        </Lab>
+      </div>
+      <Lab label="Short description (shown on product cards + PDP intro)">
+        <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={2} className={ic + " resize-none"} data-testid={`aps-override-desc-${product.id}`} />
+      </Lab>
+      <Lab label="Main image URL">
+        <input value={draft.image} onChange={(e) => setDraft({ ...draft, image: e.target.value })} className={ic} placeholder="https://…" data-testid={`aps-override-image-${product.id}`} />
+      </Lab>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <label className="inline-flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-override-active-${product.id}`} />
+          <span className="text-xs font-extrabold">Active (untick to hide from storefront)</span>
+        </label>
+        <button onClick={save} disabled={busy || !dirty} className="inline-flex items-center gap-1.5 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 text-[#1a1a1a] font-extrabold text-xs px-4 py-2 rounded-full" data-testid={`aps-override-save-${product.id}`}>
+          {busy ? <Loader2 className="animate-spin" size={11} /> : <Save size={11} />} Save override
+        </button>
       </div>
     </div>
   );

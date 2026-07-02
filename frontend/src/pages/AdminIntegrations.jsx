@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { adminListIntegrations, adminUpdateIntegrations } from "../lib/api";
-import { Save, Loader2, Eye, EyeOff, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { adminListIntegrations, adminUpdateIntegrations, adminSendTestEmail } from "../lib/api";
+import { Save, Loader2, Eye, EyeOff, CheckCircle2, AlertCircle, ExternalLink, Send } from "lucide-react";
 
 export default function AdminIntegrations() {
   const [items, setItems] = useState([]);
@@ -101,6 +101,7 @@ export default function AdminIntegrations() {
                   )}
                 </div>
                 <div className="text-[10px] text-[#9ca3af] mt-1.5">env var: <code>{it.env_var}</code></div>
+                {it.key === "resend_api_key" && it.is_set && <ResendTester />}
               </div>
             ))}
 
@@ -138,5 +139,40 @@ function ChecklistRow({ ok, children }) {
       {ok ? <CheckCircle2 size={16} className="text-[#7bc67e] mt-0.5" /> : <AlertCircle size={16} className="text-[#f59e0b] mt-0.5" />}
       <span>{children}</span>
     </li>
+  );
+}
+
+function ResendTester() {
+  const [to, setTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const send = async () => {
+    if (!to.trim() || !to.includes("@")) { toast.error("Enter a valid email"); return; }
+    setBusy(true);
+    try {
+      const res = await adminSendTestEmail(to.trim());
+      if (res?.ok) toast.success(`Test email sent to ${to} (id ${res.id?.slice(0, 8) || '—'})`);
+      else toast.error(res?.error || "Resend failed — check the key");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Resend failed"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-3 flex gap-2 items-center" data-testid="admin-resend-tester">
+      <input
+        type="email"
+        value={to}
+        onChange={(e) => setTo(e.target.value)}
+        placeholder="[email protected]"
+        className="flex-1 px-3 py-2 rounded-xl border-2 border-[#dcfce7] focus:border-[#7bc67e] outline-none text-sm"
+        data-testid="admin-resend-to"
+      />
+      <button
+        onClick={send}
+        disabled={busy}
+        className="px-4 py-2 bg-[#1a1a1a] text-white rounded-full font-extrabold text-xs inline-flex items-center gap-1.5 hover:bg-black disabled:opacity-50"
+        data-testid="admin-resend-send"
+      >
+        {busy ? <Loader2 className="animate-spin" size={12} /> : <Send size={12} />} Send test email
+      </button>
+    </div>
   );
 }

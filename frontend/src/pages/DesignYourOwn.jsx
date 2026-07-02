@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
-import { fetchDesignerProducts, createCheckout, saveDesignerArtwork } from "../lib/api";
+import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect } from "../lib/api";
+import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info } from "lucide-react";
 
@@ -32,6 +33,10 @@ export default function DesignYourOwn() {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [productId, setProductId] = useState(searchParams.get("product") || "");
+  const dyoCopy = usePageCopy("design-your-own", {
+    title: "Design Your Own",
+    subtitle: "Drag · Resize · Rotate · Double-click text · Print-ready PNG sent on checkout",
+  });
   const [sizeQtys, setSizeQtys] = useState({});
   const [view, setView] = useState("front");                 // "front" | "back" | "neck"
   const [backEnabled, setBackEnabled] = useState(false);     // adds back-print to checkout
@@ -165,15 +170,42 @@ export default function DesignYourOwn() {
   };
   const updateItem = (id, patch) => setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it));
 
-  const removeBgPlaceholder = () => {
+  const removeBgReal = async () => {
     if (!selectedId) { toast.error("Select an image first"); return; }
     const sel = items.find(i => i.id === selectedId);
     if (!sel || sel.type !== "image") { toast.error("Select an image first"); return; }
-    toast.info("Background removal — coming soon (remove.bg API to be wired)");
+    if (!sel.src) { toast.error("Image is missing source data"); return; }
+    updateItem(sel.id, { _busy: true });
+    const t = toast.loading("Removing background…");
+    try {
+      const res = await designerRemoveBg(sel.src);
+      if (!res?.image_base64) throw new Error("no image returned");
+      updateItem(sel.id, { src: res.image_base64, _busy: false });
+      toast.success("Background removed", { id: t });
+    } catch (e) {
+      updateItem(sel.id, { _busy: false });
+      const msg = e?.response?.data?.detail || e?.message || "Background removal failed";
+      toast.error(msg, { id: t });
+    }
   };
-  const aiEffectPlaceholder = (label) => {
+  const aiEffectReal = async (effectId, label) => {
     if (!selectedId) { toast.error("Select an image first"); return; }
-    toast.info(`AI ${label} — coming soon (Cutout.pro API to be wired)`);
+    const sel = items.find(i => i.id === selectedId);
+    if (!sel || sel.type !== "image") { toast.error("Select an image first"); return; }
+    if (!sel.src) { toast.error("Image is missing source data"); return; }
+    updateItem(sel.id, { _busy: true });
+    const t = toast.loading(`Applying ${label}…`);
+    try {
+      const res = await designerAiEffect(sel.src, effectId);
+      const nextSrc = res?.image_base64 || res?.image_url;
+      if (!nextSrc) throw new Error("no image returned");
+      updateItem(sel.id, { src: nextSrc, _busy: false });
+      toast.success(`${label} applied`, { id: t });
+    } catch (e) {
+      updateItem(sel.id, { _busy: false });
+      const msg = e?.response?.data?.detail || e?.message || "Effect failed";
+      toast.error(msg, { id: t });
+    }
   };
 
   // ---- Pointer interactions (in print-area coordinate space) ----
@@ -355,9 +387,9 @@ export default function DesignYourOwn() {
         <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#f0fdf4] text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs"><Sparkles size={12} className="text-[#7bc67e]" /> Designer</div>
-            <h1 className="font-nunito font-black text-3xl lg:text-5xl mt-2">Design Your Own</h1>
+            <h1 className="font-nunito font-black text-3xl lg:text-5xl mt-2" data-testid="dyo-hero-title">{dyoCopy.title}</h1>
           </div>
-          <div className="text-xs text-[#4b5563] font-nunito font-bold">Drag · Resize · Rotate · Double-click text · Print-ready PNG sent on checkout</div>
+          <div className="text-xs text-[#4b5563] font-nunito font-bold" data-testid="dyo-hero-subtitle">{dyoCopy.subtitle}</div>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-5">
@@ -400,7 +432,7 @@ export default function DesignYourOwn() {
                 <Upload size={18} /><span className="font-nunito font-extrabold text-sm">Upload image</span>
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onUpload} />
-              <button data-testid="designer-removebg-btn" onClick={removeBgPlaceholder} className="w-full mt-3 flex items-center justify-center gap-2 bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a] py-3 rounded-full font-nunito font-extrabold text-xs transition-colors">
+              <button data-testid="designer-removebg-btn" onClick={removeBgReal} className="w-full mt-3 flex items-center justify-center gap-2 bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a] py-3 rounded-full font-nunito font-extrabold text-xs transition-colors">
                 <Wand2 size={14} /> Remove Background
               </button>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -410,10 +442,10 @@ export default function DesignYourOwn() {
                   { id: "cartoon", label: "Cartoon" },
                   { id: "enhance", label: "Enhance" },
                 ].map((fx) => (
-                  <button key={fx.id} data-testid={`designer-ai-${fx.id}`} onClick={() => aiEffectPlaceholder(fx.label)} className="text-xs font-nunito font-extrabold bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a] py-2 rounded-full transition-colors">{fx.label}</button>
+                  <button key={fx.id} data-testid={`designer-ai-${fx.id}`} onClick={() => aiEffectReal(fx.id, fx.label)} className="text-xs font-nunito font-extrabold bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a] py-2 rounded-full transition-colors">{fx.label}</button>
                 ))}
               </div>
-              <div className="text-[10px] text-[#4b5563] mt-2 font-bold text-center">AI effects via Cutout.pro — coming soon</div>
+              <div className="text-[10px] text-[#4b5563] mt-2 font-bold text-center">AI effects via Cutout.pro · background removal via remove.bg</div>
             </Panel>
 
             <Panel title="Add Text">

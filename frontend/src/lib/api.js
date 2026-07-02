@@ -515,6 +515,20 @@ export async function adminListPageCopySlugs() {
   return data;
 }
 
+// ----- Designer AI helpers -----
+export async function designerRemoveBg(imageBase64) {
+  const { data } = await api.post("/designer/remove-bg", { image_base64: imageBase64 });
+  return data;
+}
+export async function designerAiEffect(imageBase64, effect) {
+  const { data } = await api.post("/designer/ai-effect", { image_base64: imageBase64, effect });
+  return data;
+}
+export async function adminSendTestEmail(to) {
+  const { data } = await api.post("/admin/test-email", { to });
+  return data;
+}
+
 // ----- Configurator settings (addon prices) -----
 export async function adminGetConfiguratorSettings() {
   const { data } = await api.get("/admin/configurator-settings");

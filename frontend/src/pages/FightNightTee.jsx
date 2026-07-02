@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { api, createCheckout, fetchFightNightAddons, fetchFightNightTiers } from "../lib/api";
+import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Plus, Minus, Loader2, Send, Zap, Sparkles, ShieldCheck, Info, Camera, Upload } from "lucide-react";
 import PortfolioCarousel from "../components/bold/PortfolioCarousel";
@@ -12,6 +13,10 @@ const SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
 
 export default function FightNightTee() {
   const [tee, setTee] = useState(null);
+  const fnCopy = usePageCopy("fight-night", {
+    title: "",
+    subtitle: "Upload your sponsors, pay securely, and we'll send a free artwork proof before we print a thing. Nothing goes to print until you're happy.",
+  });
   const [addons, setAddons] = useState([]);
   const [tiers, setTiers] = useState([]);
   const [color, setColor] = useState("Black");
@@ -193,13 +198,10 @@ export default function FightNightTee() {
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#1a1a1a] text-[#7bc67e] font-nunito font-extrabold rounded-full text-xs">
             <Zap size={14} /> Fight Night Sponsor Tee · Pay → Free Proof → Print
           </div>
-          <h1 className="mt-3 font-nunito font-black text-4xl lg:text-6xl leading-[1.05]">
-            Walk-out tees, <span className="text-[#7bc67e]">sorted.</span>
+          <h1 className="mt-3 font-nunito font-black text-4xl lg:text-6xl leading-[1.05]" data-testid="fn-hero-title">
+            {fnCopy.title ? fnCopy.title : (<>Walk-out tees, <span className="text-[#7bc67e]">sorted.</span></>)}
           </h1>
-          <p className="text-[#4b5563] mt-3 text-lg max-w-2xl">
-            Upload your sponsors, pay securely, and <strong>we&apos;ll send a free artwork proof before we print a thing</strong>.
-            Nothing goes to print until you&apos;re happy.
-          </p>
+          <p className="text-[#4b5563] mt-3 text-lg max-w-2xl" data-testid="fn-hero-subtitle">{fnCopy.subtitle}</p>
         </div>
       </div>
 

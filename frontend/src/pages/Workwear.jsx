@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import { SECTORS, GENDER_FITS } from "../lib/data";
+import usePageCopy from "../hooks/usePageCopy";
 import { ArrowRight } from "lucide-react";
 
 export default function Workwear() {
@@ -16,6 +17,11 @@ export default function Workwear() {
       .then(([p, a]) => { setProducts(p); setAggs(a); })
       .finally(() => setLoading(false));
   }, []);
+
+  const copy = usePageCopy("workwear", {
+    title: "Workwear",
+    subtitle: "Trade-tough garments branded with your logo. Free print included.",
+  });
 
   const filtered = useMemo(() => {
     if (gender === "all") return products;
@@ -31,8 +37,8 @@ export default function Workwear() {
         <div className="absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full bg-[#fde68a]/30 blur-3xl" />
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <div className="text-[#7bc67e] font-nunito font-extrabold text-sm uppercase tracking-[0.3em]">Category</div>
-          <h1 className="font-nunito font-black text-5xl lg:text-7xl mt-3">Workwear</h1>
-          <p className="text-[#4b5563] mt-4 max-w-xl text-lg">Trade-tough garments branded with your logo. Free print included.</p>
+          <h1 className="font-nunito font-black text-5xl lg:text-7xl mt-3" data-testid="workwear-hero-title">{copy.title}</h1>
+          <p className="text-[#4b5563] mt-4 max-w-xl text-lg" data-testid="workwear-hero-subtitle">{copy.subtitle}</p>
         </div>
       </div>
 

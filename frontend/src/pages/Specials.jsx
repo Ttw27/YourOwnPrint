@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import PricePromise from "../components/bold/PricePromise";
 import { fetchSpecialsProducts } from "../lib/api";
 import { GENDER_FITS } from "../lib/data";
+import usePageCopy from "../hooks/usePageCopy";
 import { Sparkles, CheckCircle2, ShieldCheck, ArrowRight, Briefcase, Zap, Tag } from "lucide-react";
 
 export default function Specials() {
@@ -14,6 +15,11 @@ export default function Specials() {
   useEffect(() => {
     fetchSpecialsProducts().then(setProducts).catch(() => setProducts([])).finally(() => setLoading(false));
   }, []);
+
+  const copy = usePageCopy("specials", {
+    title: "",
+    subtitle: "A curated lineup for new businesses. One sharp logo on the breast pocket, printed in the UK, no minimum order and no big up-front costs. Order one, order ten — whatever you need to get going.",
+  });
 
   const filtered = useMemo(() => {
     if (gender === "all") return products;
@@ -33,14 +39,10 @@ export default function Specials() {
             <span className="inline-flex items-center gap-2 bg-[#7bc67e] text-[#1a1a1a] text-xs font-extrabold uppercase tracking-[0.3em] px-3 py-1.5 rounded-full">
               <Sparkles size={12} /> Your Own Print Specials
             </span>
-            <h1 className="font-black text-5xl lg:text-7xl mt-4 leading-[1.02]">
-              Look the part<br /><span className="text-[#7bc67e]">from day one.</span>
+            <h1 className="font-black text-5xl lg:text-7xl mt-4 leading-[1.02]" data-testid="specials-hero-title">
+              {copy.title ? copy.title : (<>Look the part<br /><span className="text-[#7bc67e]">from day one.</span></>)}
             </h1>
-            <p className="text-zinc-300 mt-4 text-lg max-w-xl">
-              A curated lineup for new businesses. One sharp logo on the breast pocket, printed in the UK,
-              <strong className="text-white"> no minimum order</strong> and <strong className="text-white">no big up-front costs</strong>.
-              Order one, order ten — whatever you need to get going.
-            </p>
+            <p className="text-zinc-300 mt-4 text-lg max-w-xl" data-testid="specials-hero-subtitle">{copy.subtitle}</p>
             <div className="mt-6 flex flex-wrap gap-3 text-xs">
               <Badge>No MOQ — order 1+</Badge>
               <Badge>Breast logo included</Badge>
