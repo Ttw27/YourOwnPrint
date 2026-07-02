@@ -1030,6 +1030,7 @@ class CartLineItem(BaseModel):
 class CartCheckoutRequest(BaseModel):
     items: List[CartLineItem]
     origin_url: str
+    customer_email: Optional[str] = None
 
 
 async def _resolve_line_pricing(
@@ -1234,6 +1235,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         "id": str(uuid.uuid4()),
         "session_id": session.session_id,
         "kind": "cart",
+        "customer_email": payload.customer_email,
         "items": [
             {
                 "product_id": p["product_id"],
@@ -4747,6 +4749,20 @@ async def _seed_default_product_meta():
         print(f"product-meta seed failed: {e}")
 
 
+@app.on_event("startup")
+async def _seed_customer_indexes():
+    """Ensure unique email + TTL on password_reset_tokens.expires_at + login_attempts."""
+    try:
+        await db.customers.create_index("email", unique=True)
+        await db.password_reset_tokens.create_index("expires_at")
+        await db.customer_login_attempts.create_index("email")
+        await db.customer_carts.create_index("customer_id", unique=True)
+        await db.customer_addresses.create_index("customer_id")
+        await db.customer_designs.create_index("customer_id")
+    except Exception as e:
+        print(f"customer index setup failed: {e}")
+
+
 # Kit bundle categorisation — used by the PDP to swap UI (e.g. hide back-print options on
 # front-only bundles) and by admin listings. Keeps things declarative.
 FRONT_ONLY_BUNDLE_IDS = {
@@ -4796,6 +4812,7 @@ async def _seed_front_only_bundle_placements():
 import routers.designer_ai  # noqa: F401 — registers /designer/remove-bg, /designer/ai-effect, /admin/test-email
 import routers.cms_page_copy  # noqa: F401 — registers /page-copy/*, /admin/page-copy/*
 import routers.configurator_addons  # noqa: F401 — registers /admin/full-squad/addons, /admin/sports-outfit/addons, /admin/configurator-settings
+import routers.customer_auth  # noqa: F401 — registers /customer/register, /customer/login, /customer/cart, /customer/orders, addresses, designs
 
 # Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move

@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { priceCart } from "../lib/api";
+import { priceCart, customerGetCart, customerPutCart, customerMergeCart } from "../lib/api";
+import { useCustomerAuth } from "./CustomerAuthContext";
 
 /**
  * Multi-product cart with localStorage persistence.
@@ -39,8 +40,53 @@ export function CartProvider({ children }) {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [pricing, setPricing] = useState(false);
 
+  const { token, isAuthenticated } = useCustomerAuth();
+  const prevAuthRef = useRef(isAuthenticated);
+  const mergingRef = useRef(false);
+
   // Persist on any change
   useEffect(() => { saveToStorage(items); }, [items]);
+
+  // On login transition: merge guest cart → server, then load server cart.
+  // On logout transition: keep whatever's currently in localStorage as guest cart.
+  useEffect(() => {
+    if (prevAuthRef.current === isAuthenticated) return;
+    prevAuthRef.current = isAuthenticated;
+    if (!isAuthenticated || !token) return;
+
+    async function syncOnLogin() {
+      mergingRef.current = true;
+      try {
+        const guestPayload = items.map(({ product_id, size_qtys, color, placements, blank, design_meta, line_id }) =>
+          ({ product_id, size_qtys, color, placements, blank, design_meta, line_id }));
+        if (guestPayload.length > 0) {
+          const res = await customerMergeCart(token, guestPayload);
+          setItems(res.items || []);
+          toast.success(guestPayload.length > 1 ? `${guestPayload.length} basket items merged` : "Basket merged");
+        } else {
+          const res = await customerGetCart(token);
+          if ((res.items || []).length > 0) setItems(res.items);
+        }
+      } catch (e) {
+        // Non-blocking — user still has their local cart
+        console.warn("cart merge failed:", e);
+      } finally {
+        mergingRef.current = false;
+      }
+    }
+    syncOnLogin();
+  }, [isAuthenticated, token]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // While logged in, mirror every cart change up to the server (debounced).
+  useEffect(() => {
+    if (!isAuthenticated || !token || mergingRef.current) return;
+    const t = setTimeout(() => {
+      const payload = items.map(({ product_id, size_qtys, color, placements, blank, design_meta, line_id }) =>
+        ({ product_id, size_qtys, color, placements, blank, design_meta, line_id }));
+      customerPutCart(token, payload).catch(() => { /* silent — retry next change */ });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [items, isAuthenticated, token]);
 
   // Reprice whenever the cart shape changes
   useEffect(() => {

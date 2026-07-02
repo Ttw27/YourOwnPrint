@@ -534,8 +534,75 @@ export async function priceCart(items) {
   const { data } = await api.post("/cart/price", { items, origin_url: window.location.origin });
   return data;
 }
-export async function createCartCheckout(items) {
-  const { data } = await api.post("/checkout/cart-session", { items, origin_url: window.location.origin });
+export async function createCartCheckout(items, customer_email) {
+  const { data } = await api.post("/checkout/cart-session", { items, origin_url: window.location.origin, customer_email: customer_email || null });
+  return data;
+}
+
+// ----- Customer auth -----
+export async function customerRegister({ email, password, name }) {
+  const { data } = await api.post("/customer/register", { email, password, name });
+  return data;
+}
+export async function customerLogin({ email, password }) {
+  const { data } = await api.post("/customer/login", { email, password });
+  return data;
+}
+export async function customerLogout() {
+  const { data } = await api.post("/customer/logout", {});
+  return data;
+}
+export async function customerMe(token) {
+  const { data } = await api.get("/customer/me", token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+  return data;
+}
+export async function customerForgotPassword(email) {
+  const { data } = await api.post("/customer/forgot-password", { email });
+  return data;
+}
+export async function customerResetPassword({ token, new_password }) {
+  const { data } = await api.post("/customer/reset-password", { token, new_password });
+  return data;
+}
+// Customer cart / orders / addresses / designs
+export async function customerGetCart(token) {
+  const { data } = await api.get("/customer/cart", { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerPutCart(token, items) {
+  const { data } = await api.put("/customer/cart", { items }, { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerMergeCart(token, items) {
+  const { data } = await api.post("/customer/cart/merge", { items }, { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerOrders(token) {
+  const { data } = await api.get("/customer/orders", { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerAddresses(token) {
+  const { data } = await api.get("/customer/addresses", { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerAddAddress(token, address) {
+  const { data } = await api.post("/customer/addresses", address, { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerDeleteAddress(token, id) {
+  const { data } = await api.delete(`/customer/addresses/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerDesigns(token) {
+  const { data } = await api.get("/customer/designs", { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerSaveDesign(token, design) {
+  const { data } = await api.post("/customer/designs", design, { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+export async function customerDeleteDesign(token, id) {
+  const { data } = await api.delete(`/customer/designs/${id}`, { headers: { Authorization: `Bearer ${token}` } });
   return data;
 }
 

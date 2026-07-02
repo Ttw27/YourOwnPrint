@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { X, Trash2, Loader2, ShoppingBag, Plus, Minus, ArrowRight } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { createCartCheckout } from "../lib/api";
 import { toast } from "sonner";
 
@@ -13,6 +14,7 @@ import { toast } from "sonner";
  */
 export default function CartDrawer() {
   const { isDrawerOpen, closeDrawer, items, priced, pricing, setLineQty, removeLine, clear } = useCart();
+  const { customer } = useCustomerAuth();
   const [checkingOut, setCheckingOut] = useState(false);
   const navigate = useNavigate();
 
@@ -24,7 +26,7 @@ export default function CartDrawer() {
     try {
       const payload = items.map(({ product_id, size_qtys, color, placements, blank, design_meta }) =>
         ({ product_id, size_qtys, color, placements, blank, design_meta }));
-      const { url } = await createCartCheckout(payload);
+      const { url } = await createCartCheckout(payload, customer?.email);
       if (url) window.location.href = url;
     } catch (e) { toast.error(e?.response?.data?.detail || "Checkout failed"); }
     finally { setCheckingOut(false); }

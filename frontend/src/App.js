@@ -46,11 +46,15 @@ import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
 import ScrollToTop from "@/components/bold/ScrollToTop";
 import CartDrawer from "@/components/CartDrawer";
 import { CartProvider } from "@/context/CartContext";
+import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
+import Account from "@/pages/Account";
+import ResetPassword from "@/pages/ResetPassword";
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
+        <CustomerAuthProvider>
         <CartProvider>
         <ScrollToTop />
         <Toaster position="top-center" richColors />
@@ -87,6 +91,10 @@ function App() {
           <Route path="/admin/leavers-templates" element={<RequireAdmin><AdminLeaversTemplates /></RequireAdmin>} />
           <Route path="/design" element={<DesignYourOwn />} />
           <Route path="/design-your-own" element={<DesignYourOwn />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/account/addresses" element={<Account />} />
+          <Route path="/account/designs" element={<Account />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/reviews" element={<ReviewsPage />} />
@@ -104,6 +112,7 @@ function App() {
         <SiteFAB />
         <CartDrawer />
         </CartProvider>
+        </CustomerAuthProvider>
       </BrowserRouter>
     </div>
   );
