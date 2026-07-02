@@ -1211,6 +1211,26 @@ async def _price_line_item(item: CartLineItem) -> Dict:
     }
 
 
+
+def _assert_origin_ok(origin_url: str) -> None:
+    """Guard the Stripe success/cancel URL host — reject any origin outside
+    our production domain + preview environments. Prevents an attacker from
+    hijacking the checkout success redirect to steal session_ids."""
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(origin_url)
+    except Exception:
+        raise HTTPException(400, "Invalid origin_url")
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(400, "origin_url must be http or https")
+    host = (parsed.hostname or "").lower()
+    if not host:
+        raise HTTPException(400, "origin_url missing host")
+    allowed_suffixes = ("yourownprint.co.uk", "emergentagent.com", "localhost", "127.0.0.1")
+    if not any(host == s or host.endswith("." + s) for s in allowed_suffixes):
+        raise HTTPException(400, f"origin_url host not allowed: {host}")
+
+
 @api_router.post("/checkout/cart-session", response_model=CheckoutResponse)
 async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Request):
     """Combined Stripe session for a multi-line cart. Reprices every line server-side."""
@@ -1218,6 +1238,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         raise HTTPException(400, "Cart is empty")
     if len(payload.items) > 20:
         raise HTTPException(400, "Cart limit is 20 lines — please split into two orders")
+    _assert_origin_ok(payload.origin_url)
 
     priced = [await _price_line_item(item) for item in payload.items]
     grand_total = round(sum(p["line_total"] for p in priced), 2)
@@ -1291,6 +1312,8 @@ async def price_cart(payload: CartCheckoutRequest):
     print upcharges, size upcharges. Does NOT create a Stripe session."""
     if not payload.items:
         return {"items": [], "grand_total": 0.0, "total_qty": 0}
+    if len(payload.items) > 20:
+        raise HTTPException(400, "Cart limit is 20 lines")
     priced = [await _price_line_item(item) for item in payload.items]
     grand_total = round(sum(p["line_total"] for p in priced), 2)
     return {

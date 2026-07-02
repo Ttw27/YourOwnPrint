@@ -50,6 +50,16 @@ UK custom print + workwear e-commerce site at yourownprint.co.uk. Standalone (no
 - ✅ **Sock sizes admin** — GET /api/sock-sizes + PATCH /api/admin/sock-sizes. Editable inline on `/admin/bundle-variants` (top panel).
 - ✅ **Admin Bundle Variants** (Feb 2026, rewritten) — `/admin/bundle-variants` supports the 5 new set slot IDs, colour picker (name+hex), sizes chip list, sock sizes override, included_items chips, and a size_guide free-text field. Fully e2e tested (iter24 — 18/18 backend + 5/5 frontend flows).
 
+## Feb 2026 — Iter 30 changelog
+- 🛒 **Multi-product cart shipped end-to-end** (backend + frontend, 100% tests pass):
+  - `POST /api/cart/price` reprices any cart server-side (bulk tiers + size upcharges + print upcharges — identical to `/checkout/session`).
+  - `POST /api/checkout/cart-session` builds one Stripe session for the whole cart (max 20 lines).
+  - Server-side `origin_url` validation — reject any host outside `yourownprint.co.uk`, `emergentagent.com`, `localhost`.
+  - Frontend `<CartProvider>` + `<CartDrawer>` (slide-out right, live-repriced) + `<CartIcon>` (navbar badge). LocalStorage-persisted (`yop_cart_v1`).
+  - PDP now has "Add to basket" AND "Buy now" side-by-side. Configurators (Full Squad / Sports Outfit / Kit Your Workforce) stay quote-only.
+  - Verified E2E: 5×Tee + 1×Hoodie added from 2 different PDPs → drawer shows 6 items, £34.95 total, checkout redirects to real Stripe payment page.
+- 🧱 **`server.py` refactor scaffolding kicked off**: created `/app/backend/deps.py` (mongo + auth + api_router as single source of truth), `/app/backend/services/email.py` (Resend helpers), `/app/backend/routers/designer_ai.py` (remove-bg + ai-effect + admin/test-email moved out). Router modules import `api_router` from `deps` so no circular imports. This is the pattern for further extraction — next targets: `routers/cms.py`, `routers/checkout.py`, `routers/products.py`, `routers/configurators.py`.
+
 ## Feb 2026 — Iter 29 changelog
 - Fixed all 3 CMS blocker bugs from iter 28 (verified 26/26 backend tests + full frontend suite pass in iter 29).
 - Wired **Resend** for real transactional email on leavers/bespoke + /contact.
