@@ -1,0 +1,48 @@
+{
+  "summary": "Iter30 verified the multi-product cart (backend + frontend) and the server.py refactor regression. Backend: 19/19 pytest tests PASS in /app/backend/tests/test_iteration30.py — refactor kept all key endpoints intact (GET /api/products=52+, /full-squad/config, /sports-outfit/config, /page-copy/home={}, /site/whatsapp, /leavers/bespoke, /designer/remove-bg=503, /designer/ai-effect=503, PATCH /admin/full-squad/addons merges + rejects out-of-range, PATCH+DELETE /admin/page-copy/home). Cart endpoints verified end-to-end: POST /api/cart/price returns items[]+grand_total+total_qty for 2-line cart (tee 5 + hoodie 1 = 6 qty, ~£49.94); server ignores any client-sent line_total (spoof rejected — server-computed price used); bulk-tier discount confirmed on personalised-hoodie (unit@200 < unit@1); POST /api/checkout/cart-session returns valid Stripe URL for a valid cart, 400 'Cart is empty' for [], 400 for 21-line cart. Frontend: cart-icon renders in navbar on PDPs; cart-icon-count badge shows count when >0 and is absent when 0; cart-drawer opens with two lines from two different products; drawer-total updates via debounced POST /api/cart/price on incr/decr; remove-line works; cart-drawer-checkout POSTs /api/checkout/cart-session and redirects the browser to checkout.stripe.com (verified via post-redirect screenshot showing Stripe payment page at £34.95 for 5 tees). localStorage persistence works (seeded 2-line cart survives reload and displays correct badge count of 6). Buy-now testid present alongside add-to-cart on PDPs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/leavers/bespoke",
+        "issue": "422 error message references pydantic v2 URL 'errors.pydantic.dev/2.13' — consider serialising as a friendlier {error:'...'} shape for the public form endpoint."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "PDP for specials-eligible products (personalised-tee, personalised-hoodie)",
+        "issues": ["The `print-mode-blank` toggle from the review request is NOT rendered on specials-eligible products — only on the non-specials Section-3 branch (line 333). For specials products the 'Add to basket' button is disabled until artwork is uploaded (checkoutBlocked gate at ProductDetail.jsx:452). This is intentional per the code but means the reviewer's flow ('click Buy Blank first then Add to basket') cannot happen on personalised-tee — only via upload-artwork path. Not a bug — worth documenting."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration30.py",
+    "/app/test_reports/pytest/iter30_results.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional: expose an idempotent 'Buy Blank' testid on specials-eligible PDPs OR document in the reviewer notes that specials products always include one placement + artwork upload."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 4,965 lines (up 8 from iter29 despite the review request stating 4,740 after refactor). The scaffolded refactor moved auth+integration helpers + designer AI + email service to /app/backend/deps.py (127 lines), services/email.py (58 lines) and routers/designer_ai.py (140 lines), but the main file has NOT decreased — legacy code likely still shadowed / duplicated. Verify the router in routers/designer_ai.py is actually wired into api_router (routers/__init__.py is empty) — if the app is still serving /designer/* from server.py, the router extraction is dead code.",
+    "_price_line_item() duplicates ~80 lines of pricing logic already present in POST /checkout/session (server.py ~975-1010). Extract a single _resolve_line_pricing() helper and call it from both cart-session and legacy single-item checkout to guarantee identical bulk-tier + upcharge math.",
+    "CartCheckoutRequest.origin_url is str but not validated — an attacker could pass 'javascript:...' or a domain not owned by us and get it echoed into the Stripe success_url. Add HttpUrl validation and/or an allow-list of host domains.",
+    "The 20-line cart limit is hardcoded in checkout/cart-session but not in /cart/price — /cart/price will happily reprice a 100-line cart. Consider mirroring the cap for consistency."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration30.py"
+  ],
+  "success_rate": {
+    "backend": "19/19 (100%)",
+    "frontend": "100% on the cart flow — cart-icon, cart-icon-count, cart-drawer (open/close), cart-line-*, incr/decr, remove, clear, drawer-total, checkout redirect to Stripe all verified. localStorage persistence verified via seeded cart."
+  },
+  "test_credentials": "Admin: admin@yourownprint.co.uk / RDAzhFOX_ZyNSgcldy-gDA (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Playwright test seeded localStorage 'yop_cart_v1' with two lines (personalised-tee 5×M + personalised-hoodie 1×M blank), then cleared at end. Backend: PATCH addons restored to defaults (sleeve_print_price 3.5). PATCH/DELETE page-copy/home cycled — final state is {}. quote_requests collection has one TEST_iter30 leavers doc; payment_transactions has one 'cart' + one non-cart 'initiated' record.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter30 multi-product cart works E2E — verified via post-checkout Stripe redirect at £34.95 for 5×tee. Backend base URL: https://branded-workwear-lab.preview.emergentagent.com. Test file /app/backend/tests/test_iteration30.py is additive and safe to keep as regression. On specials-eligible products, the PDP 'add-to-cart' button is disabled until artwork is uploaded — the review request's 'click Buy Blank toggle first' path only works on non-specials products (workwear-jacket, etc.). For cart-flow testing on specials PDPs, use pre-seeded localStorage 'yop_cart_v1'. The refactor scaffolding (routers/designer_ai.py, deps.py, services/email.py) is in place but server.py is still 4,965 lines — verify main agent actually wired the new router into api_router before claiming the refactor is complete.",
+  "rca of the issue": "Not applicable — this iteration verified two new features (multi-product cart + refactor scaffolding). No new bugs found. Note for main agent: routers/__init__.py is empty (0 lines) — check that routers.designer_ai is actually imported/mounted in server.py or the /designer/* endpoints are still being served by the legacy handlers in server.py."
+}

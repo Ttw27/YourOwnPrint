@@ -19,67 +19,19 @@ from emergentintegrations.payments.stripe.checkout import (
     CheckoutSessionRequest,
 )
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / ".env")
+# Shared runtime lives in deps.py — mongo client, api_router, auth deps,
+# integration key resolver. All router modules import from there so this
+# file can stay focused on catalogue seed data + startup handlers.
+from deps import (
+    ROOT_DIR, client, db,
+    STRIPE_API_KEY, JWT_SECRET, JWT_ALGORITHM, ADMIN_EMAIL, ADMIN_PASSWORD,
+    _hash_password, _verify_password, _create_access_token,
+    get_current_admin, require_admin,
+    api_router, _get_integration_value,
+)
 
-mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
-
-STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
-JWT_SECRET = os.environ["JWT_SECRET"]
-JWT_ALGORITHM = "HS256"
-ADMIN_EMAIL = os.environ["ADMIN_EMAIL"]
-ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
-
-
-def _hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-
-def _verify_password(plain: str, hashed: str) -> bool:
-    try:
-        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
-    except Exception:
-        return False
-
-
-def _create_access_token(email: str) -> str:
-    payload = {
-        "sub": email,
-        "role": "admin",
-        "exp": datetime.now(timezone.utc) + timedelta(days=7),
-        "type": "access",
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-
-async def get_current_admin(request: Request) -> Dict:
-    token = request.cookies.get("access_token")
-    if not token:
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    if payload.get("type") != "access" or payload.get("role") != "admin":
-        raise HTTPException(status_code=401, detail="Invalid token")
-    user = await db.users.find_one({"email": payload.get("sub")})
-    if not user or user.get("role") != "admin":
-        raise HTTPException(status_code=401, detail="Admin not found")
-    return {"email": user["email"], "role": user["role"], "name": user.get("name", "Admin")}
-
-
-require_admin = get_current_admin
 
 app = FastAPI()
-api_router = APIRouter(prefix="/api")
 
 # ---------- Server-side product catalogue (prices NEVER taken from frontend) ----------
 PRODUCTS: Dict[str, Dict] = {
@@ -1136,6 +1088,231 @@ async def checkout_status(session_id: str, http_request: Request):
         amount_total=float(status_resp.amount_total) / 100.0,
         currency=status_resp.currency,
     )
+
+
+# ---------- Multi-product cart checkout ----------
+# Server-side pricing per line — clients cannot spoof totals.
+class CartLineItem(BaseModel):
+    product_id: str
+    size_qtys: Dict[str, int]                     # {"M": 2, "L": 1}
+    color: Optional[str] = None
+    placements: Optional[List[str]] = None
+    blank: bool = False
+    design_meta: Optional[Dict[str, str]] = None  # DYO artwork ref, etc.
+
+
+class CartCheckoutRequest(BaseModel):
+    items: List[CartLineItem]
+    origin_url: str
+
+
+async def _price_line_item(item: CartLineItem) -> Dict:
+    """Price a single cart line server-side. Returns {product, base_price, print_cost,
+    size_qtys, placements_clean, line_total, total_qty}. Mirrors the logic in
+    POST /checkout/session so pricing is identical."""
+    if item.product_id not in PRODUCTS:
+        raise HTTPException(400, f"Invalid product: {item.product_id}")
+    product = PRODUCTS[item.product_id]
+    base_price = float(product["price"])
+    size_upcharges: Dict[str, float] = product.get("size_upcharges", {}) or {}
+    allowed_sizes = set(product.get("sizes", []))
+
+    # Strip back-print for bottoms / shorts / joggers etc.
+    placements = list(item.placements or [])
+    if item.product_id in NO_BACK_PRINT_PRODUCT_IDS and placements:
+        placements = [p for p in placements if "back" not in (p or "").lower()]
+
+    # Resolve print cost using exactly the same rules as /checkout/session
+    if item.blank:
+        placements_clean: List[str] = []
+        print_cost = 0.0
+    elif item.product_id == "boxing-fight-tee":
+        placements_clean = [p for p in placements if p in FIGHT_NIGHT_ADDONS]
+        print_cost = round(sum(FIGHT_NIGHT_ADDONS[p]["price"] for p in placements_clean), 2)
+    elif product.get("category") == "team-kits":
+        placements_clean = [p for p in placements if p in TEAM_KIT_ADDONS]
+        print_cost = round(sum(TEAM_KIT_ADDONS[p]["price"] for p in placements_clean), 2)
+    elif product.get("category") == "leavers":
+        wanted = set(placements)
+        placements_clean = ["drawstring-bag"] if "drawstring-bag" in wanted else []
+        print_cost = LEAVERS_BAG_PRICE if "drawstring-bag" in wanted else 0.0
+    elif (item.design_meta or {}).get("flow") == "designer":
+        wanted = set(placements)
+        placements_clean = []
+        extra = 0.0
+        if "back-print" in wanted:
+            placements_clean.append("back-print")
+            extra += designer_back_print_price(base_price)
+        if "neck-label" in wanted:
+            placements_clean.append("neck-label")
+            extra += NECK_LABEL_PRICE
+        print_cost = round(extra, 2)
+    else:
+        placements_clean = _validate_placements(placements)
+        print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
+
+    # Sizes / qtys
+    size_qtys: Dict[str, int] = {}
+    for sz, q in (item.size_qtys or {}).items():
+        try:
+            q_int = int(q)
+        except (TypeError, ValueError):
+            continue
+        if q_int <= 0:
+            continue
+        if allowed_sizes and sz not in allowed_sizes:
+            raise HTTPException(400, f"Size '{sz}' not available for {item.product_id}")
+        size_qtys[sz] = q_int
+    if not size_qtys:
+        raise HTTPException(400, f"{item.product_id}: select at least one size")
+
+    total_qty = sum(size_qtys.values())
+    if total_qty < 1 or total_qty > 5000:
+        raise HTTPException(400, f"{item.product_id}: qty must be 1–5000")
+
+    # Bulk-tier pricing
+    if item.product_id == "boxing-fight-tee":
+        base_price = tier_unit_price(FIGHT_NIGHT_BULK_TIERS, base_price, total_qty)
+    elif product.get("category") == "leavers" and item.product_id != "leavers-drawstring-bag":
+        base_price = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base_price, total_qty)
+    elif product.get("bulk_pricing_enabled"):
+        ovr = product.get("bulk_pricing_overrides")
+        if ovr:
+            tiers_pct = sorted(
+                [(int(t["min_qty"]), float(t["pct"])) for t in ovr if "min_qty" in t and "pct" in t],
+                key=lambda x: -x[0],
+            )
+        else:
+            doc = await db.settings.find_one({"key": SETTINGS_KEY_BULK_DEFAULTS})
+            tiers_pct = doc["tiers"] if doc and "tiers" in doc else DEFAULT_BULK_TIERS_PCT
+            tiers_pct = sorted([(int(t[0]), float(t[1])) for t in tiers_pct], key=lambda x: -x[0])
+        base_price = apply_bulk_tier_pct(base_price, total_qty, tiers_pct)
+
+    line_total = 0.0
+    breakdown: List[str] = []
+    for sz, q in size_qtys.items():
+        unit = base_price + float(size_upcharges.get(sz, 0.0)) + print_cost
+        line_total += round(unit * q, 2)
+        breakdown.append(f"{sz}×{q}@£{unit:.2f}")
+    line_total = round(line_total, 2)
+
+    return {
+        "product": product,
+        "product_id": item.product_id,
+        "size_qtys": size_qtys,
+        "placements_clean": placements_clean,
+        "blank": item.blank or not placements_clean,
+        "color": item.color,
+        "line_total": line_total,
+        "total_qty": total_qty,
+        "print_cost": print_cost,
+        "breakdown": breakdown,
+        "design_meta": item.design_meta or {},
+    }
+
+
+@api_router.post("/checkout/cart-session", response_model=CheckoutResponse)
+async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Request):
+    """Combined Stripe session for a multi-line cart. Reprices every line server-side."""
+    if not payload.items:
+        raise HTTPException(400, "Cart is empty")
+    if len(payload.items) > 20:
+        raise HTTPException(400, "Cart limit is 20 lines — please split into two orders")
+
+    priced = [await _price_line_item(item) for item in payload.items]
+    grand_total = round(sum(p["line_total"] for p in priced), 2)
+    total_qty = sum(p["total_qty"] for p in priced)
+
+    if grand_total < 0.5:
+        raise HTTPException(400, "Cart total below Stripe minimum (£0.50)")
+
+    host_url = str(http_request.base_url)
+    webhook_url = f"{host_url}api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+
+    origin = payload.origin_url.rstrip("/")
+    success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}/cart"
+
+    # Compact metadata — Stripe caps values at 500 chars each. Full breakdown is stored in Mongo below.
+    item_summary = " | ".join(
+        f"{p['product']['name']} ({sum(p['size_qtys'].values())})" for p in priced
+    )[:490]
+    metadata = {
+        "kind": "cart",
+        "items_count": str(len(priced)),
+        "total_qty": str(total_qty),
+        "items_summary": item_summary,
+    }
+
+    checkout_request = CheckoutSessionRequest(
+        amount=grand_total,
+        currency="gbp",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata=metadata,
+    )
+    session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
+
+    await db.payment_transactions.insert_one({
+        "id": str(uuid.uuid4()),
+        "session_id": session.session_id,
+        "kind": "cart",
+        "items": [
+            {
+                "product_id": p["product_id"],
+                "product_name": p["product"]["name"],
+                "color": p["color"],
+                "placements": p["placements_clean"],
+                "blank": p["blank"],
+                "size_qtys": p["size_qtys"],
+                "total_quantity": p["total_qty"],
+                "line_total": p["line_total"],
+                "breakdown": p["breakdown"],
+                "design_meta": p["design_meta"],
+            }
+            for p in priced
+        ],
+        "total_quantity": total_qty,
+        "amount": grand_total,
+        "currency": "gbp",
+        "metadata": metadata,
+        "payment_status": "pending",
+        "status": "initiated",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    return CheckoutResponse(url=session.url, session_id=session.session_id)
+
+
+@api_router.post("/cart/price")
+async def price_cart(payload: CartCheckoutRequest):
+    """Repriced cart preview — used by the drawer to show the correct total incl. bulk tiers,
+    print upcharges, size upcharges. Does NOT create a Stripe session."""
+    if not payload.items:
+        return {"items": [], "grand_total": 0.0, "total_qty": 0}
+    priced = [await _price_line_item(item) for item in payload.items]
+    grand_total = round(sum(p["line_total"] for p in priced), 2)
+    return {
+        "items": [
+            {
+                "product_id": p["product_id"],
+                "product_name": p["product"]["name"],
+                "product_image": p["product"].get("image"),
+                "size_qtys": p["size_qtys"],
+                "placements": p["placements_clean"],
+                "blank": p["blank"],
+                "color": p["color"],
+                "total_qty": p["total_qty"],
+                "line_total": p["line_total"],
+                "breakdown": p["breakdown"],
+                "unit_hint": round(p["line_total"] / p["total_qty"], 2) if p["total_qty"] else 0.0,
+            }
+            for p in priced
+        ],
+        "grand_total": grand_total,
+        "total_qty": sum(p["total_qty"] for p in priced),
+    }
 
 
 @api_router.post("/reviews", response_model=ReviewOut)
@@ -4044,17 +4221,7 @@ async def update_integrations(payload: Dict):
     return {"ok": True}
 
 
-async def _get_integration_value(key: str) -> Optional[str]:
-    """Resolve a key from DB (preferred) or env (fallback)."""
-    doc = await db.settings.find_one({"key": "integration_keys"})
-    if doc:
-        v = (doc.get("values") or {}).get(key)
-        if v:
-            return v
-    meta = INTEGRATION_KEYS.get(key)
-    if meta:
-        return os.environ.get(meta["env"])
-    return None
+from deps import _get_integration_value  # replaces the local duplicate
 
 
 @api_router.get("/site/whatsapp")
@@ -4763,175 +4930,16 @@ async def _seed_front_only_bundle_placements():
 
 
 # ============================================================================
-# Resend (transactional email) — used for bespoke leavers quote notifications.
-# Key resolved via _get_integration_value("resend_api_key") (DB first, env fallback).
-# Sender email uses SENDER_EMAIL env (default: onboarding@resend.dev — Resend's shared sandbox).
-# Reply-to is the `contact_email` integration setting so replies land in the shop inbox.
+# Router modules (split out from this monolith — see /app/backend/routers/)
 # ============================================================================
-import asyncio as _asyncio
-import base64 as _b64lib
-import resend as _resend
-import httpx as _httpx
+import routers.designer_ai  # noqa: F401 — registers /designer/remove-bg, /designer/ai-effect, /admin/test-email
 
-
-async def _send_email(*, to: List[str], subject: str, html: str, reply_to: Optional[str] = None) -> Dict:
-    """Non-blocking Resend send. Returns {ok, id?, error?}. Never raises — caller shouldn't
-    fail form submission just because the notification email couldn't be dispatched."""
-    api_key = await _get_integration_value("resend_api_key")
-    if not api_key:
-        return {"ok": False, "error": "Resend API key not configured (paste it in /admin/integrations)"}
-    _resend.api_key = api_key
-    sender = os.environ.get("SENDER_EMAIL") or "Your Own Print <onboarding@resend.dev>"
-    params = {"from": sender, "to": to, "subject": subject, "html": html}
-    if reply_to:
-        params["reply_to"] = reply_to
-    try:
-        res = await _asyncio.to_thread(_resend.Emails.send, params)
-        return {"ok": True, "id": (res or {}).get("id")}
-    except Exception as e:
-        logging.warning(f"Resend email failed: {e}")
-        return {"ok": False, "error": str(e)}
-
-
-async def _shop_notification_recipient() -> Optional[str]:
-    return (await _get_integration_value("contact_email")) or None
-
-
-def _email_wrap(title: str, body_html: str) -> str:
-    """Very simple inline-CSS wrapper — works across Gmail/Outlook."""
-    return f"""
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px;font-family:Arial,sans-serif;color:#1a1a1a">
-      <tr><td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;border:2px solid #dcfce7;overflow:hidden">
-          <tr><td style="background:#7bc67e;padding:16px 24px;font-weight:900;font-size:18px;color:#1a1a1a">Your Own Print</td></tr>
-          <tr><td style="padding:24px">
-            <h2 style="margin:0 0 12px 0;font-size:22px;font-weight:900">{title}</h2>
-            {body_html}
-          </td></tr>
-          <tr><td style="background:#f0fdf4;padding:12px 24px;font-size:11px;color:#4b5563">yourownprint.co.uk — no minimums, free artwork proofs, UK printed</td></tr>
-        </table>
-      </td></tr>
-    </table>
-    """
-
-
-@api_router.post("/admin/test-email", dependencies=[Depends(require_admin)])
-async def admin_test_email(payload: Dict):
-    """Admin helper — POST {to} to send a Resend test email using the saved key."""
-    to = (payload.get("to") or "").strip()
-    if not to:
-        raise HTTPException(400, "`to` required")
-    res = await _send_email(
-        to=[to],
-        subject="Your Own Print — Resend test email",
-        html=_email_wrap("Resend is wired up ✅",
-                         "<p>This is a test email from your Your Own Print admin dashboard. If you're seeing this, your Resend API key is working.</p>"),
-    )
-    return res
-
-
-# ============================================================================
-# remove.bg — background removal used by the Design Your Own canvas
-# ============================================================================
-@api_router.post("/designer/remove-bg")
-async def designer_remove_bg(payload: Dict):
-    """Accepts {image_base64} (data URL or raw base64) and returns {image_base64: 'data:image/png;base64,...'}
-    with the background stripped. Falls back to the original image + a warning if the API key isn't set."""
-    img = (payload.get("image_base64") or "").strip()
-    if not img:
-        raise HTTPException(400, "image_base64 required")
-    # accept both data URLs and raw base64
-    b64 = img.split(",", 1)[1] if img.startswith("data:") else img
-    try:
-        raw = _b64lib.b64decode(b64, validate=True)
-    except Exception:
-        raise HTTPException(400, "image_base64 is not valid base64")
-    if len(raw) > 22 * 1024 * 1024:
-        raise HTTPException(413, "Image exceeds 22MB (remove.bg limit)")
-    api_key = await _get_integration_value("removebg_api_key")
-    if not api_key:
-        raise HTTPException(503, "remove.bg API key not configured — paste it in /admin/integrations")
-    try:
-        async with _httpx.AsyncClient(timeout=45.0) as http:
-            resp = await http.post(
-                "https://api.remove.bg/v1.0/removebg",
-                files={"image_file": ("upload.png", raw, "image/png")},
-                data={"size": "auto"},
-                headers={"X-Api-Key": api_key},
-            )
-    except _httpx.TimeoutException:
-        raise HTTPException(504, "remove.bg timed out — try a smaller image")
-    except Exception as e:
-        raise HTTPException(502, f"remove.bg error: {e}")
-    if resp.status_code != 200:
-        detail = ""
-        try:
-            detail = resp.json().get("errors", [{}])[0].get("title") or resp.text[:180]
-        except Exception:
-            detail = resp.text[:180]
-        raise HTTPException(resp.status_code, f"remove.bg: {detail}")
-    out_b64 = _b64lib.b64encode(resp.content).decode("ascii")
-    return {"image_base64": f"data:image/png;base64,{out_b64}"}
-
-
-# ============================================================================
-# Cutout.pro — AI image effects for the designer (sketch / poster / caricature)
-# ============================================================================
-@api_router.post("/designer/ai-effect")
-async def designer_ai_effect(payload: Dict):
-    """Applies a Cutout.pro effect to a base64 image.
-    payload: {image_base64, effect} where effect ∈ {"sketch","cartoon","poster","enhance"}."""
-    img = (payload.get("image_base64") or "").strip()
-    effect = (payload.get("effect") or "cartoon").strip().lower()
-    EFFECT_MAP = {
-        # Cutout.pro effect endpoints — see https://www.cutout.pro/api-doc
-        "sketch": "https://www.cutout.pro/api/v1/photoEnhance/sketchImage",
-        "cartoon": "https://www.cutout.pro/api/v1/photoEnhance/aiCartoon",
-        "poster": "https://www.cutout.pro/api/v1/photoEnhance/poster",
-        "enhance": "https://www.cutout.pro/api/v1/matting/photoEnhance",
-    }
-    if effect not in EFFECT_MAP:
-        raise HTTPException(400, f"effect must be one of {list(EFFECT_MAP)}")
-    if not img:
-        raise HTTPException(400, "image_base64 required")
-    b64 = img.split(",", 1)[1] if img.startswith("data:") else img
-    try:
-        raw = _b64lib.b64decode(b64, validate=True)
-    except Exception:
-        raise HTTPException(400, "image_base64 is not valid base64")
-    api_key = await _get_integration_value("cutoutpro_api_key")
-    if not api_key:
-        raise HTTPException(503, "Cutout.pro API key not configured — paste it in /admin/integrations")
-    try:
-        async with _httpx.AsyncClient(timeout=60.0) as http:
-            resp = await http.post(
-                EFFECT_MAP[effect],
-                files={"file": ("upload.png", raw, "image/png")},
-                headers={"APIKEY": api_key},
-            )
-    except _httpx.TimeoutException:
-        raise HTTPException(504, "Cutout.pro timed out — try a smaller image")
-    except Exception as e:
-        raise HTTPException(502, f"Cutout.pro error: {e}")
-    if resp.status_code != 200:
-        raise HTTPException(resp.status_code, f"Cutout.pro: {resp.text[:180]}")
-    # Cutout.pro returns JSON with {code, data:{imageUrl|resultImageUrl|imageBase64}} — normalise it
-    try:
-        j = resp.json()
-        d = j.get("data") or {}
-        out_b64 = d.get("imageBase64")
-        out_url = d.get("imageUrl") or d.get("resultImageUrl")
-        if out_b64:
-            return {"image_base64": f"data:image/png;base64,{out_b64}"}
-        if out_url:
-            return {"image_url": out_url}
-        raise HTTPException(502, f"Cutout.pro unexpected response: {str(j)[:180]}")
-    except HTTPException:
-        raise
-    except Exception:
-        # Some endpoints return raw image bytes on success
-        out_b64 = _b64lib.b64encode(resp.content).decode("ascii")
-        return {"image_base64": f"data:image/png;base64,{out_b64}"}
+# Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
+# proxy to the new services.email module. Kept here until those endpoints move
+# into their own router in a follow-up.
+from services.email import send_email as _send_email
+from services.email import shop_notification_recipient as _shop_notification_recipient
+from services.email import email_wrap as _email_wrap
 
 
 app.include_router(api_router)

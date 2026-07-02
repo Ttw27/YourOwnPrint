@@ -44,11 +44,14 @@ import AdminNavigation from "@/pages/AdminNavigation";
 import AdminIntegrations from "@/pages/AdminIntegrations";
 import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
 import ScrollToTop from "@/components/bold/ScrollToTop";
+import CartDrawer from "@/components/CartDrawer";
+import { CartProvider } from "@/context/CartContext";
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
+        <CartProvider>
         <ScrollToTop />
         <Toaster position="top-center" richColors />
         <Routes>
@@ -99,6 +102,8 @@ function App() {
             but to avoid duplicates each page-level FAB is identical position/size — only rendered once
             visually because pages don't include their own anymore. */}
         <SiteFAB />
+        <CartDrawer />
+        </CartProvider>
       </BrowserRouter>
     </div>
   );

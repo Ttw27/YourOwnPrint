@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { NAV_MENU } from "../../lib/data";
 import { fetchNavigation } from "../../lib/api";
 import { Facebook, Instagram, Star, ChevronDown, Menu, X } from "lucide-react";
+import CartIcon from "../CartIcon";
 
 export function BoldNavbar() {
   const { pathname } = useLocation();
@@ -115,6 +116,7 @@ export function BoldNavbar() {
         </button>
 
         <Link to="/themes" data-testid="nav-themes" className="hidden lg:inline text-xs font-nunito font-bold text-neutral-500 hover:text-[#7bc67e] ml-2">Themes</Link>
+        <CartIcon className="ml-2" />
       </div>
 
       {/* Mobile slide-over — rendered into document.body via portal to escape backdrop-blur containing block */}

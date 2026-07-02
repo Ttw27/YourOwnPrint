@@ -9,12 +9,14 @@ import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
 import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
+import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
-import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
+import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, ShoppingBag, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addLine } = useCart();
   const [product, setProduct] = useState(null);
   const [placements, setPlacements] = useState([]);
   const [allowedPlacements, setAllowedPlacements] = useState(null); // null => unrestricted
@@ -446,6 +448,33 @@ export default function ProductDetail() {
                   <div className="mt-5 grid sm:grid-cols-2 gap-2">
                     <button
                       data-testid="add-to-cart"
+                      onClick={() => {
+                        if (checkoutBlocked) {
+                          if (totalQty < 1) toast.error("Add at least 1 item to a size");
+                          else if (!blank && selectedPlacements.length === 0) toast.error("Pick at least one print placement (or switch to Buy Blank)");
+                          else toast.error("Please upload artwork for every selected placement");
+                          return;
+                        }
+                        addLine({
+                          product_id: product.id,
+                          name: product.name,
+                          size_qtys: sizeQtys,
+                          color,
+                          placements: blank ? [] : selectedPlacements,
+                          blank,
+                          design_meta: blank ? { mode: "blank" } : {
+                            mode: "uploaded",
+                            placements_uploaded: Object.keys(artwork).join(","),
+                          },
+                        });
+                      }}
+                      disabled={checkoutBlocked}
+                      className="inline-flex items-center justify-center gap-2 bg-white border-2 border-[#7bc67e] hover:bg-[#f0fdf4] disabled:opacity-50 disabled:cursor-not-allowed text-[#1a1a1a] font-nunito font-extrabold rounded-full px-5 py-3.5 transition-colors"
+                    >
+                      <ShoppingBag size={16} /> Add to basket
+                    </button>
+                    <button
+                      data-testid="buy-now"
                       onClick={onCheckout}
                       disabled={checkingOut || checkoutBlocked}
                       className="inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 disabled:cursor-not-allowed text-[#1a1a1a] font-nunito font-extrabold rounded-full px-5 py-3.5 shadow-md transition-transform hover:-translate-y-0.5"
@@ -453,10 +482,10 @@ export default function ProductDetail() {
                       {checkingOut
                         ? <><Loader2 className="animate-spin" size={16} /> Redirecting…</>
                         : blank
-                          ? <><ShoppingCart size={16} /> Checkout (Blank)</>
+                          ? <><ShoppingCart size={16} /> Buy Blank</>
                           : !allArtworkUploaded
-                            ? <><Lock size={14} /> Upload prints to checkout</>
-                            : <><ShoppingCart size={16} /> Checkout £{lineTotal.toFixed(2)}</>}
+                            ? <><Lock size={14} /> Upload prints to buy</>
+                            : <><ShoppingCart size={16} /> Buy now £{lineTotal.toFixed(2)}</>}
                     </button>
                     <button
                       data-testid="customise-design"

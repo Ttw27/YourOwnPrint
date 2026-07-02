@@ -529,6 +529,16 @@ export async function adminSendTestEmail(to) {
   return data;
 }
 
+// ----- Multi-product cart -----
+export async function priceCart(items) {
+  const { data } = await api.post("/cart/price", { items, origin_url: window.location.origin });
+  return data;
+}
+export async function createCartCheckout(items) {
+  const { data } = await api.post("/checkout/cart-session", { items, origin_url: window.location.origin });
+  return data;
+}
+
 // ----- Configurator settings (addon prices) -----
 export async function adminGetConfiguratorSettings() {
   const { data } = await api.get("/admin/configurator-settings");
