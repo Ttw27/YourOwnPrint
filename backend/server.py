@@ -3883,9 +3883,12 @@ async def admin_update_sports_outfit_addons(payload: Dict):
     for k in ("unbranded_price", "breast_print_price", "back_print_price", "full_front_print_price"):
         if k in values:
             try:
-                cleaned[k] = round(float(values[k]), 2)
+                v = round(float(values[k]), 2)
             except (TypeError, ValueError):
                 raise HTTPException(400, f"{k} must be a number")
+            if v < 0 or v > 999:
+                raise HTTPException(400, f"{k} must be between 0 and 999")
+            cleaned[k] = v
     existing = (await db.settings.find_one({"key": "sports_outfit_addons"}) or {}).get("values") or {}
     merged = {**existing, **cleaned}
     await db.settings.update_one(
@@ -3907,9 +3910,12 @@ async def admin_update_full_squad_addons(payload: Dict):
               "back_name_and_number_price", "gym_bag_addon_price"):
         if k in values:
             try:
-                cleaned[k] = round(float(values[k]), 2)
+                v = round(float(values[k]), 2)
             except (TypeError, ValueError):
                 raise HTTPException(400, f"{k} must be a number")
+            if v < 0 or v > 999:
+                raise HTTPException(400, f"{k} must be between 0 and 999")
+            cleaned[k] = v
     # MERGE with existing values so saving one key doesn't wipe the others.
     existing = (await db.settings.find_one({"key": "full_squad_addons"}) or {}).get("values") or {}
     merged = {**existing, **cleaned}
@@ -4368,13 +4374,13 @@ async def get_product_override(pid: str):
 # Consumed via a public GET; edited via an admin PATCH.
 # ============================================================================
 class PageCopyPatch(BaseModel):
-    title: Optional[str] = None
-    subtitle: Optional[str] = None
-    body: Optional[str] = None                 # long-form paragraphs (blank-line separated)
+    title: Optional[str] = Field(default=None, max_length=200)
+    subtitle: Optional[str] = Field(default=None, max_length=400)
+    body: Optional[str] = Field(default=None, max_length=20000)                 # long-form paragraphs (blank-line separated)
     bullets: Optional[List[str]] = None        # feature bullets
     faq: Optional[List[Dict]] = None            # [{q, a}, ...]
-    cta_label: Optional[str] = None
-    cta_link: Optional[str] = None
+    cta_label: Optional[str] = Field(default=None, max_length=80)
+    cta_link: Optional[str] = Field(default=None, max_length=500)
     extras: Optional[Dict] = None              # free-form { key: value } for page-specific fields
 
 

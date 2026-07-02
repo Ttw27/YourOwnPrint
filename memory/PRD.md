@@ -40,9 +40,23 @@ UK custom print + workwear e-commerce site at yourownprint.co.uk. Standalone (no
 - ✅ **Collection sidebar filter** (Feb 2026) — `/shop/:slug` now has a left-hand sidebar with auto-derived facets (Colour / Size / Gender fit / Industry / Price range). Facets ONLY appear when there's variance across the collection's products. URL-driven filters (shareable, back-forward friendly). Auto-linked from product data via `_facets_from_products` — no admin work needed to enable facets on new products.
 - ✅ **Collection SEO copy** (Feb 2026, admin-editable) — `/admin/collection-seo` per-slug editor for intro / body / FAQ. Renders as an in-depth SEO block at the bottom of `/shop/:slug` for search visibility.
 - ✅ **Bulk product import** (Feb 2026, PenCarrie / manual) — `/admin/products-import` accepts CSV upload / JSON paste / manual entry. Auto-categorises by keyword, applies markup% on source_price → retail price, and imported products **appear on the site instantly** in the correct collection with sidebar facets working out-of-the-box (server startup hook `_load_imported_products` hydrates them into the in-memory `PRODUCTS` registry; `_garment_type_of` now honours the stored `category` field). Persisted in Mongo `imported_products`. New admin nav links added for Bundle variants / Import / SEO copy.
+- ✅ **Foundational CMS** (Feb 2026) — `/admin/page-copy` slug-based hero/H1/subtitle/body editor with per-page Revert-to-defaults. Backend: GET /api/page-copy/{slug} public, PATCH+DELETE /api/admin/page-copy/{slug} admin. Pydantic-hardened length caps (title 200, subtitle 400, body 20k chars). `usePageCopy(slug, defaults)` hook wired into 10 public pages: Home, Workwear, Specials, Contact, Leavers, Fight Night, Workforce, Design Your Own, Sports, Teams & Schools. Empty string treated as "unset" so defaults show through.
+- ✅ **Configurator settings CMS** — `/admin/configurator-settings` edits Full Squad + Sports Outfit addon prices. PATCH endpoints MERGE (not replace) so saving one field retains the others. Server-side clamp 0–999 £.
+- ✅ **Product override CMS** — `/admin/product-settings` inline `Basic catalogue override` panel per row edits name / price / short description / main image / active flag. Overrides persisted in `settings.key=product_meta:<id>`; applied over pristine PRODUCTS at read time and hot-reapplied to in-memory PRODUCTS registry on save. Revert (DELETE) restores from `_PRISTINE_PRODUCTS` deepcopy — no supervisor restart needed. Tested end-to-end in iter29 (16/16 CMS backend tests pass).
+- ✅ **Resend transactional email** (Feb 2026) — non-blocking dispatch on `/api/leavers/bespoke` (notifies shop + confirms to customer) and `/api/contact` (notifies shop, reply-to = customer). Key resolved from `settings.integration_keys.resend_api_key` or `RESEND_API_KEY` env. Admin can hit `POST /api/admin/test-email` (button in `/admin/integrations` shown when the key is set) to send a "Resend is wired up ✅" test email.
+- ✅ **remove.bg (real)** — `POST /api/designer/remove-bg` accepts data-URL or raw base64 up to 22MB, calls remove.bg /removebg with X-Api-Key, returns `{image_base64: 'data:image/png;base64,...'}`. Design Your Own canvas now calls it live (busy-state on the selected image, toast success/error).
+- ✅ **Cutout.pro AI effects** — `POST /api/designer/ai-effect` supports `sketch / cartoon / poster / enhance`. Auto-normalises Cutout.pro's `imageUrl / resultImageUrl / imageBase64` response variants. Wired to the 4 effect buttons in Design Your Own.
 - ✅ **Global back-print rule** — server-side strip at /api/checkout/session for `football-shorts / gym-shorts / performance-leggings / joggers / workwear-trousers` (NO_BACK_PRINT_PRODUCT_IDS).
 - ✅ **Sock sizes admin** — GET /api/sock-sizes + PATCH /api/admin/sock-sizes. Editable inline on `/admin/bundle-variants` (top panel).
 - ✅ **Admin Bundle Variants** (Feb 2026, rewritten) — `/admin/bundle-variants` supports the 5 new set slot IDs, colour picker (name+hex), sizes chip list, sock sizes override, included_items chips, and a size_guide free-text field. Fully e2e tested (iter24 — 18/18 backend + 5/5 frontend flows).
+
+## Feb 2026 — Iter 29 changelog
+- Fixed all 3 CMS blocker bugs from iter 28 (verified 26/26 backend tests + full frontend suite pass in iter 29).
+- Wired **Resend** for real transactional email on leavers/bespoke + /contact.
+- Wired **remove.bg** and **Cutout.pro** real APIs into the DYO canvas (previously mocked).
+- Added inline product override editor at `/admin/product-settings` (basic catalogue: name / price / description / image / active).
+- Wired `usePageCopy` hook into 8 additional landing pages (Home, Workwear, Specials, Contact, Leavers, Fight Night, Workforce, Design Your Own).
+- Server-side hardening: length caps on PageCopyPatch (title 200 / subtitle 400 / body 20k), 0–999 clamp on all addon prices.
 
 ## Key API endpoints (added this iteration)
 - `GET /api/portfolio?category=&featured_only=&limit=`
@@ -63,9 +77,10 @@ UK custom print + workwear e-commerce site at yourownprint.co.uk. Standalone (no
 - ✅ Deployment readiness scan passed. Ready for "Save to Github" platform feature.
 
 ### P1 — Integrations (admin has the UI; user provides keys)
-- Wire **Resend** for: Bespoke leavers' quote emails + post-purchase review-request emails (key paste → `/admin/integrations`)
-- Wire **remove.bg** real API call in Designer (currently mocked toast)
-- Wire **Cutout.pro** real API call for AI effects (currently mocked toast)
+- ✅ **Resend** wired for bespoke leavers' quotes + /contact form (user still needs to paste RESEND_API_KEY at `/admin/integrations`)
+- ✅ **remove.bg** wired real API call in Designer (user needs to paste key)
+- ✅ **Cutout.pro** wired real API call for AI effects (user needs to paste key)
+- Post-purchase Judge.me review-request emails via Resend (still to build)
 
 ### P2 — Commerce hygiene
 - Real Stripe webhook + fulfilment pipeline (order status, dispatch emails)
