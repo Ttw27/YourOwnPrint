@@ -12,19 +12,19 @@ from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
 
-from emergentintegrations.payments.stripe.checkout import (
-    StripeCheckout,
-    CheckoutSessionResponse,
-    CheckoutStatusResponse,
-    CheckoutSessionRequest,
+from services.stripe_checkout import (
+    create_checkout_session,
+    get_checkout_status,
+    construct_webhook_event,
 )
+import stripe as _stripe_sdk
 
 # Shared runtime lives in deps.py — mongo client, api_router, auth deps,
 # integration key resolver. All router modules import from there so this
 # file can stay focused on catalogue seed data + startup handlers.
 from deps import (
     ROOT_DIR, client, db,
-    STRIPE_API_KEY, JWT_SECRET, JWT_ALGORITHM, ADMIN_EMAIL, ADMIN_PASSWORD,
+    STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET, JWT_SECRET, JWT_ALGORITHM, ADMIN_EMAIL, ADMIN_PASSWORD,
     _hash_password, _verify_password, _create_access_token,
     get_current_admin, require_admin,
     api_router, _get_integration_value,
@@ -927,10 +927,6 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
 
     _assert_origin_ok(payload.origin_url)
 
-    host_url = str(http_request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-
     origin = payload.origin_url.rstrip("/")
     success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin}/product/{payload.product_id}"
@@ -949,22 +945,20 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         for k, v in payload.design_meta.items():
             metadata[f"design_{k}"] = str(v)[:400]
 
-    checkout_request = CheckoutSessionRequest(
+    session = await create_checkout_session(
+        api_key=STRIPE_API_KEY,
         amount=total_amount,
         currency="gbp",
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=metadata,
-    )
-
-    session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(
-        checkout_request
+        product_name=product["name"],
     )
 
     await db.payment_transactions.insert_one(
         {
             "id": str(uuid.uuid4()),
-            "session_id": session.session_id,
+            "session_id": session.id,
             "product_id": payload.product_id,
             "product_name": product["name"],
             "color": payload.color,
@@ -981,18 +975,12 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         }
     )
 
-    return CheckoutResponse(url=session.url, session_id=session.session_id)
+    return CheckoutResponse(url=session.url, session_id=session.id)
 
 
 @api_router.get("/checkout/status/{session_id}", response_model=CheckoutStatusOut)
 async def checkout_status(session_id: str, http_request: Request):
-    host_url = str(http_request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-
-    status_resp: CheckoutStatusResponse = await stripe_checkout.get_checkout_status(
-        session_id
-    )
+    status_resp = await get_checkout_status(STRIPE_API_KEY, session_id)
 
     existing = await db.payment_transactions.find_one({"session_id": session_id})
     if existing and existing.get("payment_status") != status_resp.payment_status:
@@ -1011,7 +999,7 @@ async def checkout_status(session_id: str, http_request: Request):
         session_id=session_id,
         status=status_resp.status,
         payment_status=status_resp.payment_status,
-        amount_total=float(status_resp.amount_total) / 100.0,
+        amount_total=float(status_resp.amount_total or 0) / 100.0,
         currency=status_resp.currency,
     )
 
@@ -1203,10 +1191,6 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
     if grand_total < 0.5:
         raise HTTPException(400, "Cart total below Stripe minimum (£0.50)")
 
-    host_url = str(http_request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-
     origin = payload.origin_url.rstrip("/")
     success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin}/cart"
@@ -1222,18 +1206,19 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         "items_summary": item_summary,
     }
 
-    checkout_request = CheckoutSessionRequest(
+    session = await create_checkout_session(
+        api_key=STRIPE_API_KEY,
         amount=grand_total,
         currency="gbp",
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=metadata,
+        product_name="Your Own Print cart order",
     )
-    session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
 
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
-        "session_id": session.session_id,
+        "session_id": session.id,
         "kind": "cart",
         "customer_email": payload.customer_email,
         "items": [
@@ -1260,7 +1245,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
 
-    return CheckoutResponse(url=session.url, session_id=session.session_id)
+    return CheckoutResponse(url=session.url, session_id=session.id)
 
 
 @api_router.post("/cart/price")
@@ -2183,9 +2168,6 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     if payload.names_collection_mode not in ("upload", "we-will-contact"):
         raise HTTPException(400, "names_collection_mode must be 'upload' or 'we-will-contact'")
 
-    host_url = str(http_request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
     origin = payload.origin_url.rstrip("/")
     success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin}/leavers-hoodies"
@@ -2209,19 +2191,20 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "lines": ",".join(line_summary)[:450],
     }
 
-    checkout_request = CheckoutSessionRequest(
+    session = await create_checkout_session(
+        api_key=STRIPE_API_KEY,
         amount=total_amount, currency="gbp",
         success_url=success_url, cancel_url=cancel_url,
         metadata=metadata,
+        product_name="Leavers hoodie order",
     )
-    session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
 
     artwork_id = None
     if any([payload.custom_design_data_url, payload.custom_back_design_data_url, payload.names_file_data_url]):
         artwork_id = str(uuid.uuid4())
         await db.leavers_artwork.insert_one({
             "id": artwork_id,
-            "session_id": session.session_id,
+            "session_id": session.id,
             "custom_design": payload.custom_design_data_url,               # front
             "custom_back_design": payload.custom_back_design_data_url,     # back
             "names_file": payload.names_file_data_url,                     # names list
@@ -2230,7 +2213,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
 
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
-        "session_id": session.session_id,
+        "session_id": session.id,
         "flow": "leavers",
         "school": payload.school,
         "year_group": payload.year_group,
@@ -2257,7 +2240,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "status": "initiated",
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
-    return CheckoutResponse(url=session.url, session_id=session.session_id)
+    return CheckoutResponse(url=session.url, session_id=session.id)
 
 
 class LeaversBespokeRequest(BaseModel):
@@ -2855,9 +2838,6 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     if total_amount < 0.5:
         raise HTTPException(400, "Total below Stripe minimum (£0.50)")
 
-    host_url = str(http_request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
     origin = payload.origin_url.rstrip("/")
     success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin}/workforce"
@@ -2872,17 +2852,18 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         "contact_email": (payload.contact_email or "")[:80],
     }
 
-    checkout_request = CheckoutSessionRequest(
+    session = await create_checkout_session(
+        api_key=STRIPE_API_KEY,
         amount=total_amount, currency="gbp",
         success_url=success_url, cancel_url=cancel_url,
         metadata=metadata,
+        product_name="Workforce order",
     )
-    session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
 
     artwork_doc_id = str(uuid.uuid4())
     await db.workforce_artwork.insert_one({
         "id": artwork_doc_id,
-        "session_id": session.session_id,
+        "session_id": session.id,
         "breast_logo": payload.breast_logo_data_url,
         "back_print": payload.back_print_data_url,
         "needs_back_print": needs_back_print,
@@ -2891,7 +2872,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
 
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
-        "session_id": session.session_id,
+        "session_id": session.id,
         "flow": "workforce",
         "lines": valid_lines,
         "total_quantity": total_qty,
@@ -2904,7 +2885,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         "status": "initiated",
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
-    return CheckoutResponse(url=session.url, session_id=session.session_id)
+    return CheckoutResponse(url=session.url, session_id=session.id)
 
 
 # ---------- Also bought with (cross-sells) ----------
@@ -3098,24 +3079,38 @@ async def close_group_order(token: str, manage_token: str):
 async def stripe_webhook(request: Request):
     body = await request.body()
     signature = request.headers.get("Stripe-Signature", "")
-    host_url = str(request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
     try:
-        webhook_response = await stripe_checkout.handle_webhook(body, signature)
-        if webhook_response.session_id:
+        if not STRIPE_WEBHOOK_SECRET:
+            # No signing secret configured — accept-and-log rather than hard-fail, so
+            # local/dev setups without a configured webhook still don't 500. Set
+            # STRIPE_WEBHOOK_SECRET in production so signatures are actually verified.
+            logger.warning("STRIPE_WEBHOOK_SECRET not set — skipping signature verification")
+            import json as _json
+            event = _json.loads(body)
+        else:
+            event = construct_webhook_event(body, signature, STRIPE_WEBHOOK_SECRET)
+
+        event_type = event.get("type") if isinstance(event, dict) else event["type"]
+        data_object = (event.get("data") or {}).get("object") if isinstance(event, dict) else event["data"]["object"]
+        session_id = data_object.get("id") if isinstance(data_object, dict) else None
+        payment_status = data_object.get("payment_status") if isinstance(data_object, dict) else None
+
+        if event_type == "checkout.session.completed" and session_id:
             await db.payment_transactions.update_one(
-                {"session_id": webhook_response.session_id},
+                {"session_id": session_id},
                 {
                     "$set": {
-                        "payment_status": webhook_response.payment_status,
+                        "payment_status": payment_status or "paid",
                         "status": "completed",
-                        "webhook_event": webhook_response.event_type,
+                        "webhook_event": event_type,
                         "updated_at": datetime.now(timezone.utc).isoformat(),
                     }
                 },
             )
         return {"received": True}
+    except _stripe_sdk.error.SignatureVerificationError as e:
+        logger.error(f"Stripe webhook signature error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid signature")
     except Exception as e:
         logger.error(f"Stripe webhook error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -3251,64 +3246,18 @@ async def admin_list_all_qa():
 # ============================================================================
 # Object Storage (Emergent R2-style) — for Portfolio + future asset uploads
 # ============================================================================
-import requests as _requests
 import base64 as _base64
+from services.r2_storage import storage_put as _storage_put, storage_get as _storage_get
 
-_OBJ_STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
 _OBJ_APP_NAME = "yourownprint"
-_storage_key: Optional[str] = None
-
-
-def _init_storage() -> Optional[str]:
-    """Call once at startup. Sets module-level storage_key."""
-    global _storage_key
-    if _storage_key:
-        return _storage_key
-    key = os.environ.get("EMERGENT_LLM_KEY")
-    if not key:
-        return None
-    try:
-        resp = _requests.post(f"{_OBJ_STORAGE_URL}/init", json={"emergent_key": key}, timeout=30)
-        resp.raise_for_status()
-        _storage_key = resp.json().get("storage_key")
-        return _storage_key
-    except Exception as e:
-        logging.getLogger(__name__).error(f"object-storage init failed: {e}")
-        return None
-
-
-def _storage_put(path: str, data: bytes, content_type: str) -> Dict:
-    key = _init_storage()
-    if not key:
-        raise HTTPException(500, "Object storage not configured (EMERGENT_LLM_KEY missing)")
-    resp = _requests.put(
-        f"{_OBJ_STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data, timeout=120,
-    )
-    if resp.status_code >= 400:
-        raise HTTPException(500, f"object-storage upload failed: {resp.status_code} {resp.text[:200]}")
-    return resp.json()
-
-
-def _storage_get(path: str) -> Tuple[bytes, str]:
-    key = _init_storage()
-    if not key:
-        raise HTTPException(404, "Object storage not configured")
-    resp = _requests.get(
-        f"{_OBJ_STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key}, timeout=60,
-    )
-    if resp.status_code == 404:
-        raise HTTPException(404, "File not found")
-    if resp.status_code >= 400:
-        raise HTTPException(500, f"object-storage fetch failed: {resp.status_code}")
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 
 @app.on_event("startup")
 async def _startup_init_storage():
-    _init_storage()
+    # R2 client is created lazily on first use (see services/r2_storage.py);
+    # nothing to pre-warm at boot, but we keep this hook so future storage
+    # backends can plug in here without touching call sites.
+    pass
 
 
 # ============================================================================

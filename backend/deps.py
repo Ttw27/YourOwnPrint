@@ -38,6 +38,7 @@ db = client[os.environ["DB_NAME"]]
 # Auth config
 # ---------------------------------------------------------------------------
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 JWT_SECRET = os.environ["JWT_SECRET"]
 JWT_ALGORITHM = "HS256"
 ADMIN_EMAIL = os.environ["ADMIN_EMAIL"]
