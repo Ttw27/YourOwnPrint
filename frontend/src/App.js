@@ -3,7 +3,6 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Home from "@/pages/Home";
-import ThemeShowcase from "@/pages/ThemeShowcase";
 import Workwear from "@/pages/Workwear";
 import TeamsSchools from "@/pages/TeamsSchools";
 import DesignYourOwn from "@/pages/DesignYourOwn";
@@ -60,7 +59,6 @@ function App() {
         <Toaster position="top-center" richColors />
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/themes" element={<ThemeShowcase />} />
           <Route path="/workwear" element={<Workwear />} />
           <Route path="/workforce" element={<KitYourWorkforce />} />
           <Route path="/kit-your-workforce" element={<KitYourWorkforce />} />
