@@ -3269,6 +3269,7 @@ PORTFOLIO_CATEGORIES = [
     "schools", "events", "beauty", "barbering", "other",
     # Carousels / design libraries — same admin CRUD, but consumed by specific pages
     "fight-night-action",
+    "festival-tees-brands",
     "leavers-front-designs",
     "leavers-back-designs",
     "leavers-full-front-designs",
