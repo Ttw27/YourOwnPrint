@@ -116,7 +116,6 @@ export function BoldNavbar() {
           <Menu size={18} />
         </button>
 
-        <Link to="/themes" data-testid="nav-themes" className="hidden lg:inline text-xs font-nunito font-bold text-neutral-500 hover:text-[#7bc67e] ml-2">Themes</Link>
         <AccountButton className="ml-2" />
         <CartIcon className="ml-1" />
       </div>
