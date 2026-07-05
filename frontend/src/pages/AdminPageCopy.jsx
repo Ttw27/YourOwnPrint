@@ -26,6 +26,7 @@ const PAGE_COPY_SLUGS = [
   { slug: "team-kit-builder", label: "Team Kit Builder" },
   { slug: "full-squad-configurator", label: "Full Squad Configurator" },
   { slug: "sports-outfit-configurator", label: "Sports Outfit Configurator" },
+  { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
 ];
 
 const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "" };
