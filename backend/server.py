@@ -971,11 +971,74 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
             "metadata": metadata,
             "payment_status": "pending",
             "status": "initiated",
+            "receipt_sent": False,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
     )
 
     return CheckoutResponse(url=session.url, session_id=session.id)
+
+
+async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
+    """Fires the shop notification + customer receipt for a completed order.
+    Idempotent: only sends once per order, guarded by the `receipt_sent` flag
+    (set atomically here so a webhook and a status-poll firing near-simultaneously
+    can't both send). Never raises — a failed email must never break checkout."""
+    if not doc or doc.get("receipt_sent"):
+        return
+    # Atomic claim: only proceed if we're the one flipping receipt_sent False -> True.
+    claim = await db.payment_transactions.update_one(
+        {"session_id": doc["session_id"], "receipt_sent": {"$ne": True}},
+        {"$set": {"receipt_sent": True}},
+    )
+    if claim.modified_count == 0:
+        return  # someone else already claimed it (webhook vs poll race)
+
+    try:
+        customer_email = None
+        details = getattr(status_resp, "customer_details", None)
+        if details:
+            customer_email = getattr(details, "email", None)
+        customer_email = customer_email or doc.get("customer_email") or doc.get("contact_email")
+
+        amount = float(getattr(status_resp, "amount_total", None) or 0) / 100.0
+        currency = (getattr(status_resp, "currency", None) or "gbp").upper()
+        order_label = doc.get("product_name") or doc.get("flow") or doc.get("kind") or "order"
+        qty = doc.get("total_quantity", "")
+
+        shop_to = await _shop_notification_recipient()
+        if shop_to:
+            body_shop = _email_wrap(
+                f"New paid order — {order_label}",
+                f"""
+                <p>A new order has just been paid.</p>
+                <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
+                  <tr><td style="color:#4b5563"><strong>Order</strong></td><td>{order_label}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Quantity</strong></td><td>{qty or '—'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Amount</strong></td><td>£{amount:.2f} {currency}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Customer</strong></td><td>{customer_email or '—'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Session</strong></td><td>{doc.get('session_id','')}</td></tr>
+                </table>
+                """,
+            )
+            await _send_email(to=[shop_to], subject=f"[Paid order] {order_label} — £{amount:.2f}", html=body_shop)
+
+        if customer_email:
+            body_cust = _email_wrap(
+                "Order confirmed — thank you!",
+                f"""
+                <p>Thanks for your order — we've received payment and it's on its way into production.</p>
+                <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
+                  <tr><td style="color:#4b5563"><strong>Order</strong></td><td>{order_label}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Amount paid</strong></td><td>£{amount:.2f} {currency}</td></tr>
+                </table>
+                <p style="margin-top:16px;color:#4b5563">We'll be in touch if we need anything from you (like artwork approval); otherwise we'll email you again once it's shipped.</p>
+                <p style="margin-top:16px">— The Your Own Print team</p>
+                """,
+            )
+            await _send_email(to=[customer_email], subject="Your Your Own Print order is confirmed", html=body_cust)
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"order confirmation email failed: {e}")
 
 
 @api_router.get("/checkout/status/{session_id}", response_model=CheckoutStatusOut)
@@ -994,6 +1057,8 @@ async def checkout_status(session_id: str, http_request: Request):
                 }
             },
         )
+    if existing and status_resp.payment_status == "paid":
+        await _maybe_send_order_emails(existing, status_resp)
 
     return CheckoutStatusOut(
         session_id=session_id,
@@ -1170,7 +1235,7 @@ def _assert_origin_ok(origin_url: str) -> None:
     host = (parsed.hostname or "").lower()
     if not host:
         raise HTTPException(400, "origin_url missing host")
-    allowed_suffixes = ("yourownprint.co.uk", "emergentagent.com", "localhost", "127.0.0.1")
+    allowed_suffixes = ("yourownprint.co.uk", "vercel.app", "emergentagent.com", "localhost", "127.0.0.1")
     if not any(host == s or host.endswith("." + s) for s in allowed_suffixes):
         raise HTTPException(400, f"origin_url host not allowed: {host}")
 
@@ -1242,6 +1307,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         "metadata": metadata,
         "payment_status": "pending",
         "status": "initiated",
+        "receipt_sent": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
 
@@ -2238,6 +2304,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "metadata": metadata,
         "payment_status": "pending",
         "status": "initiated",
+        "receipt_sent": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
     return CheckoutResponse(url=session.url, session_id=session.id)
@@ -2883,6 +2950,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         "artwork_id": artwork_doc_id,
         "payment_status": "pending",
         "status": "initiated",
+        "receipt_sent": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
     return CheckoutResponse(url=session.url, session_id=session.id)
@@ -3075,6 +3143,37 @@ async def close_group_order(token: str, manage_token: str):
     return {"ok": True}
 
 
+@api_router.get("/admin/orders", dependencies=[Depends(require_admin)])
+async def admin_list_orders(status: str = "all", limit: int = 200):
+    """Read-only feed of every checkout attempt (paid, pending, expired…) across
+    all 4 checkout flows (single product, cart, leavers, workforce)."""
+    query = {} if status == "all" else {"payment_status": status}
+    cursor = db.payment_transactions.find(query).sort("created_at", -1).limit(min(limit, 500))
+    orders = []
+    async for doc in cursor:
+        doc.pop("_id", None)
+        orders.append(doc)
+    return {"orders": orders, "count": len(orders)}
+
+
+@api_router.get("/admin/enquiries", dependencies=[Depends(require_admin)])
+async def admin_list_enquiries(limit: int = 200):
+    """Merged, read-only feed of /contact submissions and /quote-request leads
+    (team kits, fight night, bespoke leavers, general enquiries, etc.), newest first."""
+    per_source = min(limit, 500)
+    contacts, quotes = [], []
+    async for doc in db.contact_submissions.find({}).sort("created_at", -1).limit(per_source):
+        doc.pop("_id", None)
+        doc["source"] = "contact"
+        contacts.append(doc)
+    async for doc in db.quote_requests.find({}).sort("created_at", -1).limit(per_source):
+        doc.pop("_id", None)
+        doc["source"] = "quote"
+        quotes.append(doc)
+    merged = sorted(contacts + quotes, key=lambda d: d.get("created_at", ""), reverse=True)
+    return {"enquiries": merged[:limit], "count": len(merged[:limit])}
+
+
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
     body = await request.body()
@@ -3107,6 +3206,10 @@ async def stripe_webhook(request: Request):
                     }
                 },
             )
+            existing = await db.payment_transactions.find_one({"session_id": session_id})
+            if existing and (payment_status or "").lower() == "paid":
+                full_session = await get_checkout_status(STRIPE_API_KEY, session_id)
+                await _maybe_send_order_emails(existing, full_session)
         return {"received": True}
     except _stripe_sdk.error.SignatureVerificationError as e:
         logger.error(f"Stripe webhook signature error: {e}")
