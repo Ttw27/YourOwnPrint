@@ -15,8 +15,8 @@ export default function LeaversHoodies() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchLeaversProducts().then(setProducts);
-    fetchLeaversTiers().then(setTiers);
+    fetchLeaversProducts().then(setProducts).catch(() => toast.error("Couldn't load products — please refresh"));
+    fetchLeaversTiers().then(setTiers).catch(() => toast.error("Couldn't load pricing tiers — please refresh"));
     fetchLeaversTemplates().then(setTemplates).catch(() => setTemplates([]));
   }, []);
   const tiersAsc = [...(tiers.tiers || [])].sort((a, b) => a.min_qty - b.min_qty);

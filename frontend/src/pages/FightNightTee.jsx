@@ -13,6 +13,7 @@ const SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
 
 export default function FightNightTee() {
   const [tee, setTee] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const fnCopy = usePageCopy("fight-night", {
     title: "",
     subtitle: "Upload your sponsors, pay securely, and we'll send a free artwork proof before we print a thing. Nothing goes to print until you're happy.",
@@ -38,7 +39,8 @@ export default function FightNightTee() {
 
   useEffect(() => {
     Promise.all([api.get("/products/boxing-fight-tee").then(r => r.data), fetchFightNightAddons(), fetchFightNightTiers()])
-      .then(([p, a, t]) => { setTee(p); setAddons(a); setTiers(t.tiers || []); setColor(p.colors[0]?.name || "Black"); });
+      .then(([p, a, t]) => { setTee(p); setAddons(a); setTiers(t.tiers || []); setColor(p.colors[0]?.name || "Black"); })
+      .catch(() => { toast.error("Couldn't load this page — please refresh"); setLoadError(true); });
   }, []);
 
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
@@ -183,7 +185,19 @@ export default function FightNightTee() {
     }
   };
 
-  if (!tee) return <div className="bg-white min-h-screen"><BoldNavbar /><div className="p-12 text-center">Loading…</div></div>;
+  if (!tee) return (
+    <div className="bg-white min-h-screen">
+      <BoldNavbar />
+      <div className="p-12 text-center">
+        {loadError ? (
+          <>
+            <p className="text-sm text-[#4b5563]">Something went wrong loading this page.</p>
+            <button onClick={() => window.location.reload()} className="mt-4 inline-flex bg-[#7bc67e] text-[#1a1a1a] font-extrabold px-5 py-2.5 rounded-full">Try again</button>
+          </>
+        ) : "Loading…"}
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">

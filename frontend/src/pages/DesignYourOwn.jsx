@@ -32,6 +32,7 @@ const USE_CASE_LABELS = {
 export default function DesignYourOwn() {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [loadError, setLoadError] = useState(false);
   const [productId, setProductId] = useState(searchParams.get("product") || "");
   const dyoCopy = usePageCopy("design-your-own", {
     title: "Design Your Own",
@@ -66,6 +67,9 @@ export default function DesignYourOwn() {
     fetchDesignerProducts().then((list) => {
       setProducts(list);
       if (!productId && list[0]) setProductId(list[0].id);
+    }).catch(() => {
+      toast.error("Couldn't load the designer — please refresh the page");
+      setLoadError(true);
     });
   }, []);
 
@@ -374,7 +378,14 @@ export default function DesignYourOwn() {
     return (
       <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
         <BoldNavbar />
-        <div className="p-12 text-center text-sm text-[#4b5563]">Loading designer…</div>
+        <div className="p-12 text-center text-sm text-[#4b5563]">
+          {loadError ? (
+            <>
+              <p>Something went wrong loading the designer.</p>
+              <button onClick={() => window.location.reload()} className="mt-4 inline-flex bg-[#7bc67e] text-[#1a1a1a] font-extrabold px-5 py-2.5 rounded-full">Try again</button>
+            </>
+          ) : "Loading designer…"}
+        </div>
       </div>
     );
   }
