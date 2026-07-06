@@ -611,3 +611,13 @@ export async function adminGetConfiguratorSettings() {
   const { data } = await api.get("/admin/configurator-settings");
   return data;
 }
+
+// ----- Orders & enquiries (admin) -----
+export async function adminListOrders(status = "all", limit = 200) {
+  const { data } = await api.get("/admin/orders", { params: { status, limit } });
+  return data;
+}
+export async function adminListEnquiries(limit = 200) {
+  const { data } = await api.get("/admin/enquiries", { params: { limit } });
+  return data;
+}
