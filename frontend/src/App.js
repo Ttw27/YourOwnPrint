@@ -42,6 +42,8 @@ import AdminPageCopy from "@/pages/AdminPageCopy";
 import AdminConfiguratorSettings from "@/pages/AdminConfiguratorSettings";
 import AdminNavigation from "@/pages/AdminNavigation";
 import AdminIntegrations from "@/pages/AdminIntegrations";
+import AdminOrders from "@/pages/AdminOrders";
+import AdminEnquiries from "@/pages/AdminEnquiries";
 import WhatsAppFAB from "@/components/bold/WhatsAppFAB";
 import ScrollToTop from "@/components/bold/ScrollToTop";
 import CartDrawer from "@/components/CartDrawer";
@@ -88,6 +90,8 @@ function App() {
           <Route path="/admin/configurator-settings" element={<RequireAdmin><AdminConfiguratorSettings /></RequireAdmin>} />
           <Route path="/admin/navigation" element={<RequireAdmin><AdminNavigation /></RequireAdmin>} />
           <Route path="/admin/integrations" element={<RequireAdmin><AdminIntegrations /></RequireAdmin>} />
+          <Route path="/admin/orders" element={<RequireAdmin><AdminOrders /></RequireAdmin>} />
+          <Route path="/admin/enquiries" element={<RequireAdmin><AdminEnquiries /></RequireAdmin>} />
           <Route path="/admin/leavers-templates" element={<RequireAdmin><AdminLeaversTemplates /></RequireAdmin>} />
           <Route path="/design" element={<DesignYourOwn />} />
           <Route path="/design-your-own" element={<DesignYourOwn />} />
