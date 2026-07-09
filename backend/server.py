@@ -4881,6 +4881,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    # Vercel gives every project several live URLs (the main domain, a
+    # `-git-<branch>-<team>.vercel.app` alias, and a unique URL per preview
+    # deployment). Rather than needing CORS_ORIGINS updated every time one of
+    # those is used, also allow anything under this Vercel team's namespace
+    # plus the production alias, via regex.
+    allow_origin_regex=r"^https://([a-zA-Z0-9-]+-)?ttw27s-projects\.vercel\.app$|^https://your-own-print\.vercel\.app$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
