@@ -1918,8 +1918,11 @@ async def get_product_bulk_tiers(product_id: str):
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
 @api_router.get("/admin/products", dependencies=[Depends(require_admin)])
-async def admin_list_all_products():
-    """Admin overview of all products with editable meta fields."""
+async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = ""):
+    """Admin overview of all products with editable meta fields.
+    Paginated (default 25/page) and searchable — this list can run into the
+    thousands once a supplier catalogue (e.g. PenCarrie) has been imported, so
+    it's never returned in one go."""
     out = []
     for p in PRODUCTS.values():
         out.append({
@@ -1941,7 +1944,13 @@ async def admin_list_all_products():
             "gender_fit": p.get("gender_fit") or "unisex",
             "industry_tags": p.get("industry_tags") or [],
         })
-    return out
+    if q:
+        q_lower = q.strip().lower()
+        out = [it for it in out if q_lower in f"{it['name']} {it['id']} {it['brand']} {it['sku']}".lower()]
+    total = len(out)
+    limit = min(limit, 200)
+    page = out[offset:offset + limit]
+    return {"items": page, "total": total, "offset": offset, "returned": len(page)}
 
 
 @api_router.get("/products/{product_id}/allowed-placements")
