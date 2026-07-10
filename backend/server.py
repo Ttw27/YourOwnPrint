@@ -4738,8 +4738,12 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
         raise HTTPException(400, "PenCarrie API token not set — add it in /admin/integrations first.")
     # Defensive: strip an accidentally-pasted "Bearer " prefix — some dashboards
     # display the token that way, and people copy it verbatim including the word.
-    if token.strip().lower().startswith("bearer "):
-        token = token.strip()[7:].strip()
+    # Defensive: strip all whitespace/newlines (a trailing newline from copy-paste
+    # is a very common invisible cause of auth failures) and any "Bearer " prefix
+    # some dashboards display the token with.
+    token = token.strip()
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
 
     import httpx
     import zipfile
@@ -4752,7 +4756,13 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
             resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
             resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        raise HTTPException(502, f"PenCarrie API returned {e.response.status_code} — double-check the API token in /admin/integrations.")
+        detail = (e.response.text or "").strip()[:300]
+        msg = f"PenCarrie API returned {e.response.status_code}"
+        if detail:
+            msg += f" — their response: {detail}"
+        else:
+            msg += " (no further detail from PenCarrie) — double-check the API token in /admin/integrations, and that API access is actually enabled on your PenCarrie account, not just that a token exists."
+        raise HTTPException(502, msg)
     except Exception as e:
         raise HTTPException(502, f"Couldn't reach PenCarrie's API: {e}")
 
