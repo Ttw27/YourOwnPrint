@@ -496,6 +496,10 @@ export async function fetchProductOverride(pid) {
   const { data } = await api.get(`/admin/products/${pid}/override`);
   return data;
 }
+export async function suggestCrossSell(pid, limit = 6) {
+  const { data } = await api.get(`/admin/products/${pid}/suggest-cross-sell`, { params: { limit } });
+  return data;
+}
 
 // ----- Page copy CMS -----
 export async function fetchPageCopy(slug) {
