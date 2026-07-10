@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, Navigate } from "react-router-dom";
 import { fetchAdminMe, getAdminToken, adminLogout } from "../lib/api";
+import { ChevronDown } from "lucide-react";
 
 export default function RequireAdmin({ children }) {
   const location = useLocation();
@@ -39,38 +40,90 @@ export default function RequireAdmin({ children }) {
   );
 }
 
+const ADMIN_NAV_GROUPS = [
+  {
+    label: "Catalog",
+    links: [
+      ["Products", "/admin/product-settings"],
+      ["Portfolio", "/admin/portfolio"],
+      ["Import", "/admin/products-import"],
+      ["Bundle variants", "/admin/bundle-variants"],
+      ["SEO copy", "/admin/collection-seo"],
+    ],
+  },
+  {
+    label: "Orders",
+    links: [
+      ["Orders", "/admin/orders"],
+      ["Enquiries", "/admin/enquiries"],
+      ["Q&A", "/admin/qa"],
+    ],
+  },
+  {
+    label: "Content",
+    links: [
+      ["Navigation", "/admin/navigation"],
+      ["Page copy", "/admin/page-copy"],
+      ["Configurator £", "/admin/configurator-settings"],
+    ],
+  },
+  {
+    label: "Setup",
+    links: [
+      ["Designer", "/admin/designer-products"],
+      ["Team kits", "/admin/team-kits"],
+      ["Leavers", "/admin/leavers-templates"],
+      ["Reviews import", "/admin/import-reviews"],
+      ["Integrations", "/admin/integrations"],
+    ],
+  },
+];
+
 function AdminTopBar({ email }) {
+  const [openKey, setOpenKey] = useState(null);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    function onDoc(e) {
+      if (!rootRef.current?.contains(e.target)) setOpenKey(null);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
   const onLogout = async () => {
     await adminLogout();
     window.location.href = "/admin/login";
   };
+
   return (
-    <div className="w-full bg-zinc-900 border-b border-zinc-800 text-zinc-100 px-4 py-2.5 flex items-center justify-between text-sm sticky top-0 z-50" data-testid="admin-topbar">
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-amber-400 font-bold tracking-wider text-xs uppercase mr-1">YOP Admin</span>
-
-        <a href="/admin/product-settings" className="hover:text-amber-300" data-testid="admin-nav-products">Products</a>
-        <a href="/admin/portfolio" className="hover:text-amber-300" data-testid="admin-nav-portfolio">Portfolio</a>
-        <a href="/admin/products-import" className="hover:text-amber-300" data-testid="admin-nav-products-import">Import</a>
-        <a href="/admin/bundle-variants" className="hover:text-amber-300" data-testid="admin-nav-bundle-variants">Bundle variants</a>
-        <a href="/admin/collection-seo" className="hover:text-amber-300" data-testid="admin-nav-collection-seo">SEO copy</a>
-
-        <span className="w-px h-4 bg-zinc-700" />
-        <a href="/admin/orders" className="hover:text-amber-300" data-testid="admin-nav-orders">Orders</a>
-        <a href="/admin/enquiries" className="hover:text-amber-300" data-testid="admin-nav-enquiries">Enquiries</a>
-        <a href="/admin/qa" className="hover:text-amber-300" data-testid="admin-nav-qa">Q&amp;A</a>
-
-        <span className="w-px h-4 bg-zinc-700" />
-        <a href="/admin/navigation" className="hover:text-amber-300" data-testid="admin-nav-navigation">Navigation</a>
-        <a href="/admin/page-copy" className="hover:text-amber-300" data-testid="admin-nav-page-copy">Page copy</a>
-        <a href="/admin/configurator-settings" className="hover:text-amber-300" data-testid="admin-nav-configurator-settings">Configurator £</a>
-
-        <span className="w-px h-4 bg-zinc-700" />
-        <a href="/admin/designer-products" className="hover:text-amber-300" data-testid="admin-nav-designer">Designer</a>
-        <a href="/admin/team-kits" className="hover:text-amber-300" data-testid="admin-nav-team-kits">Team kits</a>
-        <a href="/admin/leavers-templates" className="hover:text-amber-300" data-testid="admin-nav-leavers-templates">Leavers</a>
-        <a href="/admin/import-reviews" className="hover:text-amber-300" data-testid="admin-nav-import">Reviews import</a>
-        <a href="/admin/integrations" className="hover:text-amber-300" data-testid="admin-nav-integrations">Integrations</a>
+    <div ref={rootRef} className="w-full bg-zinc-900 border-b border-zinc-800 text-zinc-100 px-4 py-2.5 flex items-center justify-between text-sm sticky top-0 z-50" data-testid="admin-topbar">
+      <div className="flex items-center gap-1">
+        <span className="text-amber-400 font-bold tracking-wider text-xs uppercase mr-3">YOP Admin</span>
+        {ADMIN_NAV_GROUPS.map((group) => {
+          const isOpen = openKey === group.label;
+          return (
+            <div key={group.label} className="relative">
+              <button
+                type="button"
+                onClick={() => setOpenKey(isOpen ? null : group.label)}
+                className={`px-3 py-1.5 rounded-full inline-flex items-center gap-1 transition-colors ${isOpen ? "bg-zinc-800 text-amber-300" : "hover:text-amber-300"}`}
+                data-testid={`admin-nav-group-${group.label.toLowerCase()}`}
+              >
+                {group.label} <ChevronDown size={13} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isOpen && (
+                <div className="absolute left-0 top-full mt-2 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl py-2 min-w-[180px] z-50">
+                  {group.links.map(([label, href]) => (
+                    <a key={href} href={href} onClick={() => setOpenKey(null)} className="block px-4 py-2 text-sm hover:bg-zinc-800 hover:text-amber-300" data-testid={`admin-nav-link-${href.replace(/\W+/g, "-")}`}>
+                      {label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       <div className="flex items-center gap-3">
         <span className="text-zinc-500 hidden sm:inline" data-testid="admin-current-email">{email}</span>

@@ -1,26 +1,58 @@
 import React, { useEffect, useState } from "react";
 import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw } from "lucide-react";
+import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+
+const PAGE_SIZE = 25;
 
 export default function AdminProductSettings() {
   const [products, setProducts] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [filter, setFilter] = useState("");
+  const [debouncedFilter, setDebouncedFilter] = useState("");
+  const [allProductsLite, setAllProductsLite] = useState([]); // {id, name} across the WHOLE catalogue — for cross-sell pickers only, never rendered as one giant list
   const [defaults, setDefaults] = useState({ tiers: [] });
   const [workforce, setWorkforce] = useState({ tiers: [], quote_threshold: 100 });
-  const [filter, setFilter] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState(null);
 
-  const reload = async () => {
+  // Debounce the search box so we're not firing a request on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedFilter(filter), 350);
+    return () => clearTimeout(t);
+  }, [filter]);
+
+  const reload = async (opts = {}) => {
+    const targetPage = opts.page ?? page;
     setLoading(true);
     try {
-      const [ps, ds, wf] = await Promise.all([fetchAllProductsAdmin(), fetchBulkDefaults(), fetchWorkforceTiers().catch(() => null)]);
-      setProducts(ps); setDefaults(ds);
+      const [ps, ds, wf] = await Promise.all([
+        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter),
+        fetchBulkDefaults(),
+        fetchWorkforceTiers().catch(() => null),
+      ]);
+      setProducts(ps.items || []);
+      setTotal(ps.total || 0);
+      setDefaults(ds);
       if (wf) setWorkforce({ tiers: wf.tiers || [], quote_threshold: wf.quote_threshold || 100 });
     } finally { setLoading(false); }
   };
-  useEffect(() => { reload(); }, []);
+
+  // Fetch the whole catalogue's id+name once, for the cross-sell search pickers
+  // (id+name only is cheap even for thousands of products — it's rendering
+  // them all as buttons that was slow, so that no longer happens).
+  const loadAllLite = async () => {
+    try {
+      const d = await fetchAllProductsAdmin(0, 5000, "");
+      setAllProductsLite((d.items || []).map(p => ({ id: p.id, name: p.name })));
+    } catch { /* non-critical — pickers just show fewer suggestions */ }
+  };
+
+  useEffect(() => { loadAllLite(); }, []);
+  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { reload({ page }); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
 
@@ -85,8 +117,6 @@ export default function AdminProductSettings() {
     finally { setBusy(false); }
   };
 
-  const visible = products.filter(p => !filter.trim() || `${p.name} ${p.id} ${p.brand} ${p.sku}`.toLowerCase().includes(filter.toLowerCase()));
-
   return (
     <div className="bg-white min-h-screen font-nunito text-[#1a1a1a]">
       <div className="max-w-5xl mx-auto px-6 py-10">
@@ -135,11 +165,12 @@ export default function AdminProductSettings() {
           </div>
         </div>
 
-        <input data-testid="aps-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter products…" className="mt-6 bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-96" />
+        <input data-testid="aps-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search products by name, brand, or SKU…" className="mt-6 bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-96" />
+        {total > 0 && <div className="text-[11px] text-[#4b5563] mt-2">{total} product{total === 1 ? "" : "s"}{debouncedFilter ? " matching" : " total"} · showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}</div>}
 
         {loading ? <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div> : (
           <div className="space-y-3 mt-6" data-testid="aps-list">
-            {visible.map((p) => (
+            {products.map((p) => (
               <div key={p.id} data-testid={`aps-${p.id}`} className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4">
                 <button onClick={() => setOpenId(openId === p.id ? null : p.id)} className="w-full flex items-center gap-3 text-left">
                   <img src={p.image} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
@@ -264,56 +295,27 @@ export default function AdminProductSettings() {
                     <div>
                       <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">&quot;Customers also bought&quot; (cross-sells on this PDP)</div>
                       <div className="text-[11px] text-[#4b5563] mb-2">Pick up to 6 products to show on this PDP. Leave empty to auto-pick from the same category.</div>
-                      <div className="flex flex-wrap gap-1.5" data-testid={`aps-also-bought-${p.id}`}>
-                        {products.filter(q => q.id !== p.id).map((q) => {
-                          const list = Array.isArray(p.also_bought) ? p.also_bought : [];
-                          const on = list.includes(q.id);
-                          return (
-                            <button
-                              key={q.id}
-                              type="button"
-                              onClick={() => {
-                                let next;
-                                if (on) next = list.filter(x => x !== q.id);
-                                else if (list.length >= 6) { toast.error("Max 6 cross-sells per product"); return; }
-                                else next = [...list, q.id];
-                                update(p.id, { also_bought: next });
-                              }}
-                              className={`px-2.5 py-1 rounded-full text-[11px] font-nunito font-extrabold border transition ${on ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#e5e7eb] text-[#4b5563] hover:border-[#7bc67e]"}`}
-                              data-testid={`aps-also-bought-${p.id}-${q.id}`}
-                            >
-                              {on ? "✓ " : ""}{q.name}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <CrossSellPicker
+                        selectedIds={Array.isArray(p.also_bought) ? p.also_bought : []}
+                        allProducts={allProductsLite}
+                        excludeId={p.id}
+                        maxItems={6}
+                        onChange={(next) => update(p.id, { also_bought: next })}
+                        testid={`aps-also-bought-${p.id}`}
+                      />
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">&quot;Match with&quot; (complete-the-look complementary items)</div>
                       <div className="text-[11px] text-[#4b5563] mb-2">Pick up to 4 complementary products (e.g. matching joggers, beanie). Hidden on PDP if empty (no auto-fallback).</div>
-                      <div className="flex flex-wrap gap-1.5" data-testid={`aps-match-with-${p.id}`}>
-                        {products.filter(q => q.id !== p.id).map((q) => {
-                          const list = Array.isArray(p.match_with) ? p.match_with : [];
-                          const on = list.includes(q.id);
-                          return (
-                            <button
-                              key={q.id}
-                              type="button"
-                              onClick={() => {
-                                let next;
-                                if (on) next = list.filter(x => x !== q.id);
-                                else if (list.length >= 4) { toast.error("Max 4 match-with items per product"); return; }
-                                else next = [...list, q.id];
-                                update(p.id, { match_with: next });
-                              }}
-                              className={`px-2.5 py-1 rounded-full text-[11px] font-nunito font-extrabold border transition ${on ? "bg-amber-400 border-amber-400 text-[#1a1a1a]" : "bg-white border-[#e5e7eb] text-[#4b5563] hover:border-amber-400"}`}
-                              data-testid={`aps-match-with-${p.id}-${q.id}`}
-                            >
-                              {on ? "✓ " : ""}{q.name}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <CrossSellPicker
+                        selectedIds={Array.isArray(p.match_with) ? p.match_with : []}
+                        allProducts={allProductsLite}
+                        excludeId={p.id}
+                        maxItems={4}
+                        accent="amber"
+                        onChange={(next) => update(p.id, { match_with: next })}
+                        testid={`aps-match-with-${p.id}`}
+                      />
                     </div>
                     <div>
                       <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -347,6 +349,18 @@ export default function AdminProductSettings() {
             ))}
           </div>
         )}
+
+        {!loading && total > PAGE_SIZE && (
+          <div className="flex items-center justify-center gap-4 mt-6" data-testid="aps-pagination">
+            <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="aps-page-prev">
+              <ChevronLeft size={14} /> Prev
+            </button>
+            <span className="text-xs text-[#4b5563]">Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}</span>
+            <button onClick={() => setPage((p) => (p + 1) * PAGE_SIZE < total ? p + 1 : p)} disabled={(page + 1) * PAGE_SIZE >= total} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="aps-page-next">
+              Next <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -355,6 +369,71 @@ export default function AdminProductSettings() {
 const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7bc67e]";
 function Lab({ label, children }) { return <div><div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">{label}</div>{children}</div>; }
 
+
+/**
+ * Search-to-add product picker for cross-sell fields (also_bought, match_with).
+ * Renders only the CURRENTLY SELECTED items as chips, plus a search box that
+ * shows up to 8 matching suggestions at a time — never renders the whole
+ * catalogue as buttons, which is what made opening any product row slow once
+ * the catalogue grew into the hundreds/thousands (e.g. after a PenCarrie import).
+ */
+function CrossSellPicker({ selectedIds, allProducts, excludeId, maxItems, onChange, testid, accent = "green" }) {
+  const [query, setQuery] = useState("");
+  const accentClasses = accent === "amber"
+    ? "bg-amber-400 border-amber-400 text-[#1a1a1a]"
+    : "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]";
+
+  const selectedProducts = selectedIds
+    .map((id) => allProducts.find((p) => p.id === id))
+    .filter(Boolean);
+
+  const suggestions = query.trim()
+    ? allProducts
+        .filter((p) => p.id !== excludeId && !selectedIds.includes(p.id) && p.name.toLowerCase().includes(query.trim().toLowerCase()))
+        .slice(0, 8)
+    : [];
+
+  const add = (id) => {
+    if (selectedIds.length >= maxItems) { toast.error(`Max ${maxItems} per product`); return; }
+    onChange([...selectedIds, id]);
+    setQuery("");
+  };
+  const remove = (id) => onChange(selectedIds.filter((x) => x !== id));
+
+  return (
+    <div data-testid={testid}>
+      {selectedProducts.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selectedProducts.map((p) => (
+            <button key={p.id} type="button" onClick={() => remove(p.id)} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-nunito font-extrabold border ${accentClasses}`} data-testid={`${testid}-chip-${p.id}`}>
+              {p.name} <X size={11} />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={selectedIds.length >= maxItems ? `Max ${maxItems} reached` : "Search products to add…"}
+          disabled={selectedIds.length >= maxItems}
+          className="w-full sm:w-80 bg-white border border-[#e5e7eb] rounded-full pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-[#7bc67e] disabled:opacity-50"
+          data-testid={`${testid}-search`}
+        />
+        {suggestions.length > 0 && (
+          <div className="absolute z-10 mt-1 bg-white border border-[#dcfce7] rounded-2xl shadow-lg py-1 w-full sm:w-80 max-h-56 overflow-y-auto">
+            {suggestions.map((p) => (
+              <button key={p.id} type="button" onClick={() => add(p.id)} className="block w-full text-left px-4 py-2 text-xs hover:bg-[#f0fdf4]" data-testid={`${testid}-suggestion-${p.id}`}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ImageGalleryEditor({ productId, urls, onChange }) {
   const [draft, setDraft] = React.useState("");
