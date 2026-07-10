@@ -4786,12 +4786,24 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
     url = "https://www.pencarrie.com/api/public/v1/export/products.zip"
     try:
         async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-            resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+            resp = await client.get(
+                url,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/zip, application/octet-stream, */*",
+                    # Some WAFs / anti-bot layers block requests carrying an
+                    # obvious HTTP-library default User-Agent (e.g. "python-httpx/0.27").
+                    # A realistic browser UA is the standard, well-documented workaround.
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                },
+            )
             resp.raise_for_status()
     except httpx.HTTPStatusError as e:
         detail = (e.response.text or "").strip()[:300]
         msg = f"PenCarrie API returned {e.response.status_code}"
-        if detail:
+        if detail.lower().startswith(("<!doctype html", "<html")):
+            msg += " — this looks like a generic web-server/firewall block page, not an API error from PenCarrie's app (their real API errors would come back as JSON). Likely their anti-bot protection blocking the request rather than the token itself being wrong."
+        elif detail:
             msg += f" — their response: {detail}"
         else:
             msg += " (no further detail from PenCarrie) — double-check the API token in /admin/integrations, and that API access is actually enabled on your PenCarrie account, not just that a token exists."
