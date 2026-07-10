@@ -22,7 +22,7 @@ export default function Home() {
 
   const copy = usePageCopy("home", {
     title: "",
-    subtitle: "No minimums. No setup fees. Free logo design. UK based & friendly.",
+    subtitle: "Look every bit as professional as you feel — without the price tag to match. Proudly based in Leicester, printing and delivering workwear, teamwear and custom clothing to businesses and teams across the whole of the UK.",
   });
 
   return (
@@ -72,7 +72,7 @@ export default function Home() {
       {/* Trust bar */}
       <div className="bg-[#f0fdf4] border-y border-[#dcfce7]">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm font-nunito font-bold text-[#1a1a1a]">
-          {["No Minimum Orders", "No Setup Fees", "Free Logo Design", "UK Based"].map(t => (
+          {["Leicester, UK — Nationwide Delivery", "No Minimum Orders", "No Setup Fees", "Free Logo Design"].map(t => (
             <div key={t} className="flex items-center gap-2"><Check size={16} className="text-[#7bc67e]" />{t}</div>
           ))}
           <div className="flex items-center gap-2"><Star size={16} className="text-amber-500 fill-amber-500" />{RATING.value}★ from {RATING.count} reviews</div>

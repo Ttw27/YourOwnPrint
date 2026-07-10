@@ -157,7 +157,10 @@ export default function AdminProductsImport() {
     setSaving(true);
     try {
       const d = await bulkImportProducts({ ...defaults, items: filtered });
-      toast.success(`Imported ${d.created?.length || 0} products${d.skipped?.length ? `, ${d.skipped.length} skipped` : ""}.`);
+      const imgNote = d.images_mirrored_to_r2 || d.images_failed_to_mirror
+        ? ` ${d.images_mirrored_to_r2 || 0} image(s) saved to R2${d.images_failed_to_mirror ? `, ${d.images_failed_to_mirror} couldn't be fetched (kept original link)` : ""}.`
+        : "";
+      toast.success(`Imported ${d.created?.length || 0} products${d.skipped?.length ? `, ${d.skipped.length} skipped` : ""}.${imgNote}`);
       setRows([]);
       refresh();
     } catch (e) { toast.error(e?.response?.data?.detail || "Import failed"); }
