@@ -4145,6 +4145,8 @@ INTEGRATION_KEYS = {
                          "help": "e.g. +447xxxxxxxxx — appears site-wide and on Get-a-Quote."},
     "contact_email": {"label": "Contact / Reply-to Email", "kind": "text", "env": "CONTACT_EMAIL",
                        "help": "Where quote requests and bespoke leavers' enquiries are emailed."},
+    "pencarrie_api_token": {"label": "PenCarrie API Token", "kind": "secret", "env": "PENCARRIE_API_TOKEN",
+                             "help": "From PenCarrie: My Account > Account Settings > API Access Tokens. Used to pull the product catalogue automatically."},
 }
 
 
@@ -4690,6 +4692,57 @@ def _price_with_vat_and_charm(source_price: float, markup_pct: float, apply_vat:
             candidate = round(candidate + 1.0, 2)
         price = candidate
     return round(price, 2)
+
+
+@api_router.get("/admin/pencarrie/fetch-catalogue", dependencies=[Depends(require_admin)])
+async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500):
+    """Pulls PenCarrie's product export directly via their public API (no manual
+    CSV download needed) — see https://www.pencarrie.com/data/enhanced-data.
+    Requires a PenCarrie API token set in /admin/integrations (My Account >
+    Account Settings > API Access Tokens on PenCarrie's site).
+
+    Returns raw CSV rows (as-is, whatever column names PenCarrie uses) for the
+    frontend's existing flexible column-matching to normalise — same path as
+    a manually pasted CSV."""
+    token = await _get_integration_value("pencarrie_api_token")
+    if not token:
+        raise HTTPException(400, "PenCarrie API token not set — add it in /admin/integrations first.")
+
+    import httpx
+    import zipfile
+    import io
+    import csv as csv_module
+
+    url = "https://www.pencarrie.com/api/public/v1/export/products.zip"
+    try:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+            resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+            resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(502, f"PenCarrie API returned {e.response.status_code} — double-check the API token in /admin/integrations.")
+    except Exception as e:
+        raise HTTPException(502, f"Couldn't reach PenCarrie's API: {e}")
+
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(resp.content))
+        csv_filename = next((n for n in zf.namelist() if n.lower().endswith(".csv")), None)
+        if not csv_filename:
+            raise HTTPException(502, "PenCarrie's response didn't contain a CSV file — their export format may have changed.")
+        raw_bytes = zf.read(csv_filename)
+    except zipfile.BadZipFile:
+        raise HTTPException(502, "PenCarrie's response wasn't a valid ZIP file — their API format may have changed.")
+
+    text = raw_bytes.decode("utf-8-sig", errors="replace")
+    all_rows = list(csv_module.DictReader(io.StringIO(text)))
+    limit = min(limit, 2000)
+    page = all_rows[offset:offset + limit]
+    return {
+        "rows": page,
+        "columns": list(all_rows[0].keys()) if all_rows else [],
+        "total_available": len(all_rows),
+        "offset": offset,
+        "returned": len(page),
+    }
 
 
 @api_router.post("/admin/products/bulk-import", dependencies=[Depends(require_admin)])
