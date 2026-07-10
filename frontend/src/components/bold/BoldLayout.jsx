@@ -172,12 +172,12 @@ export function BoldNavbar() {
 export function BoldFooter() {
   return (
     <footer className="bg-[#1a1a1a] text-white">
-      <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-5 gap-8">
         <div>
           <div className="inline-flex items-center bg-white/90 rounded-xl p-2">
             <img src="/logo.png" alt="Your Own Print" className="h-9 w-auto" />
           </div>
-          <p className="mt-3 text-sm text-neutral-300">Bright, friendly UK print & workwear.</p>
+          <p className="mt-3 text-sm text-neutral-300">Custom print & workwear, based in Leicester — delivering across the whole of the UK.</p>
           <div className="flex gap-3 mt-4">
             <a href="#" className="w-9 h-9 grid place-items-center rounded-full bg-white/10 hover:bg-[#7bc67e] hover:text-black transition-colors"><Facebook size={16} /></a>
             <a href="#" className="w-9 h-9 grid place-items-center rounded-full bg-white/10 hover:bg-[#7bc67e] hover:text-black transition-colors"><Instagram size={16} /></a>
@@ -185,6 +185,7 @@ export function BoldFooter() {
         </div>
         <FooterCol title="Shop" links={[["Workwear", "/workwear"], ["Teams & Schools", "/teams-schools"], ["Design Your Own", "/design"]]} />
         <FooterCol title="Help" links={[["Get a Quote", "/contact"], ["Contact", "/contact"], ["Reviews", "/reviews"]]} />
+        <FooterCol title="Policies" links={[["Terms & Conditions", "/terms"], ["Privacy Policy", "/privacy"], ["Delivery & Returns", "/returns"]]} />
         <div>
           <div className="font-nunito font-bold text-sm text-neutral-400 mb-3">Payments</div>
           <div className="flex flex-wrap gap-2 text-xs">
