@@ -4664,6 +4664,32 @@ class BulkImportPayload(BaseModel):
     default_markup_pct: Optional[float] = 0.0
     default_gender_fit: Optional[str] = "unisex"
     dry_run: Optional[bool] = False
+    # Pricing: source_price from a supplier CSV (e.g. Pencarrie) is treated as
+    # ex-VAT trade cost, standard practice for UK wholesale suppliers. We apply
+    # your markup, then add VAT, then round up to a charm price — only when
+    # `price` isn't explicitly given in the row (an explicit price is always
+    # used as-is, untouched).
+    apply_vat: Optional[bool] = True
+    vat_rate_pct: Optional[float] = 20.0
+    charm_price_99: Optional[bool] = True
+
+
+def _price_with_vat_and_charm(source_price: float, markup_pct: float, apply_vat: bool, vat_rate_pct: float, charm: bool) -> float:
+    """source_price is treated as ex-VAT trade cost (standard for UK wholesale
+    suppliers). Applies markup, then VAT, then (optionally) rounds UP to the
+    nearest £X.99 — never down, so the charm-priced figure never undercuts
+    the margin you actually asked for."""
+    price = source_price * (1 + markup_pct / 100.0)
+    if apply_vat:
+        price = price * (1 + vat_rate_pct / 100.0)
+    if charm:
+        import math
+        pounds = math.floor(price)
+        candidate = round(pounds + 0.99, 2)
+        if candidate < price:
+            candidate = round(candidate + 1.0, 2)
+        price = candidate
+    return round(price, 2)
 
 
 @api_router.post("/admin/products/bulk-import", dependencies=[Depends(require_admin)])
@@ -4687,7 +4713,9 @@ async def bulk_import_products(payload: BulkImportPayload):
             if price is None and raw.get("source_price") is not None:
                 sp = float(raw["source_price"])
                 markup = float(raw.get("markup_pct", payload.default_markup_pct or 0))
-                price = round(sp * (1 + markup / 100.0), 2)
+                price = _price_with_vat_and_charm(
+                    sp, markup, payload.apply_vat, payload.vat_rate_pct, payload.charm_price_99
+                )
             price = float(price or 0)
             category = raw.get("category") or _auto_category(name, raw.get("description") or "")
 
