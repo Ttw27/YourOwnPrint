@@ -4695,11 +4695,16 @@ def _price_with_vat_and_charm(source_price: float, markup_pct: float, apply_vat:
 
 
 @api_router.get("/admin/pencarrie/fetch-catalogue", dependencies=[Depends(require_admin)])
-async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500):
+async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: str = "", q: str = ""):
     """Pulls PenCarrie's product export directly via their public API (no manual
     CSV download needed) — see https://www.pencarrie.com/data/enhanced-data.
     Requires a PenCarrie API token set in /admin/integrations (My Account >
     Account Settings > API Access Tokens on PenCarrie's site).
+
+    `brand` filters to an exact brand match (see `available_brands` in the
+    response for valid values). `q` is a free-text search across every column
+    (name, style code, description, etc.) — the natural way to filter by
+    style/garment type since PenCarrie doesn't expose a single "style" field.
 
     Returns raw CSV rows (as-is, whatever column names PenCarrie uses) for the
     frontend's existing flexible column-matching to normalise — same path as
@@ -4734,12 +4739,37 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500):
 
     text = raw_bytes.decode("utf-8-sig", errors="replace")
     all_rows = list(csv_module.DictReader(io.StringIO(text)))
+
+    # Auto-detect which column holds the brand — varies until we've seen a real export.
+    brand_col = None
+    if all_rows:
+        headers_lower = {h.lower(): h for h in all_rows[0].keys()}
+        for candidate in ("brand", "brand_name", "manufacturer", "make"):
+            if candidate in headers_lower:
+                brand_col = headers_lower[candidate]
+                break
+    available_brands = sorted({
+        r[brand_col].strip() for r in all_rows if brand_col and r.get(brand_col, "").strip()
+    }) if brand_col else []
+
+    filtered = all_rows
+    if brand:
+        if not brand_col:
+            raise HTTPException(400, "Couldn't find a brand column in PenCarrie's export to filter on.")
+        filtered = [r for r in filtered if r.get(brand_col, "").strip().lower() == brand.strip().lower()]
+    if q:
+        q_lower = q.strip().lower()
+        filtered = [r for r in filtered if any(q_lower in str(v).lower() for v in r.values())]
+
     limit = min(limit, 2000)
-    page = all_rows[offset:offset + limit]
+    page = filtered[offset:offset + limit]
     return {
         "rows": page,
         "columns": list(all_rows[0].keys()) if all_rows else [],
         "total_available": len(all_rows),
+        "total_matching": len(filtered),
+        "available_brands": available_brands[:500],
+        "brand_column_detected": brand_col,
         "offset": offset,
         "returned": len(page),
     }
