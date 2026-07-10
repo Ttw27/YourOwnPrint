@@ -30,6 +30,25 @@ from pydantic import BaseModel, EmailStr, Field
 
 from deps import api_router, db, JWT_SECRET, JWT_ALGORITHM
 from services.email import email_wrap, send_email, shop_notification_recipient
+from services.r2_storage import storage_put_async as _r2_put, get_public_url as _r2_public_url
+
+
+def _parse_thumbnail_data_url(data_url: str, max_bytes: int = 2_000_000):
+    """Minimal data-URL parser for design thumbnails (own copy — importing
+    server.py's version here would create a circular import)."""
+    import base64
+    if not data_url or not data_url.startswith("data:"):
+        return None, None
+    try:
+        header, b64 = data_url.split(",", 1)
+        content_type = header.split(";")[0].replace("data:", "") or "image/png"
+        raw = base64.b64decode(b64)
+        if len(raw) > max_bytes:
+            return None, None
+        ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}.get(content_type, "png")
+        return raw, (content_type, ext)
+    except Exception:
+        return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -488,10 +507,26 @@ async def customer_list_designs(customer: Dict = Depends(require_customer)):
 @api_router.post("/customer/designs")
 async def customer_save_design(payload: SavedDesignIn, customer: Dict = Depends(require_customer)):
     design_id = str(uuid.uuid4())
+    doc = payload.model_dump()
+
+    thumb = doc.get("thumbnail_data_url")
+    if thumb and thumb.startswith("data:"):
+        raw, meta = _parse_thumbnail_data_url(thumb)
+        if raw:
+            content_type, ext = meta
+            path = f"design-thumbnails/{design_id}.{ext}"
+            try:
+                await _r2_put(path, raw, content_type)
+                r2_url = _r2_public_url(path)
+                if r2_url:
+                    doc["thumbnail_data_url"] = r2_url  # same field name — frontend renders it identically either way
+            except Exception:
+                pass  # fall back to the original data URL rather than lose the thumbnail entirely
+
     await db.customer_designs.insert_one({
         "id": design_id,
         "customer_id": customer["id"],
-        **payload.model_dump(),
+        **doc,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
     return {"ok": True, "id": design_id}
