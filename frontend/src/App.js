@@ -4,6 +4,9 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Home from "@/pages/Home";
 import FestivalTeesAndBrands from "@/pages/FestivalTeesAndBrands";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
+import Returns from "@/pages/Returns";
 import Workwear from "@/pages/Workwear";
 import TeamsSchools from "@/pages/TeamsSchools";
 import DesignYourOwn from "@/pages/DesignYourOwn";
@@ -63,6 +66,9 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/festival-tees-and-brands" element={<FestivalTeesAndBrands />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/returns" element={<Returns />} />
           <Route path="/workwear" element={<Workwear />} />
           <Route path="/workforce" element={<KitYourWorkforce />} />
           <Route path="/kit-your-workforce" element={<KitYourWorkforce />} />
