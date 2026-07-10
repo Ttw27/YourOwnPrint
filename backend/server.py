@@ -688,10 +688,14 @@ async def root():
 
 
 @api_router.get("/products")
-async def list_products(category: Optional[str] = None):
-    if category:
-        return [p for p in PRODUCTS.values() if p["category"] == category]
-    return list(PRODUCTS.values())
+async def list_products(category: Optional[str] = None, gender_fit: Optional[str] = None, limit: int = 500, offset: int = 0):
+    items = [p for p in PRODUCTS.values() if not category or p["category"] == category]
+    if gender_fit and gender_fit != "all":
+        items = [p for p in items if (p.get("gender_fit") or "unisex") == gender_fit]
+    total = len(items)
+    limit = min(limit, 1000)
+    page = items[offset:offset + limit]
+    return {"items": page, "total": total, "offset": offset, "returned": len(page)}
 
 
 @api_router.get("/products/{product_id}")
@@ -1733,8 +1737,8 @@ async def list_use_cases():
 
 
 @api_router.get("/admin/designer-products", dependencies=[Depends(require_admin)])
-async def admin_list_designer_products():
-    """Admin view — ALL products with their current designer settings."""
+async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str = ""):
+    """Admin view — ALL products with their current designer settings, paginated."""
     out = []
     for p in PRODUCTS.values():
         out.append({
@@ -1749,7 +1753,13 @@ async def admin_list_designer_products():
             "description_long": p.get("description_long") or "",
             "use_cases": p.get("use_cases") or [],
         })
-    return out
+    if q:
+        q_lower = q.strip().lower()
+        out = [it for it in out if q_lower in f"{it['name']} {it['id']}".lower()]
+    total = len(out)
+    limit = min(limit, 200)
+    page = out[offset:offset + limit]
+    return {"items": page, "total": total, "offset": offset, "returned": len(page)}
 
 
 @api_router.patch("/admin/designer-products/{product_id}", dependencies=[Depends(require_admin)])
@@ -4657,15 +4667,20 @@ def _slugify_source_sku(name: str, sku: str = "") -> str:
 
 
 @api_router.get("/admin/products/imported", dependencies=[Depends(require_admin)])
-async def list_imported_products():
+async def list_imported_products(offset: int = 0, limit: int = 25, q: str = ""):
+    query = {}
+    if q:
+        query = {"name": {"$regex": q.strip(), "$options": "i"}}
+    total = await db.imported_products.count_documents(query)
     out = []
-    async for d in db.imported_products.find().sort("imported_at", -1):
+    cursor = db.imported_products.find(query).sort("imported_at", -1).skip(offset).limit(min(limit, 200))
+    async for d in cursor:
         out.append({k: d.get(k) for k in [
             "id", "name", "price", "category", "image", "description",
             "gender_fit", "industry_tags", "colors", "sizes", "size_upcharges",
             "source", "source_sku", "brand", "active", "imported_at",
         ]})
-    return {"items": out, "total": len(out)}
+    return {"items": out, "total": total, "offset": offset, "returned": len(out)}
 
 
 class BulkImportPayload(BaseModel):
