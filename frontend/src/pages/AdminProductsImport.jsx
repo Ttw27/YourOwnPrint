@@ -108,6 +108,9 @@ export default function AdminProductsImport() {
     default_brand: "",
     default_gender_fit: "unisex",
     default_markup_pct: 40,
+    apply_vat: true,
+    vat_rate_pct: 20,
+    charm_price_99: true,
   });
 
   async function refresh() {
@@ -209,11 +212,19 @@ export default function AdminProductsImport() {
               </select>
             </label>
             <label className="block">
-              <div className="text-[10px] font-extrabold mb-1">Markup % (on trade cost)</div>
+              <div className="text-[10px] font-extrabold mb-1">Markup % (on ex-VAT trade cost)</div>
               <input type="number" step="1" value={defaults.default_markup_pct} onChange={(e) => setDefaults({ ...defaults, default_markup_pct: parseFloat(e.target.value) || 0 })} className="input" data-testid="apx-default-markup" />
             </label>
+            <label className="flex items-center gap-2 mt-5">
+              <input type="checkbox" checked={defaults.apply_vat} onChange={(e) => setDefaults({ ...defaults, apply_vat: e.target.checked })} data-testid="apx-apply-vat" />
+              <span className="text-[10px] font-extrabold">Add VAT ({defaults.vat_rate_pct}%)</span>
+            </label>
+            <label className="flex items-center gap-2 mt-5">
+              <input type="checkbox" checked={defaults.charm_price_99} onChange={(e) => setDefaults({ ...defaults, charm_price_99: e.target.checked })} data-testid="apx-charm-price" />
+              <span className="text-[10px] font-extrabold">Round up to nearest £X.99</span>
+            </label>
           </div>
-          <p className="text-[11px] text-[#4b5563] mt-2 inline-flex items-start gap-1.5"><Info size={11} className="mt-0.5 text-[#7bc67e]" />If a row has an explicit <code>price</code>, that&apos;s used as-is. If only <code>source_price</code> is set, the retail price = source_price × (1 + markup%).</p>
+          <p className="text-[11px] text-[#4b5563] mt-2 inline-flex items-start gap-1.5"><Info size={11} className="mt-0.5 text-[#7bc67e]" />If a row has an explicit <code>price</code>, that&apos;s used as-is, untouched. Otherwise: retail price = (source_price × (1 + markup%)) {defaults.apply_vat ? `× (1 + ${defaults.vat_rate_pct}% VAT)` : ""} {defaults.charm_price_99 ? ", rounded up to the nearest £X.99" : ""}. e.g. an £8.00 trade cost at 40% markup{defaults.apply_vat ? " + VAT" : ""}{defaults.charm_price_99 ? ", charm-priced" : ""} → about £{(() => { let p = 8 * 1.4; if (defaults.apply_vat) p *= (1 + defaults.vat_rate_pct / 100); if (defaults.charm_price_99) { const pounds = Math.floor(p); p = pounds + 0.99; } return p.toFixed(2); })()}.</p>
         </div>
 
         {/* Input methods */}
