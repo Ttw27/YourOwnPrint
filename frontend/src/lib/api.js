@@ -36,9 +36,9 @@ export async function fetchAdminMe() {
   return data;
 }
 
-export async function fetchProducts(category) {
-  const { data } = await api.get("/products", { params: category ? { category } : {} });
-  return data;
+export async function fetchProducts(category, limit = 500, offset = 0, genderFit) {
+  const { data } = await api.get("/products", { params: { ...(category ? { category } : {}), ...(genderFit ? { gender_fit: genderFit } : {}), limit, offset } });
+  return data; // {items, total, offset, returned}
 }
 
 export async function submitContact(payload) {
@@ -184,8 +184,8 @@ export async function fetchDesignerProducts() {
   const { data } = await api.get("/designer/products");
   return data;
 }
-export async function fetchAdminDesignerProducts() {
-  const { data } = await api.get("/admin/designer-products");
+export async function fetchAdminDesignerProducts(offset = 0, limit = 25, q = "") {
+  const { data } = await api.get("/admin/designer-products", { params: { offset, limit, q } });
   return data;
 }
 export async function updateDesignerSettings(product_id, payload) {
@@ -466,8 +466,8 @@ export async function adminUpdateSockSizes(values) {
 }
 
 // ----- Product bulk import (PenCarrie / manual one-off) -----
-export async function fetchImportedProducts() {
-  const { data } = await api.get("/admin/products/imported");
+export async function fetchImportedProducts(offset = 0, limit = 25, q = "") {
+  const { data } = await api.get("/admin/products/imported", { params: { offset, limit, q } });
   return data;
 }
 export async function bulkImportProducts(payload) {
