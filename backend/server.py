@@ -3350,7 +3350,7 @@ async def admin_list_all_qa():
 # Object Storage (Emergent R2-style) — for Portfolio + future asset uploads
 # ============================================================================
 import base64 as _base64
-from services.r2_storage import storage_put as _storage_put, storage_get as _storage_get
+from services.r2_storage import storage_put as _storage_put, storage_get as _storage_get, mirror_external_image as _mirror_external_image
 
 _OBJ_APP_NAME = "yourownprint"
 
@@ -3561,7 +3561,7 @@ class ArtworkUploadPayload(BaseModel):
 @api_router.post("/uploads/artwork")
 async def upload_artwork(payload: ArtworkUploadPayload):
     """Public endpoint used by the configurators to attach print files to quote requests.
-    Stores the file in Emergent Object Storage and returns a public URL served via
+    Stores the file in R2 and returns a public URL served via
     /api/uploads/artwork/{filename} (auth-free since these are quote attachments)."""
     raw, content_type, ext = _parse_data_url(payload.image_data_url, max_bytes=10_000_000)
     item_id = str(uuid.uuid4())
@@ -4673,6 +4673,8 @@ async def bulk_import_products(payload: BulkImportPayload):
     now = datetime.now(timezone.utc).isoformat()
     created: List[Dict] = []
     skipped: List[Dict] = []
+    images_mirrored = 0
+    images_failed = 0
     for raw in payload.items:
         try:
             name = str(raw.get("name") or "").strip()
@@ -4688,13 +4690,37 @@ async def bulk_import_products(payload: BulkImportPayload):
                 price = round(sp * (1 + markup / 100.0), 2)
             price = float(price or 0)
             category = raw.get("category") or _auto_category(name, raw.get("description") or "")
+
+            image_url = str(raw.get("image") or "").strip()
+            additional_urls = [str(u).strip() for u in (raw.get("additional_images") or []) if str(u).strip()]
+            if not payload.dry_run:
+                # Mirror the supplier's images into our own R2 bucket so the product
+                # page never depends on the supplier's site staying up/unchanged.
+                if image_url:
+                    mirrored = await _mirror_external_image(image_url)
+                    if mirrored:
+                        image_url = mirrored
+                        images_mirrored += 1
+                    else:
+                        images_failed += 1  # falls back to the original (hotlinked) URL below
+                mirrored_additional = []
+                for u in additional_urls:
+                    m = await _mirror_external_image(u)
+                    if m:
+                        mirrored_additional.append(m)
+                        images_mirrored += 1
+                    else:
+                        mirrored_additional.append(u)
+                        images_failed += 1
+                additional_urls = mirrored_additional
+
             doc = {
                 "id": pid,
                 "name": name,
                 "price": price,
                 "category": category,
-                "image": str(raw.get("image") or "").strip(),
-                "additional_images": [str(u).strip() for u in (raw.get("additional_images") or []) if str(u).strip()],
+                "image": image_url,
+                "additional_images": additional_urls,
                 "description": str(raw.get("description") or "").strip()[:4000],
                 "gender_fit": (raw.get("gender_fit") or payload.default_gender_fit or "unisex"),
                 "industry_tags": raw.get("industry_tags") or [],
@@ -4717,7 +4743,14 @@ async def bulk_import_products(payload: BulkImportPayload):
             created.append({"id": pid, "name": name, "category": category, "price": price})
         except Exception as e:
             skipped.append({"reason": str(e)[:200], "row": raw})
-    return {"ok": True, "created": created, "skipped": skipped, "dry_run": payload.dry_run}
+    return {
+        "ok": True,
+        "created": created,
+        "skipped": skipped,
+        "dry_run": payload.dry_run,
+        "images_mirrored_to_r2": images_mirrored,
+        "images_failed_to_mirror": images_failed,
+    }
 
 
 class ImportedProductPatch(BaseModel):
@@ -4886,7 +4919,7 @@ app.add_middleware(
     # deployment). Rather than needing CORS_ORIGINS updated every time one of
     # those is used, also allow anything under this Vercel team's namespace
     # plus the production alias, via regex.
-    allow_origin_regex=r"^https://([a-zA-Z0-9-]+-)?ttw27s-projects\.vercel\.app$|^https://your-own-print\.vercel\.app$",
+    allow_origin_regex=r"^https://([a-zA-Z0-9-]+-)?ttw27s-projects\.vercel\.app$|^https://your-own-print\.vercel\.app$|^https://(www\.)?yourownprint\.co\.uk$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
