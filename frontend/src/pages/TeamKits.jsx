@@ -4,7 +4,9 @@ import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayou
 import { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import PricePromise from "../components/bold/PricePromise";
 import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
-import { ArrowRight, Trophy, Users, MessageCircle, Sparkles, BadgeCheck } from "lucide-react";
+import { ArrowRight, Trophy, Users, MessageCircle, Sparkles, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 25;
 
 const FEATURES = [
   { icon: BadgeCheck, label: "Club badge included" },
@@ -15,14 +17,17 @@ const FEATURES = [
 
 export default function TeamKits() {
   const [products, setProducts] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [aggs, setAggs] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetchProducts("team-kits"), fetchReviewsAggregate()])
-      .then(([p, a]) => { setProducts(p); setAggs(a); })
+    setLoading(true);
+    Promise.all([fetchProducts("team-kits", PAGE_SIZE, page * PAGE_SIZE), fetchReviewsAggregate()])
+      .then(([p, a]) => { setProducts(p.items || []); setTotal(p.total || 0); setAggs(a); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
@@ -80,33 +85,46 @@ export default function TeamKits() {
         {loading ? (
           <div className="text-center text-[#4b5563] py-16">Loading bundles…</div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10" data-testid="team-kit-gallery">
-            {products.map((p, i) => {
-              const agg = aggs[p.id];
-              return (
-                <Link key={p.id} to={`/product/${p.id}`} data-testid={`team-kit-card-${p.id}`} className="group relative bg-white rounded-3xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-xl transition-all overflow-hidden flex flex-col">
-                  <div className="aspect-[5/4] overflow-hidden bg-[#f0fdf4] relative">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                    <span className="absolute top-3 left-3 bg-[#7bc67e] text-[#1a1a1a] text-[10px] font-nunito font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full">Kit Bundle</span>
-                  </div>
-                  <div className="p-5 flex-1 flex flex-col">
-                    <h3 className="font-nunito font-extrabold text-xl">{p.name}</h3>
-                    <p className="text-sm text-[#4b5563] mt-1 flex-1">{p.description}</p>
-                    <div className="mt-4 flex items-baseline justify-between">
-                      <div>
-                        <div className="text-xs font-nunito font-bold text-[#4b5563]">from</div>
-                        <div className="text-[#7bc67e] font-nunito font-black text-3xl leading-tight">£{p.price.toFixed(2)}<span className="text-sm font-bold text-[#4b5563]"> /player</span></div>
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10" data-testid="team-kit-gallery">
+              {products.map((p, i) => {
+                const agg = aggs[p.id];
+                return (
+                  <Link key={p.id} to={`/product/${p.id}`} data-testid={`team-kit-card-${p.id}`} className="group relative bg-white rounded-3xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-xl transition-all overflow-hidden flex flex-col">
+                    <div className="aspect-[5/4] overflow-hidden bg-[#f0fdf4] relative">
+                      <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <span className="absolute top-3 left-3 bg-[#7bc67e] text-[#1a1a1a] text-[10px] font-nunito font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full">Kit Bundle</span>
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col">
+                      <h3 className="font-nunito font-extrabold text-xl">{p.name}</h3>
+                      <p className="text-sm text-[#4b5563] mt-1 flex-1">{p.description}</p>
+                      <div className="mt-4 flex items-baseline justify-between">
+                        <div>
+                          <div className="text-xs font-nunito font-bold text-[#4b5563]">from</div>
+                          <div className="text-[#7bc67e] font-nunito font-black text-3xl leading-tight">£{p.price.toFixed(2)}<span className="text-sm font-bold text-[#4b5563]"> /player</span></div>
+                        </div>
+                        {agg && <StarRating value={agg.average} size={12} />}
                       </div>
-                      {agg && <StarRating value={agg.average} size={12} />}
+                      <div className="mt-3 inline-flex items-center gap-1 text-sm font-nunito font-extrabold text-[#1a1a1a] group-hover:text-[#7bc67e] transition-colors">
+                        Configure your team <ArrowRight size={14} />
+                      </div>
                     </div>
-                    <div className="mt-3 inline-flex items-center gap-1 text-sm font-nunito font-extrabold text-[#1a1a1a] group-hover:text-[#7bc67e] transition-colors">
-                      Configure your team <ArrowRight size={14} />
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+            {total > PAGE_SIZE && (
+              <div className="flex items-center justify-center gap-4 mt-10" data-testid="team-kits-pagination">
+                <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="team-kits-page-prev">
+                  <ChevronLeft size={14} /> Prev
+                </button>
+                <span className="text-xs text-[#4b5563]">Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}</span>
+                <button onClick={() => setPage((p) => (p + 1) * PAGE_SIZE < total ? p + 1 : p)} disabled={(page + 1) * PAGE_SIZE >= total} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="team-kits-page-next">
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

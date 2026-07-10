@@ -4,7 +4,9 @@ import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayou
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
-import { Trophy, Users, Zap, ArrowRight, Sparkles } from "lucide-react";
+import { Trophy, Users, Zap, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 25;
 
 const SPORT_GROUPS = [
   { key: "football", label: "Football", icon: Trophy, accent: "bg-[#7bc67e]", desc: "Match jerseys, shorts, training kits", products: ["football-jersey", "football-shorts", "training-tracksuit", "training-tee"] },
@@ -16,17 +18,30 @@ const SPORT_GROUPS = [
 ];
 
 export default function Sports() {
-  const [products, setProducts] = useState([]);
+  // Curated lookups (sport-group tiles above) need specific named products regardless
+  // of pagination, so they're kept on a separate, un-paginated-but-capped fetch.
+  const [productsById, setProductsById] = useState({});
+  // The "All sports products" grid below is properly paginated (25/page).
+  const [gridProducts, setGridProducts] = useState([]);
+  const [gridTotal, setGridTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [aggs, setAggs] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetchProducts("sports"), fetchReviewsAggregate()])
-      .then(([p, a]) => { setProducts(p); setAggs(a); })
-      .finally(() => setLoading(false));
+    fetchProducts("sports", 500).then((d) => {
+      setProductsById(Object.fromEntries((d.items || []).map(p => [p.id, p])));
+    });
+    fetchReviewsAggregate().then(setAggs);
   }, []);
 
-  const productsById = Object.fromEntries(products.map(p => [p.id, p]));
+  useEffect(() => {
+    setLoading(true);
+    fetchProducts("sports", PAGE_SIZE, page * PAGE_SIZE)
+      .then((d) => { setGridProducts(d.items || []); setGridTotal(d.total || 0); })
+      .finally(() => setLoading(false));
+  }, [page]);
+
   const copy = usePageCopy("sports", {
     title: "Kit out your crew.",
     subtitle: "Match-day jerseys, fight-night sponsor tees, training tracksuits — names, numbers, sponsors, badges. Big team or solo athlete, we've got you.",
@@ -103,26 +118,39 @@ export default function Sports() {
         {loading ? (
           <div className="text-[#4b5563]">Loading…</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {products.map((p, i) => {
-              const agg = aggs[p.id];
-              return (
-                <Link key={p.id} to={`/product/${p.id}`} data-testid={`sports-product-${i}`} className="group bg-white rounded-2xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md transition-all overflow-hidden">
-                  <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                  <div className="p-4">
-                    <div className="font-nunito font-bold">{p.name}</div>
-                    <div className="text-xs text-[#4b5563] mt-1 line-clamp-2">{p.description}</div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-[#7bc67e] font-nunito font-extrabold text-xl">£{p.price.toFixed(2)}</span>
-                      {agg && <StarRating value={agg.average} size={12} />}
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {gridProducts.map((p, i) => {
+                const agg = aggs[p.id];
+                return (
+                  <Link key={p.id} to={`/product/${p.id}`} data-testid={`sports-product-${i}`} className="group bg-white rounded-2xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md transition-all overflow-hidden">
+                    <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
+                      <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                    <div className="p-4">
+                      <div className="font-nunito font-bold">{p.name}</div>
+                      <div className="text-xs text-[#4b5563] mt-1 line-clamp-2">{p.description}</div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-[#7bc67e] font-nunito font-extrabold text-xl">£{p.price.toFixed(2)}</span>
+                        {agg && <StarRating value={agg.average} size={12} />}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            {gridTotal > PAGE_SIZE && (
+              <div className="flex items-center justify-center gap-4 mt-10" data-testid="sports-pagination">
+                <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="sports-page-prev">
+                  <ChevronLeft size={14} /> Prev
+                </button>
+                <span className="text-xs text-[#4b5563]">Page {page + 1} of {Math.ceil(gridTotal / PAGE_SIZE)}</span>
+                <button onClick={() => setPage((p) => (p + 1) * PAGE_SIZE < gridTotal ? p + 1 : p)} disabled={(page + 1) * PAGE_SIZE >= gridTotal} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="sports-page-next">
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

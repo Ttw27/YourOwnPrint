@@ -5,7 +5,7 @@ import {
   pencarrieFetchCatalogue,
 } from "../lib/api";
 import {
-  Upload, Plus, Trash2, Save, Loader2, Download, FileText, X, Info, ExternalLink,
+  Upload, Plus, Trash2, Save, Loader2, Download, FileText, X, Info, ExternalLink, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 /**
@@ -102,6 +102,10 @@ export default function AdminProductsImport() {
   const [rows, setRows] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [imported, setImported] = useState([]);
+  const [importedTotal, setImportedTotal] = useState(0);
+  const [importedPage, setImportedPage] = useState(0);
+  const [importedSearch, setImportedSearch] = useState("");
+  const IMPORTED_PAGE_SIZE = 25;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [jsonText, setJsonText] = useState("");
@@ -115,13 +119,18 @@ export default function AdminProductsImport() {
     charm_price_99: true,
   });
 
-  async function refresh() {
+  async function refresh(page = importedPage) {
     setLoading(true);
-    try { const d = await fetchImportedProducts(); setImported(d.items || []); }
+    try {
+      const d = await fetchImportedProducts(page * IMPORTED_PAGE_SIZE, IMPORTED_PAGE_SIZE, importedSearch);
+      setImported(d.items || []);
+      setImportedTotal(d.total || 0);
+    }
     catch { toast.error("Failed to load imported products"); }
     finally { setLoading(false); }
   }
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { setImportedPage(0); refresh(0); }, [importedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { refresh(importedPage); }, [importedPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function pushRows(list) {
     const normalised = list.map(normaliseRow).filter((r) => r.name);
@@ -433,34 +442,48 @@ export default function AdminProductsImport() {
 
         {/* Existing imports */}
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4" data-testid="apx-existing">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-xs uppercase tracking-wider text-[#7bc67e] font-extrabold">Already imported · {imported.length}</div>
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="text-xs uppercase tracking-wider text-[#7bc67e] font-extrabold">Already imported · {importedTotal}</div>
             {loading && <Loader2 className="animate-spin text-[#7bc67e]" size={14} />}
           </div>
+          <input value={importedSearch} onChange={(e) => setImportedSearch(e.target.value)} placeholder="Search imported products…" className="input mb-3" data-testid="apx-existing-search" />
           {imported.length === 0 ? (
-            <div className="text-xs text-[#4b5563] italic py-4">Nothing imported yet. Upload a CSV or paste JSON above to get started.</div>
+            <div className="text-xs text-[#4b5563] italic py-4">{importedSearch ? "No matches." : "Nothing imported yet. Upload a CSV or paste JSON above to get started."}</div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {imported.map((p) => (
-                <div key={p.id} className="border-2 border-[#dcfce7] rounded-2xl p-3 flex gap-3" data-testid={`apx-existing-${p.id}`}>
-                  {p.image
-                    ? <img src={p.image} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
-                    : <div className="w-14 h-14 rounded-lg bg-[#f0fdf4] grid place-items-center flex-shrink-0 text-[9px] text-[#7bc67e]">no img</div>}
-                  <div className="flex-1 min-w-0 text-xs">
-                    <div className="font-extrabold truncate">{p.name}</div>
-                    <div className="text-[10px] text-[#4b5563] capitalize">{p.category} · {p.gender_fit} · £{Number(p.price).toFixed(2)}</div>
-                    {p.brand && <div className="text-[10px] text-[#166534] mt-0.5">{p.brand} {p.source_sku ? `· ${p.source_sku}` : ""}</div>}
-                    <div className="mt-1 flex gap-2 items-center">
-                      <button onClick={() => toggleActive(p)} className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${p.active ? "bg-[#f0fdf4] text-[#166534]" : "bg-[#fee2e2] text-[#7f1d1d]"}`}>
-                        {p.active ? "Live" : "Hidden"}
-                      </button>
-                      <a href={`/product/${p.id}`} target="_blank" rel="noreferrer" className="text-[10px] font-extrabold text-[#166534] hover:underline inline-flex items-center gap-0.5"><ExternalLink size={10} /> View</a>
-                      <button onClick={() => removeImported(p.id)} className="ml-auto text-rose-500 hover:bg-rose-50 rounded-full p-1" data-testid={`apx-delete-${p.id}`}><Trash2 size={11} /></button>
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {imported.map((p) => (
+                  <div key={p.id} className="border-2 border-[#dcfce7] rounded-2xl p-3 flex gap-3" data-testid={`apx-existing-${p.id}`}>
+                    {p.image
+                      ? <img src={p.image} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+                      : <div className="w-14 h-14 rounded-lg bg-[#f0fdf4] grid place-items-center flex-shrink-0 text-[9px] text-[#7bc67e]">no img</div>}
+                    <div className="flex-1 min-w-0 text-xs">
+                      <div className="font-extrabold truncate">{p.name}</div>
+                      <div className="text-[10px] text-[#4b5563] capitalize">{p.category} · {p.gender_fit} · £{Number(p.price).toFixed(2)}</div>
+                      {p.brand && <div className="text-[10px] text-[#166534] mt-0.5">{p.brand} {p.source_sku ? `· ${p.source_sku}` : ""}</div>}
+                      <div className="mt-1 flex gap-2 items-center">
+                        <button onClick={() => toggleActive(p)} className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${p.active ? "bg-[#f0fdf4] text-[#166534]" : "bg-[#fee2e2] text-[#7f1d1d]"}`}>
+                          {p.active ? "Live" : "Hidden"}
+                        </button>
+                        <a href={`/product/${p.id}`} target="_blank" rel="noreferrer" className="text-[10px] font-extrabold text-[#166534] hover:underline inline-flex items-center gap-0.5"><ExternalLink size={10} /> View</a>
+                        <button onClick={() => removeImported(p.id)} className="ml-auto text-rose-500 hover:bg-rose-50 rounded-full p-1" data-testid={`apx-delete-${p.id}`}><Trash2 size={11} /></button>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+              {importedTotal > IMPORTED_PAGE_SIZE && (
+                <div className="flex items-center justify-center gap-4 mt-4" data-testid="apx-existing-pagination">
+                  <button onClick={() => setImportedPage((p) => Math.max(0, p - 1))} disabled={importedPage === 0} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline">
+                    <ChevronLeft size={14} /> Prev
+                  </button>
+                  <span className="text-xs text-[#4b5563]">Page {importedPage + 1} of {Math.ceil(importedTotal / IMPORTED_PAGE_SIZE)}</span>
+                  <button onClick={() => setImportedPage((p) => (p + 1) * IMPORTED_PAGE_SIZE < importedTotal ? p + 1 : p)} disabled={(importedPage + 1) * IMPORTED_PAGE_SIZE >= importedTotal} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline">
+                    Next <ChevronRight size={14} />
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>

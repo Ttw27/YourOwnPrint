@@ -11,10 +11,11 @@ export default function AdminTeamKits() {
   const [busy, setBusy] = useState(false);
 
   const reload = async () => {
-    const [ps, bs] = await Promise.all([fetchProducts("team-kits"), fetchTeamKitBrands()]);
-    setProducts(ps);
+    const [ps, bs] = await Promise.all([fetchProducts("team-kits", 500), fetchTeamKitBrands()]);
+    const items = ps.items || [];
+    setProducts(items);
     setBrands(bs);
-    if (ps.length && !form.product_id) setForm(f => ({ ...f, product_id: ps[0].id }));
+    if (items.length && !form.product_id) setForm(f => ({ ...f, product_id: items[0].id }));
   };
   useEffect(() => { reload(); }, []);
 

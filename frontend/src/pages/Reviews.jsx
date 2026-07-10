@@ -11,9 +11,9 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetchProducts(), fetchReviewsAggregate(), fetchRecentReviews(24)])
+    Promise.all([fetchProducts(undefined, 200), fetchReviewsAggregate(), fetchRecentReviews(24)])
       .then(([prods, aggs, rec]) => {
-        setProducts(prods);
+        setProducts(prods.items || []);
         setAggregates(aggs);
         setRecent(rec);
       })
@@ -53,7 +53,7 @@ export default function ReviewsPage() {
               return (
                 <Link key={p.id} to={`/product/${p.id}`} data-testid={`reviews-product-${p.id}`} className="bg-white rounded-2xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md transition-all overflow-hidden">
                   <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
                   <div className="p-4">
                     <div className="font-nunito font-bold text-[#1a1a1a]">{p.name}</div>
@@ -94,7 +94,7 @@ export default function ReviewsPage() {
                 {r.photos && r.photos.length > 0 && (
                   <div className="mt-3 flex gap-1.5">
                     {r.photos.slice(0, 4).map((src, i) => (
-                      <img key={i} src={src} alt="" className="w-14 h-14 object-cover rounded-lg" />
+                      <img key={i} src={src} alt="" loading="lazy" className="w-14 h-14 object-cover rounded-lg" />
                     ))}
                   </div>
                 )}

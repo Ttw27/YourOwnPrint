@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { fetchAdminDesignerProducts, updateDesignerSettings } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon } from "lucide-react";
+import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
 
+const PAGE_SIZE = 25;
 const DEFAULT_PA = { x: 22, y: 20, w: 56, h: 55 };
 const USE_CASES = [
   { id: "workwear",        label: "Workwear" },
@@ -15,18 +16,28 @@ const USE_CASES = [
 
 export default function AdminDesignerProducts() {
   const [products, setProducts] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [filter, setFilter] = useState("");
+  const [debouncedFilter, setDebouncedFilter] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const reload = async () => {
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedFilter(filter), 350);
+    return () => clearTimeout(t);
+  }, [filter]);
+
+  const reload = async (targetPage = page) => {
     setLoading(true);
     try {
-      const list = await fetchAdminDesignerProducts();
-      setProducts(list);
+      const d = await fetchAdminDesignerProducts(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter);
+      setProducts(d.items || []);
+      setTotal(d.total || 0);
     } finally { setLoading(false); }
   };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => { setPage(0); reload(0); }, [debouncedFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { reload(page); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
   const updatePA = (id, key, value) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, designer_print_area: { ...(p.designer_print_area || DEFAULT_PA), [key]: Number(value) } } : p));
@@ -49,8 +60,6 @@ export default function AdminDesignerProducts() {
   };
   const toggleUseCase = (id, uc) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, use_cases: (p.use_cases || []).includes(uc) ? (p.use_cases || []).filter(x => x !== uc) : [...(p.use_cases || []), uc] } : p));
 
-  const visible = products.filter(p => !filter.trim() || `${p.name} ${p.id} ${p.category}`.toLowerCase().includes(filter.toLowerCase()));
-
   return (
     <div className="bg-white min-h-screen font-nunito text-[#1a1a1a]">
       <div className="max-w-6xl mx-auto px-6 py-10">
@@ -59,15 +68,16 @@ export default function AdminDesignerProducts() {
         <p className="text-[#4b5563] mt-3 max-w-2xl">Pick which products appear in the <strong>Design Your Own</strong> tool. For each enabled product set the canvas image and the printable rectangle (x/y/width/height as % of the image).</p>
 
         <div className="flex flex-wrap items-center gap-3 mt-6">
-          <input data-testid="dp-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter products…" className="bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-80" />
-          <div className="text-xs text-[#4b5563]">{products.filter(p => p.designer_enabled).length} of {products.length} enabled</div>
+          <input data-testid="dp-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search products…" className="bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-80" />
+          <div className="text-xs text-[#4b5563]">{total} product{total === 1 ? "" : "s"}{debouncedFilter ? " matching" : " total"} · showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}</div>
         </div>
 
         {loading ? (
           <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-4 mt-6" data-testid="dp-list">
-            {visible.map((p) => {
+          <>
+            <div className="grid md:grid-cols-2 gap-4 mt-6" data-testid="dp-list">
+              {products.map((p) => {
               const pa = p.designer_print_area || DEFAULT_PA;
               return (
                 <div key={p.id} data-testid={`dp-${p.id}`} className={`rounded-3xl border-2 p-4 ${p.designer_enabled ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] bg-white"}`}>
@@ -143,7 +153,20 @@ export default function AdminDesignerProducts() {
                 </div>
               );
             })}
-          </div>
+            </div>
+
+            {!loading && total > PAGE_SIZE && (
+              <div className="flex items-center justify-center gap-4 mt-6" data-testid="dp-pagination">
+                <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="dp-page-prev">
+                  <ChevronLeft size={14} /> Prev
+                </button>
+                <span className="text-xs text-[#4b5563]">Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}</span>
+                <button onClick={() => setPage((p) => (p + 1) * PAGE_SIZE < total ? p + 1 : p)} disabled={(page + 1) * PAGE_SIZE >= total} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="dp-page-next">
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

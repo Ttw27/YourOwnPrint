@@ -25,7 +25,7 @@ export default function AdminImport() {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
 
-  React.useEffect(() => { fetchProducts().then(setProducts); }, []);
+  React.useEffect(() => { fetchProducts(undefined, 500).then((d) => setProducts(d.items || [])); }, []);
 
   const runImport = async () => {
     let reviews;

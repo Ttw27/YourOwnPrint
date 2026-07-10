@@ -15,7 +15,7 @@ export default function Home() {
   const [recentReviews, setRecentReviews] = useState([]);
 
   useEffect(() => {
-    fetchProducts("best-sellers").then(setBestSellers);
+    fetchProducts("best-sellers", 12).then((d) => setBestSellers(d.items || []));
     fetchReviewsAggregate().then(setAggregates);
     fetchRecentReviews(6).then(setRecentReviews).catch(() => {});
   }, []);
@@ -91,7 +91,7 @@ export default function Home() {
             const colors = ["bg-[#7bc67e]", "bg-[#fde68a]", "bg-[#fbcfe8]", "bg-[#bfdbfe]", "bg-[#fed7aa]"];
             return (
               <Link key={s.name} to="/workwear" data-testid={`home-sector-${i}`} className="group relative aspect-[4/5] rounded-2xl overflow-hidden">
-                <img src={s.image} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <img src={s.image} alt={s.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 <div className={`absolute inset-0 ${colors[i % colors.length]} mix-blend-multiply opacity-50 group-hover:opacity-30 transition-opacity`} />
                 <div className="absolute inset-x-0 bottom-0 p-4">
                   <div className="font-nunito font-black text-white text-lg drop-shadow">{s.name}</div>
@@ -120,7 +120,7 @@ export default function Home() {
               return (
                 <Link key={p.id} to={`/product/${p.id}`} className="bg-white rounded-2xl p-4 border border-[#dcfce7] shadow-sm hover:shadow-md transition-shadow">
                   <div className="aspect-square rounded-xl overflow-hidden bg-[#f0fdf4]">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
                   </div>
                   <div className="mt-3 font-nunito font-bold text-sm">{p.name}</div>
                   <div className="flex items-center justify-between mt-1">
@@ -152,7 +152,7 @@ export default function Home() {
               {r.photos && r.photos.length > 0 && (
                 <div className="mt-3 flex gap-1.5">
                   {r.photos.slice(0, 3).map((src, i) => (
-                    <img key={i} src={src} alt="" className="w-12 h-12 object-cover rounded-lg" />
+                    <img key={i} src={src} alt="" loading="lazy" className="w-12 h-12 object-cover rounded-lg" />
                   ))}
                   {r.photos.length > 3 && <div className="w-12 h-12 rounded-lg bg-white border border-[#dcfce7] grid place-items-center text-xs font-bold">+{r.photos.length - 3}</div>}
                 </div>
