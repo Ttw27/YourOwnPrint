@@ -2481,6 +2481,7 @@ GARMENT_TYPE_CATALOGUE = [
     {"slug": "shorts",      "title": "Shorts",       "image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg"},
     {"slug": "bottoms",     "title": "Joggers & Trousers", "image": "https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg"},
     {"slug": "aprons",      "title": "Aprons",       "image": "https://images.pexels.com/photos/4252136/pexels-photo-4252136.jpeg"},
+    {"slug": "hats",        "title": "Caps & Headwear", "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg"},
     {"slug": "accessories", "title": "Accessories",  "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
 ]
 
@@ -2493,6 +2494,8 @@ def _garment_type_of(product: Dict) -> Optional[str]:
     _catalogue_slugs = {t["slug"] for t in GARMENT_TYPE_CATALOGUE}
     if cat in _catalogue_slugs:
         return cat
+    if cat in ("bags", "socks"):
+        return "accessories"  # importer-side categories with no dedicated collection page
     pid = product["id"].lower()
     name = (product.get("name") or "").lower()
     if "apron" in pid or "apron" in name:
@@ -2513,7 +2516,11 @@ def _garment_type_of(product: Dict) -> Optional[str]:
         return "sweatshirts"
     if "tee" in pid or "tshirt" in pid or "t-shirt" in name or "shirt" in pid:
         return "t-shirts"
-    if "bag" in pid or "beanie" in pid or "drawstring" in pid:
+    if "cap" in pid or "cap" in name or "beanie" in pid or "beanie" in name or "bucket hat" in name:
+        return "hats"
+    if "sock" in pid or "sock" in name:
+        return "accessories"
+    if "bag" in pid or "drawstring" in pid:
         return "accessories"
     if cat == "leavers":
         return "hoodies"
