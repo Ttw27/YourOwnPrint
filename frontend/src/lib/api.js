@@ -621,3 +621,9 @@ export async function adminListEnquiries(limit = 200) {
   const { data } = await api.get("/admin/enquiries", { params: { limit } });
   return data;
 }
+
+// ----- PenCarrie API import -----
+export async function pencarrieFetchCatalogue(offset = 0, limit = 500) {
+  const { data } = await api.get("/admin/pencarrie/fetch-catalogue", { params: { offset, limit } });
+  return data;
+}
