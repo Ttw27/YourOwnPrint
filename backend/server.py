@@ -1736,6 +1736,36 @@ async def list_use_cases():
     return USE_CASE_OPTIONS
 
 
+@api_router.get("/admin/products/{pid}/suggest-cross-sell", dependencies=[Depends(require_admin)])
+async def suggest_cross_sell(pid: str, limit: int = 6):
+    """Suggests cross-sell candidates for the also-bought / match-with pickers:
+    same brand, spread across different categories (so a hi-vis jacket suggests
+    that brand's trousers/polo/etc rather than 6 more hi-vis jackets) — this is
+    the 'complete the workwear outfit' pattern for a supplier catalogue import."""
+    prod = PRODUCTS.get(pid)
+    if not prod:
+        raise HTTPException(404, "Product not found")
+    brand = (prod.get("brand") or "").strip()
+    if not brand:
+        return {"suggestions": [], "brand": None, "reason": "This product has no brand set, so there's nothing to match it by."}
+
+    seen_categories = {prod.get("category")}
+    suggestions = []
+    for p in PRODUCTS.values():
+        if p["id"] == pid:
+            continue
+        if (p.get("brand") or "").strip().lower() != brand.lower():
+            continue
+        cat = p.get("category")
+        if cat in seen_categories:
+            continue  # prefer variety across categories over near-duplicates
+        seen_categories.add(cat)
+        suggestions.append({"id": p["id"], "name": p["name"], "category": cat, "image": p.get("image")})
+        if len(suggestions) >= limit:
+            break
+    return {"suggestions": suggestions, "brand": brand}
+
+
 @api_router.get("/admin/designer-products", dependencies=[Depends(require_admin)])
 async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str = ""):
     """Admin view — ALL products with their current designer settings, paginated."""
