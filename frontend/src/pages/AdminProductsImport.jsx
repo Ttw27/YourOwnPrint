@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   fetchImportedProducts, bulkImportProducts, patchImportedProduct, deleteImportedProduct,
+  pencarrieFetchCatalogue,
 } from "../lib/api";
 import {
   Upload, Plus, Trash2, Save, Loader2, Download, FileText, X, Info, ExternalLink,
@@ -76,18 +77,18 @@ function normaliseRow(raw) {
     .map((name) => ({ name, hex: "#cccccc" }));
   const sizes = String(sizesRaw || "").split(/[|,;]/).map((s) => s.trim()).filter(Boolean);
   return {
-    name: pick("name", "title", "product_name"),
-    source_sku: pick("source_sku", "sku", "style", "code"),
-    source_price: parseFloat(pick("source_price", "trade_price", "cost")) || undefined,
-    price: parseFloat(pick("price", "retail_price")) || undefined,
-    image: pick("image", "image_url", "img", "picture"),
-    additional_images: String(pick("additional_images", "gallery") || "").split(/[|;]/).map((s) => s.trim()).filter(Boolean),
-    description: pick("description", "desc", "summary"),
+    name: pick("name", "title", "product_name", "style_name", "description_short"),
+    source_sku: pick("source_sku", "sku", "style", "code", "style_code", "product_code"),
+    source_price: parseFloat(pick("source_price", "trade_price", "cost", "price_net", "net_price", "unit_cost")) || undefined,
+    price: parseFloat(pick("price", "retail_price", "rrp")) || undefined,
+    image: pick("image", "image_url", "img", "picture", "image_1", "primary_image"),
+    additional_images: String(pick("additional_images", "gallery", "image_2", "image_3") || "").split(/[|;]/).map((s) => s.trim()).filter(Boolean),
+    description: pick("description", "desc", "summary", "description_long"),
     colors: colours,
     sizes,
     gender_fit: (pick("gender_fit", "gender", "fit") || "unisex").toLowerCase(),
-    brand: pick("brand"),
-    category: pick("category", "garment_type"),
+    brand: pick("brand", "brand_name"),
+    category: pick("category", "garment_type", "product_type"),
     industry_tags: String(pick("industry_tags", "tags") || "").split(/[|,;]/).map((s) => s.trim()).filter(Boolean),
   };
 }
@@ -147,6 +148,24 @@ export default function AdminProductsImport() {
       pushRows(list);
       setJsonText("");
     } catch { toast.error("JSON must be an array of products or {items: [...]}"); }
+  }
+
+  const [pencarrieLoading, setPencarrieLoading] = useState(false);
+  const [pencarrieOffset, setPencarrieOffset] = useState(0);
+  const [pencarrieTotal, setPencarrieTotal] = useState(null);
+
+  async function onPencarrieFetch() {
+    setPencarrieLoading(true);
+    try {
+      const d = await pencarrieFetchCatalogue(pencarrieOffset, 500);
+      pushRows(d.rows || []);
+      setPencarrieTotal(d.total_available ?? null);
+      setPencarrieOffset(pencarrieOffset + (d.returned || 0));
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Couldn't fetch from PenCarrie — check your API token in /admin/integrations.");
+    } finally {
+      setPencarrieLoading(false);
+    }
   }
 
   const patchRow = (i, p) => setRows((rs) => rs.map((r, idx) => idx === i ? { ...r, ...p } : r));
@@ -228,7 +247,16 @@ export default function AdminProductsImport() {
         </div>
 
         {/* Input methods */}
-        <div className="grid md:grid-cols-3 gap-4 mb-4">
+        <div className="grid md:grid-cols-4 gap-4 mb-4">
+          <button type="button" onClick={onPencarrieFetch} disabled={pencarrieLoading} className="bg-white border-2 border-[#7bc67e] hover:bg-[#f0fdf4] rounded-2xl p-5 text-center transition disabled:opacity-60" data-testid="apx-pencarrie-fetch">
+            {pencarrieLoading ? <Loader2 size={22} className="mx-auto animate-spin text-[#7bc67e]" /> : <Download size={22} className="mx-auto text-[#7bc67e]" />}
+            <div className="mt-2 text-sm font-extrabold">Fetch from PenCarrie</div>
+            <div className="text-[11px] text-[#4b5563] mt-0.5">
+              {pencarrieTotal != null
+                ? `${pencarrieOffset} of ${pencarrieTotal} loaded — click for next 500`
+                : "Pulls your catalogue directly via the PenCarrie API"}
+            </div>
+          </button>
           <label className="bg-white border-2 border-dashed border-[#7bc67e] hover:bg-[#f0fdf4] rounded-2xl p-5 cursor-pointer transition text-center" data-testid="apx-upload-csv">
             <input type="file" accept=".csv,text/csv" onChange={onCsvFile} className="hidden" />
             <Upload size={22} className="mx-auto text-[#7bc67e]" />
@@ -248,6 +276,14 @@ export default function AdminProductsImport() {
             <div className="text-[11px] text-[#4b5563] mt-0.5">One-off row — good for single products or corrections.</div>
           </button>
         </div>
+
+        <p className="text-[11px] text-[#4b5563] mb-4 inline-flex items-start gap-1.5">
+          <Info size={11} className="mt-0.5 text-[#7bc67e]" />
+          "Fetch from PenCarrie" needs your PenCarrie API token set first, in{" "}
+          <a href="/admin/integrations" className="text-[#166534] font-extrabold hover:underline">Admin → Integrations</a>
+          {" "}(PenCarrie: My Account → Account Settings → API Access Tokens). First fetch — check the preview below looks right;
+          if columns like image or price come through blank, PenCarrie's exact column names may need a small tweak on our end.
+        </p>
 
         <details className="mb-4 bg-white border-2 border-[#dcfce7] rounded-2xl p-3">
           <summary className="cursor-pointer text-xs font-extrabold text-[#166534] inline-flex items-center gap-1"><Download size={11} /> Show me the CSV template</summary>
