@@ -9,8 +9,8 @@ body {
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: #0d0d0d;
-    color: #ffffff;
+    background: #ffffff;
+    color: #1a1a1a;
 }
 
 /* Font helpers per theme */
