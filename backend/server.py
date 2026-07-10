@@ -3244,17 +3244,50 @@ class LoginRequest(BaseModel):
     password: str
 
 
+_ADMIN_LOGIN_MAX_ATTEMPTS = 5
+_ADMIN_LOGIN_LOCKOUT_MINUTES = 15
+
+
+async def _check_admin_lockout(email: str) -> None:
+    doc = await db.admin_login_attempts.find_one({"email": email})
+    if not doc or not doc.get("locked_until"):
+        return
+    try:
+        lock_ts = datetime.fromisoformat(doc["locked_until"])
+    except Exception:
+        return
+    if lock_ts > datetime.now(timezone.utc):
+        remaining = int((lock_ts - datetime.now(timezone.utc)).total_seconds() / 60) + 1
+        raise HTTPException(423, f"Too many failed attempts. Try again in {remaining} minutes.")
+
+
+async def _record_admin_login_attempt(email: str, success: bool) -> None:
+    if success:
+        await db.admin_login_attempts.delete_one({"email": email})
+        return
+    now = datetime.now(timezone.utc)
+    doc = await db.admin_login_attempts.find_one({"email": email}) or {"email": email, "count": 0}
+    count = int(doc.get("count", 0)) + 1
+    update = {"email": email, "count": count, "last_attempt": now.isoformat()}
+    if count >= _ADMIN_LOGIN_MAX_ATTEMPTS:
+        update["locked_until"] = (now + timedelta(minutes=_ADMIN_LOGIN_LOCKOUT_MINUTES)).isoformat()
+    await db.admin_login_attempts.update_one({"email": email}, {"$set": update}, upsert=True)
+
+
 @api_router.post("/auth/login")
 async def admin_login(payload: LoginRequest, response: Response):
     email = payload.email.lower().strip()
+    await _check_admin_lockout(email)
     user = await db.users.find_one({"email": email})
-    if not user or not _verify_password(payload.password, user.get("password_hash", "")):
+    valid = bool(user) and _verify_password(payload.password, user.get("password_hash", ""))
+    await _record_admin_login_attempt(email, success=valid)
+    if not valid:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Not an admin account")
     token = _create_access_token(email)
     response.set_cookie(
-        key="access_token", value=token, httponly=True, secure=False,
+        key="access_token", value=token, httponly=True, secure=True,
         samesite="lax", max_age=7 * 24 * 3600, path="/",
     )
     return {"token": token, "user": {"email": email, "role": "admin", "name": user.get("name", "Admin")}}
