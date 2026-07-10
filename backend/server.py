@@ -4721,6 +4721,10 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
     token = await _get_integration_value("pencarrie_api_token")
     if not token:
         raise HTTPException(400, "PenCarrie API token not set — add it in /admin/integrations first.")
+    # Defensive: strip an accidentally-pasted "Bearer " prefix — some dashboards
+    # display the token that way, and people copy it verbatim including the word.
+    if token.strip().lower().startswith("bearer "):
+        token = token.strip()[7:].strip()
 
     import httpx
     import zipfile
