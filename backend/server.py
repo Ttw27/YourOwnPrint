@@ -4691,6 +4691,50 @@ def _auto_category(name: str, description: str = "") -> str:
     return "t-shirts"
 
 
+def _auto_gender_fit(name: str) -> str:
+    hay = name.lower()
+    if any(k in hay for k in ("ladies", "women's", "womens", "female fit")):
+        return "womens"
+    if any(k in hay for k in ("men's", "mens fit", "male fit")) and "women" not in hay and "ladies" not in hay:
+        return "mens"
+    if any(k in hay for k in ("kids", "children", "junior", "youth", " infant")):
+        return "kids"
+    return "unisex"
+
+
+# Best-guess only — garment type/name doesn't reliably imply a sector, so this
+# is deliberately conservative (max 2 tags) and meant to be spot-checked, not
+# treated as gospel. Only fires into REAL industry slugs (INDUSTRY_SLUGS).
+_AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
+    ("hi-vis", ["construction", "trades"]),
+    ("hi vis", ["construction", "trades"]),
+    ("apron", ["hospitality"]),
+    ("chef", ["hospitality"]),
+    ("tunic", ["healthcare", "beauty"]),
+    ("scrub", ["healthcare"]),
+    ("nurse", ["healthcare"]),
+    ("salon", ["hair-beauty"]),
+    ("beauty", ["hair-beauty"]),
+    ("gym", ["fitness"]),
+    ("tracksuit", ["fitness"]),
+    ("hoodie", ["fitness"]),
+    ("softshell", ["trades", "construction"]),
+    ("workwear", ["trades"]),
+    ("cleaning", ["cleaning"]),
+]
+
+
+def _auto_industry_tags(name: str, category: str) -> List[str]:
+    hay = f"{name} {category}".lower()
+    tags: List[str] = []
+    for keyword, industries in _AUTO_INDUSTRY_TAG_RULES:
+        if keyword in hay:
+            for t in industries:
+                if t not in tags:
+                    tags.append(t)
+    return tags[:2]
+
+
 def _apply_imported_product(doc: Dict) -> None:
     """Merge an imported product doc into in-memory PRODUCTS so all endpoints see it."""
     pid = doc.get("id")
@@ -4953,8 +4997,8 @@ async def bulk_import_products(payload: BulkImportPayload):
                 "image": image_url,
                 "additional_images": additional_urls,
                 "description": str(raw.get("description") or "").strip()[:4000],
-                "gender_fit": (raw.get("gender_fit") or payload.default_gender_fit or "unisex"),
-                "industry_tags": raw.get("industry_tags") or [],
+                "gender_fit": (raw.get("gender_fit") or payload.default_gender_fit or _auto_gender_fit(name)),
+                "industry_tags": raw.get("industry_tags") or _auto_industry_tags(name, category),
                 "colors": [
                     {"name": str(c.get("name") or c) if isinstance(c, dict) else str(c),
                      "hex":  str((c.get("hex") if isinstance(c, dict) else "#cccccc") or "#cccccc")}
