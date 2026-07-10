@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 
 const PAGE_SIZE = 25;
+const CATEGORY_OPTIONS = [
+  "t-shirts", "hoodies", "polos", "sweatshirts", "jackets", "hi-vis",
+  "shorts", "bottoms", "aprons", "hats", "accessories",
+];
 
 export default function AdminProductSettings() {
   const [products, setProducts] = useState([]);
@@ -379,6 +383,7 @@ function Lab({ label, children }) { return <div><div className="text-[10px] uppe
  */
 function CrossSellPicker({ selectedIds, allProducts, excludeId, maxItems, onChange, testid, accent = "green" }) {
   const [query, setQuery] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
   const accentClasses = accent === "amber"
     ? "bg-amber-400 border-amber-400 text-[#1a1a1a]"
     : "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]";
@@ -400,6 +405,24 @@ function CrossSellPicker({ selectedIds, allProducts, excludeId, maxItems, onChan
   };
   const remove = (id) => onChange(selectedIds.filter((x) => x !== id));
 
+  const suggestSameBrand = async () => {
+    setSuggesting(true);
+    try {
+      const d = await suggestCrossSell(excludeId, maxItems);
+      if (!d.suggestions?.length) {
+        toast.error(d.reason || "No same-brand products in other categories found to suggest.");
+        return;
+      }
+      const merged = [...new Set([...selectedIds, ...d.suggestions.map((s) => s.id)])].slice(0, maxItems);
+      onChange(merged);
+      toast.success(`Added ${d.suggestions.length} same-brand suggestion${d.suggestions.length === 1 ? "" : "s"} (${d.brand}).`);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Couldn't fetch suggestions");
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
   return (
     <div data-testid={testid}>
       {selectedProducts.length > 0 && (
@@ -411,25 +434,36 @@ function CrossSellPicker({ selectedIds, allProducts, excludeId, maxItems, onChan
           ))}
         </div>
       )}
-      <div className="relative">
-        <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={selectedIds.length >= maxItems ? `Max ${maxItems} reached` : "Search products to add…"}
-          disabled={selectedIds.length >= maxItems}
-          className="w-full sm:w-80 bg-white border border-[#e5e7eb] rounded-full pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-[#7bc67e] disabled:opacity-50"
-          data-testid={`${testid}-search`}
-        />
-        {suggestions.length > 0 && (
-          <div className="absolute z-10 mt-1 bg-white border border-[#dcfce7] rounded-2xl shadow-lg py-1 w-full sm:w-80 max-h-56 overflow-y-auto">
-            {suggestions.map((p) => (
-              <button key={p.id} type="button" onClick={() => add(p.id)} className="block w-full text-left px-4 py-2 text-xs hover:bg-[#f0fdf4]" data-testid={`${testid}-suggestion-${p.id}`}>
-                {p.name}
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={selectedIds.length >= maxItems ? `Max ${maxItems} reached` : "Search products to add…"}
+            disabled={selectedIds.length >= maxItems}
+            className="w-full sm:w-80 bg-white border border-[#e5e7eb] rounded-full pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-[#7bc67e] disabled:opacity-50"
+            data-testid={`${testid}-search`}
+          />
+          {suggestions.length > 0 && (
+            <div className="absolute z-10 mt-1 bg-white border border-[#dcfce7] rounded-2xl shadow-lg py-1 w-full sm:w-80 max-h-56 overflow-y-auto">
+              {suggestions.map((p) => (
+                <button key={p.id} type="button" onClick={() => add(p.id)} className="block w-full text-left px-4 py-2 text-xs hover:bg-[#f0fdf4]" data-testid={`${testid}-suggestion-${p.id}`}>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={suggestSameBrand}
+          disabled={suggesting || selectedIds.length >= maxItems}
+          className="inline-flex items-center gap-1 text-[11px] font-nunito font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-3 py-1.5 hover:bg-[#f0fdf4] disabled:opacity-50 whitespace-nowrap"
+          data-testid={`${testid}-suggest-brand`}
+        >
+          {suggesting ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} Same brand
+        </button>
       </div>
     </div>
   );
@@ -496,6 +530,7 @@ function ProductOverridePanel({ product, onSaved }) {
     price: product.price ?? 0,
     description: product.description || "",
     image: product.image || "",
+    category: product.category || "",
     active: product._hidden ? false : true,
   });
   const [override, setOverride] = React.useState(null);
@@ -514,6 +549,7 @@ function ProductOverridePanel({ product, onSaved }) {
     Number(draft.price) !== Number(product.price) ||
     draft.description !== (product.description || "") ||
     draft.image !== (product.image || "") ||
+    draft.category !== (product.category || "") ||
     draft.active !== (product._hidden ? false : true)
   );
 
@@ -525,6 +561,7 @@ function ProductOverridePanel({ product, onSaved }) {
         price: Number(draft.price) || null,
         description: draft.description || null,
         image: draft.image || null,
+        category: draft.category || null,
         active: draft.active,
       });
       toast.success(`${draft.name} — override saved`);
@@ -565,6 +602,12 @@ function ProductOverridePanel({ product, onSaved }) {
           <input type="number" step="0.01" min="0" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} className={ic} data-testid={`aps-override-price-${product.id}`} />
         </Lab>
       </div>
+      <Lab label="Category (which shop collection this appears in)">
+        <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className={ic} data-testid={`aps-override-category-${product.id}`}>
+          <option value="">Auto-detect from name</option>
+          {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Lab>
       <Lab label="Short description (shown on product cards + PDP intro)">
         <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={2} className={ic + " resize-none"} data-testid={`aps-override-desc-${product.id}`} />
       </Lab>
