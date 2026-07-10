@@ -96,3 +96,46 @@ def get_public_url(path: str) -> Optional[str]:
     if not base:
         return None
     return f"{base}/{path}"
+
+
+async def mirror_external_image(url: str, folder: str = "imported-products") -> Optional[str]:
+    """Downloads an image from an external URL (e.g. a supplier's product page)
+    and re-uploads it into R2, returning the new permanent R2 URL.
+
+    Used so imported product photos live on our own storage rather than being
+    hotlinked from a supplier's site — if the supplier reorganises or removes
+    their images later, ours keep working regardless.
+
+    Returns None (never raises) on any failure — callers should fall back to
+    the original URL so one bad image never breaks a whole bulk import.
+    """
+    import hashlib
+    import httpx
+
+    if not url or not url.startswith(("http://", "https://")):
+        return None
+    # Already one of ours — nothing to do.
+    public_base = os.environ.get("R2_PUBLIC_URL", "").rstrip("/")
+    if public_base and url.startswith(public_base):
+        return url
+
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            resp = await client.get(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; YourOwnPrintBot/1.0)"},
+            )
+            resp.raise_for_status()
+            data = resp.content
+            if len(data) > 8_000_000:
+                return None  # refuse absurdly large files rather than hang R2 upload
+            content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0]
+
+        ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(content_type, "jpg")
+        digest = hashlib.sha256(url.encode()).hexdigest()[:24]
+        path = f"{folder}/{digest}.{ext}"
+
+        await storage_put_async(path, data, content_type)
+        return get_public_url(path)
+    except Exception:
+        return None
