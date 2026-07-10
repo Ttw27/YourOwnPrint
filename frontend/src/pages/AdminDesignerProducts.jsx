@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchAdminDesignerProducts, updateDesignerSettings } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon } from "lucide-react";
@@ -54,7 +53,6 @@ export default function AdminDesignerProducts() {
 
   return (
     <div className="bg-white min-h-screen font-nunito text-[#1a1a1a]">
-      <BoldNavbar />
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
         <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Designer Products</h1>
@@ -148,7 +146,6 @@ export default function AdminDesignerProducts() {
           </div>
         )}
       </div>
-      <BoldFooter />
     </div>
   );
 }

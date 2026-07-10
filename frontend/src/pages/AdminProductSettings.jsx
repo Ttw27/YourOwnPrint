@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw } from "lucide-react";
@@ -90,7 +89,6 @@ export default function AdminProductSettings() {
 
   return (
     <div className="bg-white min-h-screen font-nunito text-[#1a1a1a]">
-      <BoldNavbar />
       <div className="max-w-5xl mx-auto px-6 py-10">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
         <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Product settings</h1>
@@ -350,7 +348,6 @@ export default function AdminProductSettings() {
           </div>
         )}
       </div>
-      <BoldFooter />
     </div>
   );
 }

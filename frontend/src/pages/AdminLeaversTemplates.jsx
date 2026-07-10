@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { adminListLeaversTemplates, adminCreateLeaversTemplate, adminUpdateLeaversTemplate, adminDeleteLeaversTemplate } from "../lib/api";
 import { toast } from "sonner";
 import { Plus, Save, Trash2, ImagePlus } from "lucide-react";
@@ -52,7 +51,6 @@ export default function AdminLeaversTemplates() {
 
   return (
     <div className="bg-white min-h-screen font-nunito text-[#1a1a1a]" data-testid="admin-leavers-templates-page">
-      <BoldNavbar />
       <div className="max-w-5xl mx-auto px-6 py-10">
         <h1 className="font-black text-3xl">Leavers&apos; design templates</h1>
         <p className="text-sm text-[#4b5563] mt-1">Displayed on the leavers&apos; landing page and in the order flow. Reorder using <code>sort_order</code> (lower = first).</p>
@@ -101,7 +99,6 @@ export default function AdminLeaversTemplates() {
           }
         </section>
       </div>
-      <BoldFooter />
     </div>
   );
 }

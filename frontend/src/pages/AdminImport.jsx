@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchProducts, importJudgeMe } from "../lib/api";
 import { toast } from "sonner";
 import { Upload, Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
@@ -64,7 +63,6 @@ export default function AdminImport() {
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
-      <BoldNavbar />
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
         <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Import Judge.me Reviews</h1>
@@ -135,7 +133,6 @@ export default function AdminImport() {
           </aside>
         </div>
       </div>
-      <BoldFooter />
     </div>
   );
 }

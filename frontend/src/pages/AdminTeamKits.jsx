@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchProducts, fetchTeamKitBrands, createTeamKitBrand, updateTeamKitBrand, deleteTeamKitBrand } from "../lib/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, Loader2, Sparkles } from "lucide-react";
@@ -45,7 +44,6 @@ export default function AdminTeamKits() {
 
   return (
     <div className="bg-white min-h-screen font-nunito">
-      <BoldNavbar />
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
         <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Team Kit Brands</h1>
@@ -107,7 +105,6 @@ export default function AdminTeamKits() {
           </div>
         </div>
       </div>
-      <BoldFooter />
     </div>
   );
 }
