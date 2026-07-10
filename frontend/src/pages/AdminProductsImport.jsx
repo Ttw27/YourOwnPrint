@@ -100,6 +100,7 @@ const EMPTY_ROW = {
 
 export default function AdminProductsImport() {
   const [rows, setRows] = useState([]);
+  const [selected, setSelected] = useState(new Set());
   const [imported, setImported] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -125,6 +126,7 @@ export default function AdminProductsImport() {
   function pushRows(list) {
     const normalised = list.map(normaliseRow).filter((r) => r.name);
     setRows((prev) => [...prev, ...normalised]);
+    setSelected(new Set());
     toast.success(`${normalised.length} row${normalised.length === 1 ? "" : "s"} loaded — review below then save.`);
   }
 
@@ -153,14 +155,21 @@ export default function AdminProductsImport() {
   const [pencarrieLoading, setPencarrieLoading] = useState(false);
   const [pencarrieOffset, setPencarrieOffset] = useState(0);
   const [pencarrieTotal, setPencarrieTotal] = useState(null);
+  const [pencarrieMatching, setPencarrieMatching] = useState(null);
+  const [pencarrieBrands, setPencarrieBrands] = useState([]);
+  const [pencarrieBrand, setPencarrieBrand] = useState("");
+  const [pencarrieSearch, setPencarrieSearch] = useState("");
 
-  async function onPencarrieFetch() {
+  async function onPencarrieFetch(resetPaging) {
+    const nextOffset = resetPaging ? 0 : pencarrieOffset;
     setPencarrieLoading(true);
     try {
-      const d = await pencarrieFetchCatalogue(pencarrieOffset, 500);
+      const d = await pencarrieFetchCatalogue(nextOffset, 500, pencarrieBrand, pencarrieSearch);
       pushRows(d.rows || []);
       setPencarrieTotal(d.total_available ?? null);
-      setPencarrieOffset(pencarrieOffset + (d.returned || 0));
+      setPencarrieMatching(d.total_matching ?? null);
+      setPencarrieBrands(d.available_brands || []);
+      setPencarrieOffset(nextOffset + (d.returned || 0));
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Couldn't fetch from PenCarrie — check your API token in /admin/integrations.");
     } finally {
@@ -168,10 +177,33 @@ export default function AdminProductsImport() {
     }
   }
 
+  function onPencarrieFilterChange() {
+    setPencarrieOffset(0);
+    onPencarrieFetch(true);
+  }
+
   const patchRow = (i, p) => setRows((rs) => rs.map((r, idx) => idx === i ? { ...r, ...p } : r));
   const removeRow = (i) => setRows((rs) => rs.filter((_, idx) => idx !== i));
+  const toggleSelect = (i) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(i)) next.delete(i); else next.add(i);
+    return next;
+  });
+  const toggleSelectAll = () => setSelected((prev) => prev.size === rows.length ? new Set() : new Set(rows.map((_, i) => i)));
+  const removeSelected = () => {
+    const count = selected.size;
+    setRows((rs) => rs.filter((_, idx) => !selected.has(idx)));
+    setSelected(new Set());
+    toast.success(`Removed ${count} row${count === 1 ? "" : "s"}.`);
+  };
+  const keepOnlySelected = () => {
+    const count = rows.length - selected.size;
+    setRows((rs) => rs.filter((_, idx) => selected.has(idx)));
+    setSelected(new Set());
+    toast.success(`Removed ${count} row${count === 1 ? "" : "s"}, kept the rest.`);
+  };
+  const clearAll = () => { setRows([]); setSelected(new Set()); };
   const addManualRow = () => setRows((rs) => [...rs, { ...EMPTY_ROW }]);
-  const clearAll = () => setRows([]);
 
   async function saveAll() {
     const filtered = rows.filter((r) => r.name?.trim());
@@ -247,16 +279,47 @@ export default function AdminProductsImport() {
         </div>
 
         {/* Input methods */}
-        <div className="grid md:grid-cols-4 gap-4 mb-4">
-          <button type="button" onClick={onPencarrieFetch} disabled={pencarrieLoading} className="bg-white border-2 border-[#7bc67e] hover:bg-[#f0fdf4] rounded-2xl p-5 text-center transition disabled:opacity-60" data-testid="apx-pencarrie-fetch">
-            {pencarrieLoading ? <Loader2 size={22} className="mx-auto animate-spin text-[#7bc67e]" /> : <Download size={22} className="mx-auto text-[#7bc67e]" />}
-            <div className="mt-2 text-sm font-extrabold">Fetch from PenCarrie</div>
-            <div className="text-[11px] text-[#4b5563] mt-0.5">
-              {pencarrieTotal != null
-                ? `${pencarrieOffset} of ${pencarrieTotal} loaded — click for next 500`
-                : "Pulls your catalogue directly via the PenCarrie API"}
+        <div className="bg-white border-2 border-[#7bc67e] rounded-2xl p-5 mb-4" data-testid="apx-pencarrie-panel">
+          <div className="flex items-center gap-2 mb-3">
+            <Download size={18} className="text-[#7bc67e]" />
+            <div className="text-sm font-extrabold">Fetch from PenCarrie</div>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <label className="block">
+              <div className="text-[10px] font-extrabold mb-1">Brand (optional)</div>
+              <select value={pencarrieBrand} onChange={(e) => setPencarrieBrand(e.target.value)} className="input" data-testid="apx-pencarrie-brand">
+                <option value="">All brands</option>
+                {pencarrieBrands.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <div className="text-[10px] font-extrabold mb-1">Search name / style (optional)</div>
+              <input value={pencarrieSearch} onChange={(e) => setPencarrieSearch(e.target.value)} placeholder="e.g. hoodie, polo, JH001…" className="input" data-testid="apx-pencarrie-search" />
+            </label>
+            <div className="flex items-end">
+              <button type="button" onClick={onPencarrieFilterChange} disabled={pencarrieLoading} className="w-full bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 rounded-full text-sm font-extrabold py-2.5 inline-flex items-center justify-center gap-1.5" data-testid="apx-pencarrie-fetch">
+                {pencarrieLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Fetch
+              </button>
             </div>
-          </button>
+          </div>
+          {pencarrieTotal != null && (
+            <div className="text-[11px] text-[#4b5563] mt-3 flex items-center justify-between flex-wrap gap-2">
+              <span>
+                {pencarrieMatching != null && pencarrieMatching !== pencarrieTotal
+                  ? `${pencarrieMatching} match your filter (of ${pencarrieTotal} total) · `
+                  : `${pencarrieTotal} products available · `}
+                {pencarrieOffset} loaded so far
+              </span>
+              {pencarrieOffset < (pencarrieMatching ?? pencarrieTotal) && (
+                <button type="button" onClick={() => onPencarrieFetch(false)} disabled={pencarrieLoading} className="font-extrabold text-[#166534] hover:underline" data-testid="apx-pencarrie-next">
+                  Load next 500 →
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4 mb-4">
           <label className="bg-white border-2 border-dashed border-[#7bc67e] hover:bg-[#f0fdf4] rounded-2xl p-5 cursor-pointer transition text-center" data-testid="apx-upload-csv">
             <input type="file" accept=".csv,text/csv" onChange={onCsvFile} className="hidden" />
             <Upload size={22} className="mx-auto text-[#7bc67e]" />
@@ -296,8 +359,15 @@ export default function AdminProductsImport() {
           <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4 mb-8" data-testid="apx-preview">
             <div className="flex items-center justify-between mb-3">
               <div className="text-xs uppercase tracking-wider text-[#7bc67e] font-extrabold">Preview · {previewCount} rows ready to import</div>
-              <div className="flex gap-2">
-                <button onClick={clearAll} className="text-[11px] font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1" data-testid="apx-clear"><X size={11} /> Clear</button>
+              <div className="flex gap-2 items-center">
+                {selected.size > 0 && (
+                  <>
+                    <span className="text-[11px] font-bold text-[#4b5563]">{selected.size} selected</span>
+                    <button onClick={keepOnlySelected} className="text-[11px] font-extrabold text-[#166534] hover:underline" data-testid="apx-keep-selected">Keep only these</button>
+                    <button onClick={removeSelected} className="text-[11px] font-extrabold text-rose-500 hover:underline" data-testid="apx-remove-selected">Remove these</button>
+                  </>
+                )}
+                <button onClick={clearAll} className="text-[11px] font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1" data-testid="apx-clear"><X size={11} /> Clear all</button>
                 <button onClick={saveAll} disabled={saving || previewCount === 0} className="px-4 py-2 bg-[#7bc67e] rounded-full text-sm font-extrabold inline-flex items-center gap-1.5 hover:bg-[#5eb062] disabled:opacity-40" data-testid="apx-save">
                   {saving ? <Loader2 className="animate-spin" size={12} /> : <Save size={12} />} Save {previewCount} products
                 </button>
@@ -307,6 +377,7 @@ export default function AdminProductsImport() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left text-[10px] uppercase tracking-wider text-[#4b5563] font-extrabold border-b border-[#dcfce7]">
+                    <th className="py-2 pr-2"><input type="checkbox" checked={rows.length > 0 && selected.size === rows.length} onChange={toggleSelectAll} data-testid="apx-select-all" /></th>
                     <th className="py-2 pr-2">Image</th>
                     <th className="py-2 pr-2">Name / SKU</th>
                     <th className="py-2 pr-2">Category</th>
@@ -319,7 +390,8 @@ export default function AdminProductsImport() {
                 </thead>
                 <tbody>
                   {rows.map((r, i) => (
-                    <tr key={i} className="border-b border-[#f0fdf4]" data-testid={`apx-row-${i}`}>
+                    <tr key={i} className={`border-b border-[#f0fdf4] ${selected.has(i) ? "bg-[#f0fdf4]" : ""}`} data-testid={`apx-row-${i}`}>
+                      <td className="py-2 pr-2"><input type="checkbox" checked={selected.has(i)} onChange={() => toggleSelect(i)} data-testid={`apx-row-select-${i}`} /></td>
                       <td className="py-2 pr-2">
                         {r.image ? <img src={r.image} alt="" className="w-10 h-10 rounded-lg object-cover" onError={(e) => (e.currentTarget.style.opacity = 0.2)} /> : <div className="w-10 h-10 rounded-lg bg-[#f0fdf4] grid place-items-center text-[9px] text-[#7bc67e]">no img</div>}
                       </td>
