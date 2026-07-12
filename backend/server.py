@@ -2513,6 +2513,10 @@ GARMENT_TYPE_CATALOGUE = [
     {"slug": "bottoms",     "title": "Joggers & Trousers", "image": "https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg"},
     {"slug": "aprons",      "title": "Aprons",       "image": "https://images.pexels.com/photos/4252136/pexels-photo-4252136.jpeg"},
     {"slug": "hats",        "title": "Caps & Headwear", "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg"},
+    {"slug": "footwear",    "title": "Footwear",     "image": "https://images.pexels.com/photos/2385477/pexels-photo-2385477.jpeg"},
+    {"slug": "towels",      "title": "Towels & Robes", "image": "https://images.pexels.com/photos/3997379/pexels-photo-3997379.jpeg"},
+    {"slug": "promotional", "title": "Promotional & Gifts", "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
+    {"slug": "kids-baby",   "title": "Kids & Baby",   "image": "https://images.pexels.com/photos/3933281/pexels-photo-3933281.jpeg"},
     {"slug": "accessories", "title": "Accessories",  "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
 ]
 
@@ -2537,14 +2541,22 @@ def _garment_type_of(product: Dict) -> Optional[str]:
         return "shorts"
     if "jacket" in pid or "jacket" in name or "varsity" in pid or "softshell" in pid:
         return "jackets"
-    if "vest" in pid or "vest" in name or "hi-vis" in pid or "hi vis" in name:
+    if "hi-vis" in pid or "hi vis" in name:
         return "hi-vis"
     if "polo" in pid or "polo" in name:
         return "polos"
-    if "hoodie" in pid or "hoodie" in name or "pullover" in pid:
+    if "hoodie" in pid or "hoodie" in name or "pullover" in pid or "zoodie" in name:
         return "hoodies"
     if "sweatshirt" in pid or "crewneck" in pid:
         return "sweatshirts"
+    if "trainer" in name or "boot" in name or "hiker" in name or "clog" in name or "slider" in name:
+        return "footwear"
+    if "towel" in name or "robe" in name:
+        return "towels"
+    if "mumbles" in name or "teddy" in name or "keyring" in name or "key ring" in name:
+        return "promotional"
+    if "larkwood" in name or "toddler" in name or "sleepsuit" in name or "dungaree" in name:
+        return "kids-baby"
     if "tee" in pid or "tshirt" in pid or "t-shirt" in name or "shirt" in pid:
         return "t-shirts"
     if "cap" in pid or "cap" in name or "beanie" in pid or "beanie" in name or "bucket hat" in name:
@@ -4651,33 +4663,101 @@ class ImportedProduct(BaseModel):
 _AUTO_CATEGORY_RULES: List[Tuple[str, str]] = [
     ("apron", "aprons"),
     ("polo", "polos"),
+    ("zoodie", "hoodies"),  # zip-up hoodie
     ("hoodie", "hoodies"),
     ("hoody", "hoodies"),
     ("sweatshirt", "sweatshirts"),
     ("sweat top", "sweatshirts"),
+    ("sweater", "sweatshirts"),
+    ("cardigan", "sweatshirts"),
     ("crew", "sweatshirts"),
+    ("jog pant", "bottoms"),
     ("jogger", "bottoms"),
+    ("track pant", "bottoms"),
     ("legging", "bottoms"),
-    ("gym short", "bottoms"),
     ("chino", "bottoms"),
     ("trouser", "bottoms"),
     ("cargo", "bottoms"),
+    ("jean", "bottoms"),
+    ("skort", "bottoms"),
+    ("pant", "bottoms"),  # catches remaining "...pants" not matched above
+    ("short", "shorts"),  # gym shorts, jog shorts, training shorts, campus shorts, etc.
     ("jacket", "jackets"),
     ("softshell", "jackets"),
     ("gilet", "jackets"),
     ("body warmer", "jackets"),
+    ("bodywarmer", "jackets"),
+    ("fleece", "jackets"),
+    ("coat", "jackets"),
+    ("coverall", "jackets"),
+    ("waistcoat", "jackets"),
     ("hi vis", "hi-vis"),
     ("hi-vis", "hi-vis"),
     ("hivis", "hi-vis"),
     ("high visibility", "hi-vis"),
     ("cap", "hats"),
     ("beanie", "hats"),
+    ("snapback", "hats"),
+    ("fedora", "hats"),
+    ("trilby", "hats"),
+    ("bucket hat", "hats"),
     ("hat", "hats"),
     ("bag", "bags"),
     ("rucksack", "bags"),
     ("backpack", "bags"),
     ("tote", "bags"),
+    ("shopper", "bags"),
+    ("holdall", "bags"),
+    ("weekender", "bags"),
+    ("gymsac", "bags"),
+    ("daypack", "bags"),
+    ("pouch", "bags"),
+    ("case", "bags"),
     ("sock", "socks"),
+    ("trainer", "footwear"),
+    ("boot", "footwear"),
+    ("hiker", "footwear"),
+    ("clog", "footwear"),
+    ("slider", "footwear"),
+    ("glove", "accessories"),
+    ("scarf", "accessories"),
+    ("hand warmer", "accessories"),
+    ("headband", "accessories"),
+    ("tie", "accessories"),
+    ("towel", "towels"),
+    ("blanket", "towels"),
+    ("robe", "towels"),
+    ("tunic", "t-shirts"),
+    ("blouse", "t-shirts"),
+    ("bodysuit", "t-shirts"),
+    ("vest", "t-shirts"),
+    ("base layer", "t-shirts"),
+    ("top", "t-shirts"),
+    ("neck warmer", "hats"),
+    ("snood", "hats"),
+    ("balaclava", "hats"),
+    ("visor", "hats"),
+    ("blazer", "jackets"),
+    ("jersey", "t-shirts"),
+    ("singlet", "t-shirts"),
+    ("sports bra", "t-shirts"),
+    # Gift / promotional novelty items — teddy bears, keyrings, comforters etc.
+    # (not garments, but a real product line worth its own collection).
+    ("mumbles", "promotional"),
+    ("teddy", "promotional"),
+    (" bear", "promotional"),
+    ("comforter", "promotional"),
+    ("key ring", "promotional"),
+    ("keyring", "promotional"),
+    ("rattle", "promotional"),
+    # Baby/toddler wear — a distinct customer (parents), not workwear/teamwear.
+    ("larkwood", "kids-baby"),
+    ("sleepsuit", "kids-baby"),
+    ("dungaree", "kids-baby"),
+    ("pyjama", "kids-baby"),
+    ("baby/toddler", "kids-baby"),
+    ("toddler", "kids-baby"),
+    (" bib", "kids-baby"),
     ("shirt", "t-shirts"),
     ("tee", "t-shirts"),
     ("t-shirt", "t-shirts"),
@@ -4959,6 +5039,9 @@ async def bulk_import_products(payload: BulkImportPayload):
             name = str(raw.get("name") or "").strip()
             if not name:
                 skipped.append({"reason": "missing name", "row": raw})
+                continue
+            if "silicone" in name.lower() and ("patch" in name.lower() or "template" in name.lower()):
+                skipped.append({"reason": "excluded: decoration component, not a sellable product", "row": raw})
                 continue
             source_sku = str(raw.get("source_sku") or "").strip()
             pid = str(raw.get("id") or "").strip() or _slugify_source_sku(name, source_sku)
