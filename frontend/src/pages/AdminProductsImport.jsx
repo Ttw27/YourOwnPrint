@@ -26,7 +26,8 @@ import {
 
 const GARMENT_TYPES = [
   "t-shirts", "hoodies", "polos", "sweatshirts", "aprons", "bottoms",
-  "jackets", "hi-vis", "hats", "bags", "socks",
+  "shorts", "jackets", "hi-vis", "hats", "footwear", "towels",
+  "promotional", "kids-baby", "accessories", "bags", "socks",
 ];
 const GENDER_OPTIONS = ["unisex", "mens", "womens", "kids"];
 
