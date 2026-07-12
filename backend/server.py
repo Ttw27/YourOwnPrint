@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import asyncio
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
@@ -4941,13 +4942,18 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
 
 @api_router.post("/admin/products/bulk-import", dependencies=[Depends(require_admin)])
 async def bulk_import_products(payload: BulkImportPayload):
-    if len(payload.items) > 5000:
-        raise HTTPException(413, "Too many items in one request (max 5000).")
+    if len(payload.items) > 1500:
+        raise HTTPException(413, "Too many items in one request (max 1500) — please import in smaller batches (use the brand/search filters, or split a big CSV up).")
     now = datetime.now(timezone.utc).isoformat()
     created: List[Dict] = []
     skipped: List[Dict] = []
     images_mirrored = 0
     images_failed = 0
+
+    # ---- Pass 1: build every doc's non-image fields, and collect every unique
+    # image URL that needs mirroring (without fetching anything yet). ----
+    docs: List[Dict] = []
+    urls_to_mirror: set = set()
     for raw in payload.items:
         try:
             name = str(raw.get("name") or "").strip()
@@ -4969,25 +4975,10 @@ async def bulk_import_products(payload: BulkImportPayload):
             image_url = str(raw.get("image") or "").strip()
             additional_urls = [str(u).strip() for u in (raw.get("additional_images") or []) if str(u).strip()]
             if not payload.dry_run:
-                # Mirror the supplier's images into our own R2 bucket so the product
-                # page never depends on the supplier's site staying up/unchanged.
                 if image_url:
-                    mirrored = await _mirror_external_image(image_url)
-                    if mirrored:
-                        image_url = mirrored
-                        images_mirrored += 1
-                    else:
-                        images_failed += 1  # falls back to the original (hotlinked) URL below
-                mirrored_additional = []
+                    urls_to_mirror.add(image_url)
                 for u in additional_urls:
-                    m = await _mirror_external_image(u)
-                    if m:
-                        mirrored_additional.append(m)
-                        images_mirrored += 1
-                    else:
-                        mirrored_additional.append(u)
-                        images_failed += 1
-                additional_urls = mirrored_additional
+                    urls_to_mirror.add(u)
 
             doc = {
                 "id": pid,
@@ -5012,12 +5003,42 @@ async def bulk_import_products(payload: BulkImportPayload):
                 "active": bool(raw.get("active", True)),
                 "imported_at": now,
             }
-            if not payload.dry_run:
-                await db.imported_products.update_one({"id": pid}, {"$set": doc}, upsert=True)
-                _apply_imported_product(doc)
-            created.append({"id": pid, "name": name, "category": category, "price": price})
+            docs.append(doc)
         except Exception as e:
             skipped.append({"reason": str(e)[:200], "row": raw})
+
+    # ---- Pass 2: mirror every unique image URL concurrently (capped at 15 at
+    # once — fast, but polite to both R2 and whatever site we're fetching from). ----
+    url_map: Dict[str, str] = {}
+    if urls_to_mirror:
+        semaphore = asyncio.Semaphore(15)
+
+        async def _mirror_one(url: str):
+            async with semaphore:
+                result = await _mirror_external_image(url)
+                return url, result
+
+        results = await asyncio.gather(*[_mirror_one(u) for u in urls_to_mirror])
+        for original_url, mirrored_url in results:
+            if mirrored_url:
+                url_map[original_url] = mirrored_url
+                images_mirrored += 1
+            else:
+                images_failed += 1  # doc keeps the original (hotlinked) URL as fallback, applied below
+
+    # ---- Pass 3: apply mirrored URLs and write to Mongo. ----
+    for doc in docs:
+        if doc["image"] in url_map:
+            doc["image"] = url_map[doc["image"]]
+        doc["additional_images"] = [url_map.get(u, u) for u in doc["additional_images"]]
+        try:
+            if not payload.dry_run:
+                await db.imported_products.update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
+                _apply_imported_product(doc)
+            created.append({"id": doc["id"], "name": doc["name"], "category": doc["category"], "price": doc["price"]})
+        except Exception as e:
+            skipped.append({"reason": str(e)[:200], "row": doc})
+
     return {
         "ok": True,
         "created": created,
