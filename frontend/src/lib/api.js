@@ -471,6 +471,16 @@ export async function bulkUpdateImported(payload) {
   return data;
 }
 
+export async function uploadAdminImage(file, folder = "admin-uploads") {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await api.post("/admin/upload-image", formData, {
+    params: { folder },
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data; // {url}
+}
+
 export async function fetchImportedProducts(offset = 0, limit = 25, q = "") {
   const { data } = await api.get("/admin/products/imported", { params: { offset, limit, q } });
   return data;
