@@ -281,20 +281,52 @@ export default function AdminProductsImport() {
   const clearAll = () => { setRows([]); setSelected(new Set()); };
   const addManualRow = () => setRows((rs) => [...rs, { ...EMPTY_ROW }]);
 
+  const [saveProgress, setSaveProgress] = useState(null); // {done, total} while saving
+
   async function saveAll() {
     const filtered = rows.filter((r) => r.name?.trim());
     if (!filtered.length) { toast.error("Nothing to save."); return; }
+
+    const CHUNK_SIZE = 100; // keeps each request well clear of any platform timeout, even with many images per product
+    const chunks = [];
+    for (let i = 0; i < filtered.length; i += CHUNK_SIZE) chunks.push(filtered.slice(i, i + CHUNK_SIZE));
+
     setSaving(true);
+    setSaveProgress({ done: 0, total: chunks.length });
+    let totalCreated = 0, totalSkipped = 0, totalMirrored = 0, totalFailed = 0;
+    const savedRows = new Set();
+
     try {
-      const d = await bulkImportProducts({ ...defaults, items: filtered });
-      const imgNote = d.images_mirrored_to_r2 || d.images_failed_to_mirror
-        ? ` ${d.images_mirrored_to_r2 || 0} image(s) saved to R2${d.images_failed_to_mirror ? `, ${d.images_failed_to_mirror} couldn't be fetched (kept original link)` : ""}.`
+      for (let i = 0; i < chunks.length; i++) {
+        try {
+          const d = await bulkImportProducts({ ...defaults, items: chunks[i] });
+          totalCreated += d.created?.length || 0;
+          totalSkipped += d.skipped?.length || 0;
+          totalMirrored += d.images_mirrored_to_r2 || 0;
+          totalFailed += d.images_failed_to_mirror || 0;
+          chunks[i].forEach((r) => savedRows.add(r));
+          setSaveProgress({ done: i + 1, total: chunks.length });
+        } catch (e) {
+          // Stop here — remove only what actually saved, so nothing's lost or double-saved on retry.
+          setRows((prev) => prev.filter((r) => !savedRows.has(r)));
+          toast.error(
+            `Saved ${totalCreated} product(s) across ${i} of ${chunks.length} batches, then hit an error: `
+            + (e?.response?.data?.detail || "Import failed")
+            + ". The rest are still in the preview below — safe to just click Save again to continue from here."
+          );
+          return;
+        }
+      }
+      const imgNote = totalMirrored || totalFailed
+        ? ` ${totalMirrored} image(s) saved to R2${totalFailed ? `, ${totalFailed} couldn't be fetched (kept original link)` : ""}.`
         : "";
-      toast.success(`Imported ${d.created?.length || 0} products${d.skipped?.length ? `, ${d.skipped.length} skipped` : ""}.${imgNote}`);
+      toast.success(`Imported ${totalCreated} products${totalSkipped ? `, ${totalSkipped} skipped` : ""}.${imgNote}`);
       setRows([]);
       refresh();
-    } catch (e) { toast.error(e?.response?.data?.detail || "Import failed"); }
-    finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+      setSaveProgress(null);
+    }
   }
 
   async function removeImported(id) {
@@ -452,7 +484,8 @@ export default function AdminProductsImport() {
                 )}
                 <button onClick={clearAll} className="text-[11px] font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1" data-testid="apx-clear"><X size={11} /> Clear all</button>
                 <button onClick={saveAll} disabled={saving || previewCount === 0} className="px-4 py-2 bg-[#7bc67e] rounded-full text-sm font-extrabold inline-flex items-center gap-1.5 hover:bg-[#5eb062] disabled:opacity-40" data-testid="apx-save">
-                  {saving ? <Loader2 className="animate-spin" size={12} /> : <Save size={12} />} Save {previewCount} products
+                  {saving ? <Loader2 className="animate-spin" size={12} /> : <Save size={12} />}
+                  {saving && saveProgress ? `Saving batch ${saveProgress.done + 1} of ${saveProgress.total}…` : `Save ${previewCount} products`}
                 </button>
               </div>
             </div>
