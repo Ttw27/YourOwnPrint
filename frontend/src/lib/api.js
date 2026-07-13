@@ -36,8 +36,8 @@ export async function fetchAdminMe() {
   return data;
 }
 
-export async function fetchProducts(category, limit = 500, offset = 0, genderFit) {
-  const { data } = await api.get("/products", { params: { ...(category ? { category } : {}), ...(genderFit ? { gender_fit: genderFit } : {}), limit, offset } });
+export async function fetchProducts(category, limit = 500, offset = 0, genderFit, industries) {
+  const { data } = await api.get("/products", { params: { ...(category ? { category } : {}), ...(industries ? { industries } : {}), ...(genderFit ? { gender_fit: genderFit } : {}), limit, offset } });
   return data; // {items, total, offset, returned}
 }
 
