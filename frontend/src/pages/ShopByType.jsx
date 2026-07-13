@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useParams, useSearchParams, Navigate } from "react-router-dom";
-import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
+import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
-import { fetchShopByType } from "../lib/api";
+import { fetchShopByType, fetchReviewsAggregate } from "../lib/api";
 import { ArrowRight, Loader2, X, ChevronDown } from "lucide-react";
 
 /**
@@ -21,6 +21,9 @@ export default function ShopByType() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
   const [page, setPage] = useState(0);
+  const [aggregates, setAggregates] = useState({});
+
+  useEffect(() => { fetchReviewsAggregate().then(setAggregates).catch(() => {}); }, []);
 
   // Read filter state from URL so it's shareable / back-forward friendly.
   const filters = useMemo(() => ({
@@ -179,7 +182,9 @@ export default function ShopByType() {
           ) : (
             <>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="shop-type-grid">
-                {products.map((p) => (
+                {products.map((p) => {
+                  const agg = aggregates[p.id];
+                  return (
                   <Link key={p.id} to={`/product/${p.id}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition-shadow hover:shadow-md" data-testid={`shop-type-product-${p.id}`}>
                     <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
                       <img src={p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
@@ -187,13 +192,28 @@ export default function ShopByType() {
                     <div className="p-4">
                       <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{p.category}</div>
                       <div className="font-extrabold text-base mt-0.5">{p.name}</div>
+                      {p.colors?.length > 0 && (
+                        <div className="flex items-center gap-1 mt-2" data-testid={`shop-type-swatches-${p.id}`}>
+                          {p.colors.slice(0, 6).map((c, i) => (
+                            <span key={i} title={c.name} className="w-3.5 h-3.5 rounded-full border border-[#e5e7eb]" style={{ background: c.hex || "#ccc" }} />
+                          ))}
+                          {p.colors.length > 6 && <span className="text-[10px] text-[#4b5563] ml-0.5">+{p.colors.length - 6}</span>}
+                        </div>
+                      )}
+                      {agg?.count > 0 && (
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <StarRating value={agg.average} size={11} />
+                          <span className="text-[10px] text-[#4b5563]">{agg.count} review{agg.count === 1 ? "" : "s"}</span>
+                        </div>
+                      )}
                       <div className="mt-2 flex items-baseline justify-between">
                         <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
                         <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">View <ArrowRight size={12} /></span>
                       </div>
                     </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
               {matched_total > PAGE_SIZE && (
                 <div className="flex items-center justify-center gap-4 mt-8" data-testid="shop-type-pagination">

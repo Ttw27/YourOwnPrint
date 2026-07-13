@@ -130,6 +130,7 @@ export default function AdminProductsImport() {
     charm_price_99: true,
     set_bulk_pricing_enabled: "unchanged", // "unchanged" | "on" | "off"
     retag_industries: false,
+    randomize_main_image: false,
   });
 
   async function runBulkUpdate(dryRun) {
@@ -144,14 +145,15 @@ export default function AdminProductsImport() {
         charm_price_99: bulkForm.charm_price_99,
         set_bulk_pricing_enabled: bulkForm.set_bulk_pricing_enabled === "unchanged" ? null : bulkForm.set_bulk_pricing_enabled === "on",
         retag_industries: bulkForm.retag_industries,
+        randomize_main_image: bulkForm.randomize_main_image,
         dry_run: dryRun,
       };
       const d = await bulkUpdateImported(payload);
       const errNote = d.errors ? ` ${d.errors} product(s) had an issue and were skipped (not counted as failed).` : "";
       if (dryRun) {
-        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}`);
+        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}`);
       } else {
-        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}`);
+        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}`);
         refresh();
       }
     } catch (e) {
@@ -612,6 +614,14 @@ export default function AdminProductsImport() {
                 <div>
                   <div className="text-xs font-extrabold">Re-tag industries</div>
                   <div className="text-[10px] text-[#4b5563]">Re-runs the current industry-tagging rules against each matched product's name/category — use this after the tagging rules themselves change, so already-imported products catch up without re-importing.</div>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 bg-[#f0fdf4] rounded-2xl p-4">
+                <input type="checkbox" checked={bulkForm.randomize_main_image} onChange={(e) => setBulkForm({ ...bulkForm, randomize_main_image: e.target.checked })} data-testid="apx-bulk-randomize" />
+                <div>
+                  <div className="text-xs font-extrabold">Randomize main photo</div>
+                  <div className="text-[10px] text-[#4b5563]">Picks a random photo from each product's own colours to be the main image shown on collection pages — so a whole page of products doesn't default to the same colour (usually whichever came first). Only picks from photos the product already has; nothing new is added.</div>
                 </div>
               </label>
 
