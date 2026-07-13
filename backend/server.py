@@ -545,6 +545,8 @@ PLACEMENTS: List[Dict] = [
     {"id": "back-print",   "label": "Back print",   "price": 3.50, "excludes": []},
     {"id": "left-sleeve",  "label": "Left sleeve",  "price": 1.50, "excludes": []},
     {"id": "right-sleeve", "label": "Right sleeve", "price": 1.50, "excludes": []},
+    {"id": "left-pocket",  "label": "Below left pocket",  "price": 2.00, "excludes": []},
+    {"id": "right-pocket", "label": "Below right pocket", "price": 2.00, "excludes": []},
 ]
 PLACEMENT_BY_ID = {p["id"]: p for p in PLACEMENTS}
 
@@ -1500,7 +1502,47 @@ class DesignerSettings(BaseModel):
     use_cases: Optional[List[str]] = None
 
 
-ALLOWED_PLACEMENT_OPTIONS = ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label"]
+ALLOWED_PLACEMENT_OPTIONS = ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label", "left-pocket", "right-pocket"]
+
+# Sensible default placement set per garment category — used to mass-populate
+# allowed_placements across imported products, rather than every product
+# defaulting to the full generic set (which is how a sleeveless vest ends up
+# offering "left sleeve" print, or trousers end up offering "neck label").
+CATEGORY_PLACEMENT_DEFAULTS: Dict[str, List[str]] = {
+    "t-shirts":     ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label"],
+    "polos":        ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve"],
+    "shirts":       ["left-breast", "right-breast", "full-front", "back-print"],
+    "hoodies":      ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label"],
+    "sweatshirts":  ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label"],
+    "jackets":      ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve"],
+    "hi-vis":       ["left-breast", "right-breast", "full-front", "back-print"],  # sleeves added back per-product if it's a hi-vis jacket, not a vest
+    "bottoms":      ["left-pocket", "right-pocket", "back-print"],
+    "shorts":       ["left-pocket", "right-pocket"],
+    "aprons":       ["full-front", "left-breast", "right-breast"],
+    "hats":         ["full-front"],
+    "bags":         ["full-front"],
+    "footwear":     [],
+    "towels":       ["full-front"],
+    "socks":        [],
+    "accessories":  ["full-front"],
+    "promotional":  ["full-front"],
+    "kids-baby":    ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve"],
+}
+
+
+def _auto_allowed_placements(name: str, category: str) -> List[str]:
+    base = list(CATEGORY_PLACEMENT_DEFAULTS.get(category, ALLOWED_PLACEMENT_OPTIONS))
+    hay = name.lower()
+    # Hi-vis defaults assume a sleeveless vest (the most common case) — but a
+    # hi-vis jacket/softshell/coat genuinely has sleeves, so add them back.
+    if category == "hi-vis" and any(k in hay for k in ("jacket", "softshell", "coat", "parka", "bomber")):
+        for p in ("left-sleeve", "right-sleeve"):
+            if p not in base:
+                base.append(p)
+    # Sleeveless items (vests, tanks) can't take a sleeve print regardless of category.
+    if any(k in hay for k in ("vest", "tank", "sleeveless", "singlet")):
+        base = [p for p in base if p not in ("left-sleeve", "right-sleeve")]
+    return base
 
 
 class ProductMeta(BaseModel):
@@ -5004,6 +5046,10 @@ class BulkUpdateImportedPayload(BaseModel):
     # showing the same colour (often whichever came first in the supplier data)
     # for every single product.
     randomize_main_image: Optional[bool] = False
+    # Re-computes allowed_placements per product from category + name (e.g.
+    # sleeveless vests lose sleeve options, trousers get pocket placements
+    # instead of breast/sleeve) — the sensible default set, overwritten.
+    apply_placement_defaults: Optional[bool] = False
     dry_run: Optional[bool] = False
 
 
@@ -5023,6 +5069,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     bulk_flag_set = 0
     retagged = 0
     randomized = 0
+    placements_updated = 0
     errors = 0
     error_examples = []
 
@@ -5064,6 +5111,12 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                         update["additional_images"] = [u for u in pool if u != new_main]
                         randomized += 1
 
+            if payload.apply_placement_defaults:
+                new_placements = _auto_allowed_placements(doc.get("name") or "", doc.get("category") or "")
+                if new_placements != (doc.get("allowed_placements") or []):
+                    update["allowed_placements"] = new_placements
+                    placements_updated += 1
+
             pid = doc.get("id")
             if update and not payload.dry_run and pid:
                 await db.imported_products.update_one({"id": pid}, {"$set": update})
@@ -5084,6 +5137,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "bulk_pricing_flag_set_on": bulk_flag_set,
         "retagged": retagged,
         "randomized": randomized,
+        "placements_updated": placements_updated,
         "dry_run": payload.dry_run,
     }
 
