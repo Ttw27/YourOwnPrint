@@ -5,6 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import asyncio
 import re
+import random
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
@@ -2727,6 +2728,7 @@ async def shop_by_garment_type(
             "description": p.get("description") or "",
             "gender_fit": p.get("gender_fit") or "unisex",
             "industry_tags": p.get("industry_tags") or [],
+            "colors": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("colors") or [])][:40],
         })
     items.sort(key=lambda x: x["price"])
     matched_total = len(items)
@@ -2765,7 +2767,17 @@ async def admin_get_collection_seo(slug: str):
 
 
 @api_router.get("/industries/{slug}")
-async def get_industry(slug: str, gender_fit: Optional[str] = None):
+async def get_industry(
+    slug: str,
+    gender_fit: Optional[str] = None,
+    colour: Optional[str] = None,
+    size: Optional[str] = None,
+    category: Optional[str] = None,
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+    limit: int = 25,
+    offset: int = 0,
+):
     ind = next((i for i in INDUSTRIES_CATALOGUE if i["slug"] == slug), None)
     if not ind:
         raise HTTPException(404, "Industry not found")
@@ -2774,22 +2786,61 @@ async def get_industry(slug: str, gender_fit: Optional[str] = None):
     canonical = next((i for i in INDUSTRIES_CATALOGUE if i["slug"] == canonical_slug), ind)
     # Tags to match: canonical + any aliases pointing to it
     match_slugs = {canonical_slug} | {a["slug"] for a in INDUSTRIES_CATALOGUE if a.get("alias_of") == canonical_slug}
-    products = []
-    for p in PRODUCTS.values():
-        tags = set(p.get("industry_tags") or [])
-        if tags & match_slugs:
-            if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
-                continue
-            products.append({
-                "id": p["id"], "name": p["name"], "price": float(p["price"]),
-                "image": p["image"], "category": p["category"],
-                "description": p.get("description") or "",
-                "gender_fit": p.get("gender_fit") or "unisex",
-            })
-    products.sort(key=lambda x: x["price"])
+
+    all_prods = [p for p in PRODUCTS.values() if set(p.get("industry_tags") or []) & match_slugs]
+    facets = _facets_from_products(all_prods)
+    # Category facet too (which garment types show up within this industry) —
+    # not part of the shared _facets_from_products helper, built here directly.
+    category_counts: Dict[str, int] = {}
+    for p in all_prods:
+        category_counts[p["category"]] = category_counts.get(p["category"], 0) + 1
+    facets["category"] = [{"value": k, "count": v} for k, v in sorted(category_counts.items(), key=lambda kv: -kv[1])]
+
+    colour_set = {c.strip() for c in (colour or "").split(",") if c.strip()}
+    size_set = {s.strip() for s in (size or "").split(",") if s.strip()}
+
+    def matches(p: Dict) -> bool:
+        if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
+            return False
+        if category and p["category"] != category:
+            return False
+        if colour_set:
+            names = {(c.get("name") if isinstance(c, dict) else c) for c in _collect_variant_field(p, "colors")}
+            if not (colour_set & names):
+                return False
+        if size_set:
+            szs = set(_collect_variant_field(p, "sizes"))
+            if not (size_set & szs):
+                return False
+        try:
+            price = float(p.get("price") or 0)
+        except (TypeError, ValueError):
+            price = 0.0
+        if price_min is not None and price < price_min:
+            return False
+        if price_max is not None and price > price_max:
+            return False
+        return True
+
+    items: List[Dict] = []
+    for p in all_prods:
+        if not matches(p):
+            continue
+        items.append({
+            "id": p["id"], "name": p["name"], "price": float(p["price"]),
+            "image": p["image"], "category": p["category"],
+            "description": p.get("description") or "",
+            "gender_fit": p.get("gender_fit") or "unisex",
+            "colors": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("colors") or [])][:40],
+        })
+    items.sort(key=lambda x: x["price"])
+    matched_total = len(items)
+    limit = min(limit, 200)
+    page_items = items[offset:offset + limit]
+
     # Strip the alias_of marker from the response
     out = {k: v for k, v in canonical.items() if k != "alias_of"}
-    return {**out, "products": products}
+    return {**out, "products": page_items, "facets": facets, "total": len(all_prods), "matched_total": matched_total, "offset": offset, "returned": len(page_items)}
 
 
 # ---------- Sports & Fitness Teams (SEO landings) ----------
@@ -4918,6 +4969,11 @@ class BulkUpdateImportedPayload(BaseModel):
     # themselves change, so already-imported products can catch up without
     # needing to be re-imported from scratch.
     retag_industries: Optional[bool] = False
+    # Picks a random photo from the product's own existing images (main + gallery)
+    # to be the new main image, so a whole collection page doesn't default to
+    # showing the same colour (often whichever came first in the supplier data)
+    # for every single product.
+    randomize_main_image: Optional[bool] = False
     dry_run: Optional[bool] = False
 
 
@@ -4936,6 +4992,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     skipped_no_cost = 0
     bulk_flag_set = 0
     retagged = 0
+    randomized = 0
     errors = 0
     error_examples = []
 
@@ -4966,6 +5023,17 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                     update["industry_tags"] = new_tags
                     retagged += 1
 
+            if payload.randomize_main_image:
+                current_main = doc.get("image") or ""
+                gallery = [u for u in (doc.get("additional_images") or []) if u]
+                pool = ([current_main] if current_main else []) + gallery
+                if len(pool) > 1:
+                    new_main = random.choice(pool)
+                    if new_main != current_main:
+                        update["image"] = new_main
+                        update["additional_images"] = [u for u in pool if u != new_main]
+                        randomized += 1
+
             pid = doc.get("id")
             if update and not payload.dry_run and pid:
                 await db.imported_products.update_one({"id": pid}, {"$set": update})
@@ -4985,6 +5053,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "skipped_no_cost": skipped_no_cost,
         "bulk_pricing_flag_set_on": bulk_flag_set,
         "retagged": retagged,
+        "randomized": randomized,
         "dry_run": payload.dry_run,
     }
 
