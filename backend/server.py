@@ -4936,42 +4936,52 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     skipped_no_cost = 0
     bulk_flag_set = 0
     retagged = 0
+    errors = 0
+    error_examples = []
 
     cursor = db.imported_products.find(query)
     async for doc in cursor:
         matched += 1
-        update: Dict = {}
+        try:
+            update: Dict = {}
 
-        if payload.reprice:
-            sp = doc.get("source_price")
-            if sp is None:
-                skipped_no_cost += 1
-            else:
-                new_price = _price_with_vat_and_charm(
-                    float(sp), payload.markup_pct, payload.apply_vat, payload.vat_rate_pct, payload.charm_price_99
-                )
-                update["price"] = new_price
-                repriced += 1
+            if payload.reprice:
+                sp = doc.get("source_price")
+                if sp is None:
+                    skipped_no_cost += 1
+                else:
+                    new_price = _price_with_vat_and_charm(
+                        float(sp), payload.markup_pct, payload.apply_vat, payload.vat_rate_pct, payload.charm_price_99
+                    )
+                    update["price"] = new_price
+                    repriced += 1
 
-        if payload.set_bulk_pricing_enabled is not None:
-            update["bulk_pricing_enabled"] = payload.set_bulk_pricing_enabled
-            bulk_flag_set += 1
+            if payload.set_bulk_pricing_enabled is not None:
+                update["bulk_pricing_enabled"] = payload.set_bulk_pricing_enabled
+                bulk_flag_set += 1
 
-        if payload.retag_industries:
-            new_tags = _auto_industry_tags(doc.get("name") or "", doc.get("category") or "")
-            if new_tags != (doc.get("industry_tags") or []):
-                update["industry_tags"] = new_tags
-                retagged += 1
+            if payload.retag_industries:
+                new_tags = _auto_industry_tags(doc.get("name") or "", doc.get("category") or "")
+                if new_tags != (doc.get("industry_tags") or []):
+                    update["industry_tags"] = new_tags
+                    retagged += 1
 
-        if update and not payload.dry_run:
-            await db.imported_products.update_one({"id": doc["id"]}, {"$set": update})
-            merged = {**doc, **update}
-            _apply_imported_product(merged)
+            pid = doc.get("id")
+            if update and not payload.dry_run and pid:
+                await db.imported_products.update_one({"id": pid}, {"$set": update})
+                merged = {**doc, **update}
+                _apply_imported_product(merged)
+        except Exception as e:
+            errors += 1
+            if len(error_examples) < 5:
+                error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "error": str(e)[:200]})
 
     return {
         "ok": True,
         "matched": matched,
         "repriced": repriced,
+        "errors": errors,
+        "error_examples": error_examples,
         "skipped_no_cost": skipped_no_cost,
         "bulk_pricing_flag_set_on": bulk_flag_set,
         "retagged": retagged,
