@@ -132,6 +132,7 @@ export default function AdminProductsImport() {
     retag_industries: false,
     randomize_main_image: false,
     apply_placement_defaults: false,
+    fix_corrupted_sizes: false,
   });
 
   async function runBulkUpdate(dryRun) {
@@ -148,15 +149,16 @@ export default function AdminProductsImport() {
         retag_industries: bulkForm.retag_industries,
         randomize_main_image: bulkForm.randomize_main_image,
         apply_placement_defaults: bulkForm.apply_placement_defaults,
+        fix_corrupted_sizes: bulkForm.fix_corrupted_sizes,
         dry_run: dryRun,
       };
       const d = await bulkUpdateImported(payload);
       const errNote = d.errors ? ` ${d.errors} product(s) had an issue and were skipped (not counted as failed).` : "";
       const truncNote = d.truncated ? ` Only processed the first 500 of ${d.total_matching} matching products (per-request limit) — run this again to continue with the rest.` : "";
       if (dryRun) {
-        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
+        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} would get sizes repaired` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
       } else {
-        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
+        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} had sizes repaired` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
         refresh();
       }
     } catch (e) {
@@ -633,6 +635,14 @@ export default function AdminProductsImport() {
                 <div>
                   <div className="text-xs font-extrabold">Apply sensible print placements</div>
                   <div className="text-[10px] text-[#4b5563]">Sets which print options show on each product page based on garment type — e.g. sleeveless vests lose "sleeve print", trousers get "below left/right pocket" instead of breast/sleeve options. Overwrites any placements already set on matched products.</div>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 bg-[#f0fdf4] rounded-2xl p-4">
+                <input type="checkbox" checked={bulkForm.fix_corrupted_sizes} onChange={(e) => setBulkForm({ ...bulkForm, fix_corrupted_sizes: e.target.checked })} data-testid="apx-bulk-fix-sizes" />
+                <div>
+                  <div className="text-xs font-extrabold">Fix corrupted kids sizes</div>
+                  <div className="text-[10px] text-[#4b5563]">PenCarrie's own source file had a data error — Excel silently turned age-range sizes like "3-4" or "12-13" into dates or plain numbers before we ever imported them. This detects and repairs those back to the correct size (e.g. "2026-04-03" → "3-4", "1213" → "12-13").</div>
                 </div>
               </label>
 
