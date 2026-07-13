@@ -152,10 +152,11 @@ export default function AdminProductsImport() {
       };
       const d = await bulkUpdateImported(payload);
       const errNote = d.errors ? ` ${d.errors} product(s) had an issue and were skipped (not counted as failed).` : "";
+      const truncNote = d.truncated ? ` Only processed the first 500 of ${d.total_matching} matching products (per-request limit) — run this again to continue with the rest.` : "";
       if (dryRun) {
-        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}`);
+        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
       } else {
-        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}`);
+        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
         refresh();
       }
     } catch (e) {
