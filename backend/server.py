@@ -1530,6 +1530,21 @@ CATEGORY_PLACEMENT_DEFAULTS: Dict[str, List[str]] = {
 }
 
 
+def _repair_size_value(raw: str) -> str:
+    """Repairs kids age-range sizes already corrupted in imported data —
+    e.g. "2026-04-03 00:00:00" (was "3-4", auto-converted to a date by Excel
+    in PenCarrie's own source file before it ever reached us) or "1213"
+    (was "12-13", couldn't parse as a date so Excel just dropped the dash)."""
+    s = str(raw).strip()
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})(?:\s+00:00:00)?$", s)
+    if m:
+        _, mm, dd = m.groups()
+        return f"{int(dd)}-{int(mm)}"
+    if s.isdigit() and len(s) == 4:
+        return f"{s[:2]}-{s[2:]}"
+    return s
+
+
 def _auto_allowed_placements(name: str, category: str) -> List[str]:
     base = list(CATEGORY_PLACEMENT_DEFAULTS.get(category, ALLOWED_PLACEMENT_OPTIONS))
     hay = name.lower()
@@ -5050,6 +5065,11 @@ class BulkUpdateImportedPayload(BaseModel):
     # sleeveless vests lose sleeve options, trousers get pocket placements
     # instead of breast/sleeve) — the sensible default set, overwritten.
     apply_placement_defaults: Optional[bool] = False
+    # Repairs kids age-range sizes (e.g. "3-4", "12-13") that Excel silently
+    # corrupted into real dates or bare numbers in PenCarrie's source data
+    # before it was ever imported (confirmed: "3-4" typed into their sheet
+    # became a stored date, "12-13" became the plain number 1213).
+    fix_corrupted_sizes: Optional[bool] = False
     dry_run: Optional[bool] = False
 
 
@@ -5078,6 +5098,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     retagged = 0
     randomized = 0
     placements_updated = 0
+    sizes_repaired = 0
     errors = 0
     error_examples = []
 
@@ -5125,6 +5146,13 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                     update["allowed_placements"] = new_placements
                     placements_updated += 1
 
+            if payload.fix_corrupted_sizes:
+                current_sizes = doc.get("sizes") or []
+                repaired_sizes = [_repair_size_value(s) for s in current_sizes]
+                if repaired_sizes != current_sizes:
+                    update["sizes"] = repaired_sizes
+                    sizes_repaired += 1
+
             pid = doc.get("id")
             if update and not payload.dry_run and pid:
                 await db.imported_products.update_one({"id": pid}, {"$set": update})
@@ -5146,6 +5174,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "retagged": retagged,
         "randomized": randomized,
         "placements_updated": placements_updated,
+        "sizes_repaired": sizes_repaired,
         "total_matching": total_matching,
         "truncated": truncated,
         "dry_run": payload.dry_run,
