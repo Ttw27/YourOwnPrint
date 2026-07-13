@@ -173,6 +173,22 @@ export default function AdminProductsImport() {
     } catch { toast.error("JSON must be an array of products or {items: [...]}"); }
   }
 
+  function onJsonFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const parsed = JSON.parse(String(r.result || ""));
+        const list = Array.isArray(parsed) ? parsed : (parsed.items || parsed.products || []);
+        if (!Array.isArray(list)) throw new Error("Not an array");
+        pushRows(list);
+      } catch { toast.error("Couldn't read that file — make sure it's a JSON array of products."); }
+    };
+    r.readAsText(file);
+    e.target.value = "";
+  }
+
   const [pencarrieLoading, setPencarrieLoading] = useState(false);
   const [pencarrieOffset, setPencarrieOffset] = useState(0);
   const [pencarrieTotal, setPencarrieTotal] = useState(null);
@@ -349,10 +365,17 @@ export default function AdminProductsImport() {
           </label>
           <div className="bg-white border-2 border-[#dcfce7] rounded-2xl p-4" data-testid="apx-json">
             <div className="text-xs font-extrabold flex items-center justify-between">
-              <span><FileText size={12} className="inline mr-1 text-[#7bc67e]" /> Paste JSON</span>
-              <button type="button" onClick={onJsonParse} disabled={!jsonText.trim()} className="text-[11px] font-extrabold bg-[#7bc67e] rounded-full px-2 py-0.5 hover:bg-[#5eb062] disabled:opacity-40">Load</button>
+              <span><FileText size={12} className="inline mr-1 text-[#7bc67e]" /> Paste or upload JSON</span>
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-extrabold text-[#166534] hover:underline cursor-pointer">
+                  Upload file…
+                  <input type="file" accept=".json,application/json" onChange={onJsonFile} className="hidden" data-testid="apx-json-file" />
+                </label>
+                <button type="button" onClick={onJsonParse} disabled={!jsonText.trim()} className="text-[11px] font-extrabold bg-[#7bc67e] rounded-full px-2 py-0.5 hover:bg-[#5eb062] disabled:opacity-40">Load</button>
+              </div>
             </div>
             <textarea value={jsonText} onChange={(e) => setJsonText(e.target.value)} rows={4} className="input mt-2 text-[11px] font-mono" placeholder='[{"name": "AWDis College Hoodie", "source_price": 8.99, "image": "…", "colours": ["Black","Navy"], "sizes": ["S","M","L"]}]' data-testid="apx-json-input" />
+            <p className="text-[10px] text-[#4b5563] mt-1">For large files (a few MB+), use "Upload file" rather than pasting — much smoother.</p>
           </div>
           <button type="button" onClick={addManualRow} className="bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-2xl p-5 text-center transition" data-testid="apx-add-manual">
             <Plus size={22} className="mx-auto text-[#7bc67e]" />
