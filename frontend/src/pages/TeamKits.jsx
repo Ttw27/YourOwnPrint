@@ -92,7 +92,7 @@ export default function TeamKits() {
                 return (
                   <Link key={p.id} to={`/product/${p.id}`} data-testid={`team-kit-card-${p.id}`} className="group relative bg-white rounded-3xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-xl transition-all overflow-hidden flex flex-col">
                     <div className="aspect-[5/4] overflow-hidden bg-[#f0fdf4] relative">
-                      <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" />
                       <span className="absolute top-3 left-3 bg-[#7bc67e] text-[#1a1a1a] text-[10px] font-nunito font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full">Kit Bundle</span>
                     </div>
                     <div className="p-5 flex-1 flex flex-col">

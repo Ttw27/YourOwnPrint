@@ -77,7 +77,7 @@ export default function Workwear() {
                 return (
                   <Link key={p.id} to={`/product/${p.id}`} data-testid={`workwear-product-${i}`} className="group bg-white rounded-2xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md transition-all overflow-hidden">
                     <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                      <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                     </div>
                     <div className="p-4">
                       <div className="font-nunito font-bold text-[#1a1a1a]">{p.name}</div>

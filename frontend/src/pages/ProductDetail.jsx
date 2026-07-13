@@ -208,7 +208,7 @@ export default function ProductDetail() {
               <div className="lg:col-span-5">
                 <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7] sticky top-20">
                   <div className="aspect-square overflow-hidden rounded-2xl bg-white">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    <img src={product.image} alt={product.name} className="w-full h-full object-contain" />
                   </div>
                   <div className="mt-4">
                     <span className="inline-block bg-[#fde68a] text-[#1a1a1a] text-xs font-nunito font-extrabold uppercase tracking-wider px-3 py-1 rounded-full">Team Kit Bundle</span>
@@ -675,7 +675,7 @@ function ProductGallery({ product, color }) {
   return (
     <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7]" data-testid="product-image-block">
       <div className="aspect-square overflow-hidden rounded-2xl bg-white relative">
-        <img src={current} alt={product.name} className="w-full h-full object-cover" data-testid="product-image-main" />
+        <img src={current} alt={product.name} className="w-full h-full object-contain" data-testid="product-image-main" />
         {color && (
           <div className="absolute bottom-3 left-3 bg-white px-3 py-1.5 rounded-full shadow-md font-nunito font-bold text-xs flex items-center gap-2">
             <span className="w-4 h-4 rounded-full border border-[#dcfce7]" style={{ background: (product.colors?.find((c) => c.name === color)?.hex) || "#ccc" }} />
@@ -693,7 +693,7 @@ function ProductGallery({ product, color }) {
               data-testid={`product-thumb-${i}`}
               aria-label={`View image ${i + 1}`}
             >
-              <img src={src} alt="" className="w-full h-full object-cover bg-white" />
+              <img src={src} alt="" className="w-full h-full object-contain bg-white" />
             </button>
           ))}
         </div>

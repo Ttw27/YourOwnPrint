@@ -120,7 +120,7 @@ export default function Home() {
               return (
                 <Link key={p.id} to={`/product/${p.id}`} className="bg-white rounded-2xl p-4 border border-[#dcfce7] shadow-sm hover:shadow-md transition-shadow">
                   <div className="aspect-square rounded-xl overflow-hidden bg-[#f0fdf4]">
-                    <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
+                    <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-contain" />
                   </div>
                   <div className="mt-3 font-nunito font-bold text-sm">{p.name}</div>
                   <div className="flex items-center justify-between mt-1">

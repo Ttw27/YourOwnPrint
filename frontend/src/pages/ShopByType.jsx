@@ -176,7 +176,7 @@ export default function ShopByType() {
               {products.map((p) => (
                 <Link key={p.id} to={`/product/${p.id}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition-shadow hover:shadow-md" data-testid={`shop-type-product-${p.id}`}>
                   <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src={p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                   </div>
                   <div className="p-4">
                     <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{p.category}</div>

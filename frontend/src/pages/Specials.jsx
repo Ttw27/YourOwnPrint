@@ -54,7 +54,7 @@ export default function Specials() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 grid grid-cols-3 gap-3">
               {products.slice(0, 6).map((p) => (
                 <div key={p.id} className="aspect-square rounded-xl overflow-hidden bg-zinc-800">
-                  <img src={p.image} alt="" className="w-full h-full object-cover" />
+                  <img src={p.image} alt="" loading="lazy" className="w-full h-full object-contain" />
                 </div>
               ))}
               {products.length === 0 && Array.from({ length: 6 }).map((_, i) => (
@@ -107,7 +107,7 @@ export default function Specials() {
                 data-testid={`specials-product-${p.id}`}
               >
                 <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                  <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-4">
                   <div className="font-extrabold text-base">{p.name}</div>

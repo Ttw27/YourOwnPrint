@@ -78,7 +78,7 @@ export default function IndustryDetail() {
                 data-testid={`industry-product-${p.id}`}
               >
                 <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                  <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-4">
                   <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#7bc67e]">{p.category}</div>
