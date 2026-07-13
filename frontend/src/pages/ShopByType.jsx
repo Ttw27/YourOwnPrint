@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { Link, useParams, useSearchParams, Navigate } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchShopByType, fetchReviewsAggregate } from "../lib/api";
@@ -68,7 +68,16 @@ export default function ShopByType() {
   const activeCount = ["gender_fit", "colour", "size", "industry", "price_min", "price_max"]
     .reduce((n, k) => n + (params.get(k) ? 1 : 0), 0);
 
-  if (err) return <Navigate to="/workwear" replace />;
+  if (err) return (
+    <div className="min-h-screen bg-white flex items-center justify-center px-6" data-testid="shop-type-error">
+      <div className="text-center max-w-md">
+        <BoldNavbar />
+        <div className="mt-24 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-6 text-sm">
+          Couldn't load this collection right now. <button onClick={fetch} className="underline text-[#166534] font-extrabold">Try again</button>, or <Link to="/" className="underline text-[#166534] font-extrabold">go home</Link>.
+        </div>
+      </div>
+    </div>
+  );
   if (loading && !data) return <div className="min-h-screen grid place-items-center bg-white" data-testid="shop-type-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   if (!data) return null;
 

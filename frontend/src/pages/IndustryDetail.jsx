@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { Link, useParams, useSearchParams, Navigate } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchIndustry, fetchReviewsAggregate } from "../lib/api";
@@ -66,7 +66,16 @@ export default function IndustryDetail() {
   const activeCount = ["gender_fit", "colour", "size", "category", "price_min", "price_max"]
     .reduce((n, k) => n + (params.get(k) ? 1 : 0), 0);
 
-  if (err) return <Navigate to="/industries" replace />;
+  if (err) return (
+    <div className="min-h-screen bg-white flex items-center justify-center px-6" data-testid="industry-error">
+      <div className="text-center max-w-md">
+        <BoldNavbar />
+        <div className="mt-24 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-6 text-sm">
+          Couldn't load this page right now. <button onClick={fetch} className="underline text-[#166534] font-extrabold">Try again</button>, or <Link to="/industries" className="underline text-[#166534] font-extrabold">see all industries</Link>.
+        </div>
+      </div>
+    </div>
+  );
   if (loading && !data) return <div className="min-h-screen grid place-items-center bg-white" data-testid="industry-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   if (!data) return null;
 

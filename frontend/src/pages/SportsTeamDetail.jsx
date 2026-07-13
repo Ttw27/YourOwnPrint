@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams, Navigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchSportsTeam } from "../lib/api";
@@ -11,10 +11,11 @@ export default function SportsTeamDetail() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
+  const load = () => {
+    setLoading(true); setErr(false);
     fetchSportsTeam(slug).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
-  }, [slug]);
+  };
+  useEffect(load, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // SEO: dynamic title + meta description + FAQ schema
   useEffect(() => {
@@ -52,7 +53,16 @@ export default function SportsTeamDetail() {
     };
   }, [data, slug]);
 
-  if (err) return <Navigate to="/team-kits" replace />;
+  if (err) return (
+    <div className="min-h-screen bg-white flex items-center justify-center px-6" data-testid="sports-team-error">
+      <div className="text-center max-w-md">
+        <BoldNavbar />
+        <div className="mt-24 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-6 text-sm">
+          Couldn't load this page right now. <button onClick={load} className="underline text-[#166534] font-extrabold">Try again</button>, or <Link to="/team-kits" className="underline text-[#166534] font-extrabold">see team kits</Link>.
+        </div>
+      </div>
+    </div>
+  );
   if (loading || !data) {
     return <div className="min-h-screen grid place-items-center bg-white" data-testid="sports-team-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   }
