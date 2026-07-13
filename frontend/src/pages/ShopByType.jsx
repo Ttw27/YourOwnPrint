@@ -69,11 +69,13 @@ export default function ShopByType() {
     .reduce((n, k) => n + (params.get(k) ? 1 : 0), 0);
 
   if (err) return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-6" data-testid="shop-type-error">
-      <div className="text-center max-w-md">
-        <BoldNavbar />
-        <div className="mt-24 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-6 text-sm">
-          Couldn't load this collection right now. <button onClick={fetch} className="underline text-[#166534] font-extrabold">Try again</button>, or <Link to="/" className="underline text-[#166534] font-extrabold">go home</Link>.
+    <div className="bg-white min-h-screen" data-testid="shop-type-error">
+      <BoldNavbar />
+      <div className="min-h-[70vh] flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-6 text-sm">
+            Couldn't load this collection right now. <button onClick={fetch} className="underline text-[#166534] font-extrabold">Try again</button>, or <Link to="/" className="underline text-[#166534] font-extrabold">go home</Link>.
+          </div>
         </div>
       </div>
     </div>
