@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Header, Depends, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Header, Depends, Response, UploadFile, File
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,6 +6,7 @@ import os
 import asyncio
 import re
 import random
+import hashlib
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
@@ -1493,6 +1494,7 @@ class DesignerSettings(BaseModel):
     designer_enabled: bool = True
     designer_image: str
     designer_print_area: Dict[str, float]  # {x,y,w,h} percent
+    designer_images_by_colour: Optional[Dict[str, str]] = None  # colour name -> image URL override
     composition: Optional[str] = None
     description_long: Optional[str] = None
     use_cases: Optional[List[str]] = None
@@ -1707,7 +1709,7 @@ async def _merge_designer_overrides():
     async for doc in db.designer_settings.find({}):
         pid = doc.get("product_id")
         if pid in PRODUCTS:
-            for k in ("designer_enabled", "designer_image", "designer_print_area",
+            for k in ("designer_enabled", "designer_image", "designer_print_area", "designer_images_by_colour",
                      "composition", "description_long", "use_cases"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
@@ -1742,6 +1744,8 @@ async def list_designer_products():
                 "name": p["name"],
                 "price": p["price"],
                 "image": p.get("designer_image") or p["image"],
+                "images_by_colour": p.get("designer_images_by_colour") or {},
+                "colors": p.get("colors") or [],
                 "print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
                 "sizes": p.get("sizes", []),
                 "size_upcharges": p.get("size_upcharges", {}),
@@ -1789,6 +1793,28 @@ async def suggest_cross_sell(pid: str, limit: int = 6):
     return {"suggestions": suggestions, "brand": brand}
 
 
+@api_router.post("/admin/upload-image", dependencies=[Depends(require_admin)])
+async def admin_upload_image(file: UploadFile = File(...), folder: str = "admin-uploads"):
+    """Accepts a raw image file upload (not a URL) and stores it in R2,
+    returning the public URL. Used for designer canvas images and anywhere
+    else an admin wants to upload a file directly rather than paste a link."""
+    content_type = (file.content_type or "").split(";")[0]
+    if not content_type.startswith("image/"):
+        raise HTTPException(400, "Only image files are accepted.")
+    data = await file.read()
+    if len(data) > 8_000_000:
+        raise HTTPException(400, "Image too large — please keep it under 8MB.")
+    ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(content_type, "jpg")
+    safe_folder = re.sub(r"[^a-z0-9_-]+", "-", folder.lower())[:40] or "admin-uploads"
+    digest = hashlib.sha256(data).hexdigest()[:24]
+    path = f"{safe_folder}/{digest}.{ext}"
+    await _storage_put_async(path, data, content_type)
+    url = _get_public_url(path)
+    if not url:
+        raise HTTPException(500, "R2 storage isn't fully configured (missing R2_PUBLIC_URL).")
+    return {"url": url}
+
+
 @api_router.get("/admin/designer-products", dependencies=[Depends(require_admin)])
 async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str = ""):
     """Admin view — ALL products with their current designer settings, paginated."""
@@ -1802,6 +1828,8 @@ async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str 
             "designer_enabled": bool(p.get("designer_enabled")),
             "designer_image": p.get("designer_image") or p["image"],
             "designer_print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
+            "designer_images_by_colour": p.get("designer_images_by_colour") or {},
+            "colors": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("colors") or [])],
             "composition": p.get("composition") or "",
             "description_long": p.get("description_long") or "",
             "use_cases": p.get("use_cases") or [],
@@ -1834,6 +1862,7 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
         "designer_enabled": payload.designer_enabled,
         "designer_image": payload.designer_image,
         "designer_print_area": pa,
+        "designer_images_by_colour": payload.designer_images_by_colour or {},
         "composition": (payload.composition or None),
         "description_long": (payload.description_long or None),
         "use_cases": use_cases,
@@ -1844,6 +1873,7 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
     PRODUCTS[product_id]["designer_enabled"] = payload.designer_enabled
     PRODUCTS[product_id]["designer_image"] = payload.designer_image
     PRODUCTS[product_id]["designer_print_area"] = pa
+    PRODUCTS[product_id]["designer_images_by_colour"] = payload.designer_images_by_colour or {}
     if payload.composition is not None:
         PRODUCTS[product_id]["composition"] = payload.composition or None
     if payload.description_long is not None:
@@ -3530,7 +3560,7 @@ async def admin_list_all_qa():
 # Object Storage (Emergent R2-style) — for Portfolio + future asset uploads
 # ============================================================================
 import base64 as _base64
-from services.r2_storage import storage_put as _storage_put, storage_get as _storage_get, mirror_external_image as _mirror_external_image
+from services.r2_storage import storage_put as _storage_put, storage_get as _storage_get, mirror_external_image as _mirror_external_image, storage_put_async as _storage_put_async, get_public_url as _get_public_url
 
 _OBJ_APP_NAME = "yourownprint"
 
