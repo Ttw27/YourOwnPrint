@@ -5063,6 +5063,14 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     if payload.q:
         query["name"] = {"$regex": re.escape(payload.q), "$options": "i"}
 
+    # Hard cap per request — this endpoint previously had none at all, meaning
+    # "apply to all imported products" on a catalogue of thousands could hold
+    # a single request open for minutes, which is exactly the kind of thing
+    # that looks like the whole site going down. Process in batches instead.
+    HARD_CAP = 500
+    total_matching = await db.imported_products.count_documents(query)
+    truncated = total_matching > HARD_CAP
+
     matched = 0
     repriced = 0
     skipped_no_cost = 0
@@ -5073,7 +5081,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     errors = 0
     error_examples = []
 
-    cursor = db.imported_products.find(query)
+    cursor = db.imported_products.find(query).limit(HARD_CAP)
     async for doc in cursor:
         matched += 1
         try:
@@ -5138,6 +5146,8 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "retagged": retagged,
         "randomized": randomized,
         "placements_updated": placements_updated,
+        "total_matching": total_matching,
+        "truncated": truncated,
         "dry_run": payload.dry_run,
     }
 
