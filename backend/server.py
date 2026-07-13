@@ -5057,10 +5057,17 @@ async def bulk_import_products(payload: BulkImportPayload):
 
             image_url = str(raw.get("image") or "").strip()
             additional_urls = [str(u).strip() for u in (raw.get("additional_images") or []) if str(u).strip()]
+            color_image_urls = [
+                str(c.get("image") or "").strip()
+                for c in (raw.get("colors") or [])
+                if isinstance(c, dict) and str(c.get("image") or "").strip()
+            ]
             if not payload.dry_run:
                 if image_url:
                     urls_to_mirror.add(image_url)
                 for u in additional_urls:
+                    urls_to_mirror.add(u)
+                for u in color_image_urls:
                     urls_to_mirror.add(u)
 
             doc = {
@@ -5075,7 +5082,8 @@ async def bulk_import_products(payload: BulkImportPayload):
                 "industry_tags": raw.get("industry_tags") or _auto_industry_tags(name, category),
                 "colors": [
                     {"name": str(c.get("name") or c) if isinstance(c, dict) else str(c),
-                     "hex":  str((c.get("hex") if isinstance(c, dict) else "#cccccc") or "#cccccc")}
+                     "hex":  str((c.get("hex") if isinstance(c, dict) else "#cccccc") or "#cccccc"),
+                     "image": str(c.get("image") or "").strip() if isinstance(c, dict) else ""}
                     for c in (raw.get("colors") or [])
                 ][:24],
                 "sizes": [str(s) for s in (raw.get("sizes") or [])],
@@ -5114,6 +5122,9 @@ async def bulk_import_products(payload: BulkImportPayload):
         if doc["image"] in url_map:
             doc["image"] = url_map[doc["image"]]
         doc["additional_images"] = [url_map.get(u, u) for u in doc["additional_images"]]
+        for c in doc.get("colors") or []:
+            if c.get("image"):
+                c["image"] = url_map.get(c["image"], c["image"])
         try:
             if not payload.dry_run:
                 await db.imported_products.update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
