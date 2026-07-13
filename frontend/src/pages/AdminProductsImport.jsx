@@ -147,10 +147,11 @@ export default function AdminProductsImport() {
         dry_run: dryRun,
       };
       const d = await bulkUpdateImported(payload);
+      const errNote = d.errors ? ` ${d.errors} product(s) had an issue and were skipped (not counted as failed).` : "";
       if (dryRun) {
-        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.`);
+        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}`);
       } else {
-        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.`);
+        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}`);
         refresh();
       }
     } catch (e) {
