@@ -5,7 +5,7 @@ import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, Ch
 
 const PAGE_SIZE = 25;
 const CATEGORY_OPTIONS = [
-  "t-shirts", "hoodies", "polos", "sweatshirts", "jackets", "hi-vis",
+  "t-shirts", "shirts", "hoodies", "polos", "sweatshirts", "jackets", "hi-vis",
   "shorts", "bottoms", "aprons", "hats", "footwear", "towels",
   "promotional", "kids-baby", "accessories",
 ];

@@ -25,7 +25,7 @@ import {
  */
 
 const GARMENT_TYPES = [
-  "t-shirts", "hoodies", "polos", "sweatshirts", "aprons", "bottoms",
+  "t-shirts", "shirts", "hoodies", "polos", "sweatshirts", "aprons", "bottoms",
   "shorts", "jackets", "hi-vis", "hats", "footwear", "towels",
   "promotional", "kids-baby", "accessories", "bags", "socks",
 ];
