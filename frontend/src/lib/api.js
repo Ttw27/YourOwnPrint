@@ -336,8 +336,10 @@ export const PLACEMENT_LABELS = {
   "left-sleeve": "Left sleeve",
   "right-sleeve": "Right sleeve",
   "neck-label": "Neck label",
+  "left-pocket": "Below left pocket",
+  "right-pocket": "Below right pocket",
 };
-export const ALL_PLACEMENTS = ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label"];
+export const ALL_PLACEMENTS = ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label", "left-pocket", "right-pocket"];
 
 // ----- Sports & Fitness Teams landings -----
 export async function fetchSportsTeams() {
