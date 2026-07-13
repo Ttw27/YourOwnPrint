@@ -690,8 +690,28 @@ async def root():
 
 
 @api_router.get("/products")
-async def list_products(category: Optional[str] = None, gender_fit: Optional[str] = None, limit: int = 500, offset: int = 0):
-    items = [p for p in PRODUCTS.values() if not category or p["category"] == category]
+async def list_products(category: Optional[str] = None, industries: Optional[str] = None, gender_fit: Optional[str] = None, limit: int = 500, offset: int = 0):
+    """`industries` is an optional comma-separated list of industry tags (e.g.
+    "trades,construction,cleaning"). When both `category` and `industries` are
+    given, a product matches if it satisfies EITHER — this is what lets a page
+    like /workwear show both the original hand-built "workwear" category
+    products AND any imported product (t-shirts, polos, jackets, etc.) tagged
+    as relevant to trade/construction/cleaning work, rather than requiring
+    every product to literally have category="workwear"."""
+    industry_list = [i.strip() for i in (industries or "").split(",") if i.strip()]
+
+    def matches(p):
+        cat_ok = bool(category) and p["category"] == category
+        ind_ok = bool(industry_list) and any(t in (p.get("industry_tags") or []) for t in industry_list)
+        if category and industry_list:
+            return cat_ok or ind_ok
+        if category:
+            return cat_ok
+        if industry_list:
+            return ind_ok
+        return True
+
+    items = [p for p in PRODUCTS.values() if matches(p)]
     if gender_fit and gender_fit != "all":
         items = [p for p in items if (p.get("gender_fit") or "unisex") == gender_fit]
     total = len(items)
@@ -2658,6 +2678,8 @@ async def shop_by_garment_type(
     industry: Optional[str] = None,    # comma-separated list of industry tags
     price_min: Optional[float] = None,
     price_max: Optional[float] = None,
+    limit: int = 25,
+    offset: int = 0,
 ):
     meta = next((t for t in GARMENT_TYPE_CATALOGUE if t["slug"] == slug), None)
     if not meta:
@@ -2707,8 +2729,11 @@ async def shop_by_garment_type(
             "industry_tags": p.get("industry_tags") or [],
         })
     items.sort(key=lambda x: x["price"])
+    matched_total = len(items)
+    limit = min(limit, 200)
+    page_items = items[offset:offset + limit]
     seo = await _collection_seo_copy(slug)
-    return {**meta, "products": items, "facets": facets, "seo": seo, "total": len(all_prods)}
+    return {**meta, "products": page_items, "facets": facets, "seo": seo, "total": len(all_prods), "matched_total": matched_total, "offset": offset, "returned": len(page_items)}
 
 
 @api_router.patch("/admin/collection-seo/{slug}", dependencies=[Depends(require_admin)])
@@ -4806,6 +4831,13 @@ _AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
     ("cleaning", ["cleaning"]),
 ]
 
+# Generic blanks (plain tees, polos, sweatshirts, hoodies, jackets, trousers)
+# are very commonly bought and branded as everyday workwear across trades —
+# tag them for that too, on top of anything more specific, so browsing by
+# industry/sector actually surfaces the realistic full range rather than
+# only specialist items like hi-vis or chef wear.
+_BROAD_WORKWEAR_CATEGORIES = {"t-shirts", "polos", "sweatshirts", "hoodies", "jackets", "bottoms", "shirts"}
+
 
 def _auto_industry_tags(name: str, category: str) -> List[str]:
     hay = f"{name} {category}".lower()
@@ -4815,7 +4847,9 @@ def _auto_industry_tags(name: str, category: str) -> List[str]:
             for t in industries:
                 if t not in tags:
                     tags.append(t)
-    return tags[:2]
+    if category in _BROAD_WORKWEAR_CATEGORIES and "trades" not in tags:
+        tags.append("trades")
+    return tags[:3]
 
 
 def _apply_imported_product(doc: Dict) -> None:
@@ -4879,6 +4913,11 @@ class BulkUpdateImportedPayload(BaseModel):
     charm_price_99: Optional[bool] = True
     # Bulk quantity-discount pricing toggle — None = don't touch, True/False = set for all matched.
     set_bulk_pricing_enabled: Optional[bool] = None
+    # Re-runs the current industry-tag auto-detection against each matched
+    # product's existing name/category — useful after the tagging rules
+    # themselves change, so already-imported products can catch up without
+    # needing to be re-imported from scratch.
+    retag_industries: Optional[bool] = False
     dry_run: Optional[bool] = False
 
 
@@ -4896,6 +4935,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     repriced = 0
     skipped_no_cost = 0
     bulk_flag_set = 0
+    retagged = 0
 
     cursor = db.imported_products.find(query)
     async for doc in cursor:
@@ -4917,6 +4957,12 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
             update["bulk_pricing_enabled"] = payload.set_bulk_pricing_enabled
             bulk_flag_set += 1
 
+        if payload.retag_industries:
+            new_tags = _auto_industry_tags(doc.get("name") or "", doc.get("category") or "")
+            if new_tags != (doc.get("industry_tags") or []):
+                update["industry_tags"] = new_tags
+                retagged += 1
+
         if update and not payload.dry_run:
             await db.imported_products.update_one({"id": doc["id"]}, {"$set": update})
             merged = {**doc, **update}
@@ -4928,6 +4974,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "repriced": repriced,
         "skipped_no_cost": skipped_no_cost,
         "bulk_pricing_flag_set_on": bulk_flag_set,
+        "retagged": retagged,
         "dry_run": payload.dry_run,
     }
 
