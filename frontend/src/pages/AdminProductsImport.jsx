@@ -129,6 +129,7 @@ export default function AdminProductsImport() {
     vat_rate_pct: 20,
     charm_price_99: true,
     set_bulk_pricing_enabled: "unchanged", // "unchanged" | "on" | "off"
+    retag_industries: false,
   });
 
   async function runBulkUpdate(dryRun) {
@@ -142,13 +143,14 @@ export default function AdminProductsImport() {
         vat_rate_pct: Number(bulkForm.vat_rate_pct) || 20,
         charm_price_99: bulkForm.charm_price_99,
         set_bulk_pricing_enabled: bulkForm.set_bulk_pricing_enabled === "unchanged" ? null : bulkForm.set_bulk_pricing_enabled === "on",
+        retag_industries: bulkForm.retag_industries,
         dry_run: dryRun,
       };
       const d = await bulkUpdateImported(payload);
       if (dryRun) {
-        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.`);
+        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.`);
       } else {
-        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.`);
+        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.`);
         refresh();
       }
     } catch (e) {
@@ -603,6 +605,14 @@ export default function AdminProductsImport() {
                   <p className="text-[10px] text-[#4b5563] mt-2">Uses whatever default bulk-discount tiers (% off at 10+/25+/100+/200+) you've already set in Product Settings.</p>
                 </div>
               </div>
+
+              <label className="flex items-center gap-2 bg-[#f0fdf4] rounded-2xl p-4">
+                <input type="checkbox" checked={bulkForm.retag_industries} onChange={(e) => setBulkForm({ ...bulkForm, retag_industries: e.target.checked })} data-testid="apx-bulk-retag" />
+                <div>
+                  <div className="text-xs font-extrabold">Re-tag industries</div>
+                  <div className="text-[10px] text-[#4b5563]">Re-runs the current industry-tagging rules against each matched product's name/category — use this after the tagging rules themselves change, so already-imported products catch up without re-importing.</div>
+                </div>
+              </label>
 
               <div className="flex gap-2">
                 <button type="button" onClick={() => runBulkUpdate(true)} disabled={bulkBusy} className="text-xs font-extrabold border border-[#7bc67e] text-[#166534] rounded-full px-4 py-2 hover:bg-[#f0fdf4] disabled:opacity-50" data-testid="apx-bulk-preview">
