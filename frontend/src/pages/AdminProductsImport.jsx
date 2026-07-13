@@ -73,9 +73,20 @@ function normaliseRow(raw) {
   };
   const coloursRaw = pick("colours", "colors", "colour", "color");
   const sizesRaw = pick("sizes", "size");
-  const colours = String(coloursRaw || "")
-    .split(/[|,;]/).map((s) => s.trim()).filter(Boolean)
-    .map((name) => ({ name, hex: "#cccccc" }));
+  let colours;
+  if (Array.isArray(coloursRaw)) {
+    // Already structured (e.g. from a JSON paste with per-colour images) — keep as-is,
+    // just make sure every entry has the shape we need.
+    colours = coloursRaw.map((c) =>
+      typeof c === "object" && c !== null
+        ? { name: String(c.name || "").trim(), hex: c.hex || "#cccccc", image: c.image || "" }
+        : { name: String(c).trim(), hex: "#cccccc" }
+    ).filter((c) => c.name);
+  } else {
+    colours = String(coloursRaw || "")
+      .split(/[|,;]/).map((s) => s.trim()).filter(Boolean)
+      .map((name) => ({ name, hex: "#cccccc" }));
+  }
   const sizes = String(sizesRaw || "").split(/[|,;]/).map((s) => s.trim()).filter(Boolean);
   return {
     name: pick("name", "title", "product_name", "style_name", "description_short"),
@@ -421,7 +432,15 @@ export default function AdminProductsImport() {
                         </select>
                       </td>
                       <td className="py-2 pr-2 min-w-[140px]">
-                        <input value={(r.colors || []).map((c) => (c.name || c)).join("|")} onChange={(e) => patchRow(i, { colors: e.target.value.split("|").filter(Boolean).map((n) => ({ name: n.trim(), hex: "#cccccc" })) })} className="input-sm w-full text-[10px]" placeholder="Black|Navy|Red" />
+                        <input value={(r.colors || []).map((c) => (c.name || c)).join("|")} onChange={(e) => {
+                          const existing = new Map((r.colors || []).map((c) => [(c.name || c).toLowerCase(), c]));
+                          const next = e.target.value.split("|").filter(Boolean).map((n) => {
+                            const trimmed = n.trim();
+                            const prev = existing.get(trimmed.toLowerCase());
+                            return prev && typeof prev === "object" ? { ...prev, name: trimmed } : { name: trimmed, hex: "#cccccc" };
+                          });
+                          patchRow(i, { colors: next });
+                        }} className="input-sm w-full text-[10px]" placeholder="Black|Navy|Red" />
                       </td>
                       <td className="py-2 pr-2 min-w-[110px]">
                         <input value={(r.sizes || []).join("|")} onChange={(e) => patchRow(i, { sizes: e.target.value.split("|").map((s) => s.trim()).filter(Boolean) })} className="input-sm w-full text-[10px]" placeholder="S|M|L|XL" />

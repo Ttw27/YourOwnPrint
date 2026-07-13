@@ -662,8 +662,16 @@ function ProductGallery({ product, color }) {
   const main = product.image;
   const gallery = Array.isArray(product.image_gallery) ? product.image_gallery : [];
   const images = [main, ...gallery.filter((u) => u && u !== main)];
-  const [active, setActive] = useState(0);
-  const current = images[active] || main;
+  const colorImage = color ? product.colors?.find((c) => c.name === color)?.image : null;
+
+  // null = "following the selected colour automatically"; a number = the user
+  // has manually clicked a thumbnail and wants to browse away from that.
+  const [manualIndex, setManualIndex] = useState(null);
+  useEffect(() => { setManualIndex(null); }, [color]); // new colour picked -> go back to auto-following it
+
+  const current = manualIndex !== null ? images[manualIndex] : (colorImage || images[0] || main);
+  const showingColorPhoto = manualIndex === null && !!colorImage;
+
   return (
     <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7]" data-testid="product-image-block">
       <div className="aspect-square overflow-hidden rounded-2xl bg-white relative">
@@ -680,8 +688,8 @@ function ProductGallery({ product, color }) {
           {images.slice(0, 5).map((src, i) => (
             <button
               key={src + i}
-              onClick={() => setActive(i)}
-              className={`aspect-square overflow-hidden rounded-lg border-2 transition ${active === i ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-transparent hover:border-[#dcfce7]"}`}
+              onClick={() => setManualIndex(i)}
+              className={`aspect-square overflow-hidden rounded-lg border-2 transition ${!showingColorPhoto && (manualIndex === i || (manualIndex === null && i === 0)) ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-transparent hover:border-[#dcfce7]"}`}
               data-testid={`product-thumb-${i}`}
               aria-label={`View image ${i + 1}`}
             >
