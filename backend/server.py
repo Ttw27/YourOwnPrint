@@ -4,6 +4,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import asyncio
+import re
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
@@ -4862,6 +4863,74 @@ def _slugify_source_sku(name: str, sku: str = "") -> str:
     return s or f"import-{uuid.uuid4().hex[:8]}"
 
 
+class BulkUpdateImportedPayload(BaseModel):
+    # Filter — leave all blank to apply to every imported product.
+    q: Optional[str] = ""
+    brand: Optional[str] = ""
+    category: Optional[str] = ""
+    # Re-pricing — recalculated from each product's saved trade cost (source_price).
+    # Only applies to products that actually have a source_price saved (i.e.
+    # were imported with one) — products without one are left untouched.
+    reprice: Optional[bool] = False
+    markup_pct: Optional[float] = 0.0
+    apply_vat: Optional[bool] = True
+    vat_rate_pct: Optional[float] = 20.0
+    charm_price_99: Optional[bool] = True
+    # Bulk quantity-discount pricing toggle — None = don't touch, True/False = set for all matched.
+    set_bulk_pricing_enabled: Optional[bool] = None
+    dry_run: Optional[bool] = False
+
+
+@api_router.post("/admin/products/bulk-update-imported", dependencies=[Depends(require_admin)])
+async def bulk_update_imported(payload: BulkUpdateImportedPayload):
+    query: Dict = {}
+    if payload.brand:
+        query["brand"] = {"$regex": f"^{re.escape(payload.brand)}$", "$options": "i"}
+    if payload.category:
+        query["category"] = payload.category
+    if payload.q:
+        query["name"] = {"$regex": re.escape(payload.q), "$options": "i"}
+
+    matched = 0
+    repriced = 0
+    skipped_no_cost = 0
+    bulk_flag_set = 0
+
+    cursor = db.imported_products.find(query)
+    async for doc in cursor:
+        matched += 1
+        update: Dict = {}
+
+        if payload.reprice:
+            sp = doc.get("source_price")
+            if sp is None:
+                skipped_no_cost += 1
+            else:
+                new_price = _price_with_vat_and_charm(
+                    float(sp), payload.markup_pct, payload.apply_vat, payload.vat_rate_pct, payload.charm_price_99
+                )
+                update["price"] = new_price
+                repriced += 1
+
+        if payload.set_bulk_pricing_enabled is not None:
+            update["bulk_pricing_enabled"] = payload.set_bulk_pricing_enabled
+            bulk_flag_set += 1
+
+        if update and not payload.dry_run:
+            await db.imported_products.update_one({"id": doc["id"]}, {"$set": update})
+            merged = {**doc, **update}
+            _apply_imported_product(merged)
+
+    return {
+        "ok": True,
+        "matched": matched,
+        "repriced": repriced,
+        "skipped_no_cost": skipped_no_cost,
+        "bulk_pricing_flag_set_on": bulk_flag_set,
+        "dry_run": payload.dry_run,
+    }
+
+
 @api_router.get("/admin/products/imported", dependencies=[Depends(require_admin)])
 async def list_imported_products(offset: int = 0, limit: int = 25, q: str = ""):
     query = {}
@@ -4872,7 +4941,7 @@ async def list_imported_products(offset: int = 0, limit: int = 25, q: str = ""):
     cursor = db.imported_products.find(query).sort("imported_at", -1).skip(offset).limit(min(limit, 200))
     async for d in cursor:
         out.append({k: d.get(k) for k in [
-            "id", "name", "price", "category", "image", "description",
+            "id", "name", "price", "source_price", "category", "image", "description",
             "gender_fit", "industry_tags", "colors", "sizes", "size_upcharges",
             "source", "source_sku", "brand", "active", "imported_at",
         ]})
@@ -5047,8 +5116,9 @@ async def bulk_import_products(payload: BulkImportPayload):
             source_sku = str(raw.get("source_sku") or "").strip()
             pid = str(raw.get("id") or "").strip() or _slugify_source_sku(name, source_sku)
             price = raw.get("price")
-            if price is None and raw.get("source_price") is not None:
-                sp = float(raw["source_price"])
+            source_price_val = raw.get("source_price")
+            if price is None and source_price_val is not None:
+                sp = float(source_price_val)
                 markup = float(raw.get("markup_pct", payload.default_markup_pct or 0))
                 price = _price_with_vat_and_charm(
                     sp, markup, payload.apply_vat, payload.vat_rate_pct, payload.charm_price_99
@@ -5091,6 +5161,7 @@ async def bulk_import_products(payload: BulkImportPayload):
                 "size_upcharges": raw.get("size_upcharges") or {},
                 "source": raw.get("source") or payload.default_source or "manual",
                 "source_sku": source_sku,
+                "source_price": float(source_price_val) if source_price_val is not None else None,
                 "brand": raw.get("brand") or payload.default_brand or "",
                 "active": bool(raw.get("active", True)),
                 "imported_at": now,
