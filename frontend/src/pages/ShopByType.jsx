@@ -12,6 +12,7 @@ import { ArrowRight, Loader2, X, ChevronDown } from "lucide-react";
  */
 
 const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids: "Kids" };
+const PAGE_SIZE = 25;
 
 export default function ShopByType() {
   const { slug } = useParams();
@@ -19,6 +20,7 @@ export default function ShopByType() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
+  const [page, setPage] = useState(0);
 
   // Read filter state from URL so it's shareable / back-forward friendly.
   const filters = useMemo(() => ({
@@ -30,12 +32,15 @@ export default function ShopByType() {
     price_max: params.get("price_max") || "",
   }), [params]);
 
+  // Any filter change resets back to page 1.
+  useEffect(() => { setPage(0); }, [filters]);
+
   const fetch = useCallback(() => {
     setLoading(true); setErr(false);
-    const opts = {};
+    const opts = { limit: PAGE_SIZE, offset: page * PAGE_SIZE };
     Object.entries(filters).forEach(([k, v]) => { if (v) opts[k] = v; });
     fetchShopByType(slug, opts).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
-  }, [slug, filters]);
+  }, [slug, filters, page]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -64,7 +69,7 @@ export default function ShopByType() {
   if (loading && !data) return <div className="min-h-screen grid place-items-center bg-white" data-testid="shop-type-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   if (!data) return null;
 
-  const { title, image, products, facets = {}, seo = {}, total } = data;
+  const { title, image, products, facets = {}, seo = {}, total, matched_total } = data;
 
   return (
     <div className="bg-white min-h-screen text-[#1a1a1a] font-nunito" data-testid={`shop-type-${slug}`}>
@@ -172,23 +177,36 @@ export default function ShopByType() {
               Nothing matches those filters. Try clearing them or <button onClick={clearAll} className="underline text-[#166534] font-extrabold">reset all</button>.
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="shop-type-grid">
-              {products.map((p) => (
-                <Link key={p.id} to={`/product/${p.id}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition-shadow hover:shadow-md" data-testid={`shop-type-product-${p.id}`}>
-                  <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                  <div className="p-4">
-                    <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{p.category}</div>
-                    <div className="font-extrabold text-base mt-0.5">{p.name}</div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                      <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
-                      <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">View <ArrowRight size={12} /></span>
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="shop-type-grid">
+                {products.map((p) => (
+                  <Link key={p.id} to={`/product/${p.id}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition-shadow hover:shadow-md" data-testid={`shop-type-product-${p.id}`}>
+                    <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
+                      <img src={p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                     </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                    <div className="p-4">
+                      <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{p.category}</div>
+                      <div className="font-extrabold text-base mt-0.5">{p.name}</div>
+                      <div className="mt-2 flex items-baseline justify-between">
+                        <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
+                        <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">View <ArrowRight size={12} /></span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              {matched_total > PAGE_SIZE && (
+                <div className="flex items-center justify-center gap-4 mt-8" data-testid="shop-type-pagination">
+                  <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline">
+                    <ChevronDown size={14} className="rotate-90" /> Prev
+                  </button>
+                  <span className="text-xs text-[#4b5563]">Page {page + 1} of {Math.ceil(matched_total / PAGE_SIZE)} · {matched_total} products</span>
+                  <button onClick={() => setPage((p) => (p + 1) * PAGE_SIZE < matched_total ? p + 1 : p)} disabled={(page + 1) * PAGE_SIZE >= matched_total} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline">
+                    Next <ChevronDown size={14} className="-rotate-90" />
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

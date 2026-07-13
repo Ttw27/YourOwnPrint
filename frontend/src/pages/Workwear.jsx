@@ -19,7 +19,7 @@ export default function Workwear() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetchProducts("workwear", PAGE_SIZE, page * PAGE_SIZE, gender === "all" ? undefined : gender),
+      fetchProducts("workwear", PAGE_SIZE, page * PAGE_SIZE, gender === "all" ? undefined : gender, "trades,construction,cleaning,logistics"),
       fetchReviewsAggregate(),
     ])
       .then(([p, a]) => { setProducts(p.items || []); setTotal(p.total || 0); setAggs(a); })
