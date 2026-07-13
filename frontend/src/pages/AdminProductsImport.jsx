@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   fetchImportedProducts, bulkImportProducts, patchImportedProduct, deleteImportedProduct,
-  pencarrieFetchCatalogue,
+  pencarrieFetchCatalogue, bulkUpdateImported,
 } from "../lib/api";
 import {
-  Upload, Plus, Trash2, Save, Loader2, Download, FileText, X, Info, ExternalLink, ChevronLeft, ChevronRight,
+  Upload, Plus, Trash2, Save, Loader2, Download, FileText, X, Info, ExternalLink, ChevronLeft, ChevronRight, Sparkles,
 } from "lucide-react";
 
 /**
@@ -118,6 +118,45 @@ export default function AdminProductsImport() {
   const [importedPage, setImportedPage] = useState(0);
   const [importedSearch, setImportedSearch] = useState("");
   const IMPORTED_PAGE_SIZE = 25;
+
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkForm, setBulkForm] = useState({
+    scope: "all", // "all" or "search" (uses the search box above)
+    reprice: true,
+    markup_pct: 40,
+    apply_vat: true,
+    vat_rate_pct: 20,
+    charm_price_99: true,
+    set_bulk_pricing_enabled: "unchanged", // "unchanged" | "on" | "off"
+  });
+
+  async function runBulkUpdate(dryRun) {
+    setBulkBusy(true);
+    try {
+      const payload = {
+        q: bulkForm.scope === "search" ? importedSearch : "",
+        reprice: bulkForm.reprice,
+        markup_pct: Number(bulkForm.markup_pct) || 0,
+        apply_vat: bulkForm.apply_vat,
+        vat_rate_pct: Number(bulkForm.vat_rate_pct) || 20,
+        charm_price_99: bulkForm.charm_price_99,
+        set_bulk_pricing_enabled: bulkForm.set_bulk_pricing_enabled === "unchanged" ? null : bulkForm.set_bulk_pricing_enabled === "on",
+        dry_run: dryRun,
+      };
+      const d = await bulkUpdateImported(payload);
+      if (dryRun) {
+        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.`);
+      } else {
+        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.`);
+        refresh();
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Bulk update failed");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [jsonText, setJsonText] = useState("");
@@ -482,6 +521,67 @@ export default function AdminProductsImport() {
             </div>
           </div>
         )}
+
+        {/* Bulk actions on already-imported products */}
+        <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4 mb-4">
+          <button type="button" onClick={() => setBulkOpen((v) => !v)} className="w-full flex items-center justify-between text-left" data-testid="apx-bulk-toggle">
+            <span className="text-xs uppercase tracking-wider text-[#7bc67e] font-extrabold inline-flex items-center gap-1.5"><Sparkles size={13} /> Bulk actions on imported products</span>
+            <span className="text-[11px] text-[#4b5563]">{bulkOpen ? "Hide ▲" : "Show ▼"}</span>
+          </button>
+          {bulkOpen && (
+            <div className="mt-4 space-y-3">
+              <p className="text-[11px] text-[#4b5563]">Re-price or turn on quantity-discount pricing across many products at once — no need to open each one individually. Re-pricing recalculates from each product's saved trade cost, so it only works on products imported with a source price.</p>
+
+              <div className="flex items-center gap-4 text-xs">
+                <label className="inline-flex items-center gap-1.5">
+                  <input type="radio" checked={bulkForm.scope === "all"} onChange={() => setBulkForm({ ...bulkForm, scope: "all" })} /> All imported products
+                </label>
+                <label className="inline-flex items-center gap-1.5">
+                  <input type="radio" checked={bulkForm.scope === "search"} onChange={() => setBulkForm({ ...bulkForm, scope: "search" })} /> Only products matching the search box above {importedSearch ? `("${importedSearch}")` : "(currently empty — same as All)"}
+                </label>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4 bg-[#f0fdf4] rounded-2xl p-4">
+                <div>
+                  <label className="flex items-center gap-2 mb-2">
+                    <input type="checkbox" checked={bulkForm.reprice} onChange={(e) => setBulkForm({ ...bulkForm, reprice: e.target.checked })} />
+                    <span className="text-xs font-extrabold">Re-price with a new markup</span>
+                  </label>
+                  {bulkForm.reprice && (
+                    <div className="grid grid-cols-2 gap-2 pl-6">
+                      <label className="block">
+                        <div className="text-[10px] font-extrabold mb-1">Markup % (ex-VAT)</div>
+                        <input type="number" value={bulkForm.markup_pct} onChange={(e) => setBulkForm({ ...bulkForm, markup_pct: e.target.value })} className="input" data-testid="apx-bulk-markup" />
+                      </label>
+                      <div className="flex flex-col justify-end gap-1">
+                        <label className="inline-flex items-center gap-1.5 text-[11px]"><input type="checkbox" checked={bulkForm.apply_vat} onChange={(e) => setBulkForm({ ...bulkForm, apply_vat: e.target.checked })} /> Add VAT ({bulkForm.vat_rate_pct}%)</label>
+                        <label className="inline-flex items-center gap-1.5 text-[11px]"><input type="checkbox" checked={bulkForm.charm_price_99} onChange={(e) => setBulkForm({ ...bulkForm, charm_price_99: e.target.checked })} /> Round up to £X.99</label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-extrabold mb-2">Quantity-discount pricing (bulk tiers)</div>
+                  <div className="flex gap-3 text-[11px]">
+                    <label className="inline-flex items-center gap-1.5"><input type="radio" checked={bulkForm.set_bulk_pricing_enabled === "unchanged"} onChange={() => setBulkForm({ ...bulkForm, set_bulk_pricing_enabled: "unchanged" })} /> Leave as-is</label>
+                    <label className="inline-flex items-center gap-1.5"><input type="radio" checked={bulkForm.set_bulk_pricing_enabled === "on"} onChange={() => setBulkForm({ ...bulkForm, set_bulk_pricing_enabled: "on" })} /> Turn ON for these</label>
+                    <label className="inline-flex items-center gap-1.5"><input type="radio" checked={bulkForm.set_bulk_pricing_enabled === "off"} onChange={() => setBulkForm({ ...bulkForm, set_bulk_pricing_enabled: "off" })} /> Turn OFF for these</label>
+                  </div>
+                  <p className="text-[10px] text-[#4b5563] mt-2">Uses whatever default bulk-discount tiers (% off at 10+/25+/100+/200+) you've already set in Product Settings.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button type="button" onClick={() => runBulkUpdate(true)} disabled={bulkBusy} className="text-xs font-extrabold border border-[#7bc67e] text-[#166534] rounded-full px-4 py-2 hover:bg-[#f0fdf4] disabled:opacity-50" data-testid="apx-bulk-preview">
+                  {bulkBusy ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null} Preview (no changes made)
+                </button>
+                <button type="button" onClick={() => runBulkUpdate(false)} disabled={bulkBusy} className="text-xs font-extrabold bg-[#7bc67e] hover:bg-[#5eb062] rounded-full px-4 py-2 disabled:opacity-50" data-testid="apx-bulk-apply">
+                  {bulkBusy ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null} Apply now
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Existing imports */}
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4" data-testid="apx-existing">
