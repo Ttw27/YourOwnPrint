@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { fetchAdminDesignerProducts, updateDesignerSettings } from "../lib/api";
+import React, { useEffect, useState, useRef } from "react";
+import { fetchAdminDesignerProducts, updateDesignerSettings, uploadAdminImage } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon, ChevronLeft, ChevronRight, Upload } from "lucide-react";
 
 const PAGE_SIZE = 25;
 const DEFAULT_PA = { x: 22, y: 20, w: 56, h: 55 };
@@ -50,6 +50,7 @@ export default function AdminDesignerProducts() {
         designer_enabled: p.designer_enabled,
         designer_image: p.designer_image || p.main_image,
         designer_print_area: { x: Number(pa.x), y: Number(pa.y), w: Number(pa.w), h: Number(pa.h) },
+        designer_images_by_colour: p.designer_images_by_colour || {},
         composition: p.composition || "",
         description_long: p.description_long || "",
         use_cases: p.use_cases || [],
@@ -57,6 +58,40 @@ export default function AdminDesignerProducts() {
       toast.success(`${p.name} saved`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
     finally { setBusy(false); }
+  };
+
+  const [uploadingId, setUploadingId] = useState(null); // tracks which product/colour combo is mid-upload
+
+  const uploadMainImage = async (p, file) => {
+    setUploadingId(p.id);
+    try {
+      const { url } = await uploadAdminImage(file, "designer-images");
+      update(p.id, { designer_image: url });
+      toast.success("Image uploaded");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Upload failed"); }
+    finally { setUploadingId(null); }
+  };
+
+  const uploadColourImage = async (p, colourName, file) => {
+    const key = `${p.id}:${colourName}`;
+    setUploadingId(key);
+    try {
+      const { url } = await uploadAdminImage(file, "designer-images");
+      setProducts((prev) => prev.map(x => x.id === p.id
+        ? { ...x, designer_images_by_colour: { ...(x.designer_images_by_colour || {}), [colourName]: url } }
+        : x));
+      toast.success(`${colourName} image uploaded`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Upload failed"); }
+    finally { setUploadingId(null); }
+  };
+
+  const clearColourImage = (p, colourName) => {
+    setProducts((prev) => prev.map(x => {
+      if (x.id !== p.id) return x;
+      const next = { ...(x.designer_images_by_colour || {}) };
+      delete next[colourName];
+      return { ...x, designer_images_by_colour: next };
+    }));
   };
   const toggleUseCase = (id, uc) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, use_cases: (p.use_cases || []).includes(uc) ? (p.use_cases || []).filter(x => x !== uc) : [...(p.use_cases || []), uc] } : p));
 
@@ -82,14 +117,8 @@ export default function AdminDesignerProducts() {
               return (
                 <div key={p.id} data-testid={`dp-${p.id}`} className={`rounded-3xl border-2 p-4 ${p.designer_enabled ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] bg-white"}`}>
                   <div className="flex items-start gap-3">
-                    <div className="w-20 h-20 rounded-2xl bg-white border border-[#dcfce7] overflow-hidden flex-shrink-0 relative">
-                      {p.designer_image ? (
-                        <>
-                          <img src={p.designer_image} alt="" className="w-full h-full object-cover" />
-                          {/* Print-area preview */}
-                          <div className="absolute border border-dashed border-[#7bc67e]" style={{ left: `${pa.x}%`, top: `${pa.y}%`, width: `${pa.w}%`, height: `${pa.h}%` }} />
-                        </>
-                      ) : <ImageIcon size={24} className="m-auto" />}
+                    <div className="w-20 h-20 rounded-2xl bg-white border border-[#dcfce7] overflow-hidden flex-shrink-0">
+                      {p.designer_image ? <img src={p.designer_image} alt="" className="w-full h-full object-contain" /> : <ImageIcon size={24} className="m-auto" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-nunito font-extrabold truncate">{p.name}</div>
@@ -104,12 +133,21 @@ export default function AdminDesignerProducts() {
                   {p.designer_enabled && (
                     <div className="mt-3 space-y-2">
                       <div>
-                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Designer image URL</label>
-                        <input data-testid={`dp-image-${p.id}`} value={p.designer_image || ""} onChange={(e) => update(p.id, { designer_image: e.target.value })} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" placeholder="https://…" />
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Designer image</label>
+                        <div className="flex items-center gap-2">
+                          <input data-testid={`dp-image-${p.id}`} value={p.designer_image || ""} onChange={(e) => update(p.id, { designer_image: e.target.value })} className="flex-1 bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" placeholder="https://… or upload a file" />
+                          <label className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-2.5 py-1.5 hover:bg-white cursor-pointer whitespace-nowrap">
+                            {uploadingId === p.id ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Upload
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadMainImage(p, e.target.files[0])} />
+                          </label>
+                        </div>
+                        <p className="text-[10px] text-[#4b5563] mt-1">This is a separate photo just for the design canvas — it never appears in the product's normal photo gallery customers browse.</p>
                       </div>
+
                       <div>
-                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Print area (% of image)</label>
-                        <div className="grid grid-cols-4 gap-1.5">
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Print area — drag the box on the image</label>
+                        <PrintAreaPicker image={p.designer_image} value={pa} onChange={(next) => update(p.id, { designer_print_area: next })} />
+                        <div className="grid grid-cols-4 gap-1.5 mt-2">
                           {["x","y","w","h"].map(k => (
                             <div key={k} className="bg-white border border-[#e5e7eb] rounded-xl px-2 py-1 text-xs flex items-center gap-1">
                               <span className="font-bold text-[#4b5563] uppercase">{k}</span>
@@ -118,6 +156,32 @@ export default function AdminDesignerProducts() {
                           ))}
                         </div>
                       </div>
+
+                      {p.colors?.length > 0 && (
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Per-colour images (optional)</label>
+                          <p className="text-[10px] text-[#4b5563] mb-2">Upload a matching blank photo per colour so the canvas shows the right garment colour once a customer picks one. Colours left blank just use the main image above.</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {p.colors.map((c) => {
+                              const img = (p.designer_images_by_colour || {})[c.name];
+                              const key = `${p.id}:${c.name}`;
+                              return (
+                                <div key={c.name} className="flex items-center gap-2 bg-white border border-[#e5e7eb] rounded-xl p-1.5">
+                                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#e5e7eb] flex-shrink-0 bg-[#f0fdf4]">
+                                    {img ? <img src={img} className="w-full h-full object-contain" alt="" /> : <span className="w-full h-full block" style={{ background: c.hex || "#ccc" }} />}
+                                  </div>
+                                  <span className="text-[10px] font-bold truncate flex-1">{c.name}</span>
+                                  {img && <button onClick={() => clearColourImage(p, c.name)} className="text-rose-500 hover:bg-rose-50 rounded-full p-1"><X size={10} /></button>}
+                                  <label className="text-[9px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-1.5 py-1 hover:bg-[#f0fdf4] cursor-pointer whitespace-nowrap">
+                                    {uploadingId === key ? <Loader2 size={9} className="animate-spin" /> : <Upload size={9} />}
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadColourImage(p, c.name, e.target.files[0])} />
+                                  </label>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                       <div>
                         <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Composition</label>
                         <input data-testid={`dp-composition-${p.id}`} value={p.composition || ""} onChange={(e) => update(p.id, { composition: e.target.value })} placeholder="e.g. 180 GSM · 100% ring-spun cotton" className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" />
@@ -168,6 +232,67 @@ export default function AdminDesignerProducts() {
             )}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Visual print-area editor: drag the dashed box to move it, drag the corner
+ * handle to resize — updates the real x/y/w/h (% of image) live rather than
+ * requiring the admin to guess numbers blind.
+ */
+function PrintAreaPicker({ image, value, onChange }) {
+  const containerRef = useRef(null);
+  const modeRef = useRef(null); // "move" | "resize" while a drag is active
+
+  useEffect(() => {
+    function onMove(e) {
+      if (!modeRef.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const dxPct = (e.movementX / rect.width) * 100;
+      const dyPct = (e.movementY / rect.height) * 100;
+      if (modeRef.current === "move") {
+        const nx = Math.min(Math.max(value.x + dxPct, 0), 100 - value.w);
+        const ny = Math.min(Math.max(value.y + dyPct, 0), 100 - value.h);
+        onChange({ ...value, x: Math.round(nx * 10) / 10, y: Math.round(ny * 10) / 10 });
+      } else {
+        const nw = Math.min(Math.max(value.w + dxPct, 5), 100 - value.x);
+        const nh = Math.min(Math.max(value.h + dyPct, 5), 100 - value.y);
+        onChange({ ...value, w: Math.round(nw * 10) / 10, h: Math.round(nh * 10) / 10 });
+      }
+    }
+    function onUp() { modeRef.current = null; }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [value, onChange]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative bg-white border border-[#e5e7eb] rounded-xl overflow-hidden select-none mx-auto"
+      style={{ width: "100%", maxWidth: 280, aspectRatio: "1 / 1" }}
+      data-testid="print-area-picker"
+    >
+      {image
+        ? <img src={image} alt="" className="w-full h-full object-contain pointer-events-none" draggable={false} />
+        : <div className="w-full h-full grid place-items-center text-[#4b5563] text-xs">No image yet</div>}
+      <div
+        onMouseDown={(e) => { e.preventDefault(); modeRef.current = "move"; }}
+        className="absolute border-2 border-dashed border-[#7bc67e] bg-[#7bc67e]/10 cursor-move"
+        style={{ left: `${value.x}%`, top: `${value.y}%`, width: `${value.w}%`, height: `${value.h}%` }}
+        data-testid="print-area-box"
+      >
+        <div
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); modeRef.current = "resize"; }}
+          className="absolute -right-1.5 -bottom-1.5 w-3.5 h-3.5 bg-[#7bc67e] rounded-full border-2 border-white cursor-nwse-resize"
+          data-testid="print-area-resize-handle"
+        />
       </div>
     </div>
   );
