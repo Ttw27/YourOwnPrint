@@ -2506,6 +2506,7 @@ GARMENT_TYPE_CATALOGUE = [
     {"slug": "t-shirts",    "title": "T-shirts",     "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg"},
     {"slug": "hoodies",     "title": "Hoodies",      "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg"},
     {"slug": "polos",       "title": "Polos",        "image": "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg"},
+    {"slug": "shirts",      "title": "Shirts & Blouses", "image": "https://images.pexels.com/photos/6764028/pexels-photo-6764028.jpeg"},
     {"slug": "sweatshirts", "title": "Sweatshirts",  "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg"},
     {"slug": "jackets",     "title": "Jackets",      "image": "https://images.pexels.com/photos/16429777/pexels-photo-16429777.jpeg"},
     {"slug": "hi-vis",      "title": "Hi-Vis",       "image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg"},
