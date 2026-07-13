@@ -4830,6 +4830,7 @@ def _apply_imported_product(doc: Dict) -> None:
         "category": doc.get("category") or "t-shirts",
         "image": doc.get("image") or "",
         "additional_images": doc.get("additional_images") or [],
+        "image_gallery": doc.get("additional_images") or [],
         "description": doc.get("description") or "",
         "gender_fit": doc.get("gender_fit") or "unisex",
         "industry_tags": doc.get("industry_tags") or [],
