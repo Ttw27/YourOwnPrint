@@ -133,6 +133,7 @@ export default function AdminProductsImport() {
     randomize_main_image: false,
     apply_placement_defaults: false,
     fix_corrupted_sizes: false,
+    rebuild_gallery_from_colours: false,
   });
 
   const [bulkRunAllProgress, setBulkRunAllProgress] = useState(null); // {offset, totalMatching, totals} while running
@@ -158,6 +159,7 @@ export default function AdminProductsImport() {
       randomize_main_image: bulkForm.randomize_main_image,
       apply_placement_defaults: bulkForm.apply_placement_defaults,
       fix_corrupted_sizes: bulkForm.fix_corrupted_sizes,
+      rebuild_gallery_from_colours: bulkForm.rebuild_gallery_from_colours,
       offset,
       dry_run: dryRun,
     };
@@ -175,9 +177,9 @@ export default function AdminProductsImport() {
       const { errNote } = summarizeBatch(d);
       const truncNote = d.truncated ? ` ${d.total_matching - d.next_offset} product(s) still remain — click Apply again (or use "Run all") to continue.` : "";
       if (dryRun) {
-        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} would get sizes repaired` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
+        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} would get sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} would get their photo gallery rebuilt` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
       } else {
-        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} had sizes repaired` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
+        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} had sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} had their photo gallery rebuilt` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
         refresh();
       }
     } catch (e) {
@@ -699,6 +701,14 @@ export default function AdminProductsImport() {
                 <div>
                   <div className="text-xs font-extrabold">Fix corrupted kids sizes</div>
                   <div className="text-[10px] text-[#4b5563]">PenCarrie's own source file had a data error — Excel silently turned age-range sizes like "3-4" or "12-13" into dates or plain numbers before we ever imported them. This detects and repairs those back to the correct size (e.g. "2026-04-03" → "3-4", "1213" → "12-13").</div>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 bg-[#f0fdf4] rounded-2xl p-4">
+                <input type="checkbox" checked={bulkForm.rebuild_gallery_from_colours} onChange={(e) => setBulkForm({ ...bulkForm, rebuild_gallery_from_colours: e.target.checked })} data-testid="apx-bulk-rebuild-gallery" />
+                <div>
+                  <div className="text-xs font-extrabold">Rebuild photo gallery from colours</div>
+                  <div className="text-[10px] text-[#4b5563]">If a product's main photo or thumbnail gallery looks thin/broken but its colour swatches still show the right photo when clicked, this rebuilds the main image + full gallery directly from that colour data — restores every colour's photo without needing to re-import.</div>
                 </div>
               </label>
 
