@@ -5094,6 +5094,11 @@ class BulkUpdateImportedPayload(BaseModel):
     # before it was ever imported (confirmed: "3-4" typed into their sheet
     # became a stored date, "12-13" became the plain number 1213).
     fix_corrupted_sizes: Optional[bool] = False
+    # Rebuilds the main image + photo gallery from each product's own
+    # colors[].image list — for products where the top-level image/gallery
+    # fields ended up thinned out or corrupted somewhere along the way, but
+    # the per-colour images (used by the colour swatch switcher) are still intact.
+    rebuild_gallery_from_colours: Optional[bool] = False
     # Which page of matching products to process — required for repeated
     # calls to actually advance through different products instead of
     # reprocessing the same first batch every time.
@@ -5131,6 +5136,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     randomized = 0
     placements_updated = 0
     sizes_repaired = 0
+    gallery_rebuilt = 0
     errors = 0
     error_examples = []
 
@@ -5212,6 +5218,27 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                 if len(error_examples) < 5:
                     error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "fix_corrupted_sizes", "error": str(e)[:200]})
 
+        if payload.rebuild_gallery_from_colours:
+            try:
+                colour_images = [c.get("image") for c in (doc.get("colors") or []) if isinstance(c, dict) and c.get("image")]
+                # De-duplicate while preserving order.
+                seen = set()
+                colour_images = [u for u in colour_images if not (u in seen or seen.add(u))]
+                if colour_images:
+                    current_main = doc.get("image") or ""
+                    # Keep the current main photo if it's genuinely one of this
+                    # product's own colour photos; otherwise just use the first.
+                    new_main = current_main if current_main in colour_images else colour_images[0]
+                    new_gallery = [u for u in colour_images if u != new_main]
+                    if new_main != current_main or new_gallery != (doc.get("additional_images") or []):
+                        update["image"] = new_main
+                        update["additional_images"] = new_gallery
+                        gallery_rebuilt += 1
+            except Exception as e:
+                per_doc_error = True
+                if len(error_examples) < 5:
+                    error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "rebuild_gallery_from_colours", "error": str(e)[:200]})
+
         if per_doc_error:
             errors += 1
 
@@ -5260,6 +5287,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "randomized": randomized,
         "placements_updated": placements_updated,
         "sizes_repaired": sizes_repaired,
+        "gallery_rebuilt": gallery_rebuilt,
         "total_matching": total_matching,
         "truncated": truncated,
         "next_offset": (payload.offset or 0) + matched,
