@@ -2086,7 +2086,7 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "")
             "size_guide_table": p.get("size_guide_table") or [],
             "bulk_pricing_enabled": bool(p.get("bulk_pricing_enabled")),
             "bulk_pricing_overrides": p.get("bulk_pricing_overrides") or [],
-            "allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS),
+            "allowed_placements": p.get("allowed_placements") if p.get("allowed_placements") is not None else list(ALLOWED_PLACEMENT_OPTIONS),
             "workforce_eligible": bool(p.get("workforce_eligible")),
             "also_bought": p.get("also_bought") or [],
             "match_with": p.get("match_with") or [],
@@ -2110,7 +2110,12 @@ async def get_allowed_placements(product_id: str):
     p = PRODUCTS.get(product_id)
     if not p:
         raise HTTPException(404, "Product not found")
-    return {"allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS)}
+    stored = p.get("allowed_placements")
+    # `stored` can legitimately be an empty list (e.g. footwear/socks — no
+    # print placement makes sense at all), which is different from it never
+    # having been set. `or` treats both the same (empty list is falsy), which
+    # was wrongly falling back to the full unrestricted set for those products.
+    return {"allowed_placements": stored if stored is not None else list(ALLOWED_PLACEMENT_OPTIONS)}
 
 
 @api_router.patch("/admin/products/{product_id}/meta", dependencies=[Depends(require_admin)])
@@ -2571,7 +2576,7 @@ async def list_workforce_products():
                 "size_upcharges": p.get("size_upcharges", {}),
                 "category": p["category"],
                 "brand": p.get("brand") or "",
-                "allowed_placements": p.get("allowed_placements") or list(ALLOWED_PLACEMENT_OPTIONS),
+                "allowed_placements": p.get("allowed_placements") if p.get("allowed_placements") is not None else list(ALLOWED_PLACEMENT_OPTIONS),
             })
     out.sort(key=lambda x: x["price"])
     return out
