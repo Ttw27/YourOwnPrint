@@ -5016,9 +5016,25 @@ def _apply_imported_product(doc: Dict) -> None:
         "colors": doc.get("colors") or [],
         "sizes": doc.get("sizes") or [],
         "size_upcharges": doc.get("size_upcharges") or {},
+        # These were previously dropped entirely every time this function ran
+        # (including on every server restart and every bulk-update call) —
+        # meaning allowed_placements got silently wiped back to unset moments
+        # after being correctly computed and saved, and brand was stored
+        # under the wrong key name (_brand) that nothing else ever read.
+        "allowed_placements": doc.get("allowed_placements"),
+        "brand": doc.get("brand") or "",
+        "source_sku": doc.get("source_sku") or "",
+        "source_price": doc.get("source_price"),
+        "active": doc.get("active", True),
+        "imported_at": doc.get("imported_at") or "",
+        "bulk_pricing_enabled": bool(doc.get("bulk_pricing_enabled")),
+        "designer_enabled": doc.get("designer_enabled", False),
+        "designer_image": doc.get("designer_image") or "",
+        "designer_print_area": doc.get("designer_print_area"),
+        "designer_images_by_colour": doc.get("designer_images_by_colour") or {},
         "_imported": True,
         "_source": doc.get("source") or "manual",
-        "_brand": doc.get("brand") or "",
+        "_brand": doc.get("brand") or "",  # kept for backward compatibility with any code still reading this key
     }
 
 
