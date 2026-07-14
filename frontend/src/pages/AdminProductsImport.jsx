@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { toast } from "sonner";
 import {
   fetchImportedProducts, bulkImportProducts, patchImportedProduct, deleteImportedProduct,
@@ -135,26 +135,45 @@ export default function AdminProductsImport() {
     fix_corrupted_sizes: false,
   });
 
+  const [bulkRunAllProgress, setBulkRunAllProgress] = useState(null); // {offset, totalMatching, totals} while running
+  const [bulkSelectedIds, setBulkSelectedIds] = useState(new Set());
+  const toggleBulkSelect = (id) => setBulkSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const bulkCancelRef = useRef(false);
+
+  function buildBulkPayload(dryRun, offset) {
+    return {
+      q: bulkForm.scope === "search" ? importedSearch : "",
+      ids: bulkForm.scope === "selected" ? [...bulkSelectedIds] : undefined,
+      reprice: bulkForm.reprice,
+      markup_pct: Number(bulkForm.markup_pct) || 0,
+      apply_vat: bulkForm.apply_vat,
+      vat_rate_pct: Number(bulkForm.vat_rate_pct) || 20,
+      charm_price_99: bulkForm.charm_price_99,
+      set_bulk_pricing_enabled: bulkForm.set_bulk_pricing_enabled === "unchanged" ? null : bulkForm.set_bulk_pricing_enabled === "on",
+      retag_industries: bulkForm.retag_industries,
+      randomize_main_image: bulkForm.randomize_main_image,
+      apply_placement_defaults: bulkForm.apply_placement_defaults,
+      fix_corrupted_sizes: bulkForm.fix_corrupted_sizes,
+      offset,
+      dry_run: dryRun,
+    };
+  }
+
+  function summarizeBatch(d) {
+    const errNote = d.errors ? ` ${d.errors} product(s) had an issue and were skipped (not counted as failed).` : "";
+    return { errNote };
+  }
+
   async function runBulkUpdate(dryRun) {
     setBulkBusy(true);
     try {
-      const payload = {
-        q: bulkForm.scope === "search" ? importedSearch : "",
-        reprice: bulkForm.reprice,
-        markup_pct: Number(bulkForm.markup_pct) || 0,
-        apply_vat: bulkForm.apply_vat,
-        vat_rate_pct: Number(bulkForm.vat_rate_pct) || 20,
-        charm_price_99: bulkForm.charm_price_99,
-        set_bulk_pricing_enabled: bulkForm.set_bulk_pricing_enabled === "unchanged" ? null : bulkForm.set_bulk_pricing_enabled === "on",
-        retag_industries: bulkForm.retag_industries,
-        randomize_main_image: bulkForm.randomize_main_image,
-        apply_placement_defaults: bulkForm.apply_placement_defaults,
-        fix_corrupted_sizes: bulkForm.fix_corrupted_sizes,
-        dry_run: dryRun,
-      };
-      const d = await bulkUpdateImported(payload);
-      const errNote = d.errors ? ` ${d.errors} product(s) had an issue and were skipped (not counted as failed).` : "";
-      const truncNote = d.truncated ? ` Only processed the first 500 of ${d.total_matching} matching products (per-request limit) — run this again to continue with the rest.` : "";
+      const d = await bulkUpdateImported(buildBulkPayload(dryRun, 0));
+      const { errNote } = summarizeBatch(d);
+      const truncNote = d.truncated ? ` ${d.total_matching - d.next_offset} product(s) still remain — click Apply again (or use "Run all") to continue.` : "";
       if (dryRun) {
         toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} would get sizes repaired` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
       } else {
@@ -165,6 +184,40 @@ export default function AdminProductsImport() {
       toast.error(e?.response?.data?.detail || "Bulk update failed");
     } finally {
       setBulkBusy(false);
+    }
+  }
+
+  async function runBulkUpdateAll() {
+    setBulkBusy(true);
+    bulkCancelRef.current = false;
+    let offset = 0;
+    let totalMatching = null;
+    const totals = { repriced: 0, retagged: 0, randomized: 0, placements_updated: 0, sizes_repaired: 0, errors: 0 };
+    try {
+      // First call establishes how many there are in total, for progress display.
+      while (true) {
+        if (bulkCancelRef.current) { toast(`Stopped — ${offset} product(s) processed so far.`); break; }
+        const d = await bulkUpdateImported(buildBulkPayload(false, offset));
+        totalMatching = d.total_matching;
+        totals.repriced += d.repriced || 0;
+        totals.retagged += d.retagged || 0;
+        totals.randomized += d.randomized || 0;
+        totals.placements_updated += d.placements_updated || 0;
+        totals.sizes_repaired += d.sizes_repaired || 0;
+        totals.errors += d.errors || 0;
+        offset = d.next_offset;
+        setBulkRunAllProgress({ offset, totalMatching, totals });
+        if (!d.truncated) break; // reached the end
+      }
+      if (!bulkCancelRef.current) {
+        toast.success(`Done — processed all ${offset} matching product(s). ${totals.repriced ? `${totals.repriced} repriced. ` : ""}${totals.retagged ? `${totals.retagged} retagged. ` : ""}${totals.randomized ? `${totals.randomized} photos randomized. ` : ""}${totals.placements_updated ? `${totals.placements_updated} placements updated. ` : ""}${totals.sizes_repaired ? `${totals.sizes_repaired} sizes repaired. ` : ""}${totals.errors ? `${totals.errors} skipped due to an issue.` : ""}`);
+      }
+      refresh();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Bulk update failed partway through — whatever completed so far is saved. Just click \"Run all\" again to pick up where it left off.");
+    } finally {
+      setBulkBusy(false);
+      setBulkRunAllProgress(null);
     }
   }
   const [loading, setLoading] = useState(true);
@@ -575,12 +628,15 @@ export default function AdminProductsImport() {
             <div className="mt-4 space-y-3">
               <p className="text-[11px] text-[#4b5563]">Re-price or turn on quantity-discount pricing across many products at once — no need to open each one individually. Re-pricing recalculates from each product's saved trade cost, so it only works on products imported with a source price.</p>
 
-              <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-4 text-xs flex-wrap">
                 <label className="inline-flex items-center gap-1.5">
                   <input type="radio" checked={bulkForm.scope === "all"} onChange={() => setBulkForm({ ...bulkForm, scope: "all" })} /> All imported products
                 </label>
                 <label className="inline-flex items-center gap-1.5">
                   <input type="radio" checked={bulkForm.scope === "search"} onChange={() => setBulkForm({ ...bulkForm, scope: "search" })} /> Only products matching the search box above {importedSearch ? `("${importedSearch}")` : "(currently empty — same as All)"}
+                </label>
+                <label className="inline-flex items-center gap-1.5">
+                  <input type="radio" checked={bulkForm.scope === "selected"} disabled={bulkSelectedIds.size === 0} onChange={() => setBulkForm({ ...bulkForm, scope: "selected" })} /> Only the {bulkSelectedIds.size} product{bulkSelectedIds.size === 1 ? "" : "s"} I've ticked below {bulkSelectedIds.size === 0 && "(tick some first)"}
                 </label>
               </div>
 
@@ -646,14 +702,29 @@ export default function AdminProductsImport() {
                 </div>
               </label>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap items-center">
                 <button type="button" onClick={() => runBulkUpdate(true)} disabled={bulkBusy} className="text-xs font-extrabold border border-[#7bc67e] text-[#166534] rounded-full px-4 py-2 hover:bg-[#f0fdf4] disabled:opacity-50" data-testid="apx-bulk-preview">
                   {bulkBusy ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null} Preview (no changes made)
                 </button>
                 <button type="button" onClick={() => runBulkUpdate(false)} disabled={bulkBusy} className="text-xs font-extrabold bg-[#7bc67e] hover:bg-[#5eb062] rounded-full px-4 py-2 disabled:opacity-50" data-testid="apx-bulk-apply">
-                  {bulkBusy ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null} Apply now
+                  {bulkBusy ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null} Apply now (this batch only)
                 </button>
+                {!bulkRunAllProgress ? (
+                  <button type="button" onClick={runBulkUpdateAll} disabled={bulkBusy} className="text-xs font-extrabold bg-[#166534] hover:bg-[#14532d] text-white rounded-full px-4 py-2 disabled:opacity-50" data-testid="apx-bulk-run-all">
+                    {bulkBusy ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null} Run all automatically
+                  </button>
+                ) : (
+                  <>
+                    <span className="text-xs text-[#4b5563]" data-testid="apx-bulk-progress">
+                      Processing… {bulkRunAllProgress.offset} of {bulkRunAllProgress.totalMatching}
+                    </span>
+                    <button type="button" onClick={() => { bulkCancelRef.current = true; }} className="text-xs font-extrabold text-rose-500 hover:underline">
+                      Stop
+                    </button>
+                  </>
+                )}
               </div>
+              <p className="text-[10px] text-[#4b5563]">"Apply now" processes one batch of up to 200 at a time. "Run all automatically" keeps going on its own until every matching product is done — safe to stop partway and resume later.</p>
             </div>
           )}
         </div>
@@ -662,7 +733,14 @@ export default function AdminProductsImport() {
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4" data-testid="apx-existing">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="text-xs uppercase tracking-wider text-[#7bc67e] font-extrabold">Already imported · {importedTotal}</div>
-            {loading && <Loader2 className="animate-spin text-[#7bc67e]" size={14} />}
+            <div className="flex items-center gap-3">
+              {bulkSelectedIds.size > 0 && (
+                <span className="text-[11px] text-[#166534] font-extrabold">
+                  {bulkSelectedIds.size} selected <button onClick={() => setBulkSelectedIds(new Set())} className="underline ml-1">clear</button>
+                </span>
+              )}
+              {loading && <Loader2 className="animate-spin text-[#7bc67e]" size={14} />}
+            </div>
           </div>
           <input value={importedSearch} onChange={(e) => setImportedSearch(e.target.value)} placeholder="Search imported products…" className="input mb-3" data-testid="apx-existing-search" />
           {imported.length === 0 ? (
@@ -672,6 +750,7 @@ export default function AdminProductsImport() {
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {imported.map((p) => (
                   <div key={p.id} className="border-2 border-[#dcfce7] rounded-2xl p-3 flex gap-3" data-testid={`apx-existing-${p.id}`}>
+                    <input type="checkbox" checked={bulkSelectedIds.has(p.id)} onChange={() => toggleBulkSelect(p.id)} className="mt-1 flex-shrink-0" data-testid={`apx-select-${p.id}`} />
                     {p.image
                       ? <img src={p.image} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
                       : <div className="w-14 h-14 rounded-lg bg-[#f0fdf4] grid place-items-center flex-shrink-0 text-[9px] text-[#7bc67e]">no img</div>}
