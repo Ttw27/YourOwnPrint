@@ -5123,10 +5123,11 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     cursor = db.imported_products.find(query).sort("id", 1).skip(payload.offset or 0).limit(HARD_CAP)
     async for doc in cursor:
         matched += 1
-        try:
-            update: Dict = {}
+        update: Dict = {}
+        per_doc_error = False
 
-            if payload.reprice:
+        if payload.reprice:
+            try:
                 sp = doc.get("source_price")
                 if sp is None:
                     skipped_no_cost += 1
@@ -5136,18 +5137,28 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                     )
                     update["price"] = new_price
                     repriced += 1
+            except Exception as e:
+                per_doc_error = True
+                if len(error_examples) < 5:
+                    error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "reprice", "error": str(e)[:200]})
 
-            if payload.set_bulk_pricing_enabled is not None:
-                update["bulk_pricing_enabled"] = payload.set_bulk_pricing_enabled
-                bulk_flag_set += 1
+        if payload.set_bulk_pricing_enabled is not None:
+            update["bulk_pricing_enabled"] = payload.set_bulk_pricing_enabled
+            bulk_flag_set += 1
 
-            if payload.retag_industries:
+        if payload.retag_industries:
+            try:
                 new_tags = _auto_industry_tags(doc.get("name") or "", doc.get("category") or "")
                 if new_tags != (doc.get("industry_tags") or []):
                     update["industry_tags"] = new_tags
                     retagged += 1
+            except Exception as e:
+                per_doc_error = True
+                if len(error_examples) < 5:
+                    error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "retag_industries", "error": str(e)[:200]})
 
-            if payload.randomize_main_image:
+        if payload.randomize_main_image:
+            try:
                 current_main = doc.get("image") or ""
                 gallery = [u for u in (doc.get("additional_images") or []) if u]
                 pool = ([current_main] if current_main else []) + gallery
@@ -5157,20 +5168,38 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                         update["image"] = new_main
                         update["additional_images"] = [u for u in pool if u != new_main]
                         randomized += 1
+            except Exception as e:
+                per_doc_error = True
+                if len(error_examples) < 5:
+                    error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "randomize_main_image", "error": str(e)[:200]})
 
-            if payload.apply_placement_defaults:
+        if payload.apply_placement_defaults:
+            try:
                 new_placements = _auto_allowed_placements(doc.get("name") or "", doc.get("category") or "")
                 if new_placements != (doc.get("allowed_placements") or []):
                     update["allowed_placements"] = new_placements
                     placements_updated += 1
+            except Exception as e:
+                per_doc_error = True
+                if len(error_examples) < 5:
+                    error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "apply_placement_defaults", "error": str(e)[:200]})
 
-            if payload.fix_corrupted_sizes:
+        if payload.fix_corrupted_sizes:
+            try:
                 current_sizes = doc.get("sizes") or []
                 repaired_sizes = [_repair_size_value(s) for s in current_sizes]
                 if repaired_sizes != current_sizes:
                     update["sizes"] = repaired_sizes
                     sizes_repaired += 1
+            except Exception as e:
+                per_doc_error = True
+                if len(error_examples) < 5:
+                    error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "fix_corrupted_sizes", "error": str(e)[:200]})
 
+        if per_doc_error:
+            errors += 1
+
+        try:
             pid = doc.get("id")
             if not payload.dry_run and pid:
                 merged = {**doc, **update}
