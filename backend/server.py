@@ -2,6 +2,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Request, Header, Depends,
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import UpdateOne
 import os
 import asyncio
 import re
@@ -5087,7 +5088,9 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     # "apply to all imported products" on a catalogue of thousands could hold
     # a single request open for minutes, which is exactly the kind of thing
     # that looks like the whole site going down. Process in batches instead.
-    HARD_CAP = 500
+    # Lowered alongside making writes concurrent below — a smaller, fast batch
+    # beats a larger, slow one for keeping the site responsive meanwhile.
+    HARD_CAP = 200
     total_matching = await db.imported_products.count_documents(query)
     truncated = total_matching > HARD_CAP
 
@@ -5102,6 +5105,8 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     errors = 0
     error_examples = []
 
+    # ---- Pass 1: compute every doc's update in memory (fast, no I/O) ----
+    pending: List[Tuple[str, Dict]] = []
     cursor = db.imported_products.find(query).limit(HARD_CAP)
     async for doc in cursor:
         matched += 1
@@ -5155,13 +5160,34 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
 
             pid = doc.get("id")
             if update and not payload.dry_run and pid:
-                await db.imported_products.update_one({"id": pid}, {"$set": update})
+                pending.append((pid, update))
                 merged = {**doc, **update}
-                _apply_imported_product(merged)
+                _apply_imported_product(merged)  # in-memory PRODUCTS updated immediately regardless of write timing
         except Exception as e:
             errors += 1
             if len(error_examples) < 5:
                 error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "error": str(e)[:200]})
+
+    # ---- Pass 2: write everything to Mongo concurrently (capped), instead of
+    # one-at-a-time — this is what let even a 200-500 item batch take long
+    # enough to look like the site had gone down. ----
+    if pending:
+        semaphore = asyncio.Semaphore(20)
+
+        async def _write_one(pid: str, update: Dict):
+            async with semaphore:
+                try:
+                    await db.imported_products.update_one({"id": pid}, {"$set": update})
+                except Exception as e:
+                    return pid, str(e)[:200]
+            return None
+
+        results = await asyncio.gather(*[_write_one(pid, u) for pid, u in pending])
+        for r in results:
+            if r:
+                errors += 1
+                if len(error_examples) < 5:
+                    error_examples.append({"id": r[0], "error": r[1]})
 
     return {
         "ok": True,
@@ -5509,12 +5535,34 @@ async def delete_imported_product(pid: str):
 @app.on_event("startup")
 async def _seed_default_product_meta():
     """Non-destructive: only fills empty/None fields. Admin overrides remain untouched.
-    Includes a one-time blanket 'bulk pricing on' pass guarded by settings.product_meta_seed_v1."""
+    Includes a one-time blanket 'bulk pricing on' pass guarded by settings.product_meta_seed_v1.
+
+    Runs as a background task, not awaited directly in the startup event —
+    this loops over every product in the catalogue (thousands, once PenCarrie
+    imports are in), and awaiting it inline here previously meant the whole
+    app sat unable to accept ANY request for 9+ minutes on every single
+    restart while it worked through them one at a time. The site itself
+    doesn't depend on this having finished — it only fills in defaults —
+    so there's no reason it needs to block startup.
+    """
+    asyncio.create_task(_seed_default_product_meta_impl())
+
+
+async def _seed_default_product_meta_impl():
     try:
         marker = await db.settings.find_one({"key": "product_meta_seed_v1"})
         first_run = marker is None
+
+        # One bulk read instead of one find_one() per product (was the actual
+        # cause of the multi-minute startup delay — thousands of individual
+        # round-trips to Mongo Atlas, one per product, every restart).
+        existing_by_id: Dict[str, Dict] = {}
+        async for doc in db.product_meta.find({}):
+            existing_by_id[doc.get("product_id")] = doc
+
+        writes = []
         for pid, p in PRODUCTS.items():
-            existing = await db.product_meta.find_one({"product_id": pid}) or {}
+            existing = existing_by_id.get(pid) or {}
             patch: Dict = {}
 
             if not existing.get("description_full") and not p.get("description_full"):
@@ -5525,17 +5573,22 @@ async def _seed_default_product_meta():
                 if sg:
                     patch["size_guide_table"] = sg
 
-            # One-time blanket enable of bulk pricing (admins can disable per-product after).
             if first_run and not existing.get("bulk_pricing_enabled") and not p.get("bulk_pricing_enabled"):
                 patch["bulk_pricing_enabled"] = True
 
             if patch:
                 patch["product_id"] = pid
                 patch["updated_at"] = datetime.now(timezone.utc).isoformat()
-                await db.product_meta.update_one({"product_id": pid}, {"$set": patch}, upsert=True)
+                writes.append(UpdateOne({"product_id": pid}, {"$set": patch}, upsert=True))
                 for k, v in patch.items():
                     if k not in ("product_id", "updated_at"):
                         PRODUCTS[pid][k] = v
+
+        if writes:
+            # Still capped-concurrency rather than one giant unbounded bulk_write,
+            # to keep this polite to Atlas regardless of catalogue size.
+            for i in range(0, len(writes), 500):
+                await db.product_meta.bulk_write(writes[i:i + 500], ordered=False)
 
         if first_run:
             await db.settings.update_one(
@@ -5543,6 +5596,7 @@ async def _seed_default_product_meta():
                 {"$set": {"key": "product_meta_seed_v1", "ran_at": datetime.now(timezone.utc).isoformat()}},
                 upsert=True,
             )
+        logging.info(f"product-meta seed finished in background ({len(writes)} products updated).")
     except Exception as e:
         print(f"product-meta seed failed: {e}")
 
