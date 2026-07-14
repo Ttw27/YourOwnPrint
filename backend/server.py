@@ -1547,11 +1547,12 @@ def _repair_size_value(raw: str) -> str:
 
 
 def _auto_allowed_placements(name: str, category: str) -> List[str]:
-    base = list(CATEGORY_PLACEMENT_DEFAULTS.get(category, ALLOWED_PLACEMENT_OPTIONS))
+    normalized_category = str(category or "").strip().lower()
+    base = list(CATEGORY_PLACEMENT_DEFAULTS.get(normalized_category, ALLOWED_PLACEMENT_OPTIONS))
     hay = name.lower()
     # Hi-vis defaults assume a sleeveless vest (the most common case) — but a
     # hi-vis jacket/softshell/coat genuinely has sleeves, so add them back.
-    if category == "hi-vis" and any(k in hay for k in ("jacket", "softshell", "coat", "parka", "bomber")):
+    if normalized_category == "hi-vis" and any(k in hay for k in ("jacket", "softshell", "coat", "parka", "bomber")):
         for p in ("left-sleeve", "right-sleeve"):
             if p not in base:
                 base.append(p)
@@ -4991,7 +4992,7 @@ def _auto_industry_tags(name: str, category: str) -> List[str]:
             for t in industries:
                 if t not in tags:
                     tags.append(t)
-    if category in _BROAD_WORKWEAR_CATEGORIES and "trades" not in tags:
+    if str(category or "").strip().lower() in _BROAD_WORKWEAR_CATEGORIES and "trades" not in tags:
         tags.append("trades")
     return tags[:3]
 
