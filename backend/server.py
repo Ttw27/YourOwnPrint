@@ -5171,10 +5171,11 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                     sizes_repaired += 1
 
             pid = doc.get("id")
-            if update and not payload.dry_run and pid:
-                pending.append((pid, update))
+            if not payload.dry_run and pid:
                 merged = {**doc, **update}
-                _apply_imported_product(merged)  # in-memory PRODUCTS updated immediately regardless of write timing
+                _apply_imported_product(merged)  # always sync memory to the freshly-computed state, even if no DB write was needed this time — otherwise a stale in-memory copy from before a fix existed could persist indefinitely
+                if update:
+                    pending.append((pid, update))
         except Exception as e:
             errors += 1
             if len(error_examples) < 5:
