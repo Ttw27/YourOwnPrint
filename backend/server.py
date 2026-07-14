@@ -5042,6 +5042,7 @@ class BulkUpdateImportedPayload(BaseModel):
     q: Optional[str] = ""
     brand: Optional[str] = ""
     category: Optional[str] = ""
+    ids: Optional[List[str]] = None  # if provided, restricts to exactly these product IDs (hand-picked)
     # Re-pricing — recalculated from each product's saved trade cost (source_price).
     # Only applies to products that actually have a source_price saved (i.e.
     # were imported with one) — products without one are left untouched.
@@ -5071,12 +5072,18 @@ class BulkUpdateImportedPayload(BaseModel):
     # before it was ever imported (confirmed: "3-4" typed into their sheet
     # became a stored date, "12-13" became the plain number 1213).
     fix_corrupted_sizes: Optional[bool] = False
+    # Which page of matching products to process — required for repeated
+    # calls to actually advance through different products instead of
+    # reprocessing the same first batch every time.
+    offset: Optional[int] = 0
     dry_run: Optional[bool] = False
 
 
 @api_router.post("/admin/products/bulk-update-imported", dependencies=[Depends(require_admin)])
 async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     query: Dict = {}
+    if payload.ids:
+        query["id"] = {"$in": payload.ids}
     if payload.brand:
         query["brand"] = {"$regex": f"^{re.escape(payload.brand)}$", "$options": "i"}
     if payload.category:
@@ -5092,7 +5099,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     # beats a larger, slow one for keeping the site responsive meanwhile.
     HARD_CAP = 200
     total_matching = await db.imported_products.count_documents(query)
-    truncated = total_matching > HARD_CAP
+    truncated = total_matching > (payload.offset or 0) + HARD_CAP
 
     matched = 0
     repriced = 0
@@ -5107,7 +5114,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
 
     # ---- Pass 1: compute every doc's update in memory (fast, no I/O) ----
     pending: List[Tuple[str, Dict]] = []
-    cursor = db.imported_products.find(query).limit(HARD_CAP)
+    cursor = db.imported_products.find(query).sort("id", 1).skip(payload.offset or 0).limit(HARD_CAP)
     async for doc in cursor:
         matched += 1
         try:
@@ -5203,6 +5210,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "sizes_repaired": sizes_repaired,
         "total_matching": total_matching,
         "truncated": truncated,
+        "next_offset": (payload.offset or 0) + matched,
         "dry_run": payload.dry_run,
     }
 
