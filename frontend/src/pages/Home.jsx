@@ -5,7 +5,7 @@ import ToolsShowcase from "../components/bold/ToolsShowcase";
 import PortfolioStrip from "../components/bold/PortfolioStrip";
 import PricePromise from "../components/bold/PricePromise";
 import { SECTORS, REVIEWS as STATIC_REVIEWS, RATING } from "../lib/data";
-import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews } from "../lib/api";
+import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews, fetchBestSellers } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera } from "lucide-react";
 
@@ -15,7 +15,7 @@ export default function Home() {
   const [recentReviews, setRecentReviews] = useState([]);
 
   useEffect(() => {
-    fetchProducts("best-sellers", 12).then((d) => setBestSellers(d.items || []));
+    fetchBestSellers(12).then((d) => setBestSellers(d.items || []));
     fetchReviewsAggregate().then(setAggregates);
     fetchRecentReviews(6).then(setRecentReviews).catch(() => {});
   }, []);

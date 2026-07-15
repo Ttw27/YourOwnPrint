@@ -93,6 +93,7 @@ export default function AdminProductSettings() {
         allowed_placements: Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS,
         workforce_eligible: !!p.workforce_eligible,
         specials_eligible: !!p.specials_eligible,
+        is_bestseller: !!p.is_bestseller,
         also_bought: Array.isArray(p.also_bought) ? p.also_bought : [],
         match_with: Array.isArray(p.match_with) ? p.match_with : [],
         gender_fit: p.gender_fit || "unisex",
@@ -287,6 +288,15 @@ export default function AdminProductSettings() {
                         </div>
                       </label>
                       <Sparkles size={16} className="text-[#7bc67e]" />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-xl p-3" data-testid={`aps-bestseller-row-${p.id}`}>
+                      <label className="inline-flex items-center gap-2 cursor-pointer flex-1">
+                        <input type="checkbox" checked={!!p.is_bestseller} onChange={(e) => update(p.id, { is_bestseller: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-bestseller-${p.id}`} />
+                        <div>
+                          <div className="text-sm font-nunito font-extrabold">Feature on homepage best sellers</div>
+                          <div className="text-[11px] text-[#4b5563]">Shows in the homepage best-sellers strip. If nothing's flagged for a category, one product from it shows automatically instead.</div>
+                        </div>
+                      </label>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Image gallery (extra product photos — shown as thumbnails)</div>
