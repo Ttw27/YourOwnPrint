@@ -694,6 +694,30 @@ async def root():
     return {"message": "Your Own Print API"}
 
 
+@api_router.get("/search")
+async def search_products(q: str = "", limit: int = 25, offset: int = 0):
+    """Site-wide product search by name/brand — powers the header search bar."""
+    query = (q or "").strip().lower()
+    if not query:
+        return {"items": [], "total": 0, "offset": offset, "returned": 0, "query": q}
+
+    def matches(p: Dict) -> bool:
+        hay = f"{p.get('name', '')} {p.get('brand', '') or p.get('_brand', '')}".lower()
+        return query in hay
+
+    results = [p for p in PRODUCTS.values() if matches(p)]
+    # Names that start with the query rank above names that merely contain it.
+    results.sort(key=lambda p: (0 if p.get("name", "").lower().startswith(query) else 1, p.get("name", "")))
+    total = len(results)
+    limit = min(limit, 100)
+    page = results[offset:offset + limit]
+    items = [{
+        "id": p["id"], "name": p["name"], "price": float(p["price"]),
+        "image": p["image"], "category": p["category"],
+    } for p in page]
+    return {"items": items, "total": total, "offset": offset, "returned": len(items), "query": q}
+
+
 @api_router.get("/products")
 async def list_products(category: Optional[str] = None, industries: Optional[str] = None, gender_fit: Optional[str] = None, limit: int = 500, offset: int = 0):
     """`industries` is an optional comma-separated list of industry tags (e.g.
