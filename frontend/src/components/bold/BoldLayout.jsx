@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NAV_MENU } from "../../lib/data";
 import { fetchNavigation } from "../../lib/api";
-import { Facebook, Instagram, Star, ChevronDown, Menu, X } from "lucide-react";
+import { Facebook, Instagram, Star, ChevronDown, Menu, X, Search } from "lucide-react";
 import CartIcon from "../CartIcon";
 import AccountButton from "../AccountButton";
 
 export function BoldNavbar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [openKey, setOpenKey] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef(null);
   const [menu, setMenu] = useState(NAV_MENU);
   const rootRef = useRef(null);
 
@@ -33,14 +37,27 @@ export function BoldNavbar() {
 
   useEffect(() => {
     function onDoc(e) {
-      if (!rootRef.current?.contains(e.target)) setOpenKey(null);
+      if (!rootRef.current?.contains(e.target)) { setOpenKey(null); setSearchOpen(false); }
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
+
+  function submitSearch(e) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    navigate(`/search?q=${encodeURIComponent(q)}`);
+    setSearchOpen(false);
+    setSearchQuery("");
+  }
+
   return (
-    <nav ref={rootRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#e5e7eb]" data-testid="bold-navbar">
+    <nav ref={rootRef} className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb]" data-testid="bold-navbar">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" data-testid="nav-logo" className="flex-shrink-0 inline-flex items-center" aria-label="Your Own Print — home">
           <img src="/logo.png" alt="Your Own Print" className="h-10 w-auto md:h-11 select-none" draggable="false" />
@@ -115,6 +132,29 @@ export function BoldNavbar() {
         >
           <Menu size={18} />
         </button>
+
+        <form onSubmit={submitSearch} className="relative flex items-center">
+          {searchOpen && (
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products…"
+              className="absolute right-10 top-1/2 -translate-y-1/2 w-48 sm:w-64 bg-[#f0fdf4] border border-[#dcfce7] rounded-full pl-4 pr-3 py-2 text-sm focus:outline-none focus:border-[#7bc67e]"
+              data-testid="nav-search-input"
+            />
+          )}
+          <button
+            type={searchOpen ? "submit" : "button"}
+            onClick={() => { if (!searchOpen) setSearchOpen(true); }}
+            aria-label="Search"
+            className="w-10 h-10 grid place-items-center rounded-full hover:bg-[#f0fdf4] text-[#1a1a1a] flex-shrink-0"
+            data-testid="nav-search-trigger"
+          >
+            <Search size={18} />
+          </button>
+        </form>
 
         <AccountButton className="ml-2" />
         <CartIcon className="ml-1" />
