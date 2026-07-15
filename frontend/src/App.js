@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Home from "@/pages/Home";
+import SearchResults from "@/pages/SearchResults";
 import FestivalTeesAndBrands from "@/pages/FestivalTeesAndBrands";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
@@ -65,6 +66,7 @@ function App() {
         <Toaster position="top-center" richColors />
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/search" element={<SearchResults />} />
           <Route path="/festival-tees-and-brands" element={<FestivalTeesAndBrands />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
