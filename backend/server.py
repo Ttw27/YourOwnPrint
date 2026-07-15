@@ -44,7 +44,8 @@ PRODUCTS: Dict[str, Dict] = {
         "id": "personalised-tee",
         "name": "Personalised T-Shirt",
         "price": 6.99,
-        "category": "best-sellers",
+        "category": "t-shirts",
+        "is_bestseller": True,
         "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg",
         "description": "Gildan SoftStyle 100% cotton. Upload your photo, logo or text.",
     },
@@ -52,7 +53,8 @@ PRODUCTS: Dict[str, Dict] = {
         "id": "personalised-hoodie",
         "name": "Personalised Hoodie",
         "price": 14.99,
-        "category": "best-sellers",
+        "category": "hoodies",
+        "is_bestseller": True,
         "image": "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg",
         "description": "Gildan Heavy Blend Hooded Sweatshirt. Free logo print included.",
     },
@@ -60,7 +62,8 @@ PRODUCTS: Dict[str, Dict] = {
         "id": "kids-tee",
         "name": "Kids T-Shirt",
         "price": 7.99,
-        "category": "best-sellers",
+        "category": "kids-baby",
+        "is_bestseller": True,
         "image": "https://images.pexels.com/photos/31977041/pexels-photo-31977041.jpeg",
         "description": "Soft Gildan Youth tee. Perfect for schools, leavers & teams.",
     },
@@ -68,7 +71,8 @@ PRODUCTS: Dict[str, Dict] = {
         "id": "polo-shirt",
         "name": "Pique Polo Shirt",
         "price": 8.99,
-        "category": "best-sellers",
+        "category": "polos",
+        "is_bestseller": True,
         "image": "https://images.pexels.com/photos/26063373/pexels-photo-26063373.jpeg",
         "description": "Pro RTX Pique Polo. Breast print included in price.",
     },
@@ -387,7 +391,7 @@ PRODUCTS: Dict[str, Dict] = {
 
     # ----- Bottoms (joggers / trousers / leggings) -----
     "joggers": {
-        "id": "joggers", "name": "Branded Joggers", "price": 19.99, "category": "best-sellers",
+        "id": "joggers", "name": "Branded Joggers", "price": 19.99, "category": "bottoms", "is_bestseller": True,
         "image": "https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg",
         "description": "Tapered fleece-back joggers — your logo on the thigh or hip. Gyms, leavers, fitness coaches.",
     },
@@ -692,6 +696,84 @@ def _photo_ok(s: str) -> bool:
 @api_router.get("/")
 async def root():
     return {"message": "Your Own Print API"}
+
+
+SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "https://your-own-print.vercel.app")
+
+
+@api_router.get("/sitemap.xml")
+async def sitemap_xml():
+    """Dynamically generated sitemap — includes every product, collection,
+    and industry page currently live, so it never goes stale as the
+    catalogue grows or changes. Served at the real /sitemap.xml via a
+    Vercel rewrite (see frontend/vercel.json)."""
+    urls = [
+        ("/", "1.0", "daily"),
+        ("/workwear", "0.9", "daily"),
+        ("/sports-fitness", "0.8", "weekly"),
+        ("/team-kits", "0.8", "weekly"),
+        ("/specials", "0.7", "weekly"),
+        ("/design", "0.7", "weekly"),
+        ("/industries", "0.7", "weekly"),
+        ("/reviews", "0.5", "weekly"),
+    ]
+    for t in GARMENT_TYPE_CATALOGUE:
+        urls.append((f"/shop/{t['slug']}", "0.8", "daily"))
+    for i in INDUSTRIES_CATALOGUE:
+        if not i.get("alias_of"):  # skip aliases, only canonical pages
+            urls.append((f"/industries/{i['slug']}", "0.7", "weekly"))
+    for pid, p in PRODUCTS.items():
+        if p.get("active", True):
+            urls.append((f"/product/{pid}", "0.6", "weekly"))
+
+    xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for path, priority, freq in urls:
+        loc = f"{SITE_BASE_URL}{path}"
+        xml_parts.append(f"<url><loc>{loc}</loc><changefreq>{freq}</changefreq><priority>{priority}</priority></url>")
+    xml_parts.append("</urlset>")
+    return Response(content="".join(xml_parts), media_type="application/xml")
+
+
+@api_router.get("/robots.txt")
+async def robots_txt():
+    content = f"User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: {SITE_BASE_URL}/sitemap.xml\n"
+    return Response(content=content, media_type="text/plain")
+
+
+@api_router.get("/products/best-sellers")
+async def best_sellers(limit: int = 12):
+    """Manually-flagged best sellers first, topped up with one representative
+    product per garment category so the homepage always shows a genuine
+    spread of the catalogue — rather than being frozen at whatever's been
+    manually flagged, which is especially important on a catalogue this size."""
+    flagged = [p for p in PRODUCTS.values() if p.get("is_bestseller") and p.get("active", True)]
+    flagged.sort(key=lambda x: x.get("name", ""))
+    picks = list(flagged)
+    seen_ids = {p["id"] for p in picks}
+    seen_categories = {p["category"] for p in picks}
+
+    if len(picks) < limit:
+        by_category: Dict[str, Dict] = {}
+        for p in PRODUCTS.values():
+            if p["id"] in seen_ids or not p.get("active", True):
+                continue
+            cat = p["category"]
+            if cat in seen_categories:
+                continue
+            # Keep the first one seen per category — good enough for a diverse spread.
+            if cat not in by_category:
+                by_category[cat] = p
+        for cat, p in by_category.items():
+            if len(picks) >= limit:
+                break
+            picks.append(p)
+            seen_categories.add(cat)
+
+    items = [{
+        "id": p["id"], "name": p["name"], "price": float(p["price"]),
+        "image": p["image"], "category": p["category"],
+    } for p in picks[:limit]]
+    return {"items": items, "total": len(items)}
 
 
 @api_router.get("/search")
@@ -1600,6 +1682,7 @@ class ProductMeta(BaseModel):
     match_with: Optional[List[str]] = None
     image_gallery: Optional[List[str]] = None
     specials_eligible: Optional[bool] = None
+    is_bestseller: Optional[bool] = None
     gender_fit: Optional[str] = None  # mens | womens | unisex | kids
     industry_tags: Optional[List[str]] = None
 
@@ -1802,7 +1885,7 @@ async def _merge_designer_overrides():
         if pid in PRODUCTS:
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
                      "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-                     "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible",
+                     "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible", "is_bestseller",
                      "gender_fit", "industry_tags"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
@@ -2205,6 +2288,7 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "match_with": payload.match_with,
         "image_gallery": payload.image_gallery,
         "specials_eligible": payload.specials_eligible if payload.specials_eligible is not None else bool(PRODUCTS[product_id].get("specials_eligible")),
+        "is_bestseller": payload.is_bestseller if payload.is_bestseller is not None else bool(PRODUCTS[product_id].get("is_bestseller")),
         "gender_fit": payload.gender_fit,
         "industry_tags": payload.industry_tags,
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -2212,7 +2296,7 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
               "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-              "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible",
+              "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible", "is_bestseller",
               "gender_fit", "industry_tags"):
         v = doc.get(k)
         if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible", "specials_eligible"):
@@ -3257,11 +3341,29 @@ async def also_bought(product_id: str, limit: int = 4):
 
 @api_router.get("/products/{product_id}/match-with")
 async def match_with(product_id: str, limit: int = 4):
-    """Curator-picked complementary products (no auto-fallback — returns empty if admin hasn't picked any)."""
+    """Curator-picked complementary products, with an automatic fallback —
+    same industry tag(s), different category — so "complete the look"
+    actually shows something for the vast majority of the catalogue that
+    hasn't been manually curated, rather than showing nothing at all."""
     p = PRODUCTS.get(product_id)
     if not p:
         raise HTTPException(404, "Product not found")
     picks = list(p.get("match_with") or [])
+    if not picks:
+        my_tags = set(p.get("industry_tags") or [])
+        candidates = [
+            q for q in PRODUCTS.values()
+            if q["id"] != product_id and q["category"] != p["category"]
+            and (not my_tags or my_tags & set(q.get("industry_tags") or []))
+        ]
+        # Prefer same-brand matches first (a genuine "goes together" signal),
+        # then stable order by price so results don't jump around.
+        my_brand = (p.get("brand") or p.get("_brand") or "").strip().lower()
+        candidates.sort(key=lambda x: (
+            0 if my_brand and (x.get("brand") or x.get("_brand") or "").strip().lower() == my_brand else 1,
+            float(x["price"]), x["id"],
+        ))
+        picks = [q["id"] for q in candidates[:limit]]
     out = []
     seen = set()
     for pid in picks:
