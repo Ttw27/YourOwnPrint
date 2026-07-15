@@ -36,6 +36,11 @@ export async function fetchAdminMe() {
   return data;
 }
 
+export async function searchProducts(q, limit = 25, offset = 0) {
+  const { data } = await api.get("/search", { params: { q, limit, offset } });
+  return data;
+}
+
 export async function fetchProducts(category, limit = 500, offset = 0, genderFit, industries) {
   const { data } = await api.get("/products", { params: { ...(category ? { category } : {}), ...(industries ? { industries } : {}), ...(genderFit ? { gender_fit: genderFit } : {}), limit, offset } });
   return data; // {items, total, offset, returned}
