@@ -1581,7 +1581,7 @@ class ProductMeta(BaseModel):
 
 
 GENDER_FIT_OPTIONS = ["mens", "womens", "unisex", "kids"]
-INDUSTRY_SLUGS = ["trades", "hospitality", "healthcare", "beauty", "construction", "logistics", "fitness", "cleaning", "hair-beauty"]
+INDUSTRY_SLUGS = ["healthcare", "construction-trades", "retail", "security", "corporate", "sports-fitness", "industrial", "beauty-wellness", "cleaning", "hospitality-catering"]
 INDUSTRIES_CATALOGUE = [
     {"slug": "healthcare", "title": "Healthcare", "subtitle": "Clinics, dental, mobile carers", "hero_image": "https://images.pexels.com/photos/4173324/pexels-photo-4173324.jpeg", "blurb": "Polos, tunics and sweatshirts customers recognise — soft fabrics, clean print, easy on hot washes."},
     {"slug": "construction-trades", "title": "Construction & Trades", "subtitle": "Builders, sparks, plumbers, joiners, site crews", "hero_image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg", "blurb": "Hi-vis vests, workwear tees, jackets and trousers that survive site life. EN ISO 20471 options ready to print."},
@@ -4959,21 +4959,27 @@ def _auto_gender_fit(name: str) -> str:
 # is deliberately conservative (max 2 tags) and meant to be spot-checked, not
 # treated as gospel. Only fires into REAL industry slugs (INDUSTRY_SLUGS).
 _AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
-    ("hi-vis", ["construction", "trades"]),
-    ("hi vis", ["construction", "trades"]),
-    ("apron", ["hospitality"]),
-    ("chef", ["hospitality"]),
-    ("tunic", ["healthcare", "beauty"]),
+    ("hi-vis", ["construction-trades"]),
+    ("hi vis", ["construction-trades"]),
+    ("apron", ["hospitality-catering"]),
+    ("chef", ["hospitality-catering"]),
+    ("tunic", ["healthcare", "beauty-wellness"]),
     ("scrub", ["healthcare"]),
     ("nurse", ["healthcare"]),
-    ("salon", ["hair-beauty"]),
-    ("beauty", ["hair-beauty"]),
-    ("gym", ["fitness"]),
-    ("tracksuit", ["fitness"]),
-    ("hoodie", ["fitness"]),
-    ("softshell", ["trades", "construction"]),
-    ("workwear", ["trades"]),
+    ("salon", ["beauty-wellness"]),
+    ("beauty", ["beauty-wellness"]),
+    ("barber", ["beauty-wellness"]),
+    ("gym", ["sports-fitness"]),
+    ("tracksuit", ["sports-fitness"]),
+    ("hoodie", ["sports-fitness"]),
+    ("softshell", ["construction-trades"]),
+    ("workwear", ["construction-trades"]),
     ("cleaning", ["cleaning"]),
+    ("security", ["security"]),
+    ("door supervisor", ["security"]),
+    ("warehouse", ["industrial"]),
+    ("forklift", ["industrial"]),
+    ("industrial", ["industrial"]),
 ]
 
 # Generic blanks (plain tees, polos, sweatshirts, hoodies, jackets, trousers)
@@ -4982,6 +4988,11 @@ _AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
 # industry/sector actually surfaces the realistic full range rather than
 # only specialist items like hi-vis or chef wear.
 _BROAD_WORKWEAR_CATEGORIES = {"t-shirts", "polos", "sweatshirts", "hoodies", "jackets", "bottoms", "shirts"}
+
+# Note: "Retail" and "Corporate" are deliberately not auto-detected — a plain
+# polo or shirt is equally valid for either (or a dozen other sectors), so
+# guessing from the garment name alone would just be noise. These stay
+# available to tag manually per-product in Product Settings instead.
 
 
 def _auto_industry_tags(name: str, category: str) -> List[str]:
@@ -4992,8 +5003,8 @@ def _auto_industry_tags(name: str, category: str) -> List[str]:
             for t in industries:
                 if t not in tags:
                     tags.append(t)
-    if str(category or "").strip().lower() in _BROAD_WORKWEAR_CATEGORIES and "trades" not in tags:
-        tags.append("trades")
+    if str(category or "").strip().lower() in _BROAD_WORKWEAR_CATEGORIES and "construction-trades" not in tags:
+        tags.append("construction-trades")
     return tags[:3]
 
 
