@@ -2,11 +2,6 @@
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "https://yourownprint-production.up.railway.app/api/sitemap.xml" },
     { "source": "/robots.txt", "destination": "https://yourownprint-production.up.railway.app/api/robots.txt" },
-    {
-      "source": "/product/:id",
-      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|SkypeUriPreview).*" }],
-      "destination": "/api/product-og?id=:id"
-    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
