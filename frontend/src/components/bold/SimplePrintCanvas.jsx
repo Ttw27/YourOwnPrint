@@ -94,8 +94,8 @@ export default function SimplePrintCanvas({ background, printArea, artworkUrl, o
 
         {/* Print area boundary */}
         <div
-          className="absolute border-2 border-dashed border-white/70"
-          style={{ left: `${printArea.x}%`, top: `${printArea.y}%`, width: `${printArea.w}%`, height: `${printArea.h}%` }}
+          className="absolute border-2 border-dashed border-[#7bc67e]"
+          style={{ left: `${printArea.x}%`, top: `${printArea.y}%`, width: `${printArea.w}%`, height: `${printArea.h}%`, boxShadow: "0 0 0 1px rgba(255,255,255,0.9)" }}
         >
           {artworkUrl ? (
             <div
@@ -120,11 +120,14 @@ export default function SimplePrintCanvas({ background, printArea, artworkUrl, o
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={busy}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-white bg-black/10 hover:bg-black/20 transition-colors"
+              className="absolute inset-0 flex items-center justify-center"
               data-testid="print-canvas-upload-trigger"
             >
-              {busy ? <Loader2 size={22} className="animate-spin" /> : <Upload size={22} />}
-              <span className="text-xs font-bold">Upload artwork</span>
+              <span className="flex flex-col items-center gap-1.5 bg-white/95 text-[#1a1a1a] rounded-xl px-4 py-3 shadow-md border border-[#e5e7eb] hover:border-[#7bc67e] transition-colors">
+                {busy ? <Loader2 size={20} className="animate-spin text-[#7bc67e]" /> : <Upload size={20} className="text-[#7bc67e]" />}
+                <span className="text-xs font-bold">Tap to add your artwork</span>
+                <span className="text-[10px] text-[#4b5563]">Drag & resize it here once uploaded</span>
+              </span>
             </button>
           )}
         </div>
