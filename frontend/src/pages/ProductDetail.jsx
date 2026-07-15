@@ -495,21 +495,7 @@ export default function ProductDetail() {
                             ? <><Lock size={14} /> Upload prints to buy</>
                             : <><ShoppingCart size={16} /> Buy now £{lineTotal.toFixed(2)}</>}
                     </button>
-                    <button
-                      data-testid="customise-design"
-                      onClick={() => {
-                        if (blank) { toast.error("Switch to 'Add Custom Print' first"); return; }
-                        if (selectedPlacements.length === 0) { toast.error("Pick at least one print placement first"); return; }
-                        const qs = new URLSearchParams({ product: product.id, placements: selectedPlacements.join(","), color: color || "" });
-                        navigate(`/design?${qs.toString()}`);
-                      }}
-                      disabled={blank || selectedPlacements.length === 0}
-                      className="inline-flex items-center justify-center gap-2 border-2 border-[#7bc67e] text-[#7bc67e] hover:bg-[#7bc67e] hover:text-[#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed font-nunito font-extrabold rounded-full px-5 py-3.5 transition-colors"
-                    >
-                      <Wand2 size={16} /> Upload your prints
-                    </button>
                   </div>
-                  <div className="text-xs text-neutral-400 mt-2">"Upload your prints" opens our designer for live previewing — or upload directly above and checkout.</div>
                 </div>
 
                 {/* Trust strip */}
