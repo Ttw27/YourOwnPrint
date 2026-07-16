@@ -33,7 +33,7 @@ export default function RelatedProductsStrip({ productId, title, subtitle, fetch
             data-testid={`${testidPrefix}-item-${p.id}`}
           >
             <div className="aspect-square overflow-hidden rounded-xl bg-[#f9fafb] mb-2">
-              <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition" />
+              <img src={p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition" />
             </div>
             <div className="font-nunito font-extrabold text-sm leading-tight line-clamp-2">{p.name}</div>
             <div className="text-xs font-nunito font-extrabold mt-1" style={{ color: accentColor }}>From £{p.price.toFixed(2)}</div>
