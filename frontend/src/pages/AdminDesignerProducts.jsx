@@ -41,16 +41,21 @@ export default function AdminDesignerProducts() {
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
   const updatePA = (id, key, value) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, designer_print_area: { ...(p.designer_print_area || DEFAULT_PA), [key]: Number(value) } } : p));
+  const updatePABack = (id, key, value) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, designer_print_area_back: { ...(p.designer_print_area_back || p.designer_print_area || DEFAULT_PA), [key]: Number(value) } } : p));
 
   const save = async (p) => {
     setBusy(true);
     try {
       const pa = p.designer_print_area || DEFAULT_PA;
+      const paBack = p.designer_print_area_back || null;
       await updateDesignerSettings(p.id, {
         designer_enabled: p.designer_enabled,
         designer_image: p.designer_image || p.main_image,
         designer_print_area: { x: Number(pa.x), y: Number(pa.y), w: Number(pa.w), h: Number(pa.h) },
         designer_images_by_colour: p.designer_images_by_colour || {},
+        designer_image_back: p.designer_image_back || null,
+        designer_print_area_back: paBack ? { x: Number(paBack.x), y: Number(paBack.y), w: Number(paBack.w), h: Number(paBack.h) } : null,
+        designer_images_by_colour_back: p.designer_images_by_colour_back || {},
         composition: p.composition || "",
         description_long: p.description_long || "",
         use_cases: p.use_cases || [],
@@ -93,6 +98,39 @@ export default function AdminDesignerProducts() {
       return { ...x, designer_images_by_colour: next };
     }));
   };
+
+  const uploadMainImageBack = async (p, file) => {
+    const key = `${p.id}:back`;
+    setUploadingId(key);
+    try {
+      const { url } = await uploadAdminImage(file, "designer-images");
+      update(p.id, { designer_image_back: url });
+      toast.success("Back image uploaded");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Upload failed"); }
+    finally { setUploadingId(null); }
+  };
+
+  const uploadColourImageBack = async (p, colourName, file) => {
+    const key = `${p.id}:back:${colourName}`;
+    setUploadingId(key);
+    try {
+      const { url } = await uploadAdminImage(file, "designer-images");
+      setProducts((prev) => prev.map(x => x.id === p.id
+        ? { ...x, designer_images_by_colour_back: { ...(x.designer_images_by_colour_back || {}), [colourName]: url } }
+        : x));
+      toast.success(`${colourName} back image uploaded`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Upload failed"); }
+    finally { setUploadingId(null); }
+  };
+
+  const clearColourImageBack = (p, colourName) => {
+    setProducts((prev) => prev.map(x => {
+      if (x.id !== p.id) return x;
+      const next = { ...(x.designer_images_by_colour_back || {}) };
+      delete next[colourName];
+      return { ...x, designer_images_by_colour_back: next };
+    }));
+  };
   const toggleUseCase = (id, uc) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, use_cases: (p.use_cases || []).includes(uc) ? (p.use_cases || []).filter(x => x !== uc) : [...(p.use_cases || []), uc] } : p));
 
   return (
@@ -114,6 +152,7 @@ export default function AdminDesignerProducts() {
             <div className="grid md:grid-cols-2 gap-4 mt-6" data-testid="dp-list">
               {products.map((p) => {
               const pa = p.designer_print_area || DEFAULT_PA;
+              const paBack = p.designer_print_area_back || pa;
               return (
                 <div key={p.id} data-testid={`dp-${p.id}`} className={`rounded-3xl border-2 p-4 ${p.designer_enabled ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] bg-white"}`}>
                   <div className="flex items-start gap-3">
@@ -182,6 +221,61 @@ export default function AdminDesignerProducts() {
                           </div>
                         </div>
                       )}
+
+                      <div className="pt-2 border-t border-dashed border-[#dcfce7]">
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back-view image (optional)</label>
+                        <p className="text-[10px] text-[#4b5563] mb-1.5">Add this if the product supports back print — customers switching to "back" in the designer will see this photo instead of the front one. Leave blank and it just falls back to the front photo, same as before.</p>
+                        <div className="flex items-center gap-2">
+                          <input data-testid={`dp-image-back-${p.id}`} value={p.designer_image_back || ""} onChange={(e) => update(p.id, { designer_image_back: e.target.value })} className="flex-1 bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" placeholder="https://… or upload a file" />
+                          <label className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-2.5 py-1.5 hover:bg-white cursor-pointer whitespace-nowrap">
+                            {uploadingId === `${p.id}:back` ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Upload
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadMainImageBack(p, e.target.files[0])} />
+                          </label>
+                        </div>
+                      </div>
+
+                      {p.designer_image_back && (
+                        <>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back print area — drag the box on the image</label>
+                            <PrintAreaPicker image={p.designer_image_back} value={paBack} onChange={(next) => update(p.id, { designer_print_area_back: next })} />
+                            <div className="grid grid-cols-4 gap-1.5 mt-2">
+                              {["x","y","w","h"].map(k => (
+                                <div key={k} className="bg-white border border-[#e5e7eb] rounded-xl px-2 py-1 text-xs flex items-center gap-1">
+                                  <span className="font-bold text-[#4b5563] uppercase">{k}</span>
+                                  <input data-testid={`dp-${k}-back-${p.id}`} type="number" min={0} max={100} value={paBack[k]} onChange={(e) => updatePABack(p.id, k, e.target.value)} className="w-full bg-transparent focus:outline-none text-right" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {p.colors?.length > 0 && (
+                            <div>
+                              <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Per-colour back images (optional)</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {p.colors.map((c) => {
+                                  const img = (p.designer_images_by_colour_back || {})[c.name];
+                                  const key = `${p.id}:back:${c.name}`;
+                                  return (
+                                    <div key={c.name} className="flex items-center gap-2 bg-white border border-[#e5e7eb] rounded-xl p-1.5">
+                                      <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#e5e7eb] flex-shrink-0 bg-[#f0fdf4]">
+                                        {img ? <img src={img} className="w-full h-full object-contain" alt="" /> : <span className="w-full h-full block" style={{ background: c.hex || "#ccc" }} />}
+                                      </div>
+                                      <span className="text-[10px] font-bold truncate flex-1">{c.name}</span>
+                                      {img && <button onClick={() => clearColourImageBack(p, c.name)} className="text-rose-500 hover:bg-rose-50 rounded-full p-1"><X size={10} /></button>}
+                                      <label className="text-[9px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-1.5 py-1 hover:bg-[#f0fdf4] cursor-pointer whitespace-nowrap">
+                                        {uploadingId === key ? <Loader2 size={9} className="animate-spin" /> : <Upload size={9} />}
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadColourImageBack(p, c.name, e.target.files[0])} />
+                                      </label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+
                       <div>
                         <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Composition</label>
                         <input data-testid={`dp-composition-${p.id}`} value={p.composition || ""} onChange={(e) => update(p.id, { composition: e.target.value })} placeholder="e.g. 180 GSM · 100% ring-spun cotton" className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" />

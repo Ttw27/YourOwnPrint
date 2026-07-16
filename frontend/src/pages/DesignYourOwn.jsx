@@ -75,7 +75,9 @@ export default function DesignYourOwn() {
 
   const product = products.find(p => p.id === productId);
   const garmentPrintArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
-  const printArea = view === "neck" ? NECK_LABEL_PRINT_AREA : garmentPrintArea;
+  const garmentPrintAreaBack = product?.print_area_back || garmentPrintArea;
+  const printArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
+  const garmentImage = view === "back" ? (product?.image_back || product?.image) : product?.image;
   const unitPrice = product?.price ?? 0;
   const backPrintPrice = product?.back_print_price ?? 0;
   const neckLabelPrice = product?.neck_label_price ?? 1.5;
@@ -570,7 +572,7 @@ export default function DesignYourOwn() {
                     <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-300 font-nunito font-extrabold">Neck label · approx 60 × 30 mm</div>
                   </div>
                 ) : (
-                  <img src={product?.image} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+                  <img src={garmentImage} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
                 )}
                 {/* Side badge */}
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-nunito font-extrabold uppercase tracking-[0.2em] text-[#1a1a1a] border border-[#dcfce7]" data-testid="designer-side-badge">
