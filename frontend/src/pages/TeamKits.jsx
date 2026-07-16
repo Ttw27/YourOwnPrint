@@ -21,13 +21,16 @@ export default function TeamKits() {
   const [page, setPage] = useState(0);
   const [aggs, setAggs] = useState({});
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
+  const load = () => {
+    setLoading(true); setErr(false);
     Promise.all([fetchProducts("team-kits", PAGE_SIZE, page * PAGE_SIZE), fetchReviewsAggregate()])
       .then(([p, a]) => { setProducts(p.items || []); setTotal(p.total || 0); setAggs(a); })
+      .catch(() => setErr(true))
       .finally(() => setLoading(false));
-  }, [page]);
+  };
+  useEffect(load, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
@@ -84,6 +87,14 @@ export default function TeamKits() {
 
         {loading ? (
           <div className="text-center text-[#4b5563] py-16">Loading bundles…</div>
+        ) : err ? (
+          <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-6 text-sm max-w-xl mx-auto mt-10" data-testid="team-kits-error">
+            Couldn't load bundles right now. <button onClick={load} className="underline text-[#166534] font-extrabold">Try again</button>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-6 text-sm max-w-xl mx-auto mt-10" data-testid="team-kits-empty">
+            Nothing here yet.
+          </div>
         ) : (
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10" data-testid="team-kit-gallery">

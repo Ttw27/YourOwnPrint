@@ -32,8 +32,8 @@ const GARMENT_TYPES = [
 const GENDER_OPTIONS = ["unisex", "mens", "womens", "kids"];
 
 const SAMPLE_CSV = `name,source_sku,source_price,image,description,colours,sizes,gender_fit,brand
-AWDis College Hoodie,JH001,8.99,https://images.pexels.com/photos/8532610/pexels-photo-8532610.jpeg,Classic 280gsm pullover hoodie,Black|Navy|Grey Marl,S|M|L|XL|XXL,unisex,AWDis
-AWDis Just Polos Polo Shirt,JP001,6.50,https://images.pexels.com/photos/8532614/pexels-photo-8532614.jpeg,Slim-fit pique polo,White|Bottle Green|Navy,S|M|L|XL,unisex,AWDis
+AWDis College Hoodie,JH001,8.99,https://images.pexels.com/photos/8532610/pexels-photo-8532610.jpeg?auto=compress&cs=tinysrgb&w=800,Classic 280gsm pullover hoodie,Black|Navy|Grey Marl,S|M|L|XL|XXL,unisex,AWDis
+AWDis Just Polos Polo Shirt,JP001,6.50,https://images.pexels.com/photos/8532614/pexels-photo-8532614.jpeg?auto=compress&cs=tinysrgb&w=800,Slim-fit pique polo,White|Bottle Green|Navy,S|M|L|XL,unisex,AWDis
 `;
 
 // Minimal RFC-4180-ish CSV parser (handles quoted values + escaped quotes).
