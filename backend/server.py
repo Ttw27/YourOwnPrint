@@ -1604,6 +1604,12 @@ class DesignerSettings(BaseModel):
     designer_image: str
     designer_print_area: Dict[str, float]  # {x,y,w,h} percent
     designer_images_by_colour: Optional[Dict[str, str]] = None  # colour name -> image URL override
+    # Back-view equivalents — optional. If not set, the designer falls back
+    # to showing the front photo/print area when a customer switches to back
+    # view, same as it always has (not ideal, but not a regression either).
+    designer_image_back: Optional[str] = None
+    designer_print_area_back: Optional[Dict[str, float]] = None
+    designer_images_by_colour_back: Optional[Dict[str, str]] = None
     composition: Optional[str] = None
     description_long: Optional[str] = None
     use_cases: Optional[List[str]] = None
@@ -1876,6 +1882,7 @@ async def _merge_designer_overrides():
         pid = doc.get("product_id")
         if pid in PRODUCTS:
             for k in ("designer_enabled", "designer_image", "designer_print_area", "designer_images_by_colour",
+                     "designer_image_back", "designer_print_area_back", "designer_images_by_colour_back",
                      "composition", "description_long", "use_cases"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
@@ -1911,8 +1918,11 @@ async def list_designer_products():
                 "price": p["price"],
                 "image": p.get("designer_image") or p["image"],
                 "images_by_colour": p.get("designer_images_by_colour") or {},
+                "image_back": p.get("designer_image_back") or p.get("designer_image") or p["image"],
+                "images_by_colour_back": p.get("designer_images_by_colour_back") or {},
                 "colors": p.get("colors") or [],
                 "print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
+                "print_area_back": p.get("designer_print_area_back") or p.get("designer_print_area") or DEFAULT_PRINT_AREA,
                 "sizes": p.get("sizes", []),
                 "size_upcharges": p.get("size_upcharges", {}),
                 "back_print_price": designer_back_print_price(float(p["price"])),
@@ -1995,6 +2005,9 @@ async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str 
             "designer_image": p.get("designer_image") or p["image"],
             "designer_print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
             "designer_images_by_colour": p.get("designer_images_by_colour") or {},
+            "designer_image_back": p.get("designer_image_back") or "",
+            "designer_print_area_back": p.get("designer_print_area_back"),
+            "designer_images_by_colour_back": p.get("designer_images_by_colour_back") or {},
             "colors": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("colors") or [])],
             "composition": p.get("composition") or "",
             "description_long": p.get("description_long") or "",
@@ -2019,6 +2032,14 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
             raise HTTPException(400, f"print_area missing '{k}'")
         if not (0 <= float(pa[k]) <= 100):
             raise HTTPException(400, f"print_area '{k}' must be 0-100")
+    pa_back = None
+    if payload.designer_print_area_back is not None:
+        pa_back = payload.designer_print_area_back
+        for k in ("x", "y", "w", "h"):
+            if k not in pa_back:
+                raise HTTPException(400, f"print_area_back missing '{k}'")
+            if not (0 <= float(pa_back[k]) <= 100):
+                raise HTTPException(400, f"print_area_back '{k}' must be 0-100")
     use_cases = payload.use_cases or []
     for uc in use_cases:
         if uc not in USE_CASE_OPTIONS:
@@ -2029,6 +2050,9 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
         "designer_image": payload.designer_image,
         "designer_print_area": pa,
         "designer_images_by_colour": payload.designer_images_by_colour or {},
+        "designer_image_back": payload.designer_image_back or None,
+        "designer_print_area_back": pa_back,
+        "designer_images_by_colour_back": payload.designer_images_by_colour_back or {},
         "composition": (payload.composition or None),
         "description_long": (payload.description_long or None),
         "use_cases": use_cases,
@@ -2040,6 +2064,9 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
     PRODUCTS[product_id]["designer_image"] = payload.designer_image
     PRODUCTS[product_id]["designer_print_area"] = pa
     PRODUCTS[product_id]["designer_images_by_colour"] = payload.designer_images_by_colour or {}
+    PRODUCTS[product_id]["designer_image_back"] = payload.designer_image_back or None
+    PRODUCTS[product_id]["designer_print_area_back"] = pa_back
+    PRODUCTS[product_id]["designer_images_by_colour_back"] = payload.designer_images_by_colour_back or {}
     if payload.composition is not None:
         PRODUCTS[product_id]["composition"] = payload.composition or None
     if payload.description_long is not None:
