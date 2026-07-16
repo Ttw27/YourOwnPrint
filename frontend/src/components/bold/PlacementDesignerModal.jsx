@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { designerRemoveBg, designerAiEffect } from "../../lib/api";
-import { X, Upload, Type, Trash2, RotateCw, Loader2, Wand2, ArrowUp, ArrowDown, Copy, Pencil, Layers, Check } from "lucide-react";
+import { Link } from "react-router-dom";
+import { designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../../lib/api";
+import { X, Upload, Type, Trash2, RotateCw, Loader2, Wand2, ArrowUp, ArrowDown, Copy, Pencil, Layers, Check, Lock } from "lucide-react";
 
 const FONTS = [
   { label: "Nunito", value: "Nunito, sans-serif" },
@@ -10,6 +11,16 @@ const FONTS = [
   { label: "Manrope", value: "Manrope, sans-serif" },
   { label: "Oswald", value: "Oswald, sans-serif" },
   { label: "Cormorant", value: "'Cormorant Garamond', serif" },
+  { label: "Bebas Neue", value: "'Bebas Neue', sans-serif" },
+  { label: "Pacifico", value: "Pacifico, cursive" },
+  { label: "Permanent Marker", value: "'Permanent Marker', cursive" },
+  { label: "Anton", value: "Anton, sans-serif" },
+  { label: "Caveat", value: "Caveat, cursive" },
+  { label: "Bangers", value: "Bangers, cursive" },
+  { label: "Playfair Display", value: "'Playfair Display', serif" },
+  { label: "Archivo Black", value: "'Archivo Black', sans-serif" },
+  { label: "Dancing Script", value: "'Dancing Script', cursive" },
+  { label: "Righteous", value: "Righteous, sans-serif" },
 ];
 
 /**
@@ -31,6 +42,13 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
   const [textColor, setTextColor] = useState("#1a1a1a");
   const [textFont, setTextFont] = useState(FONTS[0].value);
   const [confirming, setConfirming] = useState(false);
+  const [aiUsage, setAiUsage] = useState(null);
+  const isLoggedIn = !!getCustomerToken();
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    designerAiUsage().then(setAiUsage).catch(() => {});
+  }, [isLoggedIn]);
   const printAreaRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -84,6 +102,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
   const updateItem = (id, patch) => setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it));
 
   const removeBgReal = async () => {
+    if (!isLoggedIn) { toast.error("Log in to use AI tools — free, just prevents random abuse of the paid AI service."); return; }
     if (!selected || selected.type !== "image") { toast.error("Select an image first"); return; }
     updateItem(selected.id, { _busy: true });
     const t = toast.loading("Removing background…");
@@ -91,6 +110,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
       const res = await designerRemoveBg(selected.src);
       if (!res?.image_base64) throw new Error("no image returned");
       updateItem(selected.id, { src: res.image_base64, _busy: false });
+      if (typeof res.ai_uses_remaining === "number") setAiUsage((u) => ({ ...(u || { limit: 20 }), remaining: res.ai_uses_remaining, used: (u?.limit || 20) - res.ai_uses_remaining }));
       toast.success("Background removed", { id: t });
     } catch (e) {
       updateItem(selected.id, { _busy: false });
@@ -99,6 +119,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
   };
 
   const aiEffectReal = async (effectId, label) => {
+    if (!isLoggedIn) { toast.error("Log in to use AI tools — free, just prevents random abuse of the paid AI service."); return; }
     if (!selected || selected.type !== "image") { toast.error("Select an image first"); return; }
     updateItem(selected.id, { _busy: true });
     const t = toast.loading(`Applying ${label}…`);
@@ -107,6 +128,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
       const nextSrc = res?.image_base64 || res?.image_url;
       if (!nextSrc) throw new Error("no image returned");
       updateItem(selected.id, { src: nextSrc, _busy: false });
+      if (typeof res.ai_uses_remaining === "number") setAiUsage((u) => ({ ...(u || { limit: 20 }), remaining: res.ai_uses_remaining, used: (u?.limit || 20) - res.ai_uses_remaining }));
       toast.success(`${label} applied`, { id: t });
     } catch (e) {
       updateItem(selected.id, { _busy: false });
@@ -322,8 +344,17 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
             {selected?.type === "image" && (
               <div className="bg-[#f0fdf4] rounded-xl p-3 space-y-1.5">
                 <div className="text-xs font-extrabold text-[#166534] flex items-center gap-1.5"><Wand2 size={13} /> AI tools</div>
-                <button onClick={removeBgReal} className="w-full text-xs font-bold bg-white border border-[#dcfce7] rounded-lg py-1.5 hover:border-[#7bc67e]">Remove background</button>
-                <button onClick={() => aiEffectReal("enhance", "Enhance")} className="w-full text-xs font-bold bg-white border border-[#dcfce7] rounded-lg py-1.5 hover:border-[#7bc67e]">Enhance quality</button>
+                <button onClick={removeBgReal} disabled={!isLoggedIn} className={`w-full text-xs font-bold rounded-lg py-1.5 ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] border border-[#e5e7eb] cursor-not-allowed" : "bg-white border border-[#dcfce7] hover:border-[#7bc67e]"}`}>
+                  {!isLoggedIn && <Lock size={10} className="inline mr-1 -mt-0.5" />}Remove background
+                </button>
+                <button onClick={() => aiEffectReal("enhance", "Enhance")} disabled={!isLoggedIn} className={`w-full text-xs font-bold rounded-lg py-1.5 ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] border border-[#e5e7eb] cursor-not-allowed" : "bg-white border border-[#dcfce7] hover:border-[#7bc67e]"}`}>
+                  {!isLoggedIn && <Lock size={10} className="inline mr-1 -mt-0.5" />}Enhance quality
+                </button>
+                {!isLoggedIn ? (
+                  <p className="text-[9px] text-[#712B13] font-bold pt-1"><Link to="/account" className="underline font-extrabold">Log in</Link> to use these — free, just stops random abuse.</p>
+                ) : aiUsage ? (
+                  <p className="text-[9px] text-[#4b5563] font-bold pt-1">{aiUsage.remaining} of {aiUsage.limit} free AI edits left this month</p>
+                ) : null}
               </div>
             )}
 
