@@ -8,7 +8,8 @@ import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
-import SimplePrintCanvas, { DEFAULT_PLACEMENT_AREAS } from "../components/bold/SimplePrintCanvas";
+import PlacementDesignerModal from "../components/bold/PlacementDesignerModal";
+import { DEFAULT_PLACEMENT_AREAS } from "../components/bold/SimplePrintCanvas";
 import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
 import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
@@ -788,31 +789,7 @@ function Section({ title, right, children }) {
 function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId, productColor }) {
   const ref = useRef(null);
   const [designing, setDesigning] = useState(false);
-  const [rawFile, setRawFile] = useState(null); // the file currently placed on the canvas, pre-compositing
-  const [busy, setBusy] = useState(false);
   const printArea = DEFAULT_PLACEMENT_AREAS[placement?.id] || DEFAULT_PLACEMENT_AREAS["full-front"];
-
-  const handleCanvasUpload = (file) => {
-    setRawFile(file);
-  };
-
-  const confirmDesign = async () => {
-    if (!rawFile) return;
-    setBusy(true);
-    try {
-      // Flatten just the artwork (not the colour background) into a single
-      // PNG sized to the print area — from this point on it behaves exactly
-      // like a normal upload, no other code needs to know it came from the canvas.
-      const composited = await compositeArtworkOnly(rawFile);
-      onPick(composited, true); // second arg = already a data URL, skip re-reading as file
-      setDesigning(false);
-      setRawFile(null);
-    } catch {
-      toast.error("Couldn't process that image — try a different file.");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <div className={`rounded-xl border-2 p-3 transition-colors ${dataUrl ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-dashed border-[#e5e7eb] bg-white"}`} data-testid={testId}>
@@ -830,24 +807,6 @@ function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId, productColo
             <button data-testid={`${testId}-remove`} onClick={onRemove} className="text-xs font-nunito font-extrabold text-rose-500 hover:bg-rose-50 rounded-full px-3 py-1.5 transition-colors inline-flex items-center gap-1"><Trash2 size={10} /> Remove</button>
           </div>
         </div>
-      ) : designing ? (
-        <div>
-          <SimplePrintCanvas
-            background={{ type: "color", value: productColor || "#f0fdf4" }}
-            printArea={printArea}
-            artworkUrl={rawFile ? URL.createObjectURL(rawFile) : null}
-            onUpload={handleCanvasUpload}
-            onClear={() => setRawFile(null)}
-            busy={busy}
-            size={220}
-          />
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <button onClick={() => { setDesigning(false); setRawFile(null); }} className="text-xs font-nunito font-extrabold text-[#4b5563] hover:underline">Cancel</button>
-            <button onClick={confirmDesign} disabled={!rawFile || busy} className="text-xs font-nunito font-extrabold bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 rounded-full px-4 py-1.5" data-testid={`${testId}-confirm-design`}>
-              {busy ? <Loader2 size={12} className="inline animate-spin mr-1" /> : null} Use this
-            </button>
-          </div>
-        </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           <button data-testid={`${testId}-upload`} onClick={() => ref.current?.click()} className="bg-white hover:bg-[#f0fdf4] border border-dashed border-[#7bc67e] text-[#7bc67e] py-4 rounded-lg flex flex-col items-center gap-1 transition-colors">
@@ -861,27 +820,18 @@ function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId, productColo
         </div>
       )}
       <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => onPick(e.target.files?.[0])} />
+
+      {designing && (
+        <PlacementDesignerModal
+          placementLabel={placement?.label}
+          printArea={printArea}
+          backgroundColor={productColor || "#f0fdf4"}
+          onClose={() => setDesigning(false)}
+          onConfirm={(dataUrlResult) => { onPick(dataUrlResult, true); setDesigning(false); }}
+        />
+      )}
     </div>
   );
-}
-
-/** Reads a File, draws it centred/scaled onto a transparent canvas, returns a PNG data URL. */
-function compositeArtworkOnly(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const size = 1000;
-      const canvas = document.createElement("canvas");
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      const scale = Math.min(size / img.width, size / img.height) * 0.9;
-      const w = img.width * scale, h = img.height * scale;
-      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
-  });
 }
 
 
