@@ -546,13 +546,21 @@ export async function adminListPageCopySlugs() {
   return data;
 }
 
-// ----- Designer AI helpers -----
+// ----- Designer AI helpers (require a logged-in customer — see CUSTOMER_TOKEN_KEY) -----
+export const CUSTOMER_TOKEN_KEY = "yop_customer_token";
+export function getCustomerToken() {
+  try { return localStorage.getItem(CUSTOMER_TOKEN_KEY) || ""; } catch { return ""; }
+}
 export async function designerRemoveBg(imageBase64) {
-  const { data } = await api.post("/designer/remove-bg", { image_base64: imageBase64 });
+  const { data } = await api.post("/designer/remove-bg", { image_base64: imageBase64 }, { headers: { Authorization: `Bearer ${getCustomerToken()}` } });
   return data;
 }
 export async function designerAiEffect(imageBase64, effect) {
-  const { data } = await api.post("/designer/ai-effect", { image_base64: imageBase64, effect });
+  const { data } = await api.post("/designer/ai-effect", { image_base64: imageBase64, effect }, { headers: { Authorization: `Bearer ${getCustomerToken()}` } });
+  return data;
+}
+export async function designerAiUsage() {
+  const { data } = await api.get("/designer/ai-usage", { headers: { Authorization: `Bearer ${getCustomerToken()}` } });
   return data;
 }
 export async function adminSendTestEmail(to) {
