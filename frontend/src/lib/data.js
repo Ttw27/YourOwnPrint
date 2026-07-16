@@ -1,22 +1,22 @@
 // Static seed data (sectors, reviews) used across themes.
 export const SECTORS = [
-  { name: "Construction & Trades", image: "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg" },
-  { name: "Healthcare", image: "https://images.pexels.com/photos/5430213/pexels-photo-5430213.jpeg" },
-  { name: "Hospitality", image: "https://images.pexels.com/photos/15323377/pexels-photo-15323377.png" },
-  { name: "Retail", image: "https://images.pexels.com/photos/18703556/pexels-photo-18703556.jpeg" },
-  { name: "Sports & Fitness", image: "https://images.pexels.com/photos/12097160/pexels-photo-12097160.jpeg" },
-  { name: "Dance & Theatre", image: "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg" },
-  { name: "Schools & Leavers", image: "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg" },
-  { name: "Hi-Vis", image: "https://images.pexels.com/photos/34859873/pexels-photo-34859873.jpeg" },
-  { name: "Security", image: "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png" },
-  { name: "Beauty & Wellness", image: "https://images.pexels.com/photos/6899554/pexels-photo-6899554.jpeg" },
+  { name: "Construction & Trades", image: "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Healthcare", image: "https://images.pexels.com/photos/5430213/pexels-photo-5430213.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Hospitality", image: "https://images.pexels.com/photos/15323377/pexels-photo-15323377.png?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Retail", image: "https://images.pexels.com/photos/18703556/pexels-photo-18703556.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Sports & Fitness", image: "https://images.pexels.com/photos/12097160/pexels-photo-12097160.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Dance & Theatre", image: "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Schools & Leavers", image: "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Hi-Vis", image: "https://images.pexels.com/photos/34859873/pexels-photo-34859873.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Security", image: "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Beauty & Wellness", image: "https://images.pexels.com/photos/6899554/pexels-photo-6899554.jpeg?auto=compress&cs=tinysrgb&w=800" },
 ];
 
 export const BEST_SELLERS = [
-  { id: "personalised-tee", name: "Personalised T-Shirt", price: "£6.99", image: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg" },
-  { id: "personalised-hoodie", name: "Hoodie", price: "£14.99", image: "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg" },
-  { id: "kids-tee", name: "Kids T-Shirt", price: "£7.99", image: "https://images.pexels.com/photos/31977041/pexels-photo-31977041.jpeg" },
-  { id: "polo-shirt", name: "Polo", price: "£8.99", image: "https://images.pexels.com/photos/26063373/pexels-photo-26063373.jpeg" },
+  { id: "personalised-tee", name: "Personalised T-Shirt", price: "£6.99", image: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { id: "personalised-hoodie", name: "Hoodie", price: "£14.99", image: "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { id: "kids-tee", name: "Kids T-Shirt", price: "£7.99", image: "https://images.pexels.com/photos/31977041/pexels-photo-31977041.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { id: "polo-shirt", name: "Polo", price: "£8.99", image: "https://images.pexels.com/photos/26063373/pexels-photo-26063373.jpeg?auto=compress&cs=tinysrgb&w=800" },
 ];
 
 export const REVIEWS = [
@@ -187,11 +187,11 @@ export const NAV_MENU = [
 
 // 5 hero tools showcased across the site
 export const TOOLS_SHOWCASE = [
-  { key: "design", title: "Design Your Own", tagline: "Live canvas. Drag, upload, type. Print-ready in minutes.", to: "/design", image: "https://images.pexels.com/photos/3826676/pexels-photo-3826676.jpeg", colour: "#fde68a", accent: "#1a1a1a" },
-  { key: "specials", title: "Your Own Print Specials", tagline: "Starter lineup. No MOQ. Breast logo included.", to: "/specials", image: "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg", colour: "#7bc67e", accent: "#1a1a1a" },
-  { key: "workforce", title: "Kit Your Workforce", tagline: "Mixed garments, bulk tiers, one logo across the lot.", to: "/workforce", image: "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg", colour: "#fbbf24", accent: "#1a1a1a" },
-  { key: "team-kits", title: "Team Kits", tagline: "Configurator for clubs and squads — front, back, sleeves.", to: "/team-kits", image: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg", colour: "#a78bfa", accent: "#1a1a1a" },
-  { key: "fight-night", title: "Fight Night Tees", tagline: "Branded tees for fight cards, gyms and combat events.", to: "/sports/fight-night", image: "https://images.pexels.com/photos/4761792/pexels-photo-4761792.jpeg", colour: "#f87171", accent: "#ffffff" },
+  { key: "design", title: "Design Your Own", tagline: "Live canvas. Drag, upload, type. Print-ready in minutes.", to: "/design", image: "https://images.pexels.com/photos/3826676/pexels-photo-3826676.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#fde68a", accent: "#1a1a1a" },
+  { key: "specials", title: "Your Own Print Specials", tagline: "Starter lineup. No MOQ. Breast logo included.", to: "/specials", image: "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#7bc67e", accent: "#1a1a1a" },
+  { key: "workforce", title: "Kit Your Workforce", tagline: "Mixed garments, bulk tiers, one logo across the lot.", to: "/workforce", image: "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#fbbf24", accent: "#1a1a1a" },
+  { key: "team-kits", title: "Team Kits", tagline: "Configurator for clubs and squads — front, back, sleeves.", to: "/team-kits", image: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#a78bfa", accent: "#1a1a1a" },
+  { key: "fight-night", title: "Fight Night Tees", tagline: "Branded tees for fight cards, gyms and combat events.", to: "/sports/fight-night", image: "https://images.pexels.com/photos/4761792/pexels-photo-4761792.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#f87171", accent: "#ffffff" },
 ];
 
 export const GENDER_FITS = [
