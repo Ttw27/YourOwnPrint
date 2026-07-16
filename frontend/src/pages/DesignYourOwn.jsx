@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
-import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect } from "../lib/api";
+import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
-import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info } from "lucide-react";
+import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock } from "lucide-react";
 
 const FONTS = [
   { label: "Nunito", value: "Nunito, sans-serif" },
@@ -14,6 +14,16 @@ const FONTS = [
   { label: "Manrope", value: "Manrope, sans-serif" },
   { label: "Oswald", value: "Oswald, sans-serif" },
   { label: "Cormorant", value: "'Cormorant Garamond', serif" },
+  { label: "Bebas Neue", value: "'Bebas Neue', sans-serif" },
+  { label: "Pacifico", value: "Pacifico, cursive" },
+  { label: "Permanent Marker", value: "'Permanent Marker', cursive" },
+  { label: "Anton", value: "Anton, sans-serif" },
+  { label: "Caveat", value: "Caveat, cursive" },
+  { label: "Bangers", value: "Bangers, cursive" },
+  { label: "Playfair Display", value: "'Playfair Display', serif" },
+  { label: "Archivo Black", value: "'Archivo Black', sans-serif" },
+  { label: "Dancing Script", value: "'Dancing Script', cursive" },
+  { label: "Righteous", value: "Righteous, sans-serif" },
 ];
 
 // Neck label canvas aspect (width:height) — landscape, mimics a ~60×30mm sewn-in label
@@ -40,6 +50,14 @@ export default function DesignYourOwn() {
   });
   const [sizeQtys, setSizeQtys] = useState({});
   const [view, setView] = useState("front");                 // "front" | "back" | "neck"
+  const [selectedColour, setSelectedColour] = useState(null); // colour name, or null for the product's default
+  const [aiUsage, setAiUsage] = useState(null); // {used, limit, remaining} once we know the customer's logged in
+  const isLoggedIn = !!getCustomerToken();
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    designerAiUsage().then(setAiUsage).catch(() => {}); // if the token's stale, buttons just stay enabled and the real call will 401
+  }, [isLoggedIn]);
   const [backEnabled, setBackEnabled] = useState(false);     // adds back-print to checkout
   const [neckEnabled, setNeckEnabled] = useState(false);     // adds neck-label to checkout
   const [frontItems, setFrontItems] = useState([]);
@@ -74,10 +92,16 @@ export default function DesignYourOwn() {
   }, []);
 
   const product = products.find(p => p.id === productId);
+
+  useEffect(() => { setSelectedColour(null); }, [productId]);
   const garmentPrintArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
   const garmentPrintAreaBack = product?.print_area_back || garmentPrintArea;
   const printArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
-  const garmentImage = view === "back" ? (product?.image_back || product?.image) : product?.image;
+  const colourImageFront = selectedColour && product?.images_by_colour?.[selectedColour];
+  const colourImageBack = selectedColour && product?.images_by_colour_back?.[selectedColour];
+  const garmentImage = view === "back"
+    ? (colourImageBack || product?.image_back || product?.image)
+    : (colourImageFront || product?.image);
   const unitPrice = product?.price ?? 0;
   const backPrintPrice = product?.back_print_price ?? 0;
   const neckLabelPrice = product?.neck_label_price ?? 1.5;
@@ -177,6 +201,7 @@ export default function DesignYourOwn() {
   const updateItem = (id, patch) => setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it));
 
   const removeBgReal = async () => {
+    if (!isLoggedIn) { toast.error("Log in to use AI tools — it's free, just stops random abuse of the paid AI service."); return; }
     if (!selectedId) { toast.error("Select an image first"); return; }
     const sel = items.find(i => i.id === selectedId);
     if (!sel || sel.type !== "image") { toast.error("Select an image first"); return; }
@@ -187,6 +212,7 @@ export default function DesignYourOwn() {
       const res = await designerRemoveBg(sel.src);
       if (!res?.image_base64) throw new Error("no image returned");
       updateItem(sel.id, { src: res.image_base64, _busy: false });
+      if (typeof res.ai_uses_remaining === "number") setAiUsage((u) => ({ ...(u || { limit: 20 }), remaining: res.ai_uses_remaining, used: (u?.limit || 20) - res.ai_uses_remaining }));
       toast.success("Background removed", { id: t });
     } catch (e) {
       updateItem(sel.id, { _busy: false });
@@ -195,6 +221,7 @@ export default function DesignYourOwn() {
     }
   };
   const aiEffectReal = async (effectId, label) => {
+    if (!isLoggedIn) { toast.error("Log in to use AI tools — it's free, just stops random abuse of the paid AI service."); return; }
     if (!selectedId) { toast.error("Select an image first"); return; }
     const sel = items.find(i => i.id === selectedId);
     if (!sel || sel.type !== "image") { toast.error("Select an image first"); return; }
@@ -206,6 +233,7 @@ export default function DesignYourOwn() {
       const nextSrc = res?.image_base64 || res?.image_url;
       if (!nextSrc) throw new Error("no image returned");
       updateItem(sel.id, { src: nextSrc, _busy: false });
+      if (typeof res.ai_uses_remaining === "number") setAiUsage((u) => ({ ...(u || { limit: 20 }), remaining: res.ai_uses_remaining, used: (u?.limit || 20) - res.ai_uses_remaining }));
       toast.success(`${label} applied`, { id: t });
     } catch (e) {
       updateItem(sel.id, { _busy: false });
@@ -356,6 +384,7 @@ export default function DesignYourOwn() {
         origin_url: window.location.origin,
         blank: false,
         placements,
+        color: selectedColour || product?.colors?.[0]?.name || "",
         design_meta: {
           flow: "designer",
           items: String(frontItems.length),
@@ -437,6 +466,34 @@ export default function DesignYourOwn() {
               )}
               <div className="text-[10px] text-[#4b5563] mt-2 font-bold">{products.length} products available · admin manages list</div>
             </Panel>
+
+            {product?.colors?.length > 0 && (
+              <Panel title="Colour">
+                <div className="flex flex-wrap gap-2" data-testid="designer-colour-swatches">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedColour(null)}
+                    className={`w-8 h-8 rounded-full border-2 grid place-items-center bg-white ${!selectedColour ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
+                    title="Default"
+                    data-testid="designer-colour-default"
+                  >
+                    <span className="text-[8px] font-extrabold text-[#4b5563]">Def</span>
+                  </button>
+                  {product.colors.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => setSelectedColour(c.name)}
+                      className={`w-8 h-8 rounded-full border-2 ${selectedColour === c.name ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
+                      style={{ background: c.hex || "#ccc" }}
+                      title={c.name}
+                      data-testid={`designer-colour-${c.name}`}
+                    />
+                  ))}
+                </div>
+                {selectedColour && <p className="text-[10px] text-[#4b5563] mt-2 font-bold">{selectedColour}</p>}
+              </Panel>
+            )}
           </aside>
 
           <aside className="lg:col-span-3 space-y-4 order-3 lg:order-1 lg:col-start-1 lg:row-start-1 lg:row-span-2" data-testid="designer-left-aside">
@@ -445,8 +502,13 @@ export default function DesignYourOwn() {
                 <Upload size={18} /><span className="font-nunito font-extrabold text-sm">Upload image</span>
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onUpload} />
-              <button data-testid="designer-removebg-btn" onClick={removeBgReal} className="w-full mt-3 flex items-center justify-center gap-2 bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a] py-3 rounded-full font-nunito font-extrabold text-xs transition-colors">
-                <Wand2 size={14} /> Remove Background
+              <button
+                data-testid="designer-removebg-btn"
+                onClick={removeBgReal}
+                disabled={!isLoggedIn}
+                className={`w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-full font-nunito font-extrabold text-xs transition-colors ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] cursor-not-allowed" : "bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a]"}`}
+              >
+                {!isLoggedIn ? <Lock size={13} /> : <Wand2 size={14} />} Remove Background
               </button>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {[
@@ -455,10 +517,30 @@ export default function DesignYourOwn() {
                   { id: "cartoon", label: "Cartoon" },
                   { id: "enhance", label: "Enhance" },
                 ].map((fx) => (
-                  <button key={fx.id} data-testid={`designer-ai-${fx.id}`} onClick={() => aiEffectReal(fx.id, fx.label)} className="text-xs font-nunito font-extrabold bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a] py-2 rounded-full transition-colors">{fx.label}</button>
+                  <button
+                    key={fx.id}
+                    data-testid={`designer-ai-${fx.id}`}
+                    onClick={() => aiEffectReal(fx.id, fx.label)}
+                    disabled={!isLoggedIn}
+                    className={`text-xs font-nunito font-extrabold py-2 rounded-full transition-colors ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] cursor-not-allowed" : "bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a]"}`}
+                  >
+                    {fx.label}
+                  </button>
                 ))}
               </div>
-              <div className="text-[10px] text-[#4b5563] mt-2 font-bold text-center">AI effects via Cutout.pro · background removal via remove.bg</div>
+              {!isLoggedIn ? (
+                <div className="mt-2 bg-[#fff7ed] border border-[#fed7aa] rounded-xl p-2.5 text-center" data-testid="designer-ai-login-prompt">
+                  <p className="text-[10px] font-bold text-[#712B13]">
+                    <Lock size={10} className="inline mr-1 -mt-0.5" />
+                    <Link to="/account" className="underline font-extrabold">Log in</Link> to use AI tools — free, just keeps this from being spammed on random images.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-[10px] text-[#4b5563] mt-2 font-bold text-center" data-testid="designer-ai-usage">
+                  AI effects via Cutout.pro · background removal via remove.bg
+                  {aiUsage && <div className="mt-0.5">{aiUsage.remaining} of {aiUsage.limit} free AI edits left this month</div>}
+                </div>
+              )}
             </Panel>
 
             <Panel title="Add Text">
