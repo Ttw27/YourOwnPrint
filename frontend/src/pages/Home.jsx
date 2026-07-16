@@ -88,7 +88,7 @@ export default function Home() {
         <p className="text-center text-[#4b5563] mt-3">Find your crew's look in seconds.</p>
         <div className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {SECTORS.map((s, i) => {
-            const colors = ["bg-[#7bc67e]", "bg-[#fde68a]", "bg-[#fbcfe8]", "bg-[#bfdbfe]", "bg-[#fed7aa]"];
+            const colors = ["bg-[#7bc67e]", "bg-[#D85A30]", "bg-[#378ADD]", "bg-[#D4537E]", "bg-[#1D9E75]", "bg-[#BA7517]"];
             return (
               <Link key={s.name} to="/workwear" data-testid={`home-sector-${i}`} className="group relative aspect-[4/5] rounded-2xl overflow-hidden">
                 <img src={s.image} alt={s.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
