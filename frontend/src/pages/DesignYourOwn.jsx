@@ -99,9 +99,21 @@ export default function DesignYourOwn() {
   const printArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
   const colourImageFront = selectedColour && product?.images_by_colour?.[selectedColour];
   const colourImageBack = selectedColour && product?.images_by_colour_back?.[selectedColour];
-  const garmentImage = view === "back"
-    ? (colourImageBack || product?.image_back || product?.image)
-    : (colourImageFront || product?.image);
+  const selectedColourHex = selectedColour && product?.colors?.find(c => c.name === selectedColour)?.hex;
+  // A specific colour photo is used when it exists. Otherwise: if a colour is
+  // selected but has no photo for this view, fall back to a flat tint of the
+  // ACTUAL selected colour (never the default photo — that could silently
+  // show the wrong colour, e.g. black while designing a yellow order).
+  const garmentBackground = (() => {
+    if (view === "back") {
+      if (colourImageBack) return { type: "image", src: colourImageBack };
+      if (selectedColour) return { type: "color", hex: selectedColourHex || "#e5e7eb" };
+      return { type: "image", src: product?.image_back || product?.image };
+    }
+    if (colourImageFront) return { type: "image", src: colourImageFront };
+    if (selectedColour) return { type: "color", hex: selectedColourHex || "#e5e7eb" };
+    return { type: "image", src: product?.image };
+  })();
   const unitPrice = product?.price ?? 0;
   const backPrintPrice = product?.back_print_price ?? 0;
   const neckLabelPrice = product?.neck_label_price ?? 1.5;
@@ -653,8 +665,10 @@ export default function DesignYourOwn() {
                   <div className="absolute inset-0 bg-gradient-to-b from-neutral-50 to-neutral-100 grid place-items-center pointer-events-none">
                     <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-300 font-nunito font-extrabold">Neck label · approx 60 × 30 mm</div>
                   </div>
+                ) : garmentBackground.type === "color" ? (
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: garmentBackground.hex }} data-testid="designer-flat-colour-bg" />
                 ) : (
-                  <img src={garmentImage} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+                  <img src={garmentBackground.src} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
                 )}
                 {/* Side badge */}
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-nunito font-extrabold uppercase tracking-[0.2em] text-[#1a1a1a] border border-[#dcfce7]" data-testid="designer-side-badge">
