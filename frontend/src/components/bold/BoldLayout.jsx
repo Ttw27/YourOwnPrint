@@ -133,21 +133,10 @@ export function BoldNavbar() {
           <Menu size={18} />
         </button>
 
-        <form onSubmit={submitSearch} className="relative flex items-center">
-          {searchOpen && (
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products…"
-              className="absolute right-10 top-1/2 -translate-y-1/2 w-48 sm:w-64 bg-[#f0fdf4] border border-[#dcfce7] rounded-full pl-4 pr-3 py-2 text-sm focus:outline-none focus:border-[#7bc67e]"
-              data-testid="nav-search-input"
-            />
-          )}
+        <form onSubmit={submitSearch} className="flex items-center">
           <button
-            type={searchOpen ? "submit" : "button"}
-            onClick={() => { if (!searchOpen) setSearchOpen(true); }}
+            type="button"
+            onClick={() => setSearchOpen((v) => !v)}
             aria-label="Search"
             className="w-10 h-10 grid place-items-center rounded-full hover:bg-[#f0fdf4] text-[#1a1a1a] flex-shrink-0"
             data-testid="nav-search-trigger"
@@ -159,6 +148,26 @@ export function BoldNavbar() {
         <AccountButton className="ml-2" />
         <CartIcon className="ml-1" />
       </div>
+
+      {searchOpen && (
+        <div className="border-t border-[#e5e7eb] bg-[#f9fafb]" data-testid="nav-search-panel">
+          <form onSubmit={submitSearch} className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-2">
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products…"
+              className="flex-1 bg-white border border-[#dcfce7] rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-[#7bc67e]"
+              data-testid="nav-search-input"
+            />
+            <button type="submit" className="text-xs font-nunito font-extrabold bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] rounded-full px-4 py-2.5 flex-shrink-0">Search</button>
+            <button type="button" onClick={() => setSearchOpen(false)} aria-label="Close search" className="w-8 h-8 grid place-items-center rounded-full hover:bg-[#f0fdf4] flex-shrink-0" data-testid="nav-search-close">
+              <X size={16} />
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Mobile slide-over — rendered into document.body via portal to escape backdrop-blur containing block */}
       {mobileOpen && typeof document !== "undefined" && createPortal(
