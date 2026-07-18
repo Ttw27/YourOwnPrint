@@ -1,15 +1,18 @@
 // Static seed data (sectors, reviews) used across themes.
 export const SECTORS = [
-  { name: "Construction & Trades", image: "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Healthcare", image: "https://images.pexels.com/photos/5430213/pexels-photo-5430213.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Hospitality", image: "https://images.pexels.com/photos/15323377/pexels-photo-15323377.png?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Retail", image: "https://images.pexels.com/photos/18703556/pexels-photo-18703556.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Sports & Fitness", image: "https://images.pexels.com/photos/12097160/pexels-photo-12097160.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Dance & Theatre", image: "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Schools & Leavers", image: "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Hi-Vis", image: "https://images.pexels.com/photos/34859873/pexels-photo-34859873.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Security", image: "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Beauty & Wellness", image: "https://images.pexels.com/photos/6899554/pexels-photo-6899554.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  // `href` is where the chip/tile links to. Previously these were rendered as
+  // plain <span>s on the Workwear page — styled to look clickable (cursor,
+  // hover colour) but doing nothing at all when clicked.
+  { name: "Construction & Trades", href: "/industries/construction-trades", image: "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Healthcare", href: "/industries/healthcare", image: "https://images.pexels.com/photos/5430213/pexels-photo-5430213.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Hospitality", href: "/industries/hospitality-catering", image: "https://images.pexels.com/photos/15323377/pexels-photo-15323377.png?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Retail", href: "/industries/retail", image: "https://images.pexels.com/photos/18703556/pexels-photo-18703556.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Sports & Fitness", href: "/industries/sports-fitness", image: "https://images.pexels.com/photos/12097160/pexels-photo-12097160.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Dance & Theatre", href: "/sports", image: "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Schools & Leavers", href: "/leavers-hoodies", image: "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Hi-Vis", href: "/shop/hi-vis", image: "https://images.pexels.com/photos/34859873/pexels-photo-34859873.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Security", href: "/industries/security", image: "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Beauty & Wellness", href: "/industries/beauty-wellness", image: "https://images.pexels.com/photos/6899554/pexels-photo-6899554.jpeg?auto=compress&cs=tinysrgb&w=800" },
 ];
 
 export const BEST_SELLERS = [

@@ -36,6 +36,11 @@ export async function fetchAdminMe() {
   return data;
 }
 
+export async function fetchWorkwearCollection(params = {}) {
+  const { data } = await api.get("/collections/workwear", { params });
+  return data;
+}
+
 export async function fetchBestSellers(limit = 12) {
   const { data } = await api.get("/products/best-sellers", { params: { limit } });
   return data;
