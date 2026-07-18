@@ -95,6 +95,7 @@ export const NAV_MENU = [
         heading: "By collection",
         links: [
           { label: "Fight Night Tees", to: "/fight-night-tee" },
+          { label: "Festival & DJ Merch", to: "/festival-tees-and-brands" },
           { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
           { label: "Team Kits", to: "/team-kits" },
           { label: "Teams & Schools", to: "/teams-schools" },
@@ -112,6 +113,7 @@ export const NAV_MENU = [
           { label: "Joggers & Trousers", to: "/shop/bottoms" },
           { label: "Aprons", to: "/shop/aprons" },
           { label: "Shorts", to: "/shop/shorts" },
+          { label: "Promotional & Gifts", to: "/shop/promotional" },
           { label: "Accessories", to: "/shop/accessories" },
         ],
       },
