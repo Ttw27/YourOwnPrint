@@ -5006,7 +5006,7 @@ _AUTO_CATEGORY_RULES: List[Tuple[str, str]] = [
     ("jean", "bottoms"),
     ("skort", "bottoms"),
     ("pant", "bottoms"),  # catches remaining "...pants" not matched above
-    ("short", "shorts"),  # gym shorts, jog shorts, training shorts, campus shorts, etc.
+    ("shorts", "shorts"),  # gym shorts, jog shorts, training shorts, campus shorts, etc. — plural specifically, so this never matches "short sleeve"
     ("jacket", "jackets"),
     ("softshell", "jackets"),
     ("gilet", "jackets"),
@@ -5052,8 +5052,8 @@ _AUTO_CATEGORY_RULES: List[Tuple[str, str]] = [
     ("towel", "towels"),
     ("blanket", "towels"),
     ("robe", "towels"),
-    ("tunic", "t-shirts"),
-    ("blouse", "t-shirts"),
+    ("tunic", "shirts"),
+    ("blouse", "shirts"),
     ("bodysuit", "t-shirts"),
     ("vest", "t-shirts"),
     ("base layer", "t-shirts"),
@@ -5279,6 +5279,12 @@ class BulkUpdateImportedPayload(BaseModel):
     # fields ended up thinned out or corrupted somewhere along the way, but
     # the per-colour images (used by the colour swatch switcher) are still intact.
     rebuild_gallery_from_colours: Optional[bool] = False
+    # Re-runs garment-category auto-detection against each product's name —
+    # use this after a category-detection rule changes (e.g. tunics used to
+    # wrongly map to "t-shirts"), so already-imported products catch up.
+    # Runs FIRST in the per-product pass, before retag/placements, so those
+    # steps see the corrected category rather than the stale one.
+    recategorize_products: Optional[bool] = False
     # Which page of matching products to process — required for repeated
     # calls to actually advance through different products instead of
     # reprocessing the same first batch every time.
@@ -5317,6 +5323,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     placements_updated = 0
     sizes_repaired = 0
     gallery_rebuilt = 0
+    recategorized = 0
     errors = 0
     error_examples = []
 
@@ -5327,6 +5334,19 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         matched += 1
         update: Dict = {}
         per_doc_error = False
+        effective_category = doc.get("category") or ""
+
+        if payload.recategorize_products:
+            try:
+                new_category = _auto_category(doc.get("name") or "", doc.get("description") or "")
+                if new_category and new_category != effective_category:
+                    update["category"] = new_category
+                    effective_category = new_category
+                    recategorized += 1
+            except Exception as e:
+                per_doc_error = True
+                if len(error_examples) < 5:
+                    error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "recategorize_products", "error": str(e)[:200]})
 
         if payload.reprice:
             try:
@@ -5350,7 +5370,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
 
         if payload.retag_industries:
             try:
-                new_tags = _auto_industry_tags(doc.get("name") or "", doc.get("category") or "")
+                new_tags = _auto_industry_tags(doc.get("name") or "", effective_category)
                 if new_tags != (doc.get("industry_tags") or []):
                     update["industry_tags"] = new_tags
                     retagged += 1
@@ -5377,7 +5397,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
 
         if payload.apply_placement_defaults:
             try:
-                new_placements = _auto_allowed_placements(doc.get("name") or "", doc.get("category") or "")
+                new_placements = _auto_allowed_placements(doc.get("name") or "", effective_category)
                 if new_placements != (doc.get("allowed_placements") or []):
                     update["allowed_placements"] = new_placements
                     placements_updated += 1
@@ -5468,6 +5488,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "placements_updated": placements_updated,
         "sizes_repaired": sizes_repaired,
         "gallery_rebuilt": gallery_rebuilt,
+        "recategorized": recategorized,
         "total_matching": total_matching,
         "truncated": truncated,
         "next_offset": (payload.offset or 0) + matched,
