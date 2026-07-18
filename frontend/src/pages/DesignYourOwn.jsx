@@ -494,14 +494,17 @@ export default function DesignYourOwn() {
             {product?.colors?.length > 0 && (
               <Panel title="Colour">
                 <div className="flex flex-wrap gap-2" data-testid="designer-colour-swatches">
+                  {/* This isn't a colour — it's "show the product photo we have",
+                      which is whatever colour that photo happens to be. Labelled
+                      plainly so it doesn't read as a duplicate of White. */}
                   <button
                     type="button"
                     onClick={() => setSelectedColour(null)}
-                    className={`w-8 h-8 rounded-full border-2 grid place-items-center bg-white ${!selectedColour ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
-                    title="Default"
+                    className={`h-8 px-2.5 rounded-full border-2 grid place-items-center bg-white ${!selectedColour ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
+                    title="Show the product photo as-is, rather than a specific colour"
                     data-testid="designer-colour-default"
                   >
-                    <span className="text-[8px] font-extrabold text-[#4b5563]">Def</span>
+                    <span className="text-[9px] font-extrabold text-[#4b5563] whitespace-nowrap">As shown</span>
                   </button>
                   {product.colors.map((c) => (
                     <button

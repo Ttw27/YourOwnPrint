@@ -175,14 +175,37 @@ export default function AdminNavigation() {
                           <button onClick={() => removeColumn(i, ci)} className="p-1 bg-[#fee2e2] rounded text-red-700"><Trash2 size={12} /></button>
                         </div>
                         <div className="space-y-2">
+                          {/* Stacked, not side-by-side: three inputs on one row inside a narrow
+                              mega-menu column squeezed Label and URL to a few pixels each, so
+                              existing links looked blank. */}
                           {col.links.map((lnk, li) => (
-                            <div key={li} className="flex items-center gap-1 bg-white rounded-xl p-1.5 border border-[#dcfce7]" data-testid={`admin-nav-link-${i}-${ci}-${li}`}>
-                              <button onClick={() => moveLink(i, ci, li, -1)} className="p-0.5"><ArrowUp size={10} /></button>
-                              <button onClick={() => moveLink(i, ci, li, 1)} className="p-0.5"><ArrowDown size={10} /></button>
-                              <input value={lnk.label} onChange={(e) => update((arr) => { arr[i].columns[ci].links[li].label = e.target.value; return arr; })} className="input text-xs flex-1" placeholder="Label" />
-                              <input value={lnk.to} onChange={(e) => update((arr) => { arr[i].columns[ci].links[li].to = e.target.value; return arr; })} className="input text-xs flex-1" placeholder="/path" />
-                              <input value={lnk.badge || ""} onChange={(e) => update((arr) => { arr[i].columns[ci].links[li].badge = e.target.value; return arr; })} className="input text-xs w-20" placeholder="Badge" />
-                              <button onClick={() => removeLink(i, ci, li)} className="p-0.5 text-red-700"><Trash2 size={12} /></button>
+                            <div key={li} className="bg-white rounded-xl p-2 border border-[#dcfce7] space-y-1.5" data-testid={`admin-nav-link-${i}-${ci}-${li}`}>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => moveLink(i, ci, li, -1)} className="p-0.5 flex-shrink-0" title="Move up"><ArrowUp size={11} /></button>
+                                <button onClick={() => moveLink(i, ci, li, 1)} className="p-0.5 flex-shrink-0" title="Move down"><ArrowDown size={11} /></button>
+                                <input
+                                  value={lnk.label}
+                                  onChange={(e) => update((arr) => { arr[i].columns[ci].links[li].label = e.target.value; return arr; })}
+                                  className="input text-xs flex-1 min-w-0 font-bold"
+                                  placeholder="Menu text (e.g. Hoodies)"
+                                />
+                                <button onClick={() => removeLink(i, ci, li)} className="p-0.5 text-red-700 flex-shrink-0" title="Delete link"><Trash2 size={12} /></button>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  value={lnk.to}
+                                  onChange={(e) => update((arr) => { arr[i].columns[ci].links[li].to = e.target.value; return arr; })}
+                                  className="input text-xs flex-1 min-w-0"
+                                  placeholder="/shop/hoodies"
+                                />
+                                <input
+                                  value={lnk.badge || ""}
+                                  onChange={(e) => update((arr) => { arr[i].columns[ci].links[li].badge = e.target.value; return arr; })}
+                                  className="input text-xs w-16 flex-shrink-0"
+                                  placeholder="Badge"
+                                  title="Optional little label, e.g. New"
+                                />
+                              </div>
                             </div>
                           ))}
                           <button onClick={() => addLink(i, ci)} className="w-full px-2 py-1 bg-[#f0fdf4] hover:bg-[#dcfce7] text-xs rounded-full font-extrabold inline-flex items-center justify-center gap-1"><Plus size={12} /> Add link</button>
