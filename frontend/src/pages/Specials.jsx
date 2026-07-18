@@ -6,8 +6,10 @@ import { fetchSpecialsProducts } from "../lib/api";
 import { GENDER_FITS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
 import { Sparkles, CheckCircle2, ShieldCheck, ArrowRight, Briefcase, Zap, Tag } from "lucide-react";
+import usePageTitle from "../hooks/usePageTitle";
 
 export default function Specials() {
+  usePageTitle("Specials");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [gender, setGender] = useState("all");

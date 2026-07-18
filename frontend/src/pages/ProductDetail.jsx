@@ -14,8 +14,10 @@ import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProdu
 import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, ShoppingBag, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
+import usePageTitle from "../hooks/usePageTitle";
 
 export default function ProductDetail() {
+  usePageTitle(product?.name, { description: product?.description });
   const { id } = useParams();
   const navigate = useNavigate();
   const { addLine } = useCart();

@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayou
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchIndustry, fetchReviewsAggregate } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, X, ChevronDown, SlidersHorizontal } from "lucide-react";
+import usePageTitle from "../hooks/usePageTitle";
 
 /**
  * /industries/:slug — Industry landing page (Construction & Trades, Hospitality, etc.)
@@ -15,6 +16,7 @@ const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids:
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
 export default function IndustryDetail() {
+  usePageTitle(data?.title);
   const { slug } = useParams();
   const [params, setParams] = useSearchParams();
   const [data, setData] = useState(null);

@@ -5,6 +5,7 @@ import { fetchWorkwearCollection, fetchReviewsAggregate } from "../lib/api";
 import { SECTORS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
 import { ArrowRight, ChevronDown, Loader2, SlidersHorizontal } from "lucide-react";
+import usePageTitle from "../hooks/usePageTitle";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], price_min: "", price_max: "" };
@@ -20,6 +21,7 @@ const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], pric
  * rest of the site.
  */
 export default function Workwear() {
+  usePageTitle(copy.title || "Workwear", { description: copy.subtitle });
   const [data, setData] = useState(null);
   const [aggregates, setAggregates] = useState({});
   const [loading, setLoading] = useState(true);

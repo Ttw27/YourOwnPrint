@@ -5,8 +5,10 @@ import { toast } from "sonner";
 import { SECTORS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
 import { Phone, Mail, MessageSquare, Send, Sparkles } from "lucide-react";
+import usePageTitle from "../hooks/usePageTitle";
 
 export default function Contact() {
+  usePageTitle("Contact");
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "", quantity: "", sector: "" });
   const [submitting, setSubmitting] = useState(false);
 

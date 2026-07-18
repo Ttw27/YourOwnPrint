@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchIndustries } from "../lib/api";
 import { ArrowRight, Briefcase } from "lucide-react";
+import usePageTitle from "../hooks/usePageTitle";
 
 export default function IndustriesIndex() {
+  usePageTitle("Shop by Industry");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {

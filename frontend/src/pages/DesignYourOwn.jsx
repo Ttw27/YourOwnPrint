@@ -8,6 +8,7 @@ import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRem
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock } from "lucide-react";
+import usePageTitle from "../hooks/usePageTitle";
 
 const FONTS = [
   { label: "Nunito", value: "Nunito, sans-serif" },
@@ -41,6 +42,7 @@ const USE_CASE_LABELS = {
 };
 
 export default function DesignYourOwn() {
+  usePageTitle("Design Your Own");
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loadError, setLoadError] = useState(false);
