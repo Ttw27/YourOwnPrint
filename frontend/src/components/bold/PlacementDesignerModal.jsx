@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../../lib/api";
+import FontPicker from "./FontPicker";
 import { X, Upload, Type, Trash2, RotateCw, Loader2, Wand2, ArrowUp, ArrowDown, Copy, Pencil, Layers, Check, Lock } from "lucide-react";
 
 const FONTS = [
@@ -333,9 +334,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
               <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#166534]"><Type size={13} /> Add text</div>
               <input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="e.g. 07123 456789" className="w-full text-sm bg-white border border-[#dcfce7] rounded-lg px-2 py-1.5" data-testid="placement-text-input" />
               <div className="flex gap-1.5">
-                <select value={textFont} onChange={(e) => setTextFont(e.target.value)} className="flex-1 text-xs bg-white border border-[#dcfce7] rounded-lg px-1.5 py-1">
-                  {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                </select>
+                <FontPicker value={textFont} onChange={setTextFont} fonts={FONTS} className="flex-1" />
                 <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-8 h-8 rounded-lg border border-[#dcfce7]" />
               </div>
               <button onClick={addText} className="w-full text-xs font-extrabold bg-white border border-[#7bc67e] text-[#166534] rounded-full py-1.5 hover:bg-[#f0fdf4]" data-testid="placement-add-text">Add</button>

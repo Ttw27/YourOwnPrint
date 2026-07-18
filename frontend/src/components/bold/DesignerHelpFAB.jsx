@@ -53,9 +53,15 @@ export default function DesignerHelpFAB() {
                 <strong>Switch view</strong> — use <em>Front</em> / <em>Back</em> / <em>Neck label</em> above the canvas to place different designs on each area (back &amp; neck cost extra, shown in the tab).
               </Step>
               <Step n="3">
-                <strong>Add art or text</strong> — upload your logo/PNG (transparent works best), then drag, resize and rotate on the print area. Add text with any font/colour.
+                <strong>Pick a colour</strong> — the <em>Colour</em> panel switches the canvas to that garment colour. If we&rsquo;ve photographed it you&rsquo;ll see the real garment; otherwise you&rsquo;ll see a flat block in exactly that colour so you always design against the right shade.
               </Step>
               <Step n="4">
+                <strong>Add art or text</strong> — upload your logo/PNG (transparent works best), then drag, resize and rotate inside the dashed print area. Add text in any font — the font list previews each style so you can see it before picking. Use the <em>Layers</em> panel to reorder, duplicate or delete anything.
+              </Step>
+              <Step n="5">
+                <strong>AI tools</strong> (optional) — select an uploaded image to unlock <em>Remove background</em> and photo effects. These use paid AI services, so you&rsquo;ll need to be logged in; you get 20 free edits a month.
+              </Step>
+              <Step n="6">
                 <strong>Sizes &amp; checkout</strong> — set qty per size at the bottom and hit "Checkout with Stripe". We'll email you a free proof before we print.
               </Step>
             </ol>
