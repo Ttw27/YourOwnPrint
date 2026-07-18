@@ -98,7 +98,7 @@ export default function Specials() {
             No items match this fit. Try a different filter, or admin can flag products via <strong>Product settings → Specials-eligible</strong>.
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="specials-grid">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" data-testid="specials-grid">
             {filtered.map((p) => (
               <Link
                 key={p.id}

@@ -180,7 +180,7 @@ export default function KitYourWorkforce() {
                 No workforce-eligible products yet. Ask the admin to flag them in <strong>Product settings → Workforce eligible</strong>.
               </div>
             ) : (
-              <div className="grid sm:grid-cols-2 gap-3" data-testid="workforce-products-grid">
+              <div className="grid grid-cols-2 gap-3" data-testid="workforce-products-grid">
                 {products.map(p => {
                   const isOpen = expandedId === p.id;
                   const itemQty = productSubtotalQty(p.id);

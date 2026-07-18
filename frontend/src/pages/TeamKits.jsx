@@ -97,7 +97,7 @@ export default function TeamKits() {
           </div>
         ) : (
           <>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10" data-testid="team-kit-gallery">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mt-10" data-testid="team-kit-gallery">
               {products.map((p, i) => {
                 const agg = aggs[p.id];
                 return (

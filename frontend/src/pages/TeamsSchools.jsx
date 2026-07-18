@@ -181,7 +181,7 @@ export default function TeamsSchools() {
       <section className="max-w-7xl mx-auto px-6 py-12">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold mb-2">Pick your world</div>
         <h2 className="font-black text-3xl lg:text-4xl mb-6">Which group are you kitting out?</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="ts-tiles">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" data-testid="ts-tiles">
           {TILES.map(({ id, to, testid, Icon, accent, accentText, title, tagline, bullets, cta }) => (
             <Link key={id} to={to} data-testid={testid} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md rounded-3xl overflow-hidden transition-all flex flex-col">
               <div className={`${accent} px-5 pt-5 pb-4 flex items-start justify-between`}>

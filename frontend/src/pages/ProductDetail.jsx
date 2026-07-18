@@ -246,12 +246,15 @@ export default function ProductDetail() {
           <>
             <div className="grid lg:grid-cols-12 gap-8 mb-8">
               {/* Left column on desktop: image gallery only (description & size guide moved below the buy panel for mobile-first ordering) */}
-              <div className="lg:col-span-6">
+              {/* min-w-0 is essential: without it this grid column sizes to the
+                  intrinsic width of the scrolling thumbnail strip, pushing the
+                  page wider than the screen so mobile browsers zoom to fit. */}
+              <div className="lg:col-span-6 min-w-0">
                 <ProductGallery product={product} color={color} />
               </div>
 
               {/* Right column: title, price, selections — directly under the gallery on mobile */}
-              <div className="lg:col-span-6 space-y-5">
+              <div className="lg:col-span-6 min-w-0 space-y-5">
                 <div>
                   <span className="inline-block bg-[#fde68a] text-[#1a1a1a] text-xs font-nunito font-extrabold uppercase tracking-wider px-3 py-1 rounded-full">{product.category}</span>
                   <h1 data-testid="product-name" className="mt-3 font-nunito font-black text-3xl lg:text-5xl text-[#1a1a1a]">{product.name}</h1>
@@ -668,7 +671,7 @@ function ProductGallery({ product, color }) {
   const showingColorPhoto = manualIndex === null && !!colorImage;
 
   return (
-    <div className="bg-[#f0fdf4] rounded-3xl p-6 border border-[#dcfce7]" data-testid="product-image-block">
+    <div className="bg-[#f0fdf4] rounded-3xl p-4 sm:p-6 border border-[#dcfce7] min-w-0 overflow-hidden" data-testid="product-image-block">
       <div className="aspect-square overflow-hidden rounded-2xl bg-white relative">
         <img src={current} alt={product.name} className="w-full h-full object-contain" data-testid="product-image-main" />
         {color && (
@@ -679,7 +682,7 @@ function ProductGallery({ product, color }) {
         )}
       </div>
       {images.length > 1 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x" data-testid="product-image-thumbnails">
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x min-w-0 w-full" data-testid="product-image-thumbnails">
           {/* Previously hard-capped at .slice(0, 5) with no arrows or scroll —
               any product with more than 5 photos silently hid the rest. */}
           {images.map((src, i) => (

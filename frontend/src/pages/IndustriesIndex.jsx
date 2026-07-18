@@ -22,7 +22,7 @@ export default function IndustriesIndex() {
       </header>
       <section className="max-w-7xl mx-auto px-6 py-12">
         {loading ? <div className="text-sm text-[#4b5563]">Loading…</div> :
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" data-testid="industries-grid">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5" data-testid="industries-grid">
             {items.map((ind, i) => {
               const accents = ["#7bc67e", "#D85A30", "#378ADD", "#D4537E", "#1D9E75", "#BA7517"];
               const accent = accents[i % accents.length];

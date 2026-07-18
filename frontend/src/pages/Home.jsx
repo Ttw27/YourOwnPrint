@@ -78,11 +78,13 @@ export default function Home() {
 
       {/* Trust bar */}
       <div className="bg-[#f0fdf4] border-y border-[#dcfce7]">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm font-nunito font-bold text-[#1a1a1a]">
+        {/* Mobile: a tidy 2-column grid (flex-wrap + centring left ragged,
+            uneven rows). Desktop keeps the single centred row. */}
+        <div className="max-w-7xl mx-auto px-5 py-4 sm:py-5 grid grid-cols-2 gap-x-4 gap-y-2.5 lg:flex lg:flex-wrap lg:justify-center lg:gap-x-8 lg:gap-y-3 text-[12px] sm:text-sm font-nunito font-bold text-[#1a1a1a]">
           {["Leicester, UK — Nationwide Delivery", "No Minimum Orders", "No Setup Fees", "Free Logo Design"].map(t => (
-            <div key={t} className="flex items-center gap-2"><Check size={16} className="text-[#7bc67e]" />{t}</div>
+            <div key={t} className="flex items-start gap-1.5 leading-snug"><Check size={14} className="text-[#7bc67e] flex-shrink-0 mt-0.5" />{t}</div>
           ))}
-          <div className="flex items-center gap-2"><Star size={16} className="text-amber-500 fill-amber-500" />{RATING.value}★ from {RATING.count} reviews</div>
+          <div className="flex items-start gap-1.5 leading-snug"><Star size={14} className="text-amber-500 fill-amber-500 flex-shrink-0 mt-0.5" />{RATING.value}★ from {RATING.count} reviews</div>
         </div>
       </div>
 

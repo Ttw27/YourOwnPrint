@@ -127,7 +127,7 @@ export default function SportsTeamDetail() {
       {data.products?.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 pb-12">
           <h2 className="text-2xl font-black mb-5">Shop the lineup</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="sports-team-products">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" data-testid="sports-team-products">
             {data.products.map((p) => (
               <Link
                 key={p.id}
