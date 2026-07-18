@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { fetchNavigation, adminUpdateNavigation, adminResetNavigation } from "../lib/api";
-import { ArrowUp, ArrowDown, Plus, Trash2, Save, RotateCcw, Loader2 } from "lucide-react";
+import { fetchNavigation, adminUpdateNavigation, adminResetNavigation, adminNavigationMissingDefaults, adminNavigationAddMissingDefaults } from "../lib/api";
+import { ArrowUp, ArrowDown, Plus, Trash2, Save, RotateCcw, Loader2, Sparkles } from "lucide-react";
 
 const blankItem = () => ({ key: `nav-${Date.now()}`, label: "New menu", to: "/", cta: false, columns: [] });
 const blankCol = () => ({ heading: "Column", links: [] });
@@ -11,6 +11,29 @@ export default function AdminNavigation() {
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Links the site has added since this menu was last saved. The saved menu
+  // overrides the built-in one (so admin edits survive deploys), which means
+  // new sections wouldn't otherwise appear here.
+  const [missingDefaults, setMissingDefaults] = useState([]);
+  const [addingMissing, setAddingMissing] = useState(false);
+
+  async function checkMissing() {
+    try {
+      const res = await adminNavigationMissingDefaults();
+      setMissingDefaults(res?.missing || []);
+    } catch { /* non-critical — just don't show the banner */ }
+  }
+
+  async function addMissing() {
+    setAddingMissing(true);
+    try {
+      const res = await adminNavigationAddMissingDefaults();
+      toast.success(`Added ${res.added} new link${res.added === 1 ? "" : "s"} — your existing menu is untouched`);
+      setMissingDefaults([]);
+      load();
+    } catch { toast.error("Couldn't add the new links"); }
+    finally { setAddingMissing(false); }
+  }
 
   async function load() {
     setLoading(true);
@@ -18,7 +41,7 @@ export default function AdminNavigation() {
       const cfg = await fetchNavigation();
       setMenu(cfg?.menu || []);
     } catch { toast.error("Failed to load navigation"); }
-    finally { setLoading(false); }
+    finally { setLoading(false); checkMissing(); }
   }
   useEffect(() => { load(); }, []);
 
@@ -86,6 +109,39 @@ export default function AdminNavigation() {
             </button>
           </div>
         </div>
+
+        {missingDefaults.length > 0 && (
+          <div className="mt-4 bg-[#f0fdf4] border-2 border-[#7bc67e] rounded-2xl p-4" data-testid="admin-nav-missing-defaults">
+            <div className="flex items-start gap-2">
+              <Sparkles size={16} className="text-[#166534] flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-extrabold text-sm text-[#166534]">
+                  {missingDefaults.length} new section{missingDefaults.length === 1 ? "" : "s"} available
+                </div>
+                <p className="text-[11px] text-[#4b5563] mt-0.5">
+                  These pages exist on the site but aren&rsquo;t in your saved menu yet. Adding them leaves everything
+                  you&rsquo;ve customised exactly as it is &mdash; unlike Reset, which discards your changes.
+                </p>
+                <ul className="mt-2 space-y-0.5">
+                  {missingDefaults.map((m) => (
+                    <li key={m.to} className="text-[11px] font-bold">
+                      {m.label} <span className="text-[#9ca3af] font-normal">&rarr; {m.menu_label} / {m.column_heading}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={addMissing}
+                  disabled={addingMissing}
+                  className="mt-3 px-4 py-2 bg-[#7bc67e] hover:bg-[#5eb062] rounded-full text-xs font-extrabold inline-flex items-center gap-1.5 disabled:opacity-50"
+                  data-testid="admin-nav-add-missing"
+                >
+                  {addingMissing ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                  Add to my menu
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="py-20 grid place-items-center"><Loader2 className="animate-spin text-[#7bc67e]" /></div>
