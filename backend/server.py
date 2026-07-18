@@ -3887,7 +3887,7 @@ PORTFOLIO_CATEGORIES = [
     "schools", "events", "beauty", "barbering", "other",
     # Carousels / design libraries — same admin CRUD, but consumed by specific pages
     "fight-night-action",
-    "festival-tees-brands",
+    "festival-tees-and-brands",
     "leavers-front-designs",
     "leavers-back-designs",
     "leavers-full-front-designs",
@@ -4131,6 +4131,7 @@ DEFAULT_NAV_CONFIG = {
                 ]},
                 {"heading": "By collection", "links": [
                     {"label": "Fight Night Tees", "to": "/fight-night-tee"},
+                    {"label": "Festival & DJ Merch", "to": "/festival-tees-and-brands"},
                     {"label": "Leavers' Hoodies", "to": "/leavers-hoodies"},
                     {"label": "Team Kits", "to": "/team-kits"},
                     {"label": "Teams & Schools", "to": "/teams-schools"},
@@ -4145,6 +4146,7 @@ DEFAULT_NAV_CONFIG = {
                     {"label": "Joggers & Trousers", "to": "/shop/bottoms"},
                     {"label": "Aprons", "to": "/shop/aprons"},
                     {"label": "Shorts", "to": "/shop/shorts"},
+                    {"label": "Promotional & Gifts", "to": "/shop/promotional"},
                     {"label": "Accessories", "to": "/shop/accessories"},
                 ]},
             ],
