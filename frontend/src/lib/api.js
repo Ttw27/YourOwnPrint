@@ -401,6 +401,16 @@ export async function adminUpdateNavigation(config) {
   const { data } = await api.patch("/admin/navigation", { config });
   return data;
 }
+export async function adminNavigationMissingDefaults() {
+  const { data } = await api.get("/admin/navigation/missing-defaults");
+  return data;
+}
+
+export async function adminNavigationAddMissingDefaults() {
+  const { data } = await api.post("/admin/navigation/add-missing-defaults");
+  return data;
+}
+
 export async function adminResetNavigation() {
   const { data } = await api.post("/admin/navigation/reset");
   return data;
