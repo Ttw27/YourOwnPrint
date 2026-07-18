@@ -4632,6 +4632,97 @@ async def update_navigation(payload: Dict):
     return {"ok": True, "version": config["version"]}
 
 
+def _nav_all_targets(config: Dict) -> set:
+    """Every `to` value present anywhere in a nav config."""
+    out = set()
+    for item in (config.get("menu") or []):
+        if item.get("to"):
+            out.add(item["to"])
+        for col in (item.get("columns") or []):
+            for lnk in (col.get("links") or []):
+                if lnk.get("to"):
+                    out.add(lnk["to"])
+    return out
+
+
+def _nav_missing_defaults(saved: Dict) -> List[Dict]:
+    """Links that exist in the shipped default menu but not in the admin's
+    saved menu — i.e. new sections added by a site update that the admin
+    hasn't got yet. Returned with enough context to insert them in the
+    right place, without touching anything the admin has customised."""
+    have = _nav_all_targets(saved)
+    missing: List[Dict] = []
+    for item in DEFAULT_NAV_CONFIG["menu"]:
+        for col in (item.get("columns") or []):
+            for lnk in (col.get("links") or []):
+                if lnk.get("to") and lnk["to"] not in have:
+                    missing.append({
+                        "menu_key": item["key"],
+                        "menu_label": item["label"],
+                        "column_heading": col.get("heading") or "",
+                        "label": lnk["label"],
+                        "to": lnk["to"],
+                        "badge": lnk.get("badge"),
+                    })
+    return missing
+
+
+@api_router.get("/admin/navigation/missing-defaults", dependencies=[Depends(require_admin)])
+async def navigation_missing_defaults():
+    """Non-destructive check: what has the site added since this menu was saved?"""
+    doc = await db.settings.find_one({"key": "navigation_config"})
+    if not doc or not doc.get("config"):
+        # No saved override — the default is live already, nothing is missing.
+        return {"using_default": True, "missing": []}
+    return {"using_default": False, "missing": _nav_missing_defaults(doc["config"])}
+
+
+@api_router.post("/admin/navigation/add-missing-defaults", dependencies=[Depends(require_admin)])
+async def navigation_add_missing_defaults():
+    """Adds only the missing default links into the saved menu, leaving every
+    existing item, label, order and customisation exactly as it is. This is
+    the safe alternative to 'Reset to default', which discards changes."""
+    doc = await db.settings.find_one({"key": "navigation_config"})
+    if not doc or not doc.get("config"):
+        return {"ok": True, "added": 0, "using_default": True}
+
+    config = doc["config"]
+    missing = _nav_missing_defaults(config)
+    if not missing:
+        return {"ok": True, "added": 0}
+
+    by_key = {m.get("key"): m for m in config.get("menu", [])}
+    for entry in missing:
+        target_menu = by_key.get(entry["menu_key"])
+        if target_menu is None:
+            # Whole menu section is absent — recreate it from the default.
+            src = next((m for m in DEFAULT_NAV_CONFIG["menu"] if m["key"] == entry["menu_key"]), None)
+            if not src:
+                continue
+            target_menu = {"key": src["key"], "label": src["label"], "to": src.get("to"), "columns": []}
+            config.setdefault("menu", []).append(target_menu)
+            by_key[entry["menu_key"]] = target_menu
+
+        columns = target_menu.setdefault("columns", [])
+        col = next((c for c in columns if (c.get("heading") or "") == entry["column_heading"]), None)
+        if col is None:
+            col = {"heading": entry["column_heading"], "links": []}
+            columns.append(col)
+        link = {"label": entry["label"], "to": entry["to"]}
+        if entry.get("badge"):
+            link["badge"] = entry["badge"]
+        col.setdefault("links", []).append(link)
+
+    config["version"] = int(config.get("version", 1)) + 1
+    await db.settings.update_one(
+        {"key": "navigation_config"},
+        {"$set": {"key": "navigation_config", "config": config,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "added": len(missing), "version": config["version"]}
+
+
 @api_router.post("/admin/navigation/reset", dependencies=[Depends(require_admin)])
 async def reset_navigation():
     await db.settings.update_one(
