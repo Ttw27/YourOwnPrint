@@ -17,11 +17,11 @@ import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Shoppi
 import usePageTitle from "../hooks/usePageTitle";
 
 export default function ProductDetail() {
-  usePageTitle(product?.name, { description: product?.description });
   const { id } = useParams();
   const navigate = useNavigate();
   const { addLine } = useCart();
   const [product, setProduct] = useState(null);
+  usePageTitle(product?.name, { description: product?.description });
   const [placements, setPlacements] = useState([]);
   const [allowedPlacements, setAllowedPlacements] = useState(null); // null => unrestricted
   const [qa, setQA] = useState([]);

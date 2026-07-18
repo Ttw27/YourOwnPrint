@@ -16,10 +16,10 @@ const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids:
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
 export default function ShopByType() {
-  usePageTitle(data?.title);
   const { slug } = useParams();
   const [params, setParams] = useSearchParams();
   const [data, setData] = useState(null);
+  usePageTitle(data?.title);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
   const [page, setPage] = useState(0);

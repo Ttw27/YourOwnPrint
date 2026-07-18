@@ -21,7 +21,6 @@ const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], pric
  * rest of the site.
  */
 export default function Workwear() {
-  usePageTitle(copy.title || "Workwear", { description: copy.subtitle });
   const [data, setData] = useState(null);
   const [aggregates, setAggregates] = useState({});
   const [loading, setLoading] = useState(true);
@@ -34,6 +33,7 @@ export default function Workwear() {
     title: "Workwear",
     subtitle: "Trade-tough garments branded with your logo. Free print included.",
   });
+  usePageTitle(copy.title || "Workwear", { description: copy.subtitle });
 
   const load = useCallback(() => {
     setLoading(true); setErr(false);
