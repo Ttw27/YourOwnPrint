@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Home from "@/pages/Home";
+import NotFound from "@/pages/NotFound";
 import SearchResults from "@/pages/SearchResults";
 import FestivalTeesAndBrands from "@/pages/FestivalTeesAndBrands";
 import Terms from "@/pages/Terms";
@@ -117,6 +118,8 @@ function App() {
           <Route path="/admin/product-settings" element={<RequireAdmin><AdminProductSettings /></RequireAdmin>} />
           <Route path="/admin/qa" element={<RequireAdmin><AdminQA /></RequireAdmin>} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          {/* Catch-all — must stay last. Without it, unknown URLs rendered a blank page. */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
         {/* Site-wide WhatsApp FAB. Pages that already render their own FAB will overlap harmlessly,
             but to avoid duplicates each page-level FAB is identical position/size — only rendered once
