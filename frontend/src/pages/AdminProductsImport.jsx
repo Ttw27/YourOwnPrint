@@ -134,6 +134,7 @@ export default function AdminProductsImport() {
     apply_placement_defaults: false,
     fix_corrupted_sizes: false,
     rebuild_gallery_from_colours: false,
+    recategorize_products: false,
   });
 
   const [bulkRunAllProgress, setBulkRunAllProgress] = useState(null); // {offset, totalMatching, totals} while running
@@ -160,6 +161,7 @@ export default function AdminProductsImport() {
       apply_placement_defaults: bulkForm.apply_placement_defaults,
       fix_corrupted_sizes: bulkForm.fix_corrupted_sizes,
       rebuild_gallery_from_colours: bulkForm.rebuild_gallery_from_colours,
+      recategorize_products: bulkForm.recategorize_products,
       offset,
       dry_run: dryRun,
     };
@@ -177,9 +179,9 @@ export default function AdminProductsImport() {
       const { errNote } = summarizeBatch(d);
       const truncNote = d.truncated ? ` ${d.total_matching - d.next_offset} product(s) still remain — click Apply again (or use "Run all") to continue.` : "";
       if (dryRun) {
-        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} would get sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} would get their photo gallery rebuilt` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
+        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} would get sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} would get their photo gallery rebuilt` : ""}${d.recategorized ? `, ${d.recategorized} would get recategorized` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
       } else {
-        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} had sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} had their photo gallery rebuilt` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
+        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} had sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} had their photo gallery rebuilt` : ""}${d.recategorized ? `, ${d.recategorized} recategorized` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
         refresh();
       }
     } catch (e) {
@@ -671,6 +673,14 @@ export default function AdminProductsImport() {
                   <p className="text-[10px] text-[#4b5563] mt-2">Uses whatever default bulk-discount tiers (% off at 10+/25+/100+/200+) you've already set in Product Settings.</p>
                 </div>
               </div>
+
+              <label className="flex items-center gap-2 bg-[#fff7ed] rounded-2xl p-4 border-2 border-[#fed7aa]">
+                <input type="checkbox" checked={bulkForm.recategorize_products} onChange={(e) => setBulkForm({ ...bulkForm, recategorize_products: e.target.checked })} data-testid="apx-bulk-recategorize" />
+                <div>
+                  <div className="text-xs font-extrabold">Fix mis-categorized products</div>
+                  <div className="text-[10px] text-[#4b5563]">Re-runs category detection against each product's name — fixes real bugs found tonight (e.g. "Short Sleeve Tunic" was wrongly detected as "Shorts" the garment, tunics/blouses were wrongly mapped to T-Shirts). Runs before the other options below so they use the corrected category.</div>
+                </div>
+              </label>
 
               <label className="flex items-center gap-2 bg-[#f0fdf4] rounded-2xl p-4">
                 <input type="checkbox" checked={bulkForm.retag_industries} onChange={(e) => setBulkForm({ ...bulkForm, retag_industries: e.target.checked })} data-testid="apx-bulk-retag" />
