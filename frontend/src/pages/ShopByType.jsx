@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchShopByType, fetchReviewsAggregate } from "../lib/api";
-import { ArrowRight, Loader2, X, ChevronDown } from "lucide-react";
+import { ArrowRight, Loader2, X, ChevronDown, SlidersHorizontal } from "lucide-react";
 
 /**
  * /shop/:slug — Collection page.
@@ -12,7 +12,7 @@ import { ArrowRight, Loader2, X, ChevronDown } from "lucide-react";
  */
 
 const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids: "Kids" };
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
 export default function ShopByType() {
   const { slug } = useParams();
@@ -21,6 +21,7 @@ export default function ShopByType() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
   const [page, setPage] = useState(0);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [aggregates, setAggregates] = useState({});
 
   useEffect(() => { fetchReviewsAggregate().then(setAggregates).catch(() => {}); }, []);
@@ -108,7 +109,17 @@ export default function ShopByType() {
 
       <section className="max-w-7xl mx-auto px-4 lg:px-6 py-8 grid lg:grid-cols-12 gap-6">
         {/* Sidebar filters */}
-        <aside className="lg:col-span-3" data-testid="shop-type-sidebar">
+        <button
+          onClick={() => setMobileFiltersOpen((v) => !v)}
+          className="lg:hidden inline-flex items-center justify-center gap-2 border-2 border-[#dcfce7] rounded-full px-4 py-2.5 text-sm font-extrabold"
+          data-testid="shop-type-mobile-filter-toggle"
+        >
+          <SlidersHorizontal size={14} /> {mobileFiltersOpen ? "Hide filters" : "Show filters"}
+        </button>
+
+        {/* Sidebar is collapsed by default on mobile — expanded it pushed the
+            products far down the page before anything could be seen. */}
+        <aside className={`lg:col-span-3 ${mobileFiltersOpen ? "" : "hidden lg:block"}`} data-testid="shop-type-sidebar">
           <div className="sticky top-24 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold">Filter</h3>
@@ -192,7 +203,7 @@ export default function ShopByType() {
             </div>
           ) : (
             <>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="shop-type-grid">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" data-testid="shop-type-grid">
                 {products.map((p) => {
                   const agg = aggregates[p.id];
                   return (

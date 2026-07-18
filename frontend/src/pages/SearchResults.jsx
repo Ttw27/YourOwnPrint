@@ -4,7 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { searchProducts } from "../lib/api";
 import { ArrowRight, Loader2, SearchX, ChevronLeft, ChevronRight } from "lucide-react";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
 export default function SearchResults() {
   const [params] = useSearchParams();

@@ -6,7 +6,7 @@ import PricePromise from "../components/bold/PricePromise";
 import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import { ArrowRight, Trophy, Users, MessageCircle, Sparkles, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
 const FEATURES = [
   { icon: BadgeCheck, label: "Club badge included" },

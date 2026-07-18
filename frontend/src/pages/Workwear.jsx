@@ -6,7 +6,7 @@ import { SECTORS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
 import { ArrowRight, ChevronDown, Loader2, SlidersHorizontal } from "lucide-react";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], price_min: "", price_max: "" };
 
 /**
@@ -193,7 +193,7 @@ export default function Workwear() {
           ) : (
             <>
               <div className="text-xs text-[#4b5563] mb-4 font-bold">{matched_total} product{matched_total === 1 ? "" : "s"}</div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="workwear-grid">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" data-testid="workwear-grid">
                 {products.map((p) => {
                   const agg = aggregates[p.id];
                   return (

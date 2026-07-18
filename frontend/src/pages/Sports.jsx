@@ -6,7 +6,7 @@ import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { Trophy, Users, Zap, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
 const SPORT_GROUPS = [
   { key: "football", label: "Football", icon: Trophy, accent: "bg-[#7bc67e]", desc: "Match jerseys, shorts, training kits", products: ["football-jersey", "football-shorts", "training-tracksuit", "training-tee"] },
@@ -88,7 +88,7 @@ export default function Sports() {
       {/* Sport groups */}
       <div className="max-w-7xl mx-auto px-6 py-16">
         <h2 className="font-nunito font-black text-3xl lg:text-4xl text-center">Pick your sport</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8" data-testid="sport-groups">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-8" data-testid="sport-groups">
           {SPORT_GROUPS.map(({ key, label, icon: Icon, accent, desc, products: pids, cta }) => (
             <div key={key} data-testid={`sport-group-${key}`} className="bg-white rounded-3xl border-2 border-[#dcfce7] hover:border-[#7bc67e] transition-colors p-5">
               <div className={`w-12 h-12 rounded-2xl grid place-items-center ${accent} text-[#1a1a1a]`}><Icon size={22} /></div>
