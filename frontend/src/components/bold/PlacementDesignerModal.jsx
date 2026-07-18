@@ -35,6 +35,13 @@ const FONTS = [
  *        onClose(), onConfirm(dataUrl)
  */
 export default function PlacementDesignerModal({ placementLabel, printArea, backgroundColor, onClose, onConfirm }) {
+  // The popup is already scoped to ONE placement and says which one in the
+  // header, so there's no need to shrink the working area down to that
+  // placement's real position on a garment (a left-breast box is tiny and
+  // was leaving customers designing in a postage stamp). Give them the full
+  // canvas to work in; the artwork is flattened and scaled to the real print
+  // area at production, exactly as an uploaded file would be.
+  const workingArea = { x: 8, y: 8, w: 84, h: 84 };
   const [items, setItems] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -255,7 +262,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
               <div
                 ref={printAreaRef}
                 className="absolute border-2 border-dashed border-[#7bc67e]"
-                style={{ left: `${printArea.x}%`, top: `${printArea.y}%`, width: `${printArea.w}%`, height: `${printArea.h}%`, boxShadow: "0 0 0 1px rgba(255,255,255,0.9)" }}
+                style={{ left: `${workingArea.x}%`, top: `${workingArea.y}%`, width: `${workingArea.w}%`, height: `${workingArea.h}%`, boxShadow: "0 0 0 1px rgba(255,255,255,0.9)" }}
                 data-testid="placement-print-area"
               >
                 {items.map((item) => {

@@ -46,7 +46,7 @@ export default function ToolsShowcase({ variant = "full", title = "Tools to make
         <h2 className="font-nunito font-black text-3xl lg:text-5xl mt-2">{title}</h2>
         <p className="text-[#4b5563] mt-3">{subtitle}</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {TOOLS_SHOWCASE.map((t, i) => (
           <Link
             key={t.key}
