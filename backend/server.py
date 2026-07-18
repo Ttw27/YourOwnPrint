@@ -5130,22 +5130,33 @@ _AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
     ("cleaning", ["cleaning"]),
     ("security", ["security"]),
     ("door supervisor", ["security"]),
+    ("guard", ["security"]),
+    ("sia ", ["security"]),
     ("warehouse", ["industrial"]),
     ("forklift", ["industrial"]),
     ("industrial", ["industrial"]),
+    ("corporate", ["corporate"]),
+    ("office", ["corporate"]),
+    ("executive", ["corporate"]),
+    ("blazer", ["corporate"]),
+    ("retail", ["retail"]),
 ]
 
-# Generic blanks (plain tees, polos, sweatshirts, hoodies, jackets, trousers)
-# are very commonly bought and branded as everyday workwear across trades —
-# tag them for that too, on top of anything more specific, so browsing by
+# Generic blanks (plain tees, sweatshirts, hoodies, jackets, trousers) are
+# very commonly bought and branded as everyday workwear across trades — tag
+# them for that too, on top of anything more specific, so browsing by
 # industry/sector actually surfaces the realistic full range rather than
 # only specialist items like hi-vis or chef wear.
-_BROAD_WORKWEAR_CATEGORIES = {"t-shirts", "polos", "sweatshirts", "hoodies", "jackets", "bottoms", "shirts"}
+_BROAD_WORKWEAR_CATEGORIES = {"t-shirts", "sweatshirts", "hoodies", "jackets", "bottoms"}
 
-# Note: "Retail" and "Corporate" are deliberately not auto-detected — a plain
-# polo or shirt is equally valid for either (or a dozen other sectors), so
-# guessing from the garment name alone would just be noise. These stay
-# available to tag manually per-product in Product Settings instead.
+# Polos and shirts are genuinely worn as branded uniform across trades,
+# security, AND corporate/office settings — unlike the categories above,
+# a single fallback tag would under-represent how these actually get used,
+# so give them a richer, plausible spread instead of trades-only.
+_VERSATILE_CATEGORY_FALLBACKS = {
+    "polos": ["construction-trades", "corporate", "security"],
+    "shirts": ["corporate", "construction-trades"],
+}
 
 
 def _auto_industry_tags(name: str, category: str) -> List[str]:
@@ -5156,8 +5167,13 @@ def _auto_industry_tags(name: str, category: str) -> List[str]:
             for t in industries:
                 if t not in tags:
                     tags.append(t)
-    if str(category or "").strip().lower() in _BROAD_WORKWEAR_CATEGORIES and "construction-trades" not in tags:
+    norm_category = str(category or "").strip().lower()
+    if norm_category in _BROAD_WORKWEAR_CATEGORIES and "construction-trades" not in tags:
         tags.append("construction-trades")
+    if norm_category in _VERSATILE_CATEGORY_FALLBACKS:
+        for t in _VERSATILE_CATEGORY_FALLBACKS[norm_category]:
+            if t not in tags:
+                tags.append(t)
     return tags[:3]
 
 
