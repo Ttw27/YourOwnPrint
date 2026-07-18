@@ -97,7 +97,13 @@ export default function DesignYourOwn() {
   useEffect(() => { setSelectedColour(null); }, [productId]);
   const garmentPrintArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
   const garmentPrintAreaBack = product?.print_area_back || garmentPrintArea;
-  const printArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
+  // Print areas are a % of the canvas. On a real garment photo the garment only
+  // fills part of the frame, so the admin-set % is correct. On the flat-colour
+  // fallback there IS no surrounding photo — the colour block *is* the garment —
+  // so the same % leaves a needlessly tiny box to work in. Use a roomier area
+  // in that case only; products with real photos keep their admin-set values.
+  const FLAT_COLOUR_PRINT_AREA = { x: 14, y: 14, w: 72, h: 72 };
+  const rawPrintArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
   const colourImageFront = selectedColour && product?.images_by_colour?.[selectedColour];
   const colourImageBack = selectedColour && product?.images_by_colour_back?.[selectedColour];
   const selectedColourHex = selectedColour && product?.colors?.find(c => c.name === selectedColour)?.hex;
@@ -115,6 +121,9 @@ export default function DesignYourOwn() {
     if (selectedColour) return { type: "color", hex: selectedColourHex || "#e5e7eb" };
     return { type: "image", src: product?.image };
   })();
+  const printArea = (view !== "neck" && garmentBackground.type === "color")
+    ? FLAT_COLOUR_PRINT_AREA
+    : rawPrintArea;
   const unitPrice = product?.price ?? 0;
   const backPrintPrice = product?.back_print_price ?? 0;
   const neckLabelPrice = product?.neck_label_price ?? 1.5;
@@ -654,10 +663,13 @@ export default function DesignYourOwn() {
             </div>
 
             <div className="bg-[#f0fdf4] rounded-3xl p-4 border-2 border-[#dcfce7]">
+              {/* max-h keeps the whole canvas within the viewport — at full column
+                  width a 4:5 box became taller than the screen, so the bottom of
+                  it fell below the fold. */}
               <div
                 ref={canvasRef}
                 onMouseDown={() => { setSelectedId(null); setEditingId(null); }}
-                className={`relative bg-white rounded-2xl overflow-hidden select-none ${view === "neck" ? "aspect-[2/1]" : "aspect-[4/5]"}`}
+                className={`relative bg-white rounded-2xl overflow-hidden select-none mx-auto max-h-[calc(100vh-190px)] ${view === "neck" ? "aspect-[2/1]" : "aspect-[4/5]"}`}
                 data-testid="design-canvas"
               >
                 {view === "neck" ? (
