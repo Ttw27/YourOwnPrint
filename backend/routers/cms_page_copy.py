@@ -33,6 +33,13 @@ class PageCopyPatch(BaseModel):
     cta_label: Optional[str] = Field(default=None, max_length=80)
     cta_link: Optional[str] = Field(default=None, max_length=500)
     extras: Optional[Dict] = None
+    # Admin-editable imagery. Previously every marketing image (homepage hero,
+    # the sector tiles, etc.) was hardcoded in the frontend source, so the only
+    # way to change one was to edit a file — which meant a later code change to
+    # that same file could silently overwrite it. Stored here they live in the
+    # database instead and survive every deploy.
+    hero_image: Optional[str] = Field(default=None, max_length=1000)
+    images: Optional[Dict[str, str]] = None  # arbitrary named slots, e.g. {"sector:Healthcare": "https://…"}
 
 
 @api_router.get("/page-copy/{slug}")
@@ -45,7 +52,7 @@ async def get_page_copy(slug: str):
         return {}
     return {
         k: doc.get(k)
-        for k in ("title", "subtitle", "body", "bullets", "faq", "cta_label", "cta_link", "extras")
+        for k in ("title", "subtitle", "body", "bullets", "faq", "cta_label", "cta_link", "extras", "hero_image", "images")
         if doc.get(k) is not None
     }
 
