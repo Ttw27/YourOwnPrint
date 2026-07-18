@@ -2967,6 +2967,94 @@ async def shop_by_garment_type(
     return {**meta, "products": page_items, "facets": facets, "seo": seo, "total": len(all_prods), "matched_total": matched_total, "offset": offset, "returned": len(page_items)}
 
 
+# Industries that make up the "Workwear" umbrella collection. Uses the
+# canonical slugs — the frontend previously requested the old aliases
+# ("trades,construction,logistics"), which stopped matching anything once
+# tagging was canonicalised, so the page was filtering on dead values.
+WORKWEAR_INDUSTRY_SLUGS = ["construction-trades", "cleaning", "industrial", "security"]
+
+
+@api_router.get("/collections/workwear")
+async def workwear_collection(
+    gender_fit: Optional[str] = None,
+    colour: Optional[str] = None,
+    size: Optional[str] = None,
+    industry: Optional[str] = None,
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+    limit: int = 25,
+    offset: int = 0,
+):
+    """Workwear umbrella collection — same shape as /shop/type/{slug} so the
+    page can use the identical sidebar/facet UI as every other collection."""
+    umbrella = set(WORKWEAR_INDUSTRY_SLUGS)
+    # Safety net: also include products whose garment category is inherently
+    # workwear. Without this the page would be completely empty until the
+    # "Re-tag industries" bulk action had been run, since selection would
+    # depend entirely on tags.
+    workwear_categories = {"workwear", "hi-vis", "aprons", "polos", "shirts"}
+    all_prods = [
+        p for p in PRODUCTS.values()
+        if p.get("active", True) and (
+            (umbrella & set(p.get("industry_tags") or []))
+            or str(p.get("category") or "").strip().lower() in workwear_categories
+        )
+    ]
+    facets = _facets_from_products(all_prods)
+
+    colour_set = {c.strip() for c in (colour or "").split(",") if c.strip()}
+    size_set = {s.strip() for s in (size or "").split(",") if s.strip()}
+    industry_set = {i.strip() for i in (industry or "").split(",") if i.strip()}
+
+    def matches(p: Dict) -> bool:
+        if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
+            return False
+        if colour_set:
+            names = {(c.get("name") if isinstance(c, dict) else c) for c in _collect_variant_field(p, "colors")}
+            if not (colour_set & names):
+                return False
+        if size_set:
+            szs = set(_collect_variant_field(p, "sizes"))
+            if not (size_set & szs):
+                return False
+        if industry_set:
+            tags = set(p.get("industry_tags") or [])
+            if not (industry_set & tags):
+                return False
+        try:
+            price = float(p.get("price") or 0)
+        except (TypeError, ValueError):
+            price = 0.0
+        if price_min is not None and price < price_min:
+            return False
+        if price_max is not None and price > price_max:
+            return False
+        return True
+
+    items: List[Dict] = []
+    for p in all_prods:
+        if not matches(p):
+            continue
+        items.append({
+            "id": p["id"], "name": p["name"], "price": float(p["price"]),
+            "image": p["image"], "category": p["category"],
+            "description": p.get("description") or "",
+            "gender_fit": p.get("gender_fit") or "unisex",
+            "industry_tags": p.get("industry_tags") or [],
+            "colors": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("colors") or [])][:40],
+        })
+    items.sort(key=lambda x: x["price"])
+    matched_total = len(items)
+    limit = min(limit, 200)
+    page_items = items[offset:offset + limit]
+    return {
+        "slug": "workwear", "title": "Workwear",
+        "products": page_items, "facets": facets,
+        "total": len(all_prods), "matched_total": matched_total,
+        "offset": offset, "returned": len(page_items),
+    }
+
+
 @api_router.patch("/admin/collection-seo/{slug}", dependencies=[Depends(require_admin)])
 async def admin_update_collection_seo(slug: str, payload: Dict):
     """Save admin-editable SEO block for a shop-type collection.
@@ -5125,6 +5213,29 @@ _AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
     ("gym", ["sports-fitness"]),
     ("tracksuit", ["sports-fitness"]),
     ("hoodie", ["sports-fitness"]),
+    # sports-fitness previously had only 3 keywords, so gym/fitness pages were
+    # very thinly populated — most activewear names never matched anything.
+    ("performance", ["sports-fitness"]),
+    ("running", ["sports-fitness"]),
+    ("jogger", ["sports-fitness"]),
+    ("jog ", ["sports-fitness"]),
+    ("training", ["sports-fitness"]),
+    ("athletic", ["sports-fitness"]),
+    ("sport", ["sports-fitness"]),
+    ("football", ["sports-fitness"]),
+    ("rugby", ["sports-fitness"]),
+    ("netball", ["sports-fitness"]),
+    ("cricket", ["sports-fitness"]),
+    ("baselayer", ["sports-fitness"]),
+    ("base layer", ["sports-fitness"]),
+    ("active", ["sports-fitness"]),
+    ("fitness", ["sports-fitness"]),
+    ("wicking", ["sports-fitness"]),
+    ("sweatpant", ["sports-fitness"]),
+    ("legging", ["sports-fitness"]),
+    ("yoga", ["sports-fitness"]),
+    ("boxing", ["sports-fitness"]),
+    ("marathon", ["sports-fitness"]),
     ("softshell", ["construction-trades"]),
     ("workwear", ["construction-trades"]),
     ("cleaning", ["cleaning"]),
@@ -5156,6 +5267,9 @@ _BROAD_WORKWEAR_CATEGORIES = {"t-shirts", "sweatshirts", "hoodies", "jackets", "
 _VERSATILE_CATEGORY_FALLBACKS = {
     "polos": ["construction-trades", "corporate", "security"],
     "shirts": ["corporate", "construction-trades"],
+    # Shorts previously had no fallback of any kind, so a product like
+    # "Running Shorts" ended up with zero tags and showed on no industry page.
+    "shorts": ["sports-fitness"],
 }
 
 
