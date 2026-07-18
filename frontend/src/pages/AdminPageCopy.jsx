@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { fetchPageCopy, adminUpdatePageCopy, adminDeletePageCopy } from "../lib/api";
-import { Loader2, Save, Plus, Trash2, RotateCcw } from "lucide-react";
+import { fetchPageCopy, adminUpdatePageCopy, adminDeletePageCopy, uploadAdminImage } from "../lib/api";
+import { Loader2, Save, Plus, Trash2, RotateCcw, Upload, Image as ImageIcon, X } from "lucide-react";
 
 /**
  * /admin/page-copy — Editable hero copy / bullets / body / FAQ / CTA for every
@@ -29,7 +29,54 @@ const PAGE_COPY_SLUGS = [
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
 ];
 
-const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "" };
+const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "", hero_image: "", images: {} };
+
+// Must match the `name` values in SECTORS (frontend/src/lib/data.js) — that's
+// the key each override is stored under ("sector:<name>").
+const HOME_SECTOR_NAMES = [
+  "Construction & Trades", "Healthcare", "Hospitality", "Retail", "Sports & Fitness",
+  "Dance & Theatre", "Schools & Leavers", "Hi-Vis", "Security", "Beauty & Wellness",
+];
+
+/** One image slot — paste a URL or upload a file. Blank = use code default. */
+function ImageField({ label, value, onChange, testid, compact }) {
+  const [busy, setBusy] = useState(false);
+  const onFile = async (file) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const { url } = await uploadAdminImage(file, "page-images");
+      onChange(url);
+      toast.success(`${label} uploaded`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Upload failed"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className={compact ? "" : "mb-2"} data-testid={testid}>
+      <div className="text-[11px] font-extrabold mb-1">{label}</div>
+      <div className="flex items-center gap-2">
+        <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#e5e7eb] bg-white flex-shrink-0 grid place-items-center">
+          {value ? <img src={value} alt="" className="w-full h-full object-cover" /> : <ImageIcon size={13} className="text-[#d1d5db]" />}
+        </div>
+        <input
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="input flex-1 text-xs"
+          placeholder="Paste an image URL, or upload →"
+        />
+        {value && (
+          <button type="button" onClick={() => onChange("")} title="Clear (revert to default)" className="w-8 h-8 grid place-items-center rounded-full text-rose-500 hover:bg-rose-50 flex-shrink-0">
+            <X size={13} />
+          </button>
+        )}
+        <label className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-2.5 py-2 hover:bg-[#f0fdf4] cursor-pointer whitespace-nowrap flex-shrink-0">
+          {busy ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Upload
+          <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        </label>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminPageCopy() {
   const [slug, setSlug] = useState(PAGE_COPY_SLUGS[0].slug);
@@ -56,6 +103,8 @@ export default function AdminPageCopy() {
         bullets: copy.bullets.filter((b) => b?.trim()),
         faq: copy.faq.filter((f) => (f.q || "").trim()),
         cta_label: copy.cta_label, cta_link: copy.cta_link,
+        hero_image: copy.hero_image || "",
+        images: copy.images || {},
       };
       await adminUpdatePageCopy(slug, payload);
       toast.success("Page copy saved");
@@ -115,6 +164,46 @@ export default function AdminPageCopy() {
                   <div className="text-xs font-extrabold mb-1">CTA button link</div>
                   <input value={copy.cta_link} onChange={(e) => setCopy({ ...copy, cta_link: e.target.value })} className="input" placeholder="e.g. /contact" />
                 </label>
+              </div>
+
+              {/* ---- Images (stored in the DB, so they survive every deploy) ---- */}
+              <div className="border-2 border-[#dcfce7] rounded-2xl p-4 bg-[#f9fafb]" data-testid="apc-images">
+                <div className="flex items-center gap-2 mb-1">
+                  <ImageIcon size={15} className="text-[#7bc67e]" />
+                  <div className="text-sm font-extrabold">Images</div>
+                </div>
+                <p className="text-[11px] text-[#4b5563] mb-3">
+                  Anything set here is saved to the database and will <strong>never</strong> be overwritten by a future code update.
+                  Leave blank to keep using the built-in default image.
+                </p>
+
+                <ImageField
+                  label="Hero image"
+                  value={copy.hero_image}
+                  onChange={(v) => setCopy({ ...copy, hero_image: v })}
+                  testid="apc-hero-image"
+                />
+
+                {slug === "home" && (
+                  <div className="mt-4">
+                    <div className="text-xs font-extrabold mb-2">Sector tile images</div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {HOME_SECTOR_NAMES.map((name) => (
+                        <ImageField
+                          key={name}
+                          label={name}
+                          value={(copy.images || {})[`sector:${name}`] || ""}
+                          onChange={(v) => setCopy({
+                            ...copy,
+                            images: { ...(copy.images || {}), [`sector:${name}`]: v },
+                          })}
+                          testid={`apc-sector-${name}`}
+                          compact
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <label className="block" data-testid="apc-body">

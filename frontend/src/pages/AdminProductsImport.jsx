@@ -110,6 +110,44 @@ const EMPTY_ROW = {
   colors: [], sizes: [], gender_fit: "unisex", brand: "", category: "",
 };
 
+/**
+ * ⚠️ MAINTENANCE NOTE — whenever a new bulk action checkbox is added to the
+ * "Bulk actions on imported products" panel below, add an entry for it HERE
+ * too (key must match the payload field sent to bulkUpdateImported).
+ * The "Recommended order" panel is entirely computed from this array — get
+ * this list right and that panel is automatically correct, nothing else to
+ * remember to update by hand.
+ *
+ * `conflictsWith`: list other keys that would overwrite/undo this one's
+ * result if run in the SAME pass (i.e. same click of "Apply"/"Run all
+ * automatically"). The panel below groups actions into passes so nothing
+ * conflicting ever ends up together.
+ */
+const BULK_ACTIONS_META = [
+  { key: "recategorize_products",      label: "Fix mis-categorized products",       conflictsWith: [] },
+  { key: "reprice",                    label: "Re-price with a new markup",         conflictsWith: [] },
+  { key: "retag_industries",           label: "Re-tag industries",                  conflictsWith: [] },
+  { key: "apply_placement_defaults",   label: "Apply sensible print placements",    conflictsWith: [] },
+  { key: "fix_corrupted_sizes",        label: "Fix corrupted kids sizes",           conflictsWith: [] },
+  { key: "rebuild_gallery_from_colours", label: "Rebuild photo gallery from colours", conflictsWith: ["randomize_main_image"] },
+  { key: "randomize_main_image",       label: "Randomize main photo",               conflictsWith: ["rebuild_gallery_from_colours"] },
+];
+
+/** Groups BULK_ACTIONS_META into passes — greedy: each action joins the
+ * earliest pass that doesn't already contain something it conflicts with. */
+function computeBulkActionPasses() {
+  const passes = [];
+  for (const action of BULK_ACTIONS_META) {
+    let placed = false;
+    for (const pass of passes) {
+      const clashes = pass.some(a => action.conflictsWith.includes(a.key) || a.conflictsWith.includes(action.key));
+      if (!clashes) { pass.push(action); placed = true; break; }
+    }
+    if (!placed) passes.push([action]);
+  }
+  return passes;
+}
+
 export default function AdminProductsImport() {
   const [rows, setRows] = useState([]);
   const [selected, setSelected] = useState(new Set());
@@ -631,6 +669,17 @@ export default function AdminProductsImport() {
           {bulkOpen && (
             <div className="mt-4 space-y-3">
               <p className="text-[11px] text-[#4b5563]">Re-price or turn on quantity-discount pricing across many products at once — no need to open each one individually. Re-pricing recalculates from each product's saved trade cost, so it only works on products imported with a source price.</p>
+
+              <div className="bg-[#f0fdf4] border-2 border-[#7bc67e] rounded-2xl p-3" data-testid="apx-bulk-order-guide">
+                <div className="text-xs font-extrabold text-[#166534] mb-1.5">Recommended order</div>
+                {computeBulkActionPasses().map((pass, i) => (
+                  <div key={i} className="text-[11px] text-[#166534] mb-1">
+                    <span className="font-extrabold">Pass {i + 1}:</span> {pass.map(a => a.label).join(" + ")}
+                    {i < computeBulkActionPasses().length - 1 && <span className="text-[#4b5563]"> — run this batch, then move to the next pass</span>}
+                  </div>
+                ))}
+                <div className="text-[10px] text-[#4b5563] mt-1">Anything in the same pass is safe to tick together. This list updates itself if new bulk actions are ever added.</div>
+              </div>
 
               <div className="flex items-center gap-4 text-xs flex-wrap">
                 <label className="inline-flex items-center gap-1.5">

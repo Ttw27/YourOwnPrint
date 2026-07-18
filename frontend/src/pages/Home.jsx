@@ -23,7 +23,14 @@ export default function Home() {
   const copy = usePageCopy("home", {
     title: "",
     subtitle: "Look every bit as professional as you feel — without the price tag to match. Proudly based in Leicester, printing and delivering workwear, teamwear and custom clothing to businesses and teams across the whole of the UK.",
+    // Images now come from the CMS when set, falling back to these code
+    // defaults when they haven't been changed in admin. Anything set in
+    // /admin/page-copy lives in the database and survives every deploy.
+    hero_image: "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    images: {},
   });
+  // Sector tile images: admin override by name, else the code default.
+  const sectorImage = (s) => (copy.images && copy.images[`sector:${s.name}`]) || s.image;
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
@@ -60,7 +67,7 @@ export default function Home() {
           </div>
           <div className="relative">
             <div className="aspect-square rounded-[2rem] overflow-hidden shadow-2xl rotate-2">
-              <img src="https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" className="w-full h-full object-cover" />
+              <img src={copy.hero_image} alt="" className="w-full h-full object-cover" />
             </div>
             <div className="absolute -bottom-4 -left-6 bg-white rounded-2xl shadow-lg p-4 border border-[#e5e7eb] -rotate-3">
               <div className="flex items-center gap-2"><Heart className="text-rose-500" size={18} fill="currentColor" /><div className="font-nunito font-extrabold">404+ happy customers</div></div>
@@ -92,7 +99,7 @@ export default function Home() {
             const accent = accents[i % accents.length];
             return (
               <Link key={s.name} to="/workwear" data-testid={`home-sector-${i}`} className="group relative aspect-[4/5] rounded-2xl overflow-hidden" style={{ boxShadow: `inset 0 0 0 3px ${accent}` }}>
-                <img src={s.image} alt={s.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <img src={sectorImage(s)} alt={s.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4">
                   <div className="w-8 h-1 rounded-full mb-1.5" style={{ background: accent }} />

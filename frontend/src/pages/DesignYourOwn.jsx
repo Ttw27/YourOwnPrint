@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
+import FontPicker from "../components/bold/FontPicker";
 import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
@@ -508,7 +509,7 @@ export default function DesignYourOwn() {
             )}
           </aside>
 
-          <aside className="lg:col-span-3 space-y-4 order-3 lg:order-1 lg:col-start-1 lg:row-start-1 lg:row-span-2" data-testid="designer-left-aside">
+          <aside className="lg:col-span-2 space-y-4 order-3 lg:order-1 lg:col-start-1 lg:row-start-1 lg:row-span-2" data-testid="designer-left-aside">
             <Panel title="Upload">
               <button data-testid="designer-upload-btn" onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#7bc67e] hover:bg-[#f0fdf4] text-[#7bc67e] py-6 rounded-2xl transition-colors">
                 <Upload size={18} /><span className="font-nunito font-extrabold text-sm">Upload image</span>
@@ -558,9 +559,7 @@ export default function DesignYourOwn() {
             <Panel title="Add Text">
               <input data-testid="designer-text-input" value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Your text" className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm" />
               <div className="grid grid-cols-2 gap-2 mt-2">
-                <select data-testid="designer-font" value={textFont} onChange={(e) => setTextFont(e.target.value)} className="bg-white border border-[#e5e7eb] rounded-xl px-2 py-2 text-xs">
-                  {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                </select>
+                <FontPicker value={textFont} onChange={setTextFont} fonts={FONTS} />
                 <input data-testid="designer-color" type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-full h-9 bg-white border border-[#e5e7eb] rounded-xl" />
               </div>
               <button data-testid="designer-add-text" onClick={addText} className="mt-3 w-full bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs py-2.5 rounded-full transition-colors flex items-center justify-center gap-2">
@@ -612,7 +611,7 @@ export default function DesignYourOwn() {
             </Panel>
           </aside>
 
-          <main className="lg:col-span-6 order-2 lg:order-2 lg:col-start-4 lg:row-start-1 lg:row-span-2" data-testid="designer-canvas-main">
+          <main className="lg:col-span-7 order-2 lg:order-2 lg:col-start-3 lg:row-start-1 lg:row-span-2" data-testid="designer-canvas-main">
             {/* Front / Back / Neck tabs + back/neck enable toggles */}
             <div className="flex items-center justify-between flex-wrap gap-3 mb-3" data-testid="designer-view-tabs">
               <div className="inline-flex bg-[#f0fdf4] rounded-full p-1 border border-[#dcfce7]">
@@ -677,8 +676,13 @@ export default function DesignYourOwn() {
                 {/* Print area rectangle — the design overlay lives strictly inside this box */}
                 <div
                   ref={printAreaRef}
-                  className="absolute border border-dashed border-black/25"
-                  style={{ left: `${printArea.x}%`, top: `${printArea.y}%`, width: `${printArea.w}%`, height: `${printArea.h}%` }}
+                  className="absolute border-2 border-dashed border-[#7bc67e]"
+                  style={{
+                    left: `${printArea.x}%`, top: `${printArea.y}%`, width: `${printArea.w}%`, height: `${printArea.h}%`,
+                    // White halo keeps the boundary readable on dark garments —
+                    // the old black/25 border was invisible on black/navy.
+                    boxShadow: "0 0 0 1px rgba(255,255,255,0.85)",
+                  }}
                   data-testid="design-print-area"
                 >
                   {items.map((item) => {
@@ -810,9 +814,7 @@ export default function DesignYourOwn() {
                 {selected.type === "text" ? (
                   <div className="grid grid-cols-2 gap-2">
                     <input data-testid="sel-text" value={selected.text} onChange={(e) => updateItem(selected.id, { text: e.target.value })} className="col-span-2 bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm" placeholder="Text" />
-                    <select data-testid="sel-font" value={selected.font} onChange={(e) => updateItem(selected.id, { font: e.target.value })} className="bg-white border border-[#e5e7eb] rounded-xl px-2 py-2 text-xs">
-                      {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                    </select>
+                    <FontPicker value={selected.font} onChange={(v) => updateItem(selected.id, { font: v })} fonts={FONTS} />
                     <input data-testid="sel-color" type="color" value={selected.color} onChange={(e) => updateItem(selected.id, { color: e.target.value })} className="w-full h-9 bg-white border border-[#e5e7eb] rounded-xl" />
                     <Slider label="SIZE"   testId="sel-fontsize" min={10} max={140} v={selected.fontSize} onV={(n) => updateItem(selected.id, { fontSize: n })} unit="" />
                     <Slider label="ROTATE" testId="sel-rotate"   min={0}  max={360} v={Math.round(selected.rot)} onV={(n) => updateItem(selected.id, { rot: n })} unit="°" />

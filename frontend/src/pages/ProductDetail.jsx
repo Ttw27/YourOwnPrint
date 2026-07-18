@@ -679,12 +679,14 @@ function ProductGallery({ product, color }) {
         )}
       </div>
       {images.length > 1 && (
-        <div className="mt-3 grid grid-cols-5 gap-2" data-testid="product-image-thumbnails">
-          {images.slice(0, 5).map((src, i) => (
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x" data-testid="product-image-thumbnails">
+          {/* Previously hard-capped at .slice(0, 5) with no arrows or scroll —
+              any product with more than 5 photos silently hid the rest. */}
+          {images.map((src, i) => (
             <button
               key={src + i}
               onClick={() => setManualIndex(i)}
-              className={`aspect-square overflow-hidden rounded-lg border-2 transition ${!showingColorPhoto && (manualIndex === i || (manualIndex === null && i === 0)) ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-transparent hover:border-[#dcfce7]"}`}
+              className={`w-[19%] min-w-[64px] flex-shrink-0 aspect-square overflow-hidden rounded-lg border-2 transition snap-start ${!showingColorPhoto && (manualIndex === i || (manualIndex === null && i === 0)) ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-transparent hover:border-[#dcfce7]"}`}
               data-testid={`product-thumb-${i}`}
               aria-label={`View image ${i + 1}`}
             >
