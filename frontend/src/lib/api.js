@@ -498,6 +498,15 @@ export async function bulkUpdateImported(payload) {
   return data;
 }
 
+export async function uploadAdminMedia(file, folder = "page-media") {
+  const fd = new FormData();
+  fd.append("file", file);
+  const { data } = await api.post(`/admin/upload-media?folder=${encodeURIComponent(folder)}`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data; // { url, kind, content_type, bytes }
+}
+
 export async function uploadAdminImage(file, folder = "admin-uploads") {
   const formData = new FormData();
   formData.append("file", file);
