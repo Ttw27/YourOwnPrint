@@ -62,8 +62,8 @@ const ADMIN_NAV_GROUPS = [
   {
     label: "Content",
     links: [
-      ["Navigation", "/admin/navigation"],
-      ["Page copy", "/admin/page-copy"],
+      ["Navigation menu", "/admin/navigation"],
+      ["Pages — text, images & video", "/admin/page-copy"],
       ["Configurator £", "/admin/configurator-settings"],
     ],
   },

@@ -216,16 +216,51 @@ export default function AdminPageCopy() {
   return (
     <div className="min-h-screen bg-[#f8fafc] font-nunito" data-testid="admin-page-copy">
       <div className="max-w-4xl mx-auto px-6 py-10">
-        <h1 className="font-black text-3xl mb-1">Page copy CMS</h1>
-        <p className="text-sm text-[#4b5563] mb-6">Edit the hero copy, bullets, body text, CTA and FAQ for every public page. Leave a field blank to fall back to the built-in default — safe to experiment.</p>
+        <h1 className="font-black text-3xl mb-1">Pages</h1>
+        <p className="text-sm text-[#4b5563] mb-5">Pick a page, then edit its text, images and video. Leave any field blank to fall back to the built-in default — nothing here can break the site.</p>
+
+        {/* A visible list beats a dropdown: with 17+ pages a <select> hid both
+            which page you were editing and that the others existed at all. */}
+        <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4 mb-5">
+          <div className="text-xs font-extrabold mb-2">Choose a page</div>
+          <div className="flex flex-wrap gap-1.5" data-testid="apc-page-list">
+            {PAGE_COPY_SLUGS.map((s) => {
+              const active = s.slug === slug;
+              const hasMedia = (PAGE_MEDIA_SLOTS[s.slug] || []).length > 0;
+              return (
+                <button
+                  key={s.slug}
+                  type="button"
+                  onClick={() => setSlug(s.slug)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-colors inline-flex items-center gap-1.5 ${
+                    active
+                      ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]"
+                      : "bg-white border-[#dcfce7] hover:border-[#7bc67e]"
+                  }`}
+                  data-testid={`apc-page-${s.slug}`}
+                >
+                  {s.label}
+                  {hasMedia && <Film size={11} className={active ? "text-[#1a1a1a]" : "text-[#7bc67e]"} />}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-[#4b5563] mt-2">
+            <Film size={10} className="inline text-[#7bc67e]" /> = this page has an image/video block you can set.
+          </p>
+        </div>
 
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5 space-y-4">
-          <label className="block">
-            <div className="text-xs font-extrabold mb-1">Page</div>
-            <select value={slug} onChange={(e) => setSlug(e.target.value)} className="input" data-testid="apc-slug">
-              {PAGE_COPY_SLUGS.map((s) => <option key={s.slug} value={s.slug}>{s.label}</option>)}
-            </select>
-          </label>
+          <div className="flex items-center justify-between pb-3 border-b border-[#dcfce7]">
+            <div className="font-extrabold">
+              {(PAGE_COPY_SLUGS.find((s) => s.slug === slug) || {}).label || slug}
+            </div>
+            <span className="text-[10px] text-[#4b5563]">editing this page</span>
+          </div>
+
+          <select value={slug} onChange={(e) => setSlug(e.target.value)} className="hidden" data-testid="apc-slug" aria-hidden="true" tabIndex={-1}>
+            {PAGE_COPY_SLUGS.map((s) => <option key={s.slug} value={s.slug}>{s.label}</option>)}
+          </select>
 
           {loading ? (
             <div className="py-10 grid place-items-center"><Loader2 className="animate-spin text-[#7bc67e]" /></div>
