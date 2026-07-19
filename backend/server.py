@@ -1991,6 +1991,54 @@ async def admin_upload_image(file: UploadFile = File(...), folder: str = "admin-
     return {"url": url}
 
 
+MEDIA_UPLOAD_LIMITS = {
+    "image": 8_000_000,    # 8MB — plenty for a photo
+    "video": 20_000_000,   # 20MB — a compressed 10-20s clip lands well under this
+}
+_MEDIA_EXTENSIONS = {
+    "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
+    "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov",
+}
+
+
+@api_router.post("/admin/upload-media", dependencies=[Depends(require_admin)])
+async def admin_upload_media(file: UploadFile = File(...), folder: str = "page-media"):
+    """Like /admin/upload-image but also accepts short video clips.
+
+    Video is capped deliberately low: the file is downloaded in full by every
+    visitor to the page, so a large clip makes the page slow even though R2
+    egress itself is free. Anything bigger should be compressed first, or
+    uploaded straight to R2 and pasted in as a URL.
+    """
+    content_type = (file.content_type or "").split(";")[0]
+    kind = "image" if content_type.startswith("image/") else "video" if content_type.startswith("video/") else None
+    if kind is None:
+        raise HTTPException(400, "Only image or video files are accepted.")
+    if content_type not in _MEDIA_EXTENSIONS:
+        raise HTTPException(400, f"Unsupported format '{content_type}'. Use JPG, PNG, WEBP, GIF, MP4 or WEBM.")
+
+    data = await file.read()
+    limit = MEDIA_UPLOAD_LIMITS[kind]
+    if len(data) > limit:
+        mb = limit // 1_000_000
+        actual_mb = round(len(data) / 1_000_000, 1)
+        raise HTTPException(
+            400,
+            f"That {kind} is {actual_mb}MB — please keep it under {mb}MB. "
+            f"For video, exporting at 720p for 10-20 seconds usually lands around 2-5MB.",
+        )
+
+    ext = _MEDIA_EXTENSIONS[content_type]
+    safe_folder = re.sub(r"[^a-z0-9_-]+", "-", folder.lower())[:40] or "page-media"
+    digest = hashlib.sha256(data).hexdigest()[:24]
+    path = f"{safe_folder}/{digest}.{ext}"
+    await _storage_put_async(path, data, content_type)
+    url = _get_public_url(path)
+    if not url:
+        raise HTTPException(500, "R2 storage isn't fully configured (missing R2_PUBLIC_URL).")
+    return {"url": url, "kind": kind, "content_type": content_type, "bytes": len(data)}
+
+
 @api_router.get("/admin/designer-products", dependencies=[Depends(require_admin)])
 async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str = ""):
     """Admin view — ALL products with their current designer settings, paginated."""
