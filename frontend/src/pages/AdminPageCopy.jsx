@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { fetchPageCopy, adminUpdatePageCopy, adminDeletePageCopy, uploadAdminImage } from "../lib/api";
-import { Loader2, Save, Plus, Trash2, RotateCcw, Upload, Image as ImageIcon, X } from "lucide-react";
+import { fetchPageCopy, adminUpdatePageCopy, adminDeletePageCopy, uploadAdminImage, uploadAdminMedia } from "../lib/api";
+import { Loader2, Save, Plus, Trash2, RotateCcw, Upload, Image as ImageIcon, X, Film } from "lucide-react";
+import { MEDIA_RATIOS } from "../components/bold/MediaBlock";
 
 /**
  * /admin/page-copy — Editable hero copy / bullets / body / FAQ / CTA for every
@@ -29,14 +30,96 @@ const PAGE_COPY_SLUGS = [
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
 ];
 
-const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "", hero_image: "", images: {} };
+const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "", hero_image: "", images: {}, media: {} };
 
 // Must match the `name` values in SECTORS (frontend/src/lib/data.js) — that's
 // the key each override is stored under ("sector:<name>").
+// Named media slots per page — each can hold a still OR a short looping clip.
+const PAGE_MEDIA_SLOTS = {
+  "festival-tees-brands": [
+    { key: "promo", label: "Promo tops block", hint: "Sits beside 'Promo tops for your next date'." },
+  ],
+};
+
 const HOME_SECTOR_NAMES = [
   "Construction & Trades", "Healthcare", "Hospitality", "Retail", "Sports & Fitness",
   "Dance & Theatre", "Schools & Leavers", "Hi-Vis", "Security", "Beauty & Wellness",
 ];
+
+/** One media slot — image or short video, with a display ratio. */
+function MediaField({ label, hint, value, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const media = value || {};
+
+  const onFile = async (file) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const res = await uploadAdminMedia(file, "page-media");
+      onChange({ ...media, url: res.url, kind: res.kind });
+      const mb = (res.bytes / 1_000_000).toFixed(1);
+      toast.success(`${label} uploaded (${mb}MB)`);
+      if (res.kind === "video" && res.bytes > 6_000_000) {
+        toast("Tip: that clip is on the large side — compressing it will make the page load faster.", { duration: 6000 });
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Upload failed");
+    } finally { setBusy(false); }
+  };
+
+  const isVideo = media.kind === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(media.url || "");
+
+  return (
+    <div className="bg-white border border-[#e5e7eb] rounded-xl p-3">
+      <div className="text-[11px] font-extrabold">{label}</div>
+      {hint && <div className="text-[10px] text-[#4b5563] mb-2">{hint}</div>}
+
+      <div className="flex items-center gap-2">
+        <div className="w-12 h-12 rounded-lg overflow-hidden border border-[#e5e7eb] bg-[#f0fdf4] flex-shrink-0 grid place-items-center">
+          {media.url
+            ? (isVideo
+                ? <video src={media.url} muted className="w-full h-full object-cover" />
+                : <img src={media.url} alt="" className="w-full h-full object-cover" />)
+            : <ImageIcon size={14} className="text-[#d1d5db]" />}
+        </div>
+        <input
+          value={media.url || ""}
+          onChange={(e) => onChange({ ...media, url: e.target.value })}
+          className="input flex-1 text-xs min-w-0"
+          placeholder="Paste an image or video URL, or upload →"
+        />
+        {media.url && (
+          <button type="button" onClick={() => onChange({})} title="Clear" className="w-8 h-8 grid place-items-center rounded-full text-rose-500 hover:bg-rose-50 flex-shrink-0">
+            <X size={13} />
+          </button>
+        )}
+        <label className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-2.5 py-2 hover:bg-[#f0fdf4] cursor-pointer whitespace-nowrap flex-shrink-0">
+          {busy ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Upload
+          <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        </label>
+      </div>
+
+      <div className="flex items-center gap-2 mt-2">
+        <span className="text-[10px] font-bold text-[#4b5563]">Shape</span>
+        <select
+          value={media.ratio || "1:1"}
+          onChange={(e) => onChange({ ...media, ratio: e.target.value })}
+          className="input text-xs py-1"
+        >
+          {MEDIA_RATIOS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+        </select>
+        {isVideo && (
+          <span className="text-[10px] text-[#166534] font-bold inline-flex items-center gap-1">
+            <Film size={11} /> plays muted, on loop
+          </span>
+        )}
+      </div>
+      <p className="text-[10px] text-[#4b5563] mt-1.5">
+        Video autoplays silently and loops. Keep clips 10&ndash;20s at 720p (roughly 2&ndash;5MB) so the page stays fast &mdash; 20MB max.
+      </p>
+    </div>
+  );
+}
 
 /** One image slot — paste a URL or upload a file. Blank = use code default. */
 function ImageField({ label, value, onChange, testid, compact }) {
@@ -105,6 +188,7 @@ export default function AdminPageCopy() {
         cta_label: copy.cta_label, cta_link: copy.cta_link,
         hero_image: copy.hero_image || "",
         images: copy.images || {},
+        media: copy.media || {},
       };
       await adminUpdatePageCopy(slug, payload);
       toast.success("Page copy saved");
@@ -183,6 +267,23 @@ export default function AdminPageCopy() {
                   onChange={(v) => setCopy({ ...copy, hero_image: v })}
                   testid="apc-hero-image"
                 />
+
+                {(PAGE_MEDIA_SLOTS[slug] || []).length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-xs font-extrabold mb-2">Image or video blocks</div>
+                    <div className="space-y-3">
+                      {PAGE_MEDIA_SLOTS[slug].map((slot) => (
+                        <MediaField
+                          key={slot.key}
+                          label={slot.label}
+                          hint={slot.hint}
+                          value={(copy.media || {})[slot.key]}
+                          onChange={(v) => setCopy({ ...copy, media: { ...(copy.media || {}), [slot.key]: v } })}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {slug === "home" && (
                   <div className="mt-4">

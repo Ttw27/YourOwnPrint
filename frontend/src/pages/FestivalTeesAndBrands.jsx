@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import PortfolioCarousel from "../components/bold/PortfolioCarousel";
+import MediaBlock from "../components/bold/MediaBlock";
 import { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { submitContact } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import {
-  Music, Shirt, Rocket, Sparkles, Send, CheckCircle2,
+  Music, Shirt, Rocket, Sparkles, Send, CheckCircle2, Mail,
   PackageCheck, Wallet, Truck, Megaphone,
 } from "lucide-react";
 
@@ -50,6 +51,9 @@ export default function FestivalTeesAndBrands() {
     faq: DEFAULT_FAQ,
     cta_label: "Get in touch to discuss",
     cta_link: "#enquiry",
+    // Admin-managed media for the promo block — image or short looping clip.
+    // Set it in /admin/page-copy under "Festival Tees & Start Your Brand".
+    media: {},
   });
   const brandBenefits = (copy.extras && copy.extras.brand_bullets) || DEFAULT_BRAND_BENEFITS;
 
@@ -123,15 +127,18 @@ export default function FestivalTeesAndBrands() {
               ))}
             </ul>
           </div>
-          <div className="rounded-3xl bg-[#f0fdf4] aspect-square flex items-center justify-center">
+          <MediaBlock
+            media={copy.media?.promo}
+            testid="festival-promo-media"
+          >
             <Music size={64} className="text-[#7bc67e]" />
-          </div>
+          </MediaBlock>
         </div>
       </div>
 
       {/* Gallery — admin-managed via /admin/portfolio, category "festival-tees-brands" */}
       <PortfolioCarousel
-        category="festival-tees-brands"
+        category="festival-tees-and-brands"
         eyebrow="Out on the road"
         title="DJs & artists wearing our prints"
         emptyCTA="Got tour photos in our gear? Send them over and we'll feature them here."
@@ -207,9 +214,25 @@ export default function FestivalTeesAndBrands() {
               Whether it's merch for your next date or launching your own brand — tell us a bit about
               it and we'll come back with ideas, no pressure.
             </p>
-            <div className="mt-4 flex justify-center">
-              <WhatsAppInline preset="Hi! I'd like to chat about festival tees / starting my own clothing line." />
+            {/* Two clearly-labelled routes. The WhatsApp button existed before
+                but sat unlabelled under the heading, so it read as decoration
+                rather than an alternative to the form. */}
+            <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+              <a
+                href="#festival-enquiry-form"
+                className="inline-flex items-center justify-center gap-2 bg-white border-2 border-[#1a1a1a] text-[#1a1a1a] font-extrabold rounded-full px-5 py-3 text-sm hover:bg-[#1a1a1a] hover:text-white transition-colors"
+                data-testid="festival-contact-email"
+              >
+                <Mail size={16} /> Email us
+              </a>
+              <WhatsAppInline
+                preset="Hi! I'd like to chat about festival tees / starting my own clothing line."
+                label="Message on WhatsApp"
+              />
             </div>
+            <p className="text-[11px] text-[#4b5563] mt-3">
+              WhatsApp is usually quickest during the day &mdash; the form is better if you want to send artwork or dates.
+            </p>
           </div>
 
           <form onSubmit={onSubmit} className="mt-8 bg-white rounded-3xl border-2 border-[#dcfce7] p-6 sm:p-8 space-y-4 shadow-lg">
