@@ -40,6 +40,11 @@ class PageCopyPatch(BaseModel):
     # database instead and survive every deploy.
     hero_image: Optional[str] = Field(default=None, max_length=1000)
     images: Optional[Dict[str, str]] = None  # arbitrary named slots, e.g. {"sector:Healthcare": "https://…"}
+    # Richer media slots that can hold a still OR a short looping clip, plus the
+    # aspect ratio to display it at. Kept separate from `images` so existing
+    # image-only slots stay simple.
+    #   {"promo": {"url": "...", "kind": "video", "ratio": "9:16"}}
+    media: Optional[Dict[str, Dict[str, str]]] = None
 
 
 @api_router.get("/page-copy/{slug}")
@@ -52,7 +57,7 @@ async def get_page_copy(slug: str):
         return {}
     return {
         k: doc.get(k)
-        for k in ("title", "subtitle", "body", "bullets", "faq", "cta_label", "cta_link", "extras", "hero_image", "images")
+        for k in ("title", "subtitle", "body", "bullets", "faq", "cta_label", "cta_link", "extras", "hero_image", "images", "media")
         if doc.get(k) is not None
     }
 
