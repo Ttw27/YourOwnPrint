@@ -21,6 +21,9 @@ PAGE_COPY_SLUGS = [
     "kit-your-workforce", "design-your-own", "full-squad-configurator",
     "sports-outfit-configurator", "team-kits", "team-kit-builder",
     "festival-tees-brands",
+    # Not a page — a holder for imagery that appears across many pages at once
+    # (the Price Promise photo, the tool tiles, industry + sports-team headers).
+    "site-images",
 ]
 
 
