@@ -210,7 +210,7 @@ export default function AdminProductSettings() {
                       <button data-testid={`aps-sg-add-${p.id}`} onClick={() => addRow(p.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={11} /> Add size row</button>
                     </div>
                     <div>
-                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Allowed print placements</div>
+                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Where customers can print on this</div>
                       <div className="text-[11px] text-[#4b5563] mb-2">Tick which print locations are physically possible on this garment. Disallowed options are hidden from customers in the product page and designer.</div>
                       <div className="flex flex-wrap gap-2" data-testid={`aps-placements-${p.id}`}>
                         {ALL_PLACEMENTS.map((opt) => {
@@ -246,7 +246,7 @@ export default function AdminProductSettings() {
                         </select>
                       </div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Industry tags</div>
+                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Which industry pages this appears on</div>
                         <div className="flex flex-wrap gap-1.5">
                           {INDUSTRY_SLUGS.map((slug) => {
                             const list = Array.isArray(p.industry_tags) ? p.industry_tags : [];
@@ -293,7 +293,7 @@ export default function AdminProductSettings() {
                       <label className="inline-flex items-center gap-2 cursor-pointer flex-1">
                         <input type="checkbox" checked={!!p.is_bestseller} onChange={(e) => update(p.id, { is_bestseller: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-bestseller-${p.id}`} />
                         <div>
-                          <div className="text-sm font-nunito font-extrabold">Feature on homepage best sellers</div>
+                          <div className="text-sm font-nunito font-extrabold">Show in Best Sellers on the homepage</div>
                           <div className="text-[11px] text-[#4b5563]">Shows in the homepage best-sellers strip. If nothing's flagged for a category, one product from it shows automatically instead.</div>
                         </div>
                       </label>
@@ -335,7 +335,7 @@ export default function AdminProductSettings() {
                     <div>
                       <label className="inline-flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" checked={!!p.bulk_pricing_enabled} onChange={(e) => update(p.id, { bulk_pricing_enabled: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-bulk-${p.id}`} />
-                        <span className="text-sm font-nunito font-extrabold">Enable bulk pricing on this product</span>
+                        <span className="text-sm font-nunito font-extrabold">Give discounts for larger quantities</span>
                       </label>
                       {p.bulk_pricing_enabled && (
                         <div className="mt-2 bg-[#f0fdf4] border border-[#dcfce7] rounded-xl p-3">
@@ -597,7 +597,7 @@ function ProductOverridePanel({ product, onSaved }) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wider font-extrabold text-[#166534]">
           <Pencil size={12} /> Basic catalogue override
-          {loaded && override && <span className="ml-2 px-2 py-0.5 rounded-full bg-[#7bc67e] text-[#1a1a1a] text-[10px]" data-testid={`aps-override-badge-${product.id}`}>ACTIVE OVERRIDE</span>}
+          {loaded && override && <span className="ml-2 px-2 py-0.5 rounded-full bg-[#7bc67e] text-[#1a1a1a] text-[10px]" data-testid={`aps-override-badge-${product.id}`}>Custom pricing set</span>}
         </div>
         {loaded && override && (
           <button type="button" onClick={revert} disabled={busy} className="text-[11px] font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1 disabled:opacity-50" data-testid={`aps-override-revert-${product.id}`}>
@@ -615,7 +615,7 @@ function ProductOverridePanel({ product, onSaved }) {
       </div>
       <Lab label="Category (which shop collection this appears in)">
         <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className={ic} data-testid={`aps-override-category-${product.id}`}>
-          <option value="">Auto-detect from name</option>
+          <option value="">Work it out from the product name</option>
           {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </Lab>
@@ -628,7 +628,7 @@ function ProductOverridePanel({ product, onSaved }) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <label className="inline-flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-override-active-${product.id}`} />
-          <span className="text-xs font-extrabold">Active (untick to hide from storefront)</span>
+          <span className="text-xs font-extrabold">Visible on the site (untick to hide it from customers)</span>
         </label>
         <button onClick={save} disabled={busy || !dirty} className="inline-flex items-center gap-1.5 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 text-[#1a1a1a] font-extrabold text-xs px-4 py-2 rounded-full" data-testid={`aps-override-save-${product.id}`}>
           {busy ? <Loader2 className="animate-spin" size={11} /> : <Save size={11} />} Save override

@@ -138,7 +138,7 @@ export default function AdminDesignerProducts() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
         <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Designer Products</h1>
-        <p className="text-[#4b5563] mt-3 max-w-2xl">Pick which products appear in the <strong>Design Your Own</strong> tool. For each enabled product set the canvas image and the printable rectangle (x/y/width/height as % of the image).</p>
+        <p className="text-[#4b5563] mt-3 max-w-2xl">Choose which products customers can customise in <strong>Design Your Own</strong>. For each one, set the photo they design on top of, and drag out the area their artwork is allowed to sit in. Upload a photo per colour and the designer shows the real garment in that colour &mdash; without one, it falls back to a plain block of that colour so the customer never sees the wrong shade.</p>
 
         <div className="flex flex-wrap items-center gap-3 mt-6">
           <input data-testid="dp-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search products…" className="bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-80" />
@@ -172,7 +172,7 @@ export default function AdminDesignerProducts() {
                   {p.designer_enabled && (
                     <div className="mt-3 space-y-2">
                       <div>
-                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Designer image</label>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Front photo used in the designer</label>
                         <div className="flex items-center gap-2">
                           <input data-testid={`dp-image-${p.id}`} value={p.designer_image || ""} onChange={(e) => update(p.id, { designer_image: e.target.value })} className="flex-1 bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" placeholder="https://… or upload a file" />
                           <label className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-2.5 py-1.5 hover:bg-white cursor-pointer whitespace-nowrap">
@@ -198,7 +198,7 @@ export default function AdminDesignerProducts() {
 
                       {p.colors?.length > 0 && (
                         <div>
-                          <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Per-colour images (optional)</label>
+                          <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">A front photo for each colour (optional)</label>
                           <p className="text-[10px] text-[#4b5563] mb-2">Upload a matching blank photo per colour so the canvas shows the right garment colour once a customer picks one. Colours left blank just use the main image above.</p>
                           <div className="grid grid-cols-2 gap-2">
                             {p.colors.map((c) => {
@@ -223,7 +223,7 @@ export default function AdminDesignerProducts() {
                       )}
 
                       <div className="pt-2 border-t border-dashed border-[#dcfce7]">
-                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back-view image (optional)</label>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back photo (optional — used when the customer switches to Back)</label>
                         <p className="text-[10px] text-[#4b5563] mb-1.5">Add this if the product supports back print — customers switching to "back" in the designer will see this photo instead of the front one. Leave blank and it just falls back to the front photo, same as before.</p>
                         <div className="flex items-center gap-2">
                           <input data-testid={`dp-image-back-${p.id}`} value={p.designer_image_back || ""} onChange={(e) => update(p.id, { designer_image_back: e.target.value })} className="flex-1 bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" placeholder="https://… or upload a file" />
@@ -251,7 +251,7 @@ export default function AdminDesignerProducts() {
 
                           {p.colors?.length > 0 && (
                             <div>
-                              <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Per-colour back images (optional)</label>
+                              <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">A back photo for each colour (optional)</label>
                               <div className="grid grid-cols-2 gap-2">
                                 {p.colors.map((c) => {
                                   const img = (p.designer_images_by_colour_back || {})[c.name];
@@ -281,11 +281,11 @@ export default function AdminDesignerProducts() {
                         <input data-testid={`dp-composition-${p.id}`} value={p.composition || ""} onChange={(e) => update(p.id, { composition: e.target.value })} placeholder="e.g. 180 GSM · 100% ring-spun cotton" className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" />
                       </div>
                       <div>
-                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Long description</label>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Longer description shown on the product page</label>
                         <textarea data-testid={`dp-description-${p.id}`} value={p.description_long || ""} onChange={(e) => update(p.id, { description_long: e.target.value })} placeholder="2-3 sentences shown in the Designer's product info card" rows={2} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs resize-none" />
                       </div>
                       <div>
-                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Use-case badges</label>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Small tags shown on the product (e.g. "Great for teams")</label>
                         <div className="flex flex-wrap gap-1.5" data-testid={`dp-use-cases-${p.id}`}>
                           {USE_CASES.map(({ id, label }) => {
                             const on = (p.use_cases || []).includes(id);
@@ -375,7 +375,7 @@ function PrintAreaPicker({ image, value, onChange }) {
     >
       {image
         ? <img src={image} alt="" className="w-full h-full object-contain pointer-events-none" draggable={false} />
-        : <div className="w-full h-full grid place-items-center text-[#4b5563] text-xs">No image yet</div>}
+        : <div className="w-full h-full grid place-items-center text-[#4b5563] text-xs">No photo yet</div>}
       <div
         onMouseDown={(e) => { e.preventDefault(); modeRef.current = "move"; }}
         className="absolute border-2 border-dashed border-[#7bc67e] bg-[#7bc67e]/10 cursor-move"

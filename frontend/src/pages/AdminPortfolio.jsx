@@ -78,15 +78,15 @@ export default function AdminPortfolio() {
   return (
     <div className="min-h-screen bg-[#f8fafc] font-nunito" data-testid="admin-portfolio">
       <div className="max-w-6xl mx-auto px-6 py-10">
-        <h1 className="font-black text-3xl mb-1">Portfolio</h1>
-        <p className="text-sm text-[#4b5563] mb-8">Upload customer prints, finished kits, or studio shots. Anything you tick <strong>Featured</strong> will show first on the public gallery and homepage strip.</p>
+        <h1 className="font-black text-3xl mb-1">Photo gallery</h1>
+        <p className="text-sm text-[#4b5563] mb-8">Photos of real work &mdash; customer prints, finished kits, studio shots. <strong>Category</strong> decides which page each photo appears on, so it matters: pick &ldquo;Festival Tees And Brands&rdquo; and it shows in the gallery on the Festival &amp; DJ page, &ldquo;Workwear&rdquo; on the workwear pages, and so on. Tick <strong>Featured</strong> to push a photo to the front.</p>
 
         {/* Add new */}
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-6 mb-10" data-testid="admin-portfolio-create">
-          <div className="text-xs uppercase tracking-wider text-[#7bc67e] font-extrabold mb-3">Add a new piece</div>
+          <div className="text-xs uppercase tracking-wider text-[#7bc67e] font-extrabold mb-3">Add a photo</div>
           <div className="grid md:grid-cols-2 gap-5">
             <label className="block">
-              <div className="text-xs font-extrabold mb-1">Image</div>
+              <div className="text-xs font-extrabold mb-1">The photo</div>
               <div className="aspect-square w-full bg-[#f0fdf4] border-2 border-dashed border-[#7bc67e] rounded-2xl grid place-items-center overflow-hidden relative">
                 {draft.image_data_url ? (
                   <img src={draft.image_data_url} alt="preview" className="w-full h-full object-cover" />
@@ -103,13 +103,13 @@ export default function AdminPortfolio() {
               <Field label="Title" testid="admin-portfolio-title">
                 <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="input" placeholder="e.g. Tigers FC — full home kit" />
               </Field>
-              <Field label="Category" testid="admin-portfolio-cat">
+              <Field label="Which page it shows on" testid="admin-portfolio-cat">
                 <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className="input">
                   {cats.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </Field>
-              <Field label="Caption (optional)" testid="admin-portfolio-caption">
-                <textarea value={draft.caption} onChange={(e) => setDraft({ ...draft, caption: e.target.value })} className="input min-h-[60px]" placeholder="Short story behind the print" />
+              <Field label="Caption shown under the photo (optional)" testid="admin-portfolio-caption">
+                <textarea value={draft.caption} onChange={(e) => setDraft({ ...draft, caption: e.target.value })} className="input min-h-[60px]" placeholder="e.g. 40 tees printed overnight for a festival set" />
               </Field>
               <Field label="Alt text (SEO/accessibility)" testid="admin-portfolio-alt">
                 <input value={draft.alt_text} onChange={(e) => setDraft({ ...draft, alt_text: e.target.value })} className="input" placeholder="Describe what's in the image" />
