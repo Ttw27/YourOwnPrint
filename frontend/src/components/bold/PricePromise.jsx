@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { BadgeCheck, HandshakeIcon, ArrowRight } from "lucide-react";
+import { useSiteImages } from "../../hooks/usePageCopy";
 
 /**
  * PricePromise — confident, warm price-match band.
@@ -8,8 +9,20 @@ import { BadgeCheck, HandshakeIcon, ArrowRight } from "lucide-react";
  *  - "hero" → full-bleed section with image + headline + CTA
  *  - "band" → compact 1-line band (good for headers / between sections)
  *  - "card" → boxed card (sidebar / product page)
+ *
+ * The photo in the "hero" variant is admin-editable — this band appears on the
+ * homepage, product pages, Specials, Team Kits and Kit Your Workforce, so it
+ * lives under /admin/page-copy → "Pictures used across the whole site" rather
+ * than on any one page's record.
  */
+const DEFAULT_PHOTO = "https://images.pexels.com/photos/8553861/pexels-photo-8553861.jpeg?auto=compress&cs=tinysrgb&w=900";
+
 export default function PricePromise({ variant = "hero" }) {
+  // Called before the early returns below — React requires every hook to run on
+  // every render, in the same order.
+  const site = useSiteImages();
+  const photo = site.image("pricepromise", DEFAULT_PHOTO);
+
   if (variant === "band") {
     return (
       <div className="bg-[#1a1a1a] text-white" data-testid="price-promise-band">
@@ -88,7 +101,7 @@ export default function PricePromise({ variant = "hero" }) {
         <div className="lg:col-span-5">
           <div className="relative">
             <div className="aspect-square rounded-[2rem] overflow-hidden border-4 border-[#7bc67e]">
-              <img src="https://images.pexels.com/photos/8553861/pexels-photo-8553861.jpeg?auto=compress&cs=tinysrgb&w=900" alt="UK team helping a customer" className="w-full h-full object-cover" />
+              <img src={photo} alt="UK team helping a customer" className="w-full h-full object-cover" data-testid="price-promise-photo" />
             </div>
             <div className="absolute -bottom-5 -left-5 bg-[#7bc67e] text-[#1a1a1a] rounded-2xl p-5 shadow-xl max-w-[220px]">
               <div className="font-nunito font-black text-2xl leading-tight">"We'll beat it."</div>

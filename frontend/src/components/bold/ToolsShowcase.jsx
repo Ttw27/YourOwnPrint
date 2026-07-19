@@ -2,14 +2,22 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { TOOLS_SHOWCASE } from "../../lib/data";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useSiteImages } from "../../hooks/usePageCopy";
 
 /**
  * Showcase strip for the 5 hero tools.
  * `variant`:
  *   - "full"    (default) — large 5-card mosaic for the homepage / dedicated section
  *   - "compact" — single-row scroll for collection / industry pages
+ *
+ * The five tile photos are admin-editable. This strip appears on the homepage,
+ * shop, industry, sports-team and portfolio pages, so the photos live under
+ * /admin/page-copy → "Pictures used across the whole site".
  */
 export default function ToolsShowcase({ variant = "full", title = "Tools to make it yours", subtitle = "Five ways to get your kit looking the part — pick the one that fits how you order." }) {
+  const site = useSiteImages();
+  const tileImage = (t) => site.image(`tool:${t.key}`, t.image);
+
   if (variant === "compact") {
     return (
       <section className="max-w-7xl mx-auto px-6 py-10" data-testid="tools-showcase-compact">
@@ -24,7 +32,7 @@ export default function ToolsShowcase({ variant = "full", title = "Tools to make
               className="group relative aspect-[4/5] rounded-2xl overflow-hidden border-2 border-[#dcfce7] hover:border-[#7bc67e] transition shadow-sm hover:shadow-md"
               data-testid={`tool-card-${t.key}`}
             >
-              <img src={t.image} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <img src={tileImage(t)} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-3">
                 <div className="text-white font-nunito font-black text-sm leading-tight">{t.title}</div>
@@ -55,7 +63,7 @@ export default function ToolsShowcase({ variant = "full", title = "Tools to make
             style={{ background: t.colour }}
             data-testid={`tool-card-${t.key}`}
           >
-            <img src={t.image} alt={t.title} className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply group-hover:scale-105 transition-transform duration-500" />
+            <img src={tileImage(t)} alt={t.title} className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply group-hover:scale-105 transition-transform duration-500" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
             <div className="relative h-full flex flex-col justify-between p-5">
               <div>
