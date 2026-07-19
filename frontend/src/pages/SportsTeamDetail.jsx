@@ -4,12 +4,16 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchSportsTeam } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2 } from "lucide-react";
+import { useSiteImages } from "../hooks/usePageCopy";
 
 export default function SportsTeamDetail() {
   const { slug } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
+  // Header photo is admin-editable under
+  // /admin/page-copy → "Pictures used across the whole site".
+  const site = useSiteImages();
 
   const load = () => {
     setLoading(true); setErr(false);
@@ -76,7 +80,7 @@ export default function SportsTeamDetail() {
       {/* Hero */}
       <header className="relative overflow-hidden bg-[#1a1a1a] text-white">
         <div className="absolute inset-0 opacity-30">
-          <img src={data.hero_image} alt="" className="w-full h-full object-cover" />
+          <img src={site.image(`sportsteam:${data.slug || slug}`, data.hero_image)} alt="" className="w-full h-full object-cover" data-testid="sports-team-hero-image" />
         </div>
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/85 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-6 py-20 lg:py-24">

@@ -4,9 +4,13 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchIndustries } from "../lib/api";
 import { ArrowRight, Briefcase } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import { useSiteImages } from "../hooks/usePageCopy";
 
 export default function IndustriesIndex() {
   usePageTitle("Shop by Industry");
+  // Header photos are admin-editable under
+  // /admin/page-copy → "Pictures used across the whole site".
+  const site = useSiteImages();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -37,7 +41,7 @@ export default function IndustriesIndex() {
                 data-testid={`industry-card-${ind.slug}`}
               >
                 <div className="aspect-[5/3] overflow-hidden bg-[#f0fdf4]">
-                  <img src={ind.hero_image} alt={ind.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={site.image(`industry:${ind.slug}`, ind.hero_image)} alt={ind.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-5">
                   <div className="text-xs uppercase tracking-wider font-extrabold" style={{ color: accent }}>{ind.subtitle}</div>

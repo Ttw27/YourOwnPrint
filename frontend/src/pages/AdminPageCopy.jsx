@@ -28,6 +28,7 @@ const PAGE_COPY_SLUGS = [
   { slug: "full-squad-configurator", label: "Full Squad Configurator" },
   { slug: "sports-outfit-configurator", label: "Sports Outfit Configurator" },
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
+  { slug: "site-images", label: "Pictures used across the whole site" },
 ];
 
 const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "", hero_image: "", images: {}, media: {} };
@@ -51,12 +52,68 @@ const PAGE_MEDIA_SLOTS = {
       label: "Main photo at the top of the homepage",
       hint: "The large photo beside 'Your Brand. Your Clothing. Your Own Print.'" },
   ],
+  sports: [
+    { key: "hero_image", kind: "image", field: "hero_image",
+      label: "Main photo at the top of the Sports & Fitness page",
+      hint: "The large photo beside 'Kit out your crew.'" },
+  ],
+  "leavers-hoodies": [
+    { key: "hero_image", kind: "image", field: "hero_image",
+      label: "Main photo at the top of the Leavers Hoodies page",
+      hint: "The large photo to the right of the heading." },
+  ],
+  "team-kits": [
+    { key: "hero_image", kind: "image", field: "hero_image",
+      label: "Main photo at the top of the Team Kits page",
+      hint: "The large tilted photo beside 'Team Kits. Sorted.'" },
+  ],
   "festival-tees-brands": [
     { key: "promo", kind: "media",
       label: "Photo or video beside 'Promo tops for your next date'",
       hint: "The square block on the right of that section. A short clip here plays silently on a loop." },
+    { key: "brand", kind: "media",
+      label: "Photo or video beside 'Start your own clothing line'",
+      hint: "The square block on the left of the dark section further down. A short clip here plays silently on a loop." },
+  ],
+  "site-images": [
+    { key: "pricepromise", kind: "image",
+      label: "Price Promise photo",
+      hint: "The square photo in the dark 'Looking professional shouldn't cost a fortune' band \u2014 shows on the homepage, product pages, Specials, Team Kits and Kit Your Workforce." },
+    { key: "tool:design", kind: "image", label: "Tool tile \u2014 Design Your Own",
+      hint: "One of the five tool tiles. They appear on the homepage, shop pages, industry pages, sports pages and the portfolio." },
+    { key: "tool:specials", kind: "image", label: "Tool tile \u2014 Your Own Print Specials" },
+    { key: "tool:workforce", kind: "image", label: "Tool tile \u2014 Kit Your Workforce" },
+    { key: "tool:team-kits", kind: "image", label: "Tool tile \u2014 Team Kits" },
+    { key: "tool:fight-night", kind: "image", label: "Tool tile \u2014 Fight Night Tees" },
   ],
 };
+
+// Header photo on each industry page, and the tile for it on Shop by Industry.
+// Slugs must match the backend INDUSTRIES_CATALOGUE canonical entries.
+const SITE_INDUSTRIES = [
+  { slug: "healthcare", label: "Healthcare" },
+  { slug: "construction-trades", label: "Construction & Trades" },
+  { slug: "retail", label: "Retail" },
+  { slug: "security", label: "Security" },
+  { slug: "corporate", label: "Corporate" },
+  { slug: "sports-fitness", label: "Sports & Fitness" },
+  { slug: "industrial", label: "Industrial" },
+  { slug: "beauty-wellness", label: "Beauty & Wellness" },
+  { slug: "cleaning", label: "Cleaning & Maintenance" },
+  { slug: "hospitality-catering", label: "Hospitality & Catering" },
+];
+
+// Header photo on each sports landing page. Slugs match SPORTS_TEAMS_CATALOGUE.
+const SITE_SPORTS_TEAMS = [
+  { slug: "football", label: "Football Kits" },
+  { slug: "rugby", label: "Rugby Kits" },
+  { slug: "gyms", label: "Gym Kit & Branded Apparel" },
+  { slug: "personal-trainers", label: "Personal Trainer Kit" },
+  { slug: "boxing-gyms", label: "Boxing Gym Kit" },
+  { slug: "thai-boxing", label: "Thai Boxing Gym Kit" },
+  { slug: "kick-boxing", label: "Kickboxing Gym Kit" },
+  { slug: "dance-studios", label: "Dance Studio Apparel" },
+];
 
 const HOME_SECTOR_NAMES = [
   "Construction & Trades", "Healthcare", "Hospitality", "Retail", "Sports & Fitness",
@@ -231,6 +288,12 @@ export default function AdminPageCopy() {
   const addFaq = () => setCopy((c) => ({ ...c, faq: [...c.faq, { q: "", a: "" }] }));
   const removeFaq = (i) => setCopy((c) => ({ ...c, faq: c.faq.filter((_, idx) => idx !== i) }));
 
+  // "Pictures used across the whole site" isn't a page — it has no heading,
+  // wording or FAQ of its own, so those fields are hidden for it.
+  // Declared before the JSX below reads it.
+  const isSiteImages = slug === "site-images";
+  const setImage = (key, v) => setCopy((c) => ({ ...c, images: { ...(c.images || {}), [key]: v } }));
+
   return (
     <div className="min-h-screen bg-[#f8fafc] font-nunito" data-testid="admin-page-copy">
       <div className="max-w-4xl mx-auto px-6 py-10">
@@ -284,6 +347,7 @@ export default function AdminPageCopy() {
             <div className="py-10 grid place-items-center"><Loader2 className="animate-spin text-[#7bc67e]" /></div>
           ) : (
             <>
+              {!isSiteImages && (
               <div className="grid sm:grid-cols-2 gap-3">
                 <label className="block" data-testid="apc-title">
                   <div className="text-xs font-extrabold mb-1">Main heading</div>
@@ -306,6 +370,7 @@ export default function AdminPageCopy() {
                   <input value={copy.cta_link} onChange={(e) => setCopy({ ...copy, cta_link: e.target.value })} className="input" placeholder="e.g. /contact" />
                 </label>
               </div>
+              )}
 
               {/* ---- Images (stored in the DB, so they survive every deploy) ---- */}
               <div className="border-2 border-[#dcfce7] rounded-2xl p-4 bg-[#f9fafb]" data-testid="apc-images">
@@ -319,7 +384,7 @@ export default function AdminPageCopy() {
                   using the picture that&rsquo;s built in.
                 </p>
 
-                {(PAGE_MEDIA_SLOTS[slug] || []).length === 0 && slug !== "home" ? (
+                {(PAGE_MEDIA_SLOTS[slug] || []).length === 0 && slug !== "home" && !isSiteImages ? (
                   <div className="bg-white border border-[#e5e7eb] rounded-xl p-3 text-[11px] text-[#4b5563]">
                     This page doesn&rsquo;t have any pictures you can swap out yet &mdash; only its wording.
                     If there&rsquo;s a photo on it you&rsquo;d like to be able to change, say which one and it can be added here.
@@ -351,6 +416,48 @@ export default function AdminPageCopy() {
                   </div>
                 )}
 
+                {isSiteImages && (
+                  <div className="mt-5 space-y-5">
+                    <div>
+                      <div className="text-xs font-extrabold mb-1">Industry pages</div>
+                      <p className="text-[10px] text-[#4b5563] mb-2">
+                        The photo behind the title on each industry page, and on that industry&rsquo;s tile in the Shop by Industry list.
+                      </p>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {SITE_INDUSTRIES.map((it) => (
+                          <ImageField
+                            key={it.slug}
+                            label={it.label}
+                            value={(copy.images || {})[`industry:${it.slug}`] || ""}
+                            onChange={(v) => setImage(`industry:${it.slug}`, v)}
+                            testid={`apc-industry-${it.slug}`}
+                            compact
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-extrabold mb-1">Sports &amp; fitness landing pages</div>
+                      <p className="text-[10px] text-[#4b5563] mb-2">
+                        The photo behind the title at the top of each of these pages.
+                      </p>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {SITE_SPORTS_TEAMS.map((it) => (
+                          <ImageField
+                            key={it.slug}
+                            label={it.label}
+                            value={(copy.images || {})[`sportsteam:${it.slug}`] || ""}
+                            onChange={(v) => setImage(`sportsteam:${it.slug}`, v)}
+                            testid={`apc-sportsteam-${it.slug}`}
+                            compact
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {slug === "home" && (
                   <div className="mt-4">
                     <div className="text-xs font-extrabold mb-1">The 10 &lsquo;Shop by Sector&rsquo; tiles</div>
@@ -374,11 +481,14 @@ export default function AdminPageCopy() {
                 )}
               </div>
 
+              {!isSiteImages && (
               <label className="block" data-testid="apc-body">
                 <div className="text-xs font-extrabold mb-1">Longer description <span className="text-[#4b5563] font-normal">— leave an empty line between paragraphs</span></div>
                 <textarea value={copy.body} onChange={(e) => setCopy({ ...copy, body: e.target.value })} className="input min-h-[140px] font-mono text-[12px]" placeholder="Optional. Extra paragraphs that appear under the heading." />
               </label>
+              )}
 
+              {!isSiteImages && (
               <div data-testid="apc-bullets">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-xs font-extrabold">Bullet points</div>
@@ -394,7 +504,9 @@ export default function AdminPageCopy() {
                   {copy.bullets.length === 0 && <div className="text-xs text-[#4b5563] italic">None added — the page is using the bullet points it came with.</div>}
                 </div>
               </div>
+              )}
 
+              {!isSiteImages && (
               <div data-testid="apc-faq">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-xs font-extrabold">FAQ</div>
@@ -410,6 +522,7 @@ export default function AdminPageCopy() {
                   ))}
                 </div>
               </div>
+              )}
 
               <div className="flex justify-between items-center pt-2 border-t border-[#dcfce7]">
                 <button onClick={revert} type="button" className="text-xs font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1" data-testid="apc-revert"><RotateCcw size={12} /> Undo all my changes to this page</button>

@@ -51,8 +51,10 @@ export default function FestivalTeesAndBrands() {
     faq: DEFAULT_FAQ,
     cta_label: "Get in touch to discuss",
     cta_link: "#enquiry",
-    // Admin-managed media for the promo block — image or short looping clip.
-    // Set it in /admin/page-copy under "Festival Tees & Start Your Brand".
+    // Admin-managed media — image or short looping clip, one per block:
+    //   media.promo → beside "Promo tops for your next date"
+    //   media.brand → beside "Start your own clothing line"
+    // Both are set in /admin/page-copy under "Festival Tees & Start Your Brand".
     media: {},
   });
   const brandBenefits = (copy.extras && copy.extras.brand_bullets) || DEFAULT_BRAND_BENEFITS;
@@ -149,9 +151,14 @@ export default function FestivalTeesAndBrands() {
       <div className="bg-[#1a1a1a] text-white">
         <div className="max-w-6xl mx-auto px-6 py-16">
           <div className="grid lg:grid-cols-2 gap-10 items-center">
-            <div className="order-2 lg:order-1 rounded-3xl bg-white/5 aspect-square flex items-center justify-center">
+            <MediaBlock
+              media={copy.media?.brand}
+              className="order-2 lg:order-1"
+              fallbackClassName="bg-white/5"
+              testid="festival-brand-media"
+            >
               <Rocket size={64} className="text-[#7bc67e]" />
-            </div>
+            </MediaBlock>
             <div className="order-1 lg:order-2">
               <div className="inline-flex items-center gap-2 text-xs font-extrabold text-[#7bc67e] uppercase tracking-widest">
                 <Sparkles size={14} /> Your name, your brand

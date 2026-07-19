@@ -24,6 +24,8 @@ export default function LeaversHoodies() {
   const copy = usePageCopy("leavers-hoodies", {
     title: "",
     subtitle: "Pullover hoodies, zip hoodies, varsity jackets — printed in the UK in 7–10 days. Fill in your details, pick your garment and design, choose sizes, and we'll get cracking. Free proof before we print a thing.",
+    // Swap in /admin/page-copy → Leavers Hoodies → Pictures & video.
+    hero_image: "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg?auto=compress&cs=tinysrgb&w=1200",
   });
 
   return (
@@ -69,7 +71,7 @@ export default function LeaversHoodies() {
           </div>
           <div className="relative">
             <div className="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl">
-              <img src="https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" className="w-full h-full object-cover" />
+              <img src={copy.hero_image} alt="" className="w-full h-full object-cover" data-testid="leavers-hero-image" />
             </div>
           </div>
         </div>

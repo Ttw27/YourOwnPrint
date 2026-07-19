@@ -45,6 +45,8 @@ export default function Sports() {
   const copy = usePageCopy("sports", {
     title: "Kit out your crew.",
     subtitle: "Match-day jerseys, fight-night sponsor tees, training tracksuits — names, numbers, sponsors, badges. Big team or solo athlete, we've got you.",
+    // Swap in /admin/page-copy → Sports & Fitness index → Pictures & video.
+    hero_image: "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg?auto=compress&cs=tinysrgb&w=1200",
   });
 
   return (
@@ -79,7 +81,7 @@ export default function Sports() {
           </div>
           <div className="relative">
             <div className="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl">
-              <img src="https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" className="w-full h-full object-cover" />
+              <img src={copy.hero_image} alt="" className="w-full h-full object-cover" data-testid="sports-hero-image" />
             </div>
           </div>
         </div>

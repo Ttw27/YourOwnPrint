@@ -5,6 +5,7 @@ import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchIndustry, fetchReviewsAggregate } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, X, ChevronDown, SlidersHorizontal } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import { useSiteImages } from "../hooks/usePageCopy";
 
 /**
  * /industries/:slug — Industry landing page (Construction & Trades, Hospitality, etc.)
@@ -25,6 +26,9 @@ export default function IndustryDetail() {
   const [page, setPage] = useState(0);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [aggregates, setAggregates] = useState({});
+  // Header photo is admin-editable under
+  // /admin/page-copy → "Pictures used across the whole site".
+  const site = useSiteImages();
 
   useEffect(() => { fetchReviewsAggregate().then(setAggregates).catch(() => {}); }, []);
 
@@ -85,12 +89,14 @@ export default function IndustryDetail() {
   if (!data) return null;
 
   const { title, subtitle, blurb, hero_image, products, facets = {}, total, matched_total } = data;
+  // Declared before the JSX below reads it.
+  const heroPhoto = site.image(`industry:${data.slug || slug}`, hero_image);
 
   return (
     <div className="bg-white min-h-screen text-[#1a1a1a] font-nunito" data-testid={`industry-detail-${slug}`}>
       <BoldNavbar />
       <header className="relative overflow-hidden bg-[#1a1a1a] text-white">
-        {hero_image && <div className="absolute inset-0 opacity-25"><img src={hero_image} alt="" className="w-full h-full object-cover" /></div>}
+        {heroPhoto && <div className="absolute inset-0 opacity-25"><img src={heroPhoto} alt="" className="w-full h-full object-cover" data-testid="industry-hero-image" /></div>}
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/85 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <Link to="/industries" className="text-xs text-[#7bc67e] hover:underline" data-testid="industry-back">← All industries</Link>

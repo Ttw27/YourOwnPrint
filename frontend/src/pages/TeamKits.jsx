@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayou
 import { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import PricePromise from "../components/bold/PricePromise";
 import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
+import usePageCopy from "../hooks/usePageCopy";
 import { ArrowRight, Trophy, Users, MessageCircle, Sparkles, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
@@ -31,6 +32,13 @@ export default function TeamKits() {
       .finally(() => setLoading(false));
   };
   useEffect(load, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Declared before the JSX below uses it — a const referenced above its own
+  // declaration line still compiles, then throws at runtime and blanks the page.
+  const copy = usePageCopy("team-kits", {
+    // Swap in /admin/page-copy → Team Kits → Pictures & video.
+    hero_image: "https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  });
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
@@ -70,7 +78,7 @@ export default function TeamKits() {
           </div>
           <div className="relative">
             <div className="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl rotate-1">
-              <img src="https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" className="w-full h-full object-cover" />
+              <img src={copy.hero_image} alt="" className="w-full h-full object-cover" data-testid="team-kits-hero-image" />
             </div>
             <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-lg p-4 border border-[#e5e7eb] -rotate-2 max-w-[240px]">
               <div className="flex items-center gap-2"><Users className="text-[#7bc67e]" size={18} /><div className="font-nunito font-extrabold text-sm">Single team or whole club</div></div>
