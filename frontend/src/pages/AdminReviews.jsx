@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   adminFetchReviews, adminFetchReviewStats, adminUpdateReview,
-  adminDeleteReview, adminBulkDeleteReviews, fetchProducts,
+  adminDeleteReview, adminBulkDeleteReviews, adminBulkApproveReviews, fetchProducts,
 } from "../lib/api";
 import { toast } from "sonner";
 import {
   Loader2, Trash2, Pencil, Save, X, Star, Search, ChevronLeft, ChevronRight,
-  RefreshCw, AlertTriangle,
+  RefreshCw, AlertTriangle, Check, EyeOff, Clock,
 } from "lucide-react";
 
 const PAGE_SIZE = 25;
@@ -47,6 +47,7 @@ export default function AdminReviews() {
   const [source, setSource] = useState("");
   const [rating, setRating] = useState("");
   const [productId, setProductId] = useState("");
+  const [approved, setApproved] = useState("");
 
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState({});
@@ -54,7 +55,9 @@ export default function AdminReviews() {
   const [selected, setSelected] = useState([]);
 
   const productName = useCallback(
-    (id) => (products.find((p) => p.id === id) || {}).name || id,
+    (id) => (id === "store"
+      ? "About the shop as a whole"
+      : (products.find((p) => p.id === id) || {}).name || id),
     [products]
   );
 
@@ -67,6 +70,8 @@ export default function AdminReviews() {
       if (source) params.source = source;
       if (rating) params.rating = Number(rating);
       if (productId) params.product_id = productId;
+      if (approved === "pending") params.approved = false;
+      else if (approved === "live") params.approved = true;
       const [d, s] = await Promise.all([adminFetchReviews(params), adminFetchReviewStats()]);
       setItems(d.items || []);
       setTotal(d.total || 0);
@@ -76,7 +81,7 @@ export default function AdminReviews() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, source, rating, productId]);
+  }, [page, search, source, rating, productId, approved]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { fetchProducts(undefined, 500).then((d) => setProducts(d.items || [])).catch(() => {}); }, []);
@@ -146,6 +151,20 @@ export default function AdminReviews() {
     }
   };
 
+  const setApproval = async (ids, next) => {
+    if (ids.length === 0) return;
+    try {
+      const res = await adminBulkApproveReviews(ids, next);
+      toast.success(next
+        ? `${res.updated} review${res.updated === 1 ? "" : "s"} now live on the site`
+        : `${res.updated} review${res.updated === 1 ? "" : "s"} hidden from the site`);
+      setSelected([]);
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Couldn't change that");
+    }
+  };
+
   const toggle = (id) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const allOnPageSelected = items.length > 0 && items.every((r) => selected.includes(r.id));
@@ -164,6 +183,7 @@ export default function AdminReviews() {
         <p className="text-sm text-[#4b5563] mb-5">
           Every review on the site — the ones customers left themselves and the ones brought over from
           Judge.me. Fix a typo, correct which product a review is attached to, or delete one entirely.
+          New reviews left on the site stay hidden until you publish them here.
           To bring more over, use{" "}
           <Link to="/admin/import-reviews" className="text-[#166534] font-bold underline">Reviews import</Link>.
         </p>
@@ -171,12 +191,12 @@ export default function AdminReviews() {
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" data-testid="admin-reviews-stats">
             {[
+              { label: "Waiting for approval", value: stats.pending || 0, highlight: (stats.pending || 0) > 0 },
               { label: "Total reviews", value: stats.total },
               { label: "From Judge.me", value: stats.by_source?.judgeme || 0 },
-              { label: "Left on the site", value: stats.by_source?.native || 0 },
               { label: "With photos", value: stats.with_photos || 0 },
             ].map((s) => (
-              <div key={s.label} className="bg-white border-2 border-[#dcfce7] rounded-2xl p-4">
+              <div key={s.label} className={`bg-white border-2 rounded-2xl p-4 ${s.highlight ? "border-[#fbbf24] bg-[#fffbeb]" : "border-[#dcfce7]"}`}>
                 <div className="text-2xl font-black">{s.value}</div>
                 <div className="text-[11px] text-[#4b5563] font-bold">{s.label}</div>
               </div>
@@ -185,7 +205,7 @@ export default function AdminReviews() {
         )}
 
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4 mb-5">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
               <div className="text-[11px] font-extrabold mb-1">Search</div>
               <div className="flex gap-1.5">
@@ -223,9 +243,18 @@ export default function AdminReviews() {
               </select>
             </div>
             <div>
+              <div className="text-[11px] font-extrabold mb-1">Shown on the site?</div>
+              <select value={approved} onChange={(e) => applyFilter(() => setApproved(e.target.value))} className="input text-xs w-full" data-testid="admin-reviews-approved">
+                <option value="">Live and waiting</option>
+                <option value="pending">Waiting for approval</option>
+                <option value="live">Live on the site</option>
+              </select>
+            </div>
+            <div>
               <div className="text-[11px] font-extrabold mb-1">Product</div>
               <select value={productId} onChange={(e) => applyFilter(() => setProductId(e.target.value))} className="input text-xs w-full" data-testid="admin-reviews-product">
                 <option value="">All products</option>
+                <option value="store">About the shop as a whole</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
@@ -240,6 +269,16 @@ export default function AdminReviews() {
               <button type="button" onClick={load} className="inline-flex items-center gap-1 text-[11px] font-extrabold border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-full px-3 py-1.5">
                 <RefreshCw size={12} /> Refresh
               </button>
+              {selected.length > 0 && (
+                <button type="button" onClick={() => setApproval(selected, true)} className="inline-flex items-center gap-1 text-[11px] font-extrabold bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] rounded-full px-3 py-1.5" data-testid="admin-reviews-bulk-approve">
+                  <Check size={12} /> Publish {selected.length}
+                </button>
+              )}
+              {selected.length > 0 && (
+                <button type="button" onClick={() => setApproval(selected, false)} className="inline-flex items-center gap-1 text-[11px] font-extrabold border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-full px-3 py-1.5" data-testid="admin-reviews-bulk-hide">
+                  <EyeOff size={12} /> Hide {selected.length}
+                </button>
+              )}
               {selected.length > 0 && (
                 <button type="button" onClick={removeSelected} className="inline-flex items-center gap-1 text-[11px] font-extrabold bg-rose-500 hover:bg-rose-600 text-white rounded-full px-3 py-1.5" data-testid="admin-reviews-bulk-delete">
                   <Trash2 size={12} /> Delete {selected.length}
@@ -297,6 +336,7 @@ export default function AdminReviews() {
                               <div>
                                 <div className="text-[10px] font-extrabold mb-1">Product this review is about</div>
                                 <select value={draft.product_id} onChange={(e) => setDraft({ ...draft, product_id: e.target.value })} className="input text-xs w-full">
+                                  <option value="store">About the shop as a whole</option>
                                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                               </div>
@@ -334,6 +374,14 @@ export default function AdminReviews() {
                               <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold bg-[#f0fdf4] text-[#166534]">
                                 {r.source === "judgeme" ? "Judge.me" : "Left on the site"}
                               </span>
+                              {r.approved === false && (
+                                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-extrabold bg-[#fef3c7] text-[#92400e]">
+                                  <Clock size={9} /> Waiting for approval
+                                </span>
+                              )}
+                              {r.product_id === "store" && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold bg-[#e0e7ff] text-[#3730a3]">About the shop</span>
+                              )}
                               {r.edited_at && (
                                 <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold bg-[#fde68a] text-[#1a1a1a]">Edited</span>
                               )}
@@ -359,6 +407,15 @@ export default function AdminReviews() {
 
                       {!isEditing && (
                         <div className="flex flex-col gap-1.5 flex-shrink-0">
+                          {r.approved === false ? (
+                            <button type="button" onClick={() => setApproval([r.id], true)} className="inline-flex items-center gap-1 text-[11px] font-extrabold bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] rounded-full px-3 py-1.5" data-testid={`admin-review-approve-${r.id}`}>
+                              <Check size={11} /> Publish
+                            </button>
+                          ) : (
+                            <button type="button" onClick={() => setApproval([r.id], false)} className="inline-flex items-center gap-1 text-[11px] font-extrabold border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-full px-3 py-1.5" data-testid={`admin-review-hide-${r.id}`}>
+                              <EyeOff size={11} /> Hide
+                            </button>
+                          )}
                           <button type="button" onClick={() => startEdit(r)} className="inline-flex items-center gap-1 text-[11px] font-extrabold border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-full px-3 py-1.5" data-testid={`admin-review-edit-${r.id}`}>
                             <Pencil size={11} /> Edit
                           </button>
