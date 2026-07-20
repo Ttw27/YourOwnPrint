@@ -821,11 +821,13 @@ async def list_products(category: Optional[str] = None, industries: Optional[str
     products AND any imported product (t-shirts, polos, jackets, etc.) tagged
     as relevant to trade/construction/cleaning work, rather than requiring
     every product to literally have category="workwear"."""
-    industry_list = [i.strip() for i in (industries or "").split(",") if i.strip()]
+    # Fold the requested slugs too, so /industries/trades matches products
+    # stored as construction-trades.
+    industry_list = canonical_industries((industries or "").split(","))
 
     def matches(p):
         cat_ok = bool(category) and p["category"] == category
-        ind_ok = bool(industry_list) and any(t in (p.get("industry_tags") or []) for t in industry_list)
+        ind_ok = bool(industry_list) and any(t in canonical_industries(p.get("industry_tags")) for t in industry_list)
         if category and industry_list:
             return cat_ok or ind_ok
         if category:
@@ -1754,6 +1756,42 @@ INDUSTRIES_CATALOGUE = [
 ]
 
 
+# ---------- Industry vocabulary ----------
+# Derived from the catalogue above rather than typed out again, so adding an
+# alias there can never leave this list stale — the exact failure mode that
+# fragmented the sidebar counts before.
+INDUSTRY_ALIASES: Dict[str, str] = {
+    e["slug"]: e["alias_of"] for e in INDUSTRIES_CATALOGUE if e.get("alias_of")
+}
+CANONICAL_INDUSTRIES: List[str] = [
+    e["slug"] for e in INDUSTRIES_CATALOGUE if not e.get("alias_of")
+]
+
+
+def canonical_industries(tags) -> List[str]:
+    """Fold alias slugs onto their canonical form, lowercase, de-duplicated,
+    order preserved.
+
+    Aliases exist so old URLs like /industries/trades keep working. They must
+    never be *stored* on a product: a product tagged both "trades" and
+    "construction-trades" shows up as two separate sidebar rows with split
+    counts, which is what produced the row of stray 1s.
+
+    Unrecognised values are kept rather than dropped — a slug that hasn't made
+    it into the catalogue yet is more likely a new industry than junk, and
+    silently discarding tags would be a far worse failure than showing one.
+    """
+    out: List[str] = []
+    for t in tags or []:
+        s = str(t or "").strip().lower()
+        if not s:
+            continue
+        s = INDUSTRY_ALIASES.get(s, s)
+        if s not in out:
+            out.append(s)
+    return out
+
+
 # ---------- Sports & Fitness Teams catalogue (SEO landings) ----------
 SPORTS_TEAMS_CATALOGUE = [
     {"slug": "football", "title": "Football Kits", "h1": "Custom Football Kits, Printed in the UK", "subtitle": "Jerseys, shorts, socks — match-day ready",
@@ -2381,6 +2419,7 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
     if payload.gender_fit is not None and payload.gender_fit not in GENDER_FIT_OPTIONS:
         raise HTTPException(400, f"gender_fit must be one of {GENDER_FIT_OPTIONS}")
     if payload.industry_tags is not None:
+        payload.industry_tags = canonical_industries(payload.industry_tags)
         for t in payload.industry_tags:
             if t not in INDUSTRY_SLUGS:
                 raise HTTPException(400, f"Unknown industry '{t}'. Allowed: {INDUSTRY_SLUGS}")
@@ -2944,7 +2983,9 @@ def _facets_from_products(products: List[Dict]) -> Dict:
         for s in _collect_variant_field(p, "sizes"):
             if isinstance(s, str):
                 size_c[s] += 1
-        for t in p.get("industry_tags") or []:
+        # Canonicalised on the way in, so a stray legacy tag still in the
+        # database counts toward its proper row instead of making its own.
+        for t in canonical_industries(p.get("industry_tags")):
             industry_c[t] += 1
         try:
             prices.append(float(p.get("price") or 0))
@@ -3254,21 +3295,82 @@ async def list_sports_teams():
     return out
 
 
+# Words that appear in nearly every landing page title, so scoring a hit on them
+# says nothing about relevance. Kept deliberately short: "gym" and "studio" look
+# generic but only appear on two titles each, and dropping them left the Gyms
+# page with no usable keyword at all, so everything tied and fell back to
+# alphabetical.
+_SPORTS_STOPWORDS = {"kits", "kit", "apparel", "and", "the"}
+
+
+def _sports_team_keywords(s: Dict) -> List[str]:
+    """Distinctive words for a landing page, from its slug and title."""
+    raw = f"{s.get('slug', '')} {s.get('title', '')}".lower().replace("-", " ")
+    words = {w for w in re.findall(r"[a-z]+", raw) if len(w) > 2}
+    return sorted(words - _SPORTS_STOPWORDS)
+
+
+def _sports_team_products(s: Dict) -> List[Dict]:
+    """Curated picks first, then the rest of the sports catalogue behind them.
+
+    The curated `product_ids` are hand-chosen and include bundles and
+    configurator entries that no automatic rule would surface, so they stay
+    pinned at the top. But on their own they were only ever 5-8 items, which
+    left pages like Gyms and Personal Trainers looking like the shop had
+    almost nothing in stock — the hundreds of sports-tagged products in the
+    imported catalogue never appeared at all.
+    """
+    out: List[Dict] = []
+    seen: set = set()
+
+    def add(p: Dict) -> None:
+        if not p or p.get("id") in seen:
+            return
+        seen.add(p["id"])
+        out.append({
+            "id": p["id"], "name": p["name"], "price": float(p.get("price") or 0),
+            "image": p.get("image") or "", "category": p.get("category") or "",
+            "description": p.get("description") or "",
+        })
+
+    for pid in s.get("product_ids", []):
+        add(PRODUCTS.get(pid))
+
+    keywords = _sports_team_keywords(s)
+    pool: List[Tuple[int, str, Dict]] = []
+    for p in PRODUCTS.values():
+        if p.get("id") in seen:
+            continue
+        if "sports-fitness" not in canonical_industries(p.get("industry_tags")):
+            continue
+        hay = f"{p.get('name', '')} {p.get('category', '')}".lower()
+        score = sum(1 for k in keywords if k in hay)
+        # Negative score sorts highest-relevance first; name keeps it stable so
+        # the same page doesn't shuffle between requests and duplicate items
+        # across page boundaries.
+        pool.append((-score, str(p.get("name") or ""), p))
+
+    for _, _, p in sorted(pool, key=lambda t: (t[0], t[1])):
+        add(p)
+
+    return out
+
+
 @api_router.get("/sports-teams/{slug}")
-async def get_sports_team(slug: str):
+async def get_sports_team(slug: str, limit: int = 12, offset: int = 0):
     s = next((i for i in SPORTS_TEAMS_CATALOGUE if i["slug"] == slug), None)
     if not s:
         raise HTTPException(404, "Sports landing not found")
-    products = []
-    for pid in s.get("product_ids", []):
-        p = PRODUCTS.get(pid)
-        if p:
-            products.append({
-                "id": p["id"], "name": p["name"], "price": float(p["price"]),
-                "image": p["image"], "category": p["category"],
-                "description": p.get("description") or "",
-            })
-    return {**s, "products": products}
+    limit = max(1, min(int(limit or 12), 60))
+    offset = max(0, int(offset or 0))
+    all_products = _sports_team_products(s)
+    return {
+        **s,
+        "products": all_products[offset:offset + limit],
+        "total": len(all_products),
+        "offset": offset,
+        "limit": limit,
+    }
 
 
 @api_router.get("/workforce/tiers")
@@ -5062,6 +5164,70 @@ async def _seed_specials_defaults():
 
 
 @app.on_event("startup")
+async def _canonicalise_stored_industry_tags():
+    """One-time repair: fold alias industry slugs already in the database onto
+    their canonical form.
+
+    The original seed wrote both forms on purpose (a product got "trades" *and*
+    "construction-trades"), which is what produced the row of stray 1s in the
+    sidebar. Canonicalising on read fixes the display, but leaving the aliases
+    in the database means anything reading the collection directly still sees
+    them, so clean the stored rows too.
+
+    Marker-guarded, and only writes rows that actually change — a no-op on
+    every boot after the first.
+    """
+    try:
+        marker = await db.settings.find_one({"key": "industry_canonicalise_v1"})
+        if marker is not None:
+            return
+        fixed = 0
+        cursor = db.product_meta.find({"industry_tags": {"$exists": True, "$ne": []}})
+        async for row in cursor:
+            pid = row.get("product_id")
+            before = row.get("industry_tags") or []
+            after = canonical_industries(before)
+            if after == before:
+                continue
+            await db.product_meta.update_one(
+                {"product_id": pid},
+                {"$set": {"industry_tags": after,
+                          "updated_at": datetime.now(timezone.utc).isoformat()}},
+            )
+            # Keep the in-memory copy in step, or the sidebar keeps showing the
+            # old counts until the next restart.
+            if pid in PRODUCTS:
+                PRODUCTS[pid]["industry_tags"] = after
+            fixed += 1
+
+        # Imported products keep their tags on the product document itself.
+        cursor = db.imported_products.find({"industry_tags": {"$exists": True, "$ne": []}})
+        async for row in cursor:
+            pid = row.get("id")
+            before = row.get("industry_tags") or []
+            after = canonical_industries(before)
+            if after == before:
+                continue
+            await db.imported_products.update_one(
+                {"id": pid},
+                {"$set": {"industry_tags": after}},
+            )
+            if pid in PRODUCTS:
+                PRODUCTS[pid]["industry_tags"] = after
+            fixed += 1
+
+        await db.settings.update_one(
+            {"key": "industry_canonicalise_v1"},
+            {"$set": {"key": "industry_canonicalise_v1", "fixed": fixed,
+                      "ran_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+        print(f"industry canonicalisation: {fixed} product(s) tidied")
+    except Exception as e:
+        print(f"industry canonicalisation failed: {e}")
+
+
+@app.on_event("startup")
 async def _seed_industry_tags_defaults():
     """One-time seed: assign sensible industry tags + gender_fit to existing catalogue."""
     try:
@@ -5086,6 +5252,7 @@ async def _seed_industry_tags_defaults():
             "gym-shorts":          ["sports-fitness", "fitness"],
         }
         for pid, tags in industry_map.items():
+            tags = canonical_industries(tags)
             if pid in PRODUCTS:
                 await db.product_meta.update_one(
                     {"product_id": pid},
@@ -5465,7 +5632,7 @@ def _auto_industry_tags(name: str, category: str) -> List[str]:
         for t in _VERSATILE_CATEGORY_FALLBACKS[norm_category]:
             if t not in tags:
                 tags.append(t)
-    return tags[:3]
+    return canonical_industries(tags)[:3]
 
 
 def _apply_imported_product(doc: Dict) -> None:
@@ -5483,7 +5650,7 @@ def _apply_imported_product(doc: Dict) -> None:
         "image_gallery": doc.get("additional_images") or [],
         "description": doc.get("description") or "",
         "gender_fit": doc.get("gender_fit") or "unisex",
-        "industry_tags": doc.get("industry_tags") or [],
+        "industry_tags": canonical_industries(doc.get("industry_tags")),
         "colors": doc.get("colors") or [],
         "sizes": doc.get("sizes") or [],
         "size_upcharges": doc.get("size_upcharges") or {},
@@ -5662,7 +5829,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         if payload.retag_industries:
             try:
                 new_tags = _auto_industry_tags(doc.get("name") or "", effective_category)
-                if new_tags != (doc.get("industry_tags") or []):
+                if new_tags != canonical_industries(doc.get("industry_tags")):
                     update["industry_tags"] = new_tags
                     retagged += 1
             except Exception as e:
