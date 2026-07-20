@@ -17,6 +17,7 @@ import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import ProductDetail from "@/pages/ProductDetail";
 import ReviewsPage from "@/pages/Reviews";
 import AdminImport from "@/pages/AdminImport";
+import AdminReviews from "@/pages/AdminReviews";
 import AdminTeamKits from "@/pages/AdminTeamKits";
 import AdminDesignerProducts from "@/pages/AdminDesignerProducts";
 import AdminProductSettings from "@/pages/AdminProductSettings";
@@ -113,6 +114,7 @@ function App() {
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/import-reviews" element={<RequireAdmin><AdminImport /></RequireAdmin>} />
+          <Route path="/admin/reviews" element={<RequireAdmin><AdminReviews /></RequireAdmin>} />
           <Route path="/admin/team-kits" element={<RequireAdmin><AdminTeamKits /></RequireAdmin>} />
           <Route path="/admin/designer-products" element={<RequireAdmin><AdminDesignerProducts /></RequireAdmin>} />
           <Route path="/admin/product-settings" element={<RequireAdmin><AdminProductSettings /></RequireAdmin>} />
