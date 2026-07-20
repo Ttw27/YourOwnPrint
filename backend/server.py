@@ -638,6 +638,17 @@ class CheckoutStatusOut(BaseModel):
 
 
 # ---------- Reviews ----------
+# A review about the shop as a whole rather than one garment. Reserved product
+# id, so a store review is just a review with a special product_id and needs no
+# separate collection or code path.
+STORE_REVIEW_ID = "store"
+
+# Reviews written before moderation existed have no `approved` field at all, so
+# the test is "not explicitly rejected" rather than "explicitly approved" —
+# otherwise every historic review would vanish the moment this deployed.
+APPROVED_ONLY = {"approved": {"$ne": False}}
+
+
 class ReviewCreate(BaseModel):
     product_id: str
     reviewer_name: str
@@ -659,6 +670,7 @@ class ReviewOut(BaseModel):
     photos: List[str] = []
     verified: bool = False
     source: str = "native"  # 'native' | 'judgeme'
+    approved: bool = True  # defaults True so pre-moderation records serialise fine
     created_at: str
 
 
@@ -1485,7 +1497,7 @@ async def price_cart(payload: CartCheckoutRequest):
 
 @api_router.post("/reviews", response_model=ReviewOut)
 async def create_review(payload: ReviewCreate):
-    if payload.product_id not in PRODUCTS:
+    if payload.product_id != STORE_REVIEW_ID and payload.product_id not in PRODUCTS:
         raise HTTPException(400, "Unknown product_id")
     if payload.rating < 1 or payload.rating > 5:
         raise HTTPException(400, "Rating must be 1-5")
@@ -1504,6 +1516,9 @@ async def create_review(payload: ReviewCreate):
         "photos": photos,
         "verified": False,
         "source": "native",
+        # Held back until approved in /admin/reviews. Anything customer-submitted
+        # is a spam vector, so nothing goes live on the say-so of the submitter.
+        "approved": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.reviews.insert_one(doc)
@@ -1512,9 +1527,9 @@ async def create_review(payload: ReviewCreate):
 
 @api_router.get("/reviews/product/{product_id}")
 async def list_product_reviews(product_id: str, limit: int = 50):
-    if product_id not in PRODUCTS:
+    if product_id != STORE_REVIEW_ID and product_id not in PRODUCTS:
         raise HTTPException(404, "Unknown product")
-    cursor = db.reviews.find({"product_id": product_id}).sort("created_at", -1).limit(limit)
+    cursor = db.reviews.find({"product_id": product_id, **APPROVED_ONLY}).sort("created_at", -1).limit(limit)
     items = []
     total = 0
     rating_sum = 0
@@ -1529,6 +1544,7 @@ async def list_product_reviews(product_id: str, limit: int = 50):
 @api_router.get("/reviews/aggregate")
 async def reviews_aggregate():
     pipeline = [
+        {"$match": APPROVED_ONLY},
         {"$group": {"_id": "$product_id", "avg": {"$avg": "$rating"}, "count": {"$sum": 1}}}
     ]
     out = {}
@@ -1539,11 +1555,29 @@ async def reviews_aggregate():
 
 @api_router.get("/reviews/recent")
 async def recent_reviews(limit: int = 12):
-    cursor = db.reviews.find({}).sort("created_at", -1).limit(limit)
+    cursor = db.reviews.find(APPROVED_ONLY).sort("created_at", -1).limit(limit)
     items = []
     async for r in cursor:
         items.append({k: r.get(k) for k in ReviewOut.model_fields.keys()})
     return items
+
+
+@api_router.get("/reviews/store")
+async def store_reviews(limit: int = 50):
+    """Reviews about the shop as a whole rather than a specific garment."""
+    cursor = db.reviews.find({"product_id": STORE_REVIEW_ID, **APPROVED_ONLY}).sort("created_at", -1).limit(limit)
+    items = []
+    total = 0
+    rating_sum = 0
+    async for r in cursor:
+        items.append({k: r.get(k) for k in ReviewOut.model_fields.keys()})
+        total += 1
+        rating_sum += int(r.get("rating", 0))
+    return {
+        "average": round(rating_sum / total, 2) if total else 0,
+        "count": total,
+        "reviews": items,
+    }
 
 
 @api_router.post("/reviews/import-judgeme", dependencies=[Depends(require_admin)])
@@ -1590,6 +1624,8 @@ async def import_judgeme(payload: JudgeMeImportRequest):
             "photos": photos,
             "verified": True,
             "source": "judgeme",
+            # Already public on the old Shopify store, so no point re-moderating.
+            "approved": True,
             "created_at": created,
             "judgeme_id": r.get("id") or r.get("review_id"),
         }
