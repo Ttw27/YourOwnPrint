@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversBespoke } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
+import SiteImage from "../components/bold/SiteImage";
 import { Sparkles, GraduationCap, Users, CalendarDays, Mail, Truck, ShieldCheck, Star, Package, ArrowRight, ChevronLeft, ChevronRight, Brush } from "lucide-react";
 import { toast } from "sonner";
 
@@ -71,7 +72,7 @@ export default function LeaversHoodies() {
           </div>
           <div className="relative">
             <div className="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl">
-              <img src={copy.hero_image} alt="" className="w-full h-full object-cover" data-testid="leavers-hero-image" />
+              <SiteImage src={copy.hero_image} className="w-full h-full object-cover" testid="leavers-hero-image" />
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ import PricePromise from "../components/bold/PricePromise";
 import { SECTORS, REVIEWS as STATIC_REVIEWS, RATING } from "../lib/data";
 import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews, fetchBestSellers } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
+import SiteImage from "../components/bold/SiteImage";
 import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera } from "lucide-react";
 
 export default function Home() {
@@ -67,7 +68,7 @@ export default function Home() {
           </div>
           <div className="relative">
             <div className="aspect-square rounded-[2rem] overflow-hidden shadow-2xl rotate-2">
-              <img src={copy.hero_image} alt="" className="w-full h-full object-cover" />
+              <SiteImage src={copy.hero_image} className="w-full h-full object-cover" testid="home-hero-image" />
             </div>
             <div className="absolute -bottom-4 -left-6 bg-white rounded-2xl shadow-lg p-4 border border-[#e5e7eb] -rotate-3">
               <div className="flex items-center gap-2"><Heart className="text-rose-500" size={18} fill="currentColor" /><div className="font-nunito font-extrabold">404+ happy customers</div></div>
@@ -119,7 +120,7 @@ export default function Home() {
             const accent = accents[i % accents.length];
             return (
               <Link key={s.name} to="/workwear" data-testid={`home-sector-${i}`} className="group relative aspect-[4/5] rounded-2xl overflow-hidden" style={{ boxShadow: `inset 0 0 0 3px ${accent}` }}>
-                <img src={sectorImage(s)} alt={s.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <SiteImage src={sectorImage(s)} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" testid={`home-sector-image-${i}`} />
                 <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4">
                   <div className="w-8 h-1 rounded-full mb-1.5" style={{ background: accent }} />

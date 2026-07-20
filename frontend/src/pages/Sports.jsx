@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayou
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
+import SiteImage from "../components/bold/SiteImage";
 import { Trophy, Users, Zap, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
@@ -81,7 +82,7 @@ export default function Sports() {
           </div>
           <div className="relative">
             <div className="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl">
-              <img src={copy.hero_image} alt="" className="w-full h-full object-cover" data-testid="sports-hero-image" />
+              <SiteImage src={copy.hero_image} className="w-full h-full object-cover" testid="sports-hero-image" />
             </div>
           </div>
         </div>

@@ -56,6 +56,7 @@ const ADMIN_NAV_GROUPS = [
     links: [
       ["Orders", "/admin/orders"],
       ["Enquiries", "/admin/enquiries"],
+      ["Reviews", "/admin/reviews"],
       ["Q&A", "/admin/qa"],
     ],
   },

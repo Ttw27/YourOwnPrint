@@ -6,6 +6,7 @@ import { fetchIndustry, fetchReviewsAggregate } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, X, ChevronDown, SlidersHorizontal } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import { useSiteImages } from "../hooks/usePageCopy";
+import SiteImage from "../components/bold/SiteImage";
 
 /**
  * /industries/:slug — Industry landing page (Construction & Trades, Hospitality, etc.)
@@ -96,7 +97,7 @@ export default function IndustryDetail() {
     <div className="bg-white min-h-screen text-[#1a1a1a] font-nunito" data-testid={`industry-detail-${slug}`}>
       <BoldNavbar />
       <header className="relative overflow-hidden bg-[#1a1a1a] text-white">
-        {heroPhoto && <div className="absolute inset-0 opacity-25"><img src={heroPhoto} alt="" className="w-full h-full object-cover" data-testid="industry-hero-image" /></div>}
+        {heroPhoto && <div className="absolute inset-0 opacity-25"><SiteImage src={heroPhoto} className="w-full h-full object-cover" testid="industry-hero-image" placeholderClassName="bg-transparent" /></div>}
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/85 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <Link to="/industries" className="text-xs text-[#7bc67e] hover:underline" data-testid="industry-back">← All industries</Link>

@@ -5,6 +5,7 @@ import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchSportsTeam } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2 } from "lucide-react";
 import { useSiteImages } from "../hooks/usePageCopy";
+import SiteImage from "../components/bold/SiteImage";
 
 export default function SportsTeamDetail() {
   const { slug } = useParams();
@@ -80,7 +81,7 @@ export default function SportsTeamDetail() {
       {/* Hero */}
       <header className="relative overflow-hidden bg-[#1a1a1a] text-white">
         <div className="absolute inset-0 opacity-30">
-          <img src={site.image(`sportsteam:${data.slug || slug}`, data.hero_image)} alt="" className="w-full h-full object-cover" data-testid="sports-team-hero-image" />
+          <SiteImage src={site.image(`sportsteam:${data.slug || slug}`, data.hero_image)} className="w-full h-full object-cover" testid="sports-team-hero-image" placeholderClassName="bg-transparent" />
         </div>
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/85 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-6 py-20 lg:py-24">
