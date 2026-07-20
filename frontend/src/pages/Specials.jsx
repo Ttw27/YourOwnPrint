@@ -5,14 +5,19 @@ import PricePromise from "../components/bold/PricePromise";
 import { fetchSpecialsProducts } from "../lib/api";
 import { GENDER_FITS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
-import { Sparkles, CheckCircle2, ShieldCheck, ArrowRight, Briefcase, Zap, Tag } from "lucide-react";
+import { Sparkles, CheckCircle2, ShieldCheck, ArrowRight, Briefcase, Zap, Tag, ChevronLeft, ChevronRight } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+
+// Divides evenly by 2 and 3 — the grid is 2-up on mobile, 3-up from lg — so no
+// page ends with an orphan card on a row of its own.
+const PAGE_SIZE = 24;
 
 export default function Specials() {
   usePageTitle("Specials");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [gender, setGender] = useState("all");
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     fetchSpecialsProducts().then(setProducts).catch(() => setProducts([])).finally(() => setLoading(false));
@@ -27,6 +32,24 @@ export default function Specials() {
     if (gender === "all") return products;
     return products.filter((p) => (p.gender_fit || "unisex") === gender);
   }, [products, gender]);
+
+  // Changing the fit filter can shorten the list past the current page, which
+  // would show an empty grid rather than "no matches".
+  useEffect(() => { setPage(0); }, [gender]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const visible = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
+  // Windowed, so a long lineup doesn't print a button per page.
+  const pageNumbers = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < totalPages; i++) {
+      if (i === 0 || i === totalPages - 1 || Math.abs(i - safePage) <= 2) out.push(i);
+      else if (out[out.length - 1] !== "gap") out.push("gap");
+    }
+    return out;
+  }, [totalPages, safePage]);
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen" data-testid="specials-page">
@@ -79,6 +102,12 @@ export default function Specials() {
         <h2 className="font-black text-3xl mb-2">The starter lineup</h2>
         <p className="text-[#4b5563] mb-6">Hand-picked staples that look smart with a single breast-logo print. Tap one to start your order.</p>
 
+        {!loading && filtered.length > 0 && (
+          <div className="text-xs text-[#4b5563] mb-2" data-testid="specials-count">
+            Showing {safePage * PAGE_SIZE + 1}&ndash;{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length} item{filtered.length === 1 ? "" : "s"}
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2 mb-6" data-testid="specials-gender-filter">
           <span className="text-xs uppercase tracking-[0.3em] text-[#4b5563] font-extrabold mr-2">Fit</span>
           {GENDER_FITS.map((g) => (
@@ -97,11 +126,12 @@ export default function Specials() {
           <div className="text-sm text-[#4b5563]">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-5 text-sm" data-testid="specials-empty">
-            No items match this fit. Try a different filter, or admin can flag products via <strong>Product settings → Specials-eligible</strong>.
+            Nothing in the lineup matches that fit just yet &mdash; try another one, or{" "}
+            <Link to="/shop" className="font-extrabold underline">browse the full range</Link>.
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" data-testid="specials-grid">
-            {filtered.map((p) => (
+            {visible.map((p) => (
               <Link
                 key={p.id}
                 to={`/product/${p.id}`}
@@ -127,6 +157,47 @@ export default function Specials() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1.5 mt-8 flex-wrap" data-testid="specials-pagination">
+            <button
+              type="button"
+              onClick={() => setPage(Math.max(0, safePage - 1))}
+              disabled={safePage === 0}
+              className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 px-2 py-1.5"
+            >
+              <ChevronLeft size={15} /> Prev
+            </button>
+            {pageNumbers.map((n, i) =>
+              n === "gap" ? (
+                <span key={`gap-${i}`} className="px-1.5 text-[#4b5563]">&hellip;</span>
+              ) : (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setPage(n)}
+                  aria-current={n === safePage ? "page" : undefined}
+                  data-testid={`specials-page-${n + 1}`}
+                  className={`min-w-[36px] px-2.5 py-1.5 rounded-full text-sm font-extrabold transition-colors ${
+                    n === safePage
+                      ? "bg-[#7bc67e] text-[#1a1a1a]"
+                      : "border-2 border-[#dcfce7] hover:border-[#7bc67e] text-[#1a1a1a]"
+                  }`}
+                >
+                  {n + 1}
+                </button>
+              )
+            )}
+            <button
+              type="button"
+              onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
+              disabled={safePage + 1 >= totalPages}
+              className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 px-2 py-1.5"
+            >
+              Next <ChevronRight size={15} />
+            </button>
           </div>
         )}
       </section>

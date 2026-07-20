@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
-import { fetchPortfolio } from "../lib/api";
+import { fetchAllPortfolio } from "../lib/api";
 import { Loader2, Image as ImageIcon, ArrowRight } from "lucide-react";
 
 const PRETTY = {
@@ -27,7 +27,7 @@ export default function Portfolio() {
 
   useEffect(() => {
     setLoading(true);
-    fetchPortfolio()
+    fetchAllPortfolio()
       .then(setData)
       .catch(() => setData({ categories: [], items: [] }))
       .finally(() => setLoading(false));

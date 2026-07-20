@@ -126,7 +126,10 @@ export default function TeamsSchools() {
 
   useEffect(() => {
     Promise.all([
-      fetchPortfolio({ featured: true }).catch(() => ({ items: [] })),
+      // `featured_only` is the parameter the endpoint actually reads. This said
+      // `featured`, which FastAPI quietly ignored — so the strip was showing the
+      // first 8 photos in the gallery rather than the featured ones.
+      fetchPortfolio({ featured_only: true, limit: 8 }).catch(() => ({ items: [] })),
       fetchReviewsAggregate().catch(() => ({})),
     ]).then(([p, a]) => {
       setPortfolio((p?.items || []).slice(0, 8));
