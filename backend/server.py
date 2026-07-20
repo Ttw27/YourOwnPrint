@@ -6209,6 +6209,7 @@ import routers.designer_ai  # noqa: F401 — registers /designer/remove-bg, /des
 import routers.cms_page_copy  # noqa: F401 — registers /page-copy/*, /admin/page-copy/*
 import routers.configurator_addons  # noqa: F401 — registers /admin/full-squad/addons, /admin/sports-outfit/addons, /admin/configurator-settings
 import routers.customer_auth  # noqa: F401 — registers /customer/register, /customer/login, /customer/cart, /customer/orders, addresses, designs
+import routers.admin_reviews  # noqa: F401 — registers /admin/reviews list/edit/delete
 
 # Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
