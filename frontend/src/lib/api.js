@@ -402,8 +402,10 @@ export async function fetchSportsTeams() {
   const { data } = await api.get("/sports-teams");
   return data;
 }
-export async function fetchSportsTeam(slug) {
-  const { data } = await api.get(`/sports-teams/${slug}`);
+export async function fetchSportsTeam(slug, opts = {}) {
+  const { data } = await api.get(`/sports-teams/${slug}`, {
+    params: { limit: opts.limit ?? 12, offset: opts.offset ?? 0 },
+  });
   return data;
 }
 
