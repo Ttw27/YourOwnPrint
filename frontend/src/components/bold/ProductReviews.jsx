@@ -141,7 +141,7 @@ function ReviewCard({ r }) {
   );
 }
 
-function ReviewForm({ productId, productName, onDone }) {
+export function ReviewForm({ productId, productName, onDone }) {
   const [rating, setRating] = useState(5);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -196,7 +196,7 @@ function ReviewForm({ productId, productName, onDone }) {
         body: body.trim(),
         photos,
       });
-      toast.success("Thanks for your review! ⭐");
+      toast.success("Thanks! Your review will appear once we've checked it over. ⭐");
       onDone?.();
     } catch (e) {
       const msg = e?.response?.data?.detail || e.message;
