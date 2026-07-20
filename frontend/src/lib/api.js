@@ -127,6 +127,16 @@ export async function adminBulkDeleteReviews(ids) {
   return data;
 }
 
+export async function adminBulkApproveReviews(ids, approved = true) {
+  const { data } = await api.post("/admin/reviews/bulk-approve", { ids, approved });
+  return data;
+}
+
+export async function fetchStoreReviews(limit = 50) {
+  const { data } = await api.get("/reviews/store", { params: { limit } });
+  return data;
+}
+
 export async function adminDeleteReviewImport(source) {
   const { data } = await api.post("/admin/reviews/delete-import", null, { params: { source } });
   return data;
