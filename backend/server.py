@@ -4120,14 +4120,27 @@ def _parse_data_url(data_url: str, max_bytes: int = 8_000_000) -> Tuple[bytes, s
 
 
 @api_router.get("/portfolio")
-async def list_portfolio(category: Optional[str] = None, featured_only: bool = False, limit: int = 200):
+async def list_portfolio(category: Optional[str] = None, featured_only: bool = False,
+                         featured: bool = False, limit: int = 200, offset: int = 0):
     q: Dict = {"is_hidden": {"$ne": True}}
     if category and category != "all":
         q["category"] = category
-    if featured_only:
+    # `featured` is accepted as well as `featured_only` because a caller passing
+    # the shorter name got no error and no filtering — the request just quietly
+    # returned everything. Better to honour both than to fail silently again.
+    if featured_only or featured:
         q["featured"] = True
+    limit = max(1, min(int(limit or 200), 500))
+    offset = max(0, int(offset or 0))
+    total = await db.portfolio.count_documents(q)
     items: List[Dict] = []
-    async for d in db.portfolio.find(q).limit(limit):
+    # Sorted in the query, not just after the fact. Previously the limit was
+    # applied to Mongo's natural order and only the returned slice was sorted,
+    # so past the cap you got an arbitrary batch of photos rather than the first
+    # N by display order — reordering in the admin had no effect on which ones
+    # made the cut, only on how that arbitrary batch was arranged.
+    cursor = db.portfolio.find(q).sort([("display_order", 1), ("created_at", 1)]).skip(offset).limit(limit)
+    async for d in cursor:
         items.append({
             "id": d["id"], "title": d.get("title", ""),
             "category": d.get("category", "other"),
@@ -4138,8 +4151,17 @@ async def list_portfolio(category: Optional[str] = None, featured_only: bool = F
             "featured": bool(d.get("featured", False)),
             "created_at": d.get("created_at"),
         })
+    # Re-sorted here too: documents saved before display_order existed have no
+    # such field, and Mongo sorts a missing field ahead of every number whereas
+    # this treats it as 0, which is how the gallery has always looked.
     items.sort(key=lambda x: (x["display_order"], x["created_at"] or ""))
-    return {"categories": PORTFOLIO_CATEGORIES, "items": items}
+    return {
+        "categories": PORTFOLIO_CATEGORIES,
+        "items": items,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+    }
 
 
 @api_router.get("/portfolio/categories")
