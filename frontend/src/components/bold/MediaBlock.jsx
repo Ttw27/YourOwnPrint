@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 /**
  * Renders an admin-configured image OR short video at a chosen aspect ratio.
@@ -39,7 +39,12 @@ export default function MediaBlock({
   children,
   testid = "media-block",
 }) {
-  const url = media?.url?.trim();
+  // A dead photo/video link would otherwise render a broken-image icon inside
+  // the block. Falling back to `children` shows the same placeholder the block
+  // uses before anything has been set, which is the honest thing to show.
+  const [failed, setFailed] = useState(false);
+  const url = failed ? "" : media?.url?.trim();
+  useEffect(() => { setFailed(false); }, [media?.url]);
   const ratio = ratioOverride || media?.ratio || "1:1";
   const ratioClass = RATIO_CLASS[ratio] || RATIO_CLASS["1:1"];
 
@@ -73,6 +78,7 @@ export default function MediaBlock({
           playsInline     /* stops iOS forcing fullscreen */
           preload="metadata"
           className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
           data-testid={`${testid}-video`}
         />
       ) : (
@@ -81,6 +87,7 @@ export default function MediaBlock({
           alt=""
           loading="lazy"
           className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
           data-testid={`${testid}-image`}
         />
       )}

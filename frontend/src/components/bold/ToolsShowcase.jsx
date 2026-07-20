@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { TOOLS_SHOWCASE } from "../../lib/data";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useSiteImages } from "../../hooks/usePageCopy";
+import SiteImage from "./SiteImage";
 
 /**
  * Showcase strip for the 5 hero tools.
@@ -32,7 +33,7 @@ export default function ToolsShowcase({ variant = "full", title = "Tools to make
               className="group relative aspect-[4/5] rounded-2xl overflow-hidden border-2 border-[#dcfce7] hover:border-[#7bc67e] transition shadow-sm hover:shadow-md"
               data-testid={`tool-card-${t.key}`}
             >
-              <img src={tileImage(t)} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <SiteImage src={tileImage(t)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" testid={`tool-image-${t.key}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-3">
                 <div className="text-white font-nunito font-black text-sm leading-tight">{t.title}</div>
@@ -63,7 +64,7 @@ export default function ToolsShowcase({ variant = "full", title = "Tools to make
             style={{ background: t.colour }}
             data-testid={`tool-card-${t.key}`}
           >
-            <img src={tileImage(t)} alt={t.title} className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply group-hover:scale-105 transition-transform duration-500" />
+            <SiteImage src={tileImage(t)} className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply group-hover:scale-105 transition-transform duration-500" testid={`tool-image-${t.key}`} placeholderClassName="bg-transparent" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
             <div className="relative h-full flex flex-col justify-between p-5">
               <div>

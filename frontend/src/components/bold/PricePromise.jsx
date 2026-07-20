@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { BadgeCheck, HandshakeIcon, ArrowRight } from "lucide-react";
 import { useSiteImages } from "../../hooks/usePageCopy";
+import SiteImage from "./SiteImage";
 
 /**
  * PricePromise — confident, warm price-match band.
@@ -101,7 +102,7 @@ export default function PricePromise({ variant = "hero" }) {
         <div className="lg:col-span-5">
           <div className="relative">
             <div className="aspect-square rounded-[2rem] overflow-hidden border-4 border-[#7bc67e]">
-              <img src={photo} alt="UK team helping a customer" className="w-full h-full object-cover" data-testid="price-promise-photo" />
+              <SiteImage src={photo} className="w-full h-full object-cover" testid="price-promise-photo" placeholderClassName="bg-[#2a2a2a]" />
             </div>
             <div className="absolute -bottom-5 -left-5 bg-[#7bc67e] text-[#1a1a1a] rounded-2xl p-5 shadow-xl max-w-[220px]">
               <div className="font-nunito font-black text-2xl leading-tight">"We'll beat it."</div>

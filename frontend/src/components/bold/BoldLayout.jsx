@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NAV_MENU } from "../../lib/data";
@@ -17,6 +17,11 @@ export function BoldNavbar() {
   const searchInputRef = useRef(null);
   const [menu, setMenu] = useState(NAV_MENU);
   const rootRef = useRef(null);
+  // The mega-menu panel is centred on its trigger. "Shop" sits near the left of
+  // the bar, so on a narrower desktop window a 760px panel centred on it runs
+  // off the left edge of the screen. This nudges it back inside the viewport.
+  const panelRef = useRef(null);
+  const [panelShift, setPanelShift] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -56,6 +61,28 @@ export function BoldNavbar() {
     setSearchQuery("");
   }
 
+  // Runs before paint, so the panel never appears in the wrong place first.
+  useLayoutEffect(() => {
+    if (!openKey) { setPanelShift(0); return; }
+    const measure = () => {
+      const el = panelRef.current;
+      if (!el) return;
+      const margin = 12;
+      const rect = el.getBoundingClientRect();
+      // Undo the shift already applied so we always measure the natural position.
+      const left = rect.left - panelShift;
+      const right = rect.right - panelShift;
+      let next = 0;
+      if (left < margin) next = margin - left;
+      else if (right > window.innerWidth - margin) next = Math.min(0, window.innerWidth - margin - right);
+      next = Math.round(next);
+      if (next !== panelShift) setPanelShift(next);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [openKey, panelShift]);
+
   return (
     <nav ref={rootRef} className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb]" data-testid="bold-navbar">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -89,8 +116,15 @@ export function BoldNavbar() {
                 </button>
                 {isOpen && (
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 top-full mt-3 bg-white rounded-3xl shadow-2xl border border-[#dcfce7] p-8 grid gap-8"
-                    style={{ gridTemplateColumns: item.columns.length === 1 ? "1fr" : `repeat(${item.columns.length}, minmax(190px, 1fr))`, minWidth: item.columns.length >= 3 ? 760 : (item.columns.length === 2 ? 560 : 320) }}
+                    ref={panelRef}
+                    className="absolute left-1/2 top-full mt-3 bg-white rounded-3xl shadow-2xl border border-[#dcfce7] p-6 sm:p-8 grid gap-6 sm:gap-8"
+                    style={{
+                      gridTemplateColumns: item.columns.length === 1 ? "1fr" : `repeat(${item.columns.length}, minmax(160px, 1fr))`,
+                      // `width` rather than `minWidth`: a min-width beats a max-width in
+                      // CSS, so a min-width panel stays too wide to fit a narrow window.
+                      width: `min(${item.columns.length >= 3 ? 760 : (item.columns.length === 2 ? 560 : 320)}px, calc(100vw - 24px))`,
+                      transform: `translateX(calc(-50% + ${panelShift}px))`,
+                    }}
                     data-testid={`nav-${item.key}-panel`}
                   >
                     {item.columns.map((col, i) => (
