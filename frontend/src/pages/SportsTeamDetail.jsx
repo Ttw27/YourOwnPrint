@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchSportsTeam } from "../lib/api";
-import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2 } from "lucide-react";
+import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
+
+// 12 fills the 2 / 3 / 4-column grid evenly at every breakpoint, so no page
+// ends with an orphan on a row of its own.
+const PAGE_SIZE = 12;
 
 export default function SportsTeamDetail() {
   const { slug } = useParams();
@@ -16,11 +20,31 @@ export default function SportsTeamDetail() {
   // /admin/page-copy → "Pictures used across the whole site".
   const site = useSiteImages();
 
+  const [page, setPage] = useState(0);
+
   const load = () => {
     setLoading(true); setErr(false);
-    fetchSportsTeam(slug).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
+    fetchSportsTeam(slug, { limit: PAGE_SIZE, offset: page * PAGE_SIZE })
+      .then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
   };
-  useEffect(load, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [slug, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Switching landing page has to reset the page number, or arriving on Gyms
+  // from page 3 of Football shows an empty grid.
+  useEffect(() => { setPage(0); }, [slug]);
+
+  const totalProducts = data?.total ?? (data?.products?.length || 0);
+  const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
+
+  // Windowed page numbers, so a long catalogue doesn't print 30 buttons.
+  const pageNumbers = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < totalPages; i++) {
+      if (i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 2) out.push(i);
+      else if (out[out.length - 1] !== "gap") out.push("gap");
+    }
+    return out;
+  }, [totalPages, page]);
 
   // SEO: dynamic title + meta description + FAQ schema
   useEffect(() => {
@@ -131,7 +155,14 @@ export default function SportsTeamDetail() {
       {/* Products grid */}
       {data.products?.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 pb-12">
-          <h2 className="text-2xl font-black mb-5">Shop the lineup</h2>
+          <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+            <h2 className="text-2xl font-black">Shop the lineup</h2>
+            {totalProducts > 0 && (
+              <span className="text-xs text-[#4b5563]" data-testid="sports-team-product-count">
+                Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, totalProducts)} of {totalProducts}
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" data-testid="sports-team-products">
             {data.products.map((p) => (
               <Link
@@ -141,7 +172,7 @@ export default function SportsTeamDetail() {
                 data-testid={`sports-team-product-${p.id}`}
               >
                 <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                  <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                  <SiteImage src={p.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" testid={`sports-team-product-image-${p.id}`} />
                 </div>
                 <div className="p-4">
                   <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#7bc67e]">{p.category}</div>
@@ -154,6 +185,47 @@ export default function SportsTeamDetail() {
               </Link>
             ))}
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1.5 mt-8 flex-wrap" data-testid="sports-team-pagination">
+              <button
+                type="button"
+                onClick={() => setPage((n) => Math.max(0, n - 1))}
+                disabled={page === 0}
+                className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 px-2 py-1.5"
+              >
+                <ChevronLeft size={15} /> Prev
+              </button>
+              {pageNumbers.map((n, i) =>
+                n === "gap" ? (
+                  <span key={`gap-${i}`} className="px-1.5 text-[#4b5563]">&hellip;</span>
+                ) : (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPage(n)}
+                    aria-current={n === page ? "page" : undefined}
+                    data-testid={`sports-team-page-${n + 1}`}
+                    className={`min-w-[36px] px-2.5 py-1.5 rounded-full text-sm font-extrabold transition-colors ${
+                      n === page
+                        ? "bg-[#7bc67e] text-[#1a1a1a]"
+                        : "border-2 border-[#dcfce7] hover:border-[#7bc67e] text-[#1a1a1a]"
+                    }`}
+                  >
+                    {n + 1}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                onClick={() => setPage((n) => Math.min(totalPages - 1, n + 1))}
+                disabled={page + 1 >= totalPages}
+                className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 px-2 py-1.5"
+              >
+                Next <ChevronRight size={15} />
+              </button>
+            </div>
+          )}
         </section>
       )}
 
