@@ -101,6 +101,37 @@ export async function importJudgeMe(payload) {
   return data;
 }
 
+// ---- Admin: view / edit / delete reviews ----
+export async function adminFetchReviews(params = {}) {
+  const { data } = await api.get("/admin/reviews", { params });
+  return data;
+}
+
+export async function adminFetchReviewStats() {
+  const { data } = await api.get("/admin/reviews/stats");
+  return data;
+}
+
+export async function adminUpdateReview(id, payload) {
+  const { data } = await api.patch(`/admin/reviews/${id}`, payload);
+  return data;
+}
+
+export async function adminDeleteReview(id) {
+  const { data } = await api.delete(`/admin/reviews/${id}`);
+  return data;
+}
+
+export async function adminBulkDeleteReviews(ids) {
+  const { data } = await api.post("/admin/reviews/bulk-delete", { ids });
+  return data;
+}
+
+export async function adminDeleteReviewImport(source) {
+  const { data } = await api.post("/admin/reviews/delete-import", null, { params: { source } });
+  return data;
+}
+
 export async function fetchPlacements() {
   const { data } = await api.get("/placements");
   return data;
