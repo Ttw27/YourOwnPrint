@@ -414,6 +414,31 @@ export async function fetchPortfolio(params = {}) {
   const { data } = await api.get("/portfolio", { params });
   return data;
 }
+
+/**
+ * Every visible portfolio photo, following pagination to the end.
+ *
+ * The gallery filters by category in the browser, so it needs the whole set —
+ * a server-side page would leave the category chips showing counts for
+ * whatever happened to load. The endpoint caps a single response at 500, so
+ * this walks the pages, bounded so a runaway total can't spin forever.
+ */
+export async function fetchAllPortfolio(params = {}) {
+  const PAGE = 500;
+  const MAX_REQUESTS = 6;
+  const first = await fetchPortfolio({ ...params, limit: PAGE, offset: 0 });
+  const items = [...(first.items || [])];
+  const total = first.total ?? items.length;
+  let requests = 1;
+  while (items.length < total && requests < MAX_REQUESTS) {
+    const next = await fetchPortfolio({ ...params, limit: PAGE, offset: items.length });
+    const batch = next.items || [];
+    if (batch.length === 0) break;  // nothing more coming — don't loop on an empty page
+    items.push(...batch);
+    requests += 1;
+  }
+  return { ...first, items, total };
+}
 export async function fetchPortfolioCategories() {
   const { data } = await api.get("/portfolio/categories");
   return data;
