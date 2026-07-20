@@ -29,12 +29,18 @@ class ReviewPatch(BaseModel):
     body: Optional[str] = Field(default=None, max_length=2000)
     photos: Optional[List[str]] = None
     verified: Optional[bool] = None
+    approved: Optional[bool] = None
     product_id: Optional[str] = Field(default=None, max_length=120)
     created_at: Optional[str] = Field(default=None, max_length=40)
 
 
 class BulkDeleteRequest(BaseModel):
     ids: List[str] = Field(default_factory=list)
+
+
+class BulkApproveRequest(BaseModel):
+    ids: List[str] = Field(default_factory=list)
+    approved: bool = True
 
 
 def _clean(doc: Dict) -> Dict:
@@ -50,6 +56,7 @@ async def admin_list_reviews(
     rating: Optional[int] = Query(default=None, ge=1, le=5),
     search: Optional[str] = None,
     has_photos: Optional[bool] = None,
+    approved: Optional[bool] = None,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ):
@@ -62,6 +69,11 @@ async def admin_list_reviews(
         q["source"] = source
     if rating:
         q["rating"] = int(rating)
+    if approved is True:
+        # Pre-moderation records have no `approved` field; treat them as live.
+        q["approved"] = {"$ne": False}
+    elif approved is False:
+        q["approved"] = False
     if has_photos is True:
         q["photos"] = {"$exists": True, "$ne": []}
     elif has_photos is False:
@@ -93,7 +105,11 @@ async def admin_review_stats():
     async for doc in db.reviews.aggregate([{"$group": {"_id": "$rating", "n": {"$sum": 1}}}]):
         by_rating[str(doc["_id"])] = doc["n"]
     with_photos = await db.reviews.count_documents({"photos": {"$exists": True, "$ne": []}})
-    return {"total": total, "by_source": by_source, "by_rating": by_rating, "with_photos": with_photos}
+    pending = await db.reviews.count_documents({"approved": False})
+    return {
+        "total": total, "by_source": by_source, "by_rating": by_rating,
+        "with_photos": with_photos, "pending": pending,
+    }
 
 
 @api_router.patch("/admin/reviews/{review_id}", dependencies=[Depends(require_admin)])
@@ -102,6 +118,9 @@ async def admin_update_review(review_id: str, payload: ReviewPatch):
     if not existing:
         raise HTTPException(404, "Review not found")
 
+    # exclude_unset keeps fields the caller didn't send out of the update, and the
+    # None check drops explicit nulls. False is preserved — un-approving a review
+    # must actually write False rather than be treated as "no change".
     updates = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
         raise HTTPException(400, "Nothing to update")
@@ -147,6 +166,22 @@ async def admin_bulk_delete_reviews(payload: BulkDeleteRequest):
         raise HTTPException(400, "Too many at once — 500 max per request")
     res = await db.reviews.delete_many({"id": {"$in": ids}})
     return {"deleted": res.deleted_count, "requested": len(ids)}
+
+
+@api_router.post("/admin/reviews/bulk-approve", dependencies=[Depends(require_admin)])
+async def admin_bulk_approve_reviews(payload: BulkApproveRequest):
+    """Approve or hide several reviews at once. Approving is the common case —
+    a batch of genuine reviews shouldn't need one click each."""
+    ids = [i for i in (payload.ids or []) if isinstance(i, str) and i.strip()]
+    if not ids:
+        raise HTTPException(400, "No review ids supplied")
+    if len(ids) > 500:
+        raise HTTPException(400, "Too many at once — 500 max per request")
+    res = await db.reviews.update_many(
+        {"id": {"$in": ids}},
+        {"$set": {"approved": bool(payload.approved), "edited_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"updated": res.modified_count, "requested": len(ids), "approved": bool(payload.approved)}
 
 
 @api_router.post("/admin/reviews/delete-import", dependencies=[Depends(require_admin)])
