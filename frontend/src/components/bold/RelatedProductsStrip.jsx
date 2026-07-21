@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import PriceTag from "./PriceTag";
 
 /**
  * Generic related-products strip — used by both "Customers also bought" and "Match with".
@@ -36,7 +37,7 @@ export default function RelatedProductsStrip({ productId, title, subtitle, fetch
               <img src={p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition" />
             </div>
             <div className="font-nunito font-extrabold text-sm leading-tight line-clamp-2">{p.name}</div>
-            <div className="text-xs font-nunito font-extrabold mt-1" style={{ color: accentColor }}>From £{p.price.toFixed(2)}</div>
+            <PriceTag product={p} inline size="sm" prefix="From" className="text-xs font-nunito font-extrabold mt-1 block" testid={`price-${p.id}`} />
           </Link>
         ))}
       </div>
