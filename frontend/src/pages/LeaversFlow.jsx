@@ -179,7 +179,7 @@ export default function LeaversStart() {
                   data-testid={`ls-garment-${p.id}`}
                 >
                   <div className="aspect-square overflow-hidden bg-[#f0fdf4] relative">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    <img src={p.image} alt={p.name} className="w-full h-full object-contain" />
                     {productId === p.id && (
                       <div className="absolute top-2 right-2 bg-[#7bc67e] text-[#1a1a1a] rounded-full p-1"><CheckCircle2 size={16} /></div>
                     )}
@@ -605,7 +605,7 @@ function DrawstringBagCard({ bag, price, checked, onToggle }) {
       <label className="flex flex-col sm:flex-row cursor-pointer">
         {bag && (
           <div className="sm:w-44 sm:flex-shrink-0 aspect-[4/3] sm:aspect-square overflow-hidden bg-white">
-            <img src={bag.image} alt="Matching printed drawstring bag" className="w-full h-full object-cover" data-testid="ls-bag-image" />
+            <img src={bag.image} alt="Matching printed drawstring bag" className="w-full h-full object-contain" data-testid="ls-bag-image" />
           </div>
         )}
         <div className="p-4 flex-1 flex flex-col gap-2">

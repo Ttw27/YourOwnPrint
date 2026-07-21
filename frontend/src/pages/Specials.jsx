@@ -7,6 +7,7 @@ import { GENDER_FITS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
 import { Sparkles, CheckCircle2, ShieldCheck, ArrowRight, Briefcase, Zap, Tag, ChevronLeft, ChevronRight } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import PriceTag from "../components/bold/PriceTag";
 
 // Divides evenly by 2 and 3 — the grid is 2-up on mobile, 3-up from lg — so no
 // page ends with an orphan card on a row of its own.
@@ -147,7 +148,7 @@ export default function Specials() {
                   <div className="mt-3 flex items-baseline justify-between gap-2">
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.2em] text-[#7bc67e] font-extrabold">From</div>
-                      <div className="text-2xl font-black text-[#1a1a1a] leading-none">£{p.price.toFixed(2)}</div>
+                      <PriceTag product={p} size="md" testid={`price-${p.id}`} />
                     </div>
                     <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">Pick this <ArrowRight size={14} /></span>
                   </div>

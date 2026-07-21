@@ -5,6 +5,7 @@ import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchSportsTeam } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2, ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
 import FacetBlock from "../components/bold/FacetBlock";
+import PriceTag from "../components/bold/PriceTag";
 import { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 
@@ -320,13 +321,13 @@ export default function SportsTeamDetail() {
                 data-testid={`sports-team-product-${p.id}`}
               >
                 <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                  <SiteImage src={p.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" testid={`sports-team-product-image-${p.id}`} />
+                  <SiteImage src={p.image} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" loading="lazy" testid={`sports-team-product-image-${p.id}`} />
                 </div>
                 <div className="p-4">
                   <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#7bc67e]">{p.category}</div>
                   <div className="font-extrabold text-base mt-0.5">{p.name}</div>
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
+                  <div className="mt-2 flex items-end justify-between gap-2">
+                    <PriceTag product={p} size="sm" testid={`price-${p.id}`} />
                     <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">View <ArrowRight size={12} /></span>
                   </div>
                 </div>

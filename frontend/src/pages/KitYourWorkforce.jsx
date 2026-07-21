@@ -197,7 +197,7 @@ export default function KitYourWorkforce() {
                         data-testid={`workforce-add-${p.id}`}
                         aria-expanded={isOpen}
                       >
-                        <img src={p.image} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                        <img src={p.image} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="font-extrabold text-sm truncate">{p.name}</div>
                           <div className="text-xs text-[#4b5563]">From £{p.price.toFixed(2)} · {p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
@@ -313,7 +313,7 @@ export default function KitYourWorkforce() {
                   if (!p) return null;
                   const canBack = (p.allowed_placements || []).includes("back-print");
                   return (
-                    <div key={r.uid} className="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 flex flex-wrap items-center gap-3" data-testid={`workforce-row-${r.uid}`}>                      <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                    <div key={r.uid} className="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 flex flex-wrap items-center gap-3" data-testid={`workforce-row-${r.uid}`}>                      <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-contain bg-white" />
                       <div className="flex-1 min-w-[140px]">
                         <div className="font-extrabold text-sm">{p.name}</div>
                         <div className="text-[11px] text-[#4b5563]">Breast logo included free</div>

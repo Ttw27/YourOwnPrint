@@ -7,6 +7,7 @@ import usePageCopy from "../hooks/usePageCopy";
 import { ArrowRight, ChevronDown, Loader2, SlidersHorizontal } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import FacetBlock from "../components/bold/FacetBlock";
+import PriceTag from "../components/bold/PriceTag";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], price_min: "", price_max: "" };
@@ -221,8 +222,8 @@ export default function Workwear() {
                             <span className="text-[10px] text-[#4b5563]">{agg.count} review{agg.count === 1 ? "" : "s"}</span>
                           </div>
                         )}
-                        <div className="mt-2 flex items-baseline justify-between">
-                          <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
+                        <div className="mt-2 flex items-end justify-between gap-2">
+                          <PriceTag product={p} size="sm" testid={`price-${p.id}`} />
                           <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">View <ArrowRight size={12} /></span>
                         </div>
                       </div>

@@ -6,6 +6,7 @@ import { fetchIndustry, fetchReviewsAggregate } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, X, ChevronDown, SlidersHorizontal } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import FacetBlock from "../components/bold/FacetBlock";
+import PriceTag from "../components/bold/PriceTag";
 import { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 
@@ -236,8 +237,8 @@ export default function IndustryDetail() {
                             <span className="text-[10px] text-[#4b5563]">{agg.count} review{agg.count === 1 ? "" : "s"}</span>
                           </div>
                         )}
-                        <div className="mt-2 flex items-baseline justify-between">
-                          <div className="text-xl font-black">£{p.price.toFixed(2)}</div>
+                        <div className="mt-2 flex items-end justify-between gap-2">
+                          <PriceTag product={p} size="sm" testid={`price-${p.id}`} />
                           <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">View <ArrowRight size={12} /></span>
                         </div>
                       </div>
