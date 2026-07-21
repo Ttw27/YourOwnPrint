@@ -6,6 +6,7 @@ import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { Trophy, Users, Zap, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import PriceTag from "../components/bold/PriceTag";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
@@ -134,7 +135,7 @@ export default function Sports() {
                       <div className="font-nunito font-bold">{p.name}</div>
                       <div className="text-xs text-[#4b5563] mt-1 line-clamp-2">{p.description}</div>
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-[#7bc67e] font-nunito font-extrabold text-xl">£{p.price.toFixed(2)}</span>
+                        <PriceTag product={p} size="sm" tone="brand" testid={`price-${p.id}`} />
                         {agg && <StarRating value={agg.average} size={12} />}
                       </div>
                     </div>

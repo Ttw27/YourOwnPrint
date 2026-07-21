@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { searchProducts } from "../lib/api";
 import { ArrowRight, Loader2, SearchX, ChevronLeft, ChevronRight } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import PriceTag from "../components/bold/PriceTag";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
@@ -69,7 +70,7 @@ export default function SearchResults() {
                       <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{p.category}</div>
                       <div className="font-nunito font-bold text-[#1a1a1a] mt-0.5">{p.name}</div>
                       <div className="mt-2 flex items-center justify-between">
-                        <span className="text-[#7bc67e] font-nunito font-extrabold text-xl">£{p.price.toFixed(2)}</span>
+                        <PriceTag product={p} size="sm" tone="brand" testid={`price-${p.id}`} />
                         <span className="text-xs inline-flex items-center gap-1 font-nunito font-bold text-[#1a1a1a]">View <ArrowRight size={12} /></span>
                       </div>
                     </div>

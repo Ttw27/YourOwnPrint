@@ -9,6 +9,7 @@ import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews, fetchBestSell
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera } from "lucide-react";
+import PriceTag from "../components/bold/PriceTag";
 
 export default function Home() {
   const [bestSellers, setBestSellers] = useState([]);
@@ -154,7 +155,7 @@ export default function Home() {
                   </div>
                   <div className="mt-3 font-nunito font-bold text-sm">{p.name}</div>
                   <div className="flex items-center justify-between mt-1">
-                    <div className="text-[#7bc67e] font-nunito font-extrabold text-lg">£{p.price.toFixed(2)}</div>
+                    <PriceTag product={p} size="sm" tone="brand" testid={`price-${p.id}`} />
                     {agg && <StarRating value={agg.average} size={12} />}
                   </div>
                 </Link>

@@ -7,6 +7,7 @@ import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { ArrowRight, Trophy, Users, MessageCircle, Sparkles, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import PriceTag from "../components/bold/PriceTag";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
@@ -121,7 +122,7 @@ export default function TeamKits() {
                       <div className="mt-4 flex items-baseline justify-between">
                         <div>
                           <div className="text-xs font-nunito font-bold text-[#4b5563]">from</div>
-                          <div className="text-[#7bc67e] font-nunito font-black text-3xl leading-tight">£{p.price.toFixed(2)}<span className="text-sm font-bold text-[#4b5563]"> /player</span></div>
+                          <PriceTag product={p} size="lg" tone="brand" suffix=" /player" testid={`price-${p.id}`} />
                         </div>
                         {agg && <StarRating value={agg.average} size={12} />}
                       </div>

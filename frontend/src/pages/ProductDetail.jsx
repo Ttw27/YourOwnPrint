@@ -15,6 +15,7 @@ import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, ShoppingBag, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import PriceTag from "../components/bold/PriceTag";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -225,8 +226,7 @@ export default function ProductDetail() {
                     <h1 data-testid="product-name" className="mt-2 font-nunito font-black text-3xl lg:text-4xl">{product.name}</h1>
                     <p className="text-[#4b5563] mt-2 text-sm">{product.description}</p>
                     <div className="mt-3">
-                      <span className="text-xs font-nunito font-bold text-[#4b5563]">from</span>
-                      <div className="text-[#7bc67e] font-nunito font-black text-4xl leading-tight">£{product.price.toFixed(2)}<span className="text-sm font-bold text-[#4b5563]"> /player</span></div>
+                      <PriceTag product={product} size="xl" tone="brand" prefix="from" suffix=" /player" testid="product-price-kit" />
                     </div>
                     {agg && <div className="mt-2"><StarRating value={agg.average} size={14} /> <span className="text-xs text-[#4b5563]">({agg.count} reviews)</span></div>}
                   </div>
@@ -267,7 +267,9 @@ export default function ProductDetail() {
                   </div>
                   <div className="mt-3 flex items-center gap-3 flex-wrap">
                     {agg ? <><StarRating value={agg.average} size={16} /><span className="text-sm text-[#4b5563]">{agg.average.toFixed(1)} ({agg.count} reviews)</span></> : <span className="text-sm text-[#4b5563]">No reviews yet</span>}
-                    <span className="text-xs font-nunito font-bold text-[#1a1a1a] bg-[#f0fdf4] px-2 py-1 rounded-full border border-[#dcfce7]">From £{product.price.toFixed(2)}</span>
+                    <span className="text-xs font-nunito font-bold text-[#1a1a1a] bg-[#f0fdf4] px-2 py-1 rounded-full border border-[#dcfce7]">
+                      <PriceTag product={product} inline size="sm" prefix="From" testid="product-price-badge" />
+                    </span>
                     {(product.size_guide_image || (product.size_guide_table || []).length > 0) && (
                       <button data-testid="open-size-guide" onClick={() => setShowSizeGuide(true)} className="text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline inline-flex items-center gap-1">📏 Size guide</button>
                     )}
@@ -456,7 +458,16 @@ export default function ProductDetail() {
                   )}
                   <div className="border-t border-white/10 mt-3 pt-3 flex items-baseline justify-between">
                     <span className="font-nunito font-extrabold">Total</span>
-                    <span data-testid="price-total" className="text-[#7bc67e] font-nunito font-black text-4xl">£{lineTotal.toFixed(2)}</span>
+                    <div className="text-right">
+                      <span data-testid="price-total" className="text-[#7bc67e] font-nunito font-black text-4xl">£{lineTotal.toFixed(2)}</span>
+                      {/* Derived from the same figures the cards use, so the
+                          basket and the product page can't disagree. */}
+                      <div className="text-[11px] text-white/60 mt-0.5" data-testid="price-total-vat">
+                        {product.vat_zero_rated
+                          ? "No VAT \u2014 children\u2019s clothing"
+                          : `\u00a3${(lineTotal / 1.2).toFixed(2)} ex. VAT`}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-5 grid sm:grid-cols-2 gap-2">
