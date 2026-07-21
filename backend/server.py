@@ -3313,6 +3313,9 @@ def _sports_team_keywords(s: Dict) -> List[str]:
 def _sports_team_products(s: Dict) -> List[Dict]:
     """Curated picks first, then the rest of the sports catalogue behind them.
 
+    Returns the full product records, not trimmed ones — the facet sidebar needs
+    colours, sizes and fit, which a cut-down dict wouldn't carry.
+
     The curated `product_ids` are hand-chosen and include bundles and
     configurator entries that no automatic rule would surface, so they stay
     pinned at the top. But on their own they were only ever 5-8 items, which
@@ -3323,15 +3326,11 @@ def _sports_team_products(s: Dict) -> List[Dict]:
     out: List[Dict] = []
     seen: set = set()
 
-    def add(p: Dict) -> None:
+    def add(p: Optional[Dict]) -> None:
         if not p or p.get("id") in seen:
             return
         seen.add(p["id"])
-        out.append({
-            "id": p["id"], "name": p["name"], "price": float(p.get("price") or 0),
-            "image": p.get("image") or "", "category": p.get("category") or "",
-            "description": p.get("description") or "",
-        })
+        out.append(p)
 
     for pid in s.get("product_ids", []):
         add(PRODUCTS.get(pid))
@@ -3357,19 +3356,81 @@ def _sports_team_products(s: Dict) -> List[Dict]:
 
 
 @api_router.get("/sports-teams/{slug}")
-async def get_sports_team(slug: str, limit: int = 12, offset: int = 0):
+async def get_sports_team(
+    slug: str,
+    gender_fit: Optional[str] = None,
+    colour: Optional[str] = None,
+    size: Optional[str] = None,
+    category: Optional[str] = None,
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+    limit: int = 12,
+    offset: int = 0,
+):
     s = next((i for i in SPORTS_TEAMS_CATALOGUE if i["slug"] == slug), None)
     if not s:
         raise HTTPException(404, "Sports landing not found")
     limit = max(1, min(int(limit or 12), 60))
     offset = max(0, int(offset or 0))
-    all_products = _sports_team_products(s)
+
+    all_prods = _sports_team_products(s)
+
+    # Facets describe the whole lineup, not the filtered view, so the counts
+    # beside each option don't collapse to zero as soon as one is ticked.
+    facets = _facets_from_products(all_prods)
+    category_counts: Dict[str, int] = {}
+    for p in all_prods:
+        category_counts[p.get("category") or ""] = category_counts.get(p.get("category") or "", 0) + 1
+    facets["category"] = [{"value": k, "count": v}
+                          for k, v in sorted(category_counts.items(), key=lambda kv: -kv[1]) if k]
+
+    colour_set = {c.strip() for c in (colour or "").split(",") if c.strip()}
+    size_set = {z.strip() for z in (size or "").split(",") if z.strip()}
+
+    def matches(p: Dict) -> bool:
+        if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
+            return False
+        if category and p.get("category") != category:
+            return False
+        if colour_set:
+            names = {(c.get("name") if isinstance(c, dict) else c) for c in _collect_variant_field(p, "colors")}
+            if not (colour_set & names):
+                return False
+        if size_set:
+            if not (size_set & set(_collect_variant_field(p, "sizes"))):
+                return False
+        try:
+            price = float(p.get("price") or 0)
+        except (TypeError, ValueError):
+            price = 0.0
+        if price_min is not None and price < price_min:
+            return False
+        if price_max is not None and price > price_max:
+            return False
+        return True
+
+    # Filtering preserves the curated-first order rather than re-sorting by
+    # price — the hand-picked bundles are meant to lead, filtered or not.
+    matched = [p for p in all_prods if matches(p)]
+    page = matched[offset:offset + limit]
+
+    products = [{
+        "id": p["id"], "name": p["name"], "price": float(p.get("price") or 0),
+        "image": p.get("image") or "", "category": p.get("category") or "",
+        "description": p.get("description") or "",
+        "gender_fit": p.get("gender_fit") or "unisex",
+        "colors": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("colors") or []) if isinstance(c, dict)][:40],
+    } for p in page]
+
     return {
         **s,
-        "products": all_products[offset:offset + limit],
-        "total": len(all_products),
+        "products": products,
+        "facets": facets,
+        "total": len(all_prods),
+        "matched_total": len(matched),
         "offset": offset,
         "limit": limit,
+        "returned": len(products),
     }
 
 
