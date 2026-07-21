@@ -4069,7 +4069,9 @@ async def list_qa(product_id: str):
     if product_id not in PRODUCTS:
         raise HTTPException(404, "Product not found")
     out = []
-    async for d in db.product_qa.find({"product_id": product_id}).sort("asked_at", -1):
+    # Only published questions. Anything typed into a public box is a spam
+    # vector, and this one posted straight onto the product page.
+    async for d in db.product_qa.find({"product_id": product_id, "approved": True}).sort("asked_at", -1):
         out.append({
             "id": d.get("id"),
             "product_id": d.get("product_id"),
@@ -4099,8 +4101,33 @@ async def create_qa(payload: QACreate):
         "asker_name": (payload.asker_name or "Customer").strip()[:60] or "Customer",
         "asked_at": datetime.now(timezone.utc).isoformat(),
         "answered_at": None,
+        # Held until published in /admin/qa. Existing questions have no such
+        # field; the admin migration below marks those already answered as
+        # published so nothing that was live disappears.
+        "approved": False,
     }
     await db.product_qa.insert_one(doc)
+
+    # Same Resend path quotes and orders already use. Wrapped because a mail
+    # outage must not turn into a failed submission for the customer.
+    try:
+        shop_to = await _shop_notification_recipient()
+        if shop_to:
+            product_name = PRODUCTS.get(doc["product_id"], {}).get("name", doc["product_id"])
+            await _send_email(
+                to=[shop_to],
+                subject=f"[Question] {product_name}",
+                html=(
+                    f"<p><strong>{doc['asker_name']}</strong> asked about "
+                    f"<strong>{product_name}</strong>:</p>"
+                    f"<blockquote>{doc['question']}</blockquote>"
+                    f"<p>Answer it in the admin under Orders &rarr; Q&amp;A. "
+                    f"It stays hidden from the site until you publish it.</p>"
+                ),
+            )
+    except Exception as e:
+        print(f"Q&A notification email failed: {e}")
+
     return {k: doc[k] for k in ("id", "product_id", "question", "answer", "asker_name", "asked_at", "answered_at")}
 
 
@@ -4111,11 +4138,25 @@ async def answer_qa(qa_id: str, payload: QAAnswer):
         raise HTTPException(400, "Answer cannot be empty")
     res = await db.product_qa.update_one(
         {"id": qa_id},
-        {"$set": {"answer": answer[:1000], "answered_at": datetime.now(timezone.utc).isoformat()}},
+        # Answering publishes it — a question you've bothered to reply to is one
+        # you've read, so a second click to approve would just be friction.
+        {"$set": {"answer": answer[:1000], "approved": True,
+                  "answered_at": datetime.now(timezone.utc).isoformat()}},
     )
     if res.matched_count == 0:
         raise HTTPException(404, "Q&A not found")
     return {"ok": True}
+
+
+@api_router.post("/admin/qa/{qa_id}/publish", dependencies=[Depends(require_admin)])
+async def publish_qa(qa_id: str, approved: bool = True):
+    """Show or hide a question without answering it — for a good question you
+    want visible while you dig out the answer, or a spam one you want gone from
+    the site immediately without losing the record."""
+    res = await db.product_qa.update_one({"id": qa_id}, {"$set": {"approved": bool(approved)}})
+    if res.matched_count == 0:
+        raise HTTPException(404, "Q&A not found")
+    return {"ok": True, "approved": bool(approved)}
 
 
 @api_router.delete("/admin/qa/{qa_id}", dependencies=[Depends(require_admin)])
@@ -4140,9 +4181,11 @@ async def admin_list_all_qa():
             "asker_name": d.get("asker_name") or "Customer",
             "asked_at": d.get("asked_at"),
             "answered_at": d.get("answered_at"),
+            "approved": bool(d.get("approved")),
         })
-    out.sort(key=lambda x: (x["answer"] is not None, x["asked_at"] or ""), reverse=True)
-    # unanswered first, then most-recent answered
+    # Unanswered first, then most-recent answered. There were two sort calls
+    # here doing the opposite of each other — the second won, so the output was
+    # right, but the first was dead code waiting to mislead whoever edited next.
     out.sort(key=lambda x: (x["answer"] is None, x["asked_at"] or ""), reverse=True)
     return out
 
@@ -5283,6 +5326,37 @@ async def _seed_specials_defaults():
         )
     except Exception as e:
         print(f"specials seed failed: {e}")
+
+
+@app.on_event("startup")
+async def _approve_existing_qa():
+    """One-time: mark every question that already exists as published.
+
+    Questions used to go live the moment they were submitted, so everything in
+    the collection is currently public. Filtering the product page on
+    `approved: True` without this would pull every existing question off the
+    site at once — including answered ones you'd written replies for.
+
+    Only new submissions go through moderation. Marker-guarded, no-op after
+    the first boot.
+    """
+    try:
+        marker = await db.settings.find_one({"key": "qa_approve_existing_v1"})
+        if marker is not None:
+            return
+        res = await db.product_qa.update_many(
+            {"approved": {"$exists": False}},
+            {"$set": {"approved": True}},
+        )
+        await db.settings.update_one(
+            {"key": "qa_approve_existing_v1"},
+            {"$set": {"key": "qa_approve_existing_v1", "published": res.modified_count,
+                      "ran_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+        print(f"Q&A: {res.modified_count} existing question(s) kept published")
+    except Exception as e:
+        print(f"Q&A approval migration failed: {e}")
 
 
 @app.on_event("startup")
