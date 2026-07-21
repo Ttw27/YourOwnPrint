@@ -3,9 +3,10 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NAV_MENU } from "../../lib/data";
 import { fetchNavigation } from "../../lib/api";
-import { Facebook, Instagram, Star, ChevronDown, Menu, X, Search } from "lucide-react";
+import { Facebook, Instagram, Youtube, Linkedin, Music2, Twitter, Star, ChevronDown, Menu, X, Search } from "lucide-react";
 import CartIcon from "../CartIcon";
 import AccountButton from "../AccountButton";
+import usePageCopy from "../../hooks/usePageCopy";
 
 export function BoldNavbar() {
   const { pathname } = useLocation();
@@ -252,19 +253,58 @@ export function BoldNavbar() {
   );
 }
 
+// The logo is dark artwork on a light background, so on the black footer it had
+// to sit in a white patch that read as a sticker stuck on the page. A wordmark
+// set in the brand colours belongs there instead — same identity, no box.
+const WORDMARK = [
+  ["YOUR", "#D85A30"], ["OWN", "#378ADD"], ["PRINT", "#7bc67e"],
+];
+
+// Only platforms with a link saved in the admin are rendered, so an unused one
+// never shows as a dead icon pointing at "#".
+const SOCIALS = [
+  { key: "facebook", label: "Facebook", Icon: Facebook },
+  { key: "instagram", label: "Instagram", Icon: Instagram },
+  { key: "tiktok", label: "TikTok", Icon: Music2 },
+  { key: "youtube", label: "YouTube", Icon: Youtube },
+  { key: "linkedin", label: "LinkedIn", Icon: Linkedin },
+  { key: "x", label: "X", Icon: Twitter },
+];
+
 export function BoldFooter() {
+  const footerCopy = usePageCopy("site-footer", {});
+  const extras = footerCopy.extras || {};
+  const links = SOCIALS.filter((sn) => (extras[sn.key] || "").trim());
+
   return (
     <footer className="bg-[#1a1a1a] text-white">
       <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-5 gap-8">
         <div>
-          <div className="inline-flex items-center bg-white/90 rounded-xl p-2">
-            <img src="/logo.png" alt="Your Own Print" className="h-9 w-auto" />
-          </div>
+          <Link to="/" className="inline-flex items-baseline font-nunito font-black text-2xl tracking-tight" aria-label="Your Own Print — home">
+            {WORDMARK.map(([text, colour]) => (
+              <span key={text} style={{ color: colour }}>{text}</span>
+            ))}
+            <span className="text-neutral-500 text-sm ml-1">.co.uk</span>
+          </Link>
           <p className="mt-3 text-sm text-neutral-300">Custom print & workwear, based in Leicester — delivering across the whole of the UK.</p>
-          <div className="flex gap-3 mt-4">
-            <a href="#" className="w-9 h-9 grid place-items-center rounded-full bg-white/10 hover:bg-[#7bc67e] hover:text-black transition-colors"><Facebook size={16} /></a>
-            <a href="#" className="w-9 h-9 grid place-items-center rounded-full bg-white/10 hover:bg-[#7bc67e] hover:text-black transition-colors"><Instagram size={16} /></a>
-          </div>
+          {links.length > 0 && (
+            <div className="flex gap-3 mt-4" data-testid="footer-socials">
+              {links.map(({ key, label, Icon }) => (
+                <a
+                  key={key}
+                  href={extras[key]}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  aria-label={label}
+                  title={label}
+                  data-testid={`footer-social-${key}`}
+                  className="w-9 h-9 grid place-items-center rounded-full bg-white/10 hover:bg-[#7bc67e] hover:text-black transition-colors"
+                >
+                  <Icon size={16} />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
         <FooterCol title="Shop" links={[["Workwear", "/workwear"], ["Teams & Schools", "/teams-schools"], ["Design Your Own", "/design"]]} />
         <FooterCol title="Help" links={[["Get a Quote", "/contact"], ["Contact", "/contact"], ["Reviews", "/reviews"]]} />
@@ -276,7 +316,21 @@ export function BoldFooter() {
           </div>
         </div>
       </div>
-      <div className="border-t border-white/10 py-5 text-center text-xs text-neutral-400">© {new Date().getFullYear()} Your Own Print</div>
+      <div className="border-t border-white/10 py-5 text-center text-xs text-neutral-400">
+        <div>© {new Date().getFullYear()} Your Own Print</div>
+        <div className="mt-1">
+          Site made by{" "}
+          <a
+            href="https://www.weavixstudio.com/"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-neutral-300 hover:text-[#7bc67e] underline underline-offset-2 transition-colors"
+            data-testid="footer-credit"
+          >
+            Weavix Studio
+          </a>
+        </div>
+      </div>
     </footer>
   );
 }
