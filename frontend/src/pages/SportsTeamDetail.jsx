@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchSportsTeam } from "../lib/api";
-import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2, ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
+import FacetBlock from "../components/bold/FacetBlock";
 import { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 
 // 12 fills the 2 / 3 / 4-column grid evenly at every breakpoint, so no page
 // ends with an orphan on a row of its own.
 const PAGE_SIZE = 12;
+const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids: "Kids" };
 
 export default function SportsTeamDetail() {
   const { slug } = useParams();
@@ -21,19 +23,61 @@ export default function SportsTeamDetail() {
   const site = useSiteImages();
 
   const [page, setPage] = useState(0);
+  const [params, setParams] = useSearchParams();
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  const load = () => {
+  // Filters live in the URL rather than component state, so a filtered view
+  // can be linked, bookmarked and survives the back button.
+  const filters = useMemo(() => ({
+    gender_fit: params.get("gender_fit") || "",
+    colour: params.get("colour") || "",
+    size: params.get("size") || "",
+    category: params.get("category") || "",
+    price_min: params.get("price_min") || "",
+    price_max: params.get("price_max") || "",
+  }), [params]);
+
+  const load = useCallback(() => {
     setLoading(true); setErr(false);
-    fetchSportsTeam(slug, { limit: PAGE_SIZE, offset: page * PAGE_SIZE })
+    const opts = { limit: PAGE_SIZE, offset: page * PAGE_SIZE };
+    Object.entries(filters).forEach(([k, v]) => { if (v) opts[k] = v; });
+    fetchSportsTeam(slug, opts)
       .then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
+  }, [slug, page, filters]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Narrowing the filters can leave you past the end of the new result set,
+  // which shows an empty grid rather than "nothing matches".
+  useEffect(() => { setPage(0); }, [filters]);
+
+  const patch = (patchObj) => {
+    const next = new URLSearchParams(params);
+    Object.entries(patchObj).forEach(([k, v]) => {
+      if (v === null || v === "" || v === undefined) next.delete(k);
+      else next.set(k, v);
+    });
+    setParams(next, { replace: true });
   };
-  useEffect(load, [slug, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleMulti = (key, value) => {
+    const current = new Set((params.get(key) || "").split(",").filter(Boolean));
+    if (current.has(value)) current.delete(value); else current.add(value);
+    patch({ [key]: current.size ? [...current].join(",") : "" });
+  };
+
+  const isChecked = (key, value) => new Set((params.get(key) || "").split(",").filter(Boolean)).has(value);
+  const clearAll = () => setParams({}, { replace: true });
+  const activeCount = ["gender_fit", "colour", "size", "category", "price_min", "price_max"]
+    .reduce((n, k) => n + (params.get(k) ? 1 : 0), 0);
 
   // Switching landing page has to reset the page number, or arriving on Gyms
   // from page 3 of Football shows an empty grid.
   useEffect(() => { setPage(0); }, [slug]);
 
-  const totalProducts = data?.total ?? (data?.products?.length || 0);
+  const facets = data?.facets || {};
+  // matched_total is the count after filtering; total is the whole lineup.
+  const totalProducts = data?.matched_total ?? data?.total ?? (data?.products?.length || 0);
   const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
 
   // Windowed page numbers, so a long catalogue doesn't print 30 buttons.
@@ -153,17 +197,121 @@ export default function SportsTeamDetail() {
       </section>
 
       {/* Products grid */}
-      {data.products?.length > 0 && (
+      {(data.total ?? 0) > 0 && (
         <section className="max-w-7xl mx-auto px-6 pb-12">
           <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
             <h2 className="text-2xl font-black">Shop the lineup</h2>
             {totalProducts > 0 && (
               <span className="text-xs text-[#4b5563]" data-testid="sports-team-product-count">
                 Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, totalProducts)} of {totalProducts}
+                {activeCount > 0 && ` (filtered from ${data.total})`}
               </span>
             )}
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" data-testid="sports-team-products">
+
+          <button
+            onClick={() => setMobileFiltersOpen((v) => !v)}
+            className="lg:hidden w-full mb-4 inline-flex items-center justify-center gap-2 border-2 border-[#dcfce7] rounded-full px-4 py-2.5 text-sm font-extrabold"
+            data-testid="sports-team-mobile-filter-toggle"
+          >
+            <SlidersHorizontal size={14} /> {mobileFiltersOpen ? "Hide filters" : "Show filters"}
+            {activeCount > 0 && <span className="bg-[#7bc67e] text-[#1a1a1a] rounded-full px-2 text-[10px]">{activeCount}</span>}
+          </button>
+
+          <div className="grid lg:grid-cols-12 gap-6">
+            {/* Collapsed by default on mobile — expanded, the sidebar pushes the
+                products off the bottom of the screen before anything is seen. */}
+            <aside className={`lg:col-span-3 ${mobileFiltersOpen ? "" : "hidden lg:block"}`} data-testid="sports-team-sidebar">
+              <div className="sticky top-24 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold">Filter</h3>
+                  {activeCount > 0 && (
+                    <button onClick={clearAll} className="text-[11px] font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1" data-testid="sports-team-clear-filters">
+                      <X size={11} /> Clear
+                    </button>
+                  )}
+                </div>
+
+                {facets.category && facets.category.length > 1 && (
+                  <FacetBlock title="Product type" testid="facet-category" collapsibleThreshold={8} items={facets.category}>
+                    {(shown) => shown.map((f) => (
+                      <label key={f.value} className="flex items-center gap-2 text-xs cursor-pointer capitalize" data-testid={`facet-category-${f.value}`}>
+                        <input type="radio" name="category" checked={filters.category === f.value} onChange={() => patch({ category: filters.category === f.value ? "" : f.value })} className="accent-[#7bc67e]" />
+                        <span className="flex-1">{String(f.value).replace(/-/g, " ")}</span>
+                        <span className="text-[10px] text-[#4b5563]">{f.count}</span>
+                      </label>
+                    ))}
+                  </FacetBlock>
+                )}
+
+                {facets.gender_fit && (
+                  <FacetBlock title="Fit" testid="facet-gender">
+                    <label className="flex items-center gap-2 text-xs cursor-pointer" data-testid="facet-gender-all">
+                      <input type="radio" name="gender_fit" checked={!filters.gender_fit} onChange={() => patch({ gender_fit: "" })} className="accent-[#7bc67e]" />
+                      <span>All fits</span>
+                    </label>
+                    {facets.gender_fit.map((f) => (
+                      <label key={f.value} className="flex items-center gap-2 text-xs cursor-pointer" data-testid={`facet-gender-${f.value}`}>
+                        <input type="radio" name="gender_fit" checked={filters.gender_fit === f.value} onChange={() => patch({ gender_fit: f.value })} className="accent-[#7bc67e]" />
+                        <span className="flex-1">{GENDER_LABEL[f.value] || f.value}</span>
+                        <span className="text-[10px] text-[#4b5563]">{f.count}</span>
+                      </label>
+                    ))}
+                  </FacetBlock>
+                )}
+
+                {facets.colour && (
+                  <FacetBlock title="Colour" testid="facet-colour" collapsibleThreshold={8} items={facets.colour}>
+                    {(shown) => shown.map((f) => (
+                      <label key={f.value} className="flex items-center gap-2 text-xs cursor-pointer" data-testid={`facet-colour-${f.value}`}>
+                        <input type="checkbox" checked={isChecked("colour", f.value)} onChange={() => toggleMulti("colour", f.value)} className="accent-[#7bc67e]" />
+                        <span className="flex-1">{f.value}</span>
+                        <span className="text-[10px] text-[#4b5563]">{f.count}</span>
+                      </label>
+                    ))}
+                  </FacetBlock>
+                )}
+
+                {facets.size && (
+                  <FacetBlock title="Size" testid="facet-size" collapsibleThreshold={8} items={facets.size}>
+                    {(shown) => (
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {shown.map((f) => {
+                          const active = isChecked("size", f.value);
+                          return (
+                            <button key={f.value} type="button" onClick={() => toggleMulti("size", f.value)} className={`text-xs px-2 py-1 rounded-full border-2 font-extrabold transition ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`} data-testid={`facet-size-${f.value}`}>
+                              {f.value}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </FacetBlock>
+                )}
+
+                {facets.price_range && (
+                  <FacetBlock title={`Price (£${facets.price_range.min} - £${facets.price_range.max})`} testid="facet-price">
+                    <div className="flex items-center gap-1.5">
+                      <input type="number" min={facets.price_range.min} max={facets.price_range.max} placeholder={`£${facets.price_range.min}`} defaultValue={filters.price_min} onBlur={(e) => patch({ price_min: e.target.value })} className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[#dcfce7] focus:border-[#7bc67e] focus:outline-none" data-testid="facet-price-min" />
+                      <span className="text-xs text-[#4b5563]">to</span>
+                      <input type="number" min={facets.price_range.min} max={facets.price_range.max} placeholder={`£${facets.price_range.max}`} defaultValue={filters.price_max} onBlur={(e) => patch({ price_max: e.target.value })} className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[#dcfce7] focus:border-[#7bc67e] focus:outline-none" data-testid="facet-price-max" />
+                    </div>
+                  </FacetBlock>
+                )}
+              </div>
+            </aside>
+
+            <div className="lg:col-span-9">
+              {data.products?.length === 0 ? (
+                <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-8 text-center" data-testid="sports-team-no-matches">
+                  <div className="font-extrabold">Nothing matches those filters</div>
+                  <p className="text-sm text-[#4b5563] mt-1">Try loosening one, or clear them to see the full lineup.</p>
+                  {activeCount > 0 && (
+                    <button onClick={clearAll} className="mt-3 text-sm font-extrabold text-[#166534] hover:underline">Clear filters</button>
+                  )}
+                </div>
+              ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4" data-testid="sports-team-products">
             {data.products.map((p) => (
               <Link
                 key={p.id}
@@ -185,6 +333,7 @@ export default function SportsTeamDetail() {
               </Link>
             ))}
           </div>
+              )}
 
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-1.5 mt-8 flex-wrap" data-testid="sports-team-pagination">
@@ -222,10 +371,12 @@ export default function SportsTeamDetail() {
                 disabled={page + 1 >= totalPages}
                 className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 px-2 py-1.5"
               >
-                Next <ChevronRight size={15} />
+              Next <ChevronRight size={15} />
               </button>
             </div>
           )}
+            </div>
+          </div>
         </section>
       )}
 

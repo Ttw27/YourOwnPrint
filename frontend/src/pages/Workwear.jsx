@@ -6,6 +6,7 @@ import { SECTORS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
 import { ArrowRight, ChevronDown, Loader2, SlidersHorizontal } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import FacetBlock from "../components/bold/FacetBlock";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], price_min: "", price_max: "" };
@@ -251,21 +252,3 @@ export default function Workwear() {
   );
 }
 
-function FacetBlock({ title, testid, children, collapsibleThreshold, items }) {
-  const [expanded, setExpanded] = useState(false);
-  const canCollapse = collapsibleThreshold && items && items.length > collapsibleThreshold;
-  const shown = canCollapse && !expanded ? items.slice(0, collapsibleThreshold) : (items || null);
-  return (
-    <div className="bg-white border-2 border-[#dcfce7] rounded-2xl p-3" data-testid={testid}>
-      <div className="text-xs font-extrabold mb-2">{title}</div>
-      <div className="space-y-1.5">
-        {typeof children === "function" ? children(shown) : children}
-      </div>
-      {canCollapse && (
-        <button type="button" onClick={() => setExpanded((x) => !x)} className="mt-2 text-[11px] font-extrabold text-[#166534] hover:underline inline-flex items-center gap-1" data-testid={`${testid}-toggle`}>
-          {expanded ? "Show less" : `Show all ${items.length}`} <ChevronDown size={11} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
-        </button>
-      )}
-    </div>
-  );
-}
