@@ -24,6 +24,8 @@ PAGE_COPY_SLUGS = [
     # Not a page — a holder for imagery that appears across many pages at once
     # (the Price Promise photo, the tool tiles, industry + sports-team headers).
     "site-images",
+    # Also not a page — footer social links and the credit line.
+    "site-footer",
 ]
 
 
