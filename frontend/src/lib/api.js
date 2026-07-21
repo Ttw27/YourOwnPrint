@@ -379,6 +379,11 @@ export async function answerProductQuestion(qa_id, answer) {
   const { data } = await api.post(`/admin/qa/${qa_id}/answer`, { answer });
   return data;
 }
+export async function publishProductQuestion(qa_id, approved = true) {
+  const { data } = await api.post(`/admin/qa/${qa_id}/publish`, null, { params: { approved } });
+  return data;
+}
+
 export async function deleteProductQuestion(qa_id) {
   const { data } = await api.delete(`/admin/qa/${qa_id}`);
   return data;
