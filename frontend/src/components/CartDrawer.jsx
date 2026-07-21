@@ -127,7 +127,7 @@ export default function CartDrawer() {
               >
                 {checkingOut ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />} Secure checkout
               </button>
-              <p className="text-[10px] text-[#4b5563] text-center">Bulk discounts + print upcharges applied server-side. VAT calculated at checkout.</p>
+              <p className="text-[10px] text-[#4b5563] text-center">Bulk discounts and print upcharges are applied server-side. Prices include VAT where it applies; children’s clothing is zero-rated.</p>
             </footer>
           </>
         )}
