@@ -782,7 +782,7 @@ async def best_sellers(limit: int = 12):
             seen_categories.add(cat)
 
     items = [{
-        "id": p["id"], "name": p["name"], "price": float(p["price"]),
+        "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
         "image": p["image"], "category": p["category"],
     } for p in picks[:limit]]
     return {"items": items, "total": len(items)}
@@ -806,7 +806,7 @@ async def search_products(q: str = "", limit: int = 25, offset: int = 0):
     limit = min(limit, 100)
     page = results[offset:offset + limit]
     items = [{
-        "id": p["id"], "name": p["name"], "price": float(p["price"]),
+        "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
         "image": p["image"], "category": p["category"],
     } for p in page]
     return {"items": items, "total": total, "offset": offset, "returned": len(items), "query": q}
@@ -1756,6 +1756,45 @@ INDUSTRIES_CATALOGUE = [
 ]
 
 
+# ---------- VAT ----------
+# Stored prices are gross. _price_with_vat_and_charm builds them from an ex-VAT
+# trade cost by applying markup, then VAT, then charm rounding — so `price` is
+# what the customer pays, and the ex-VAT figure is derived back out of it.
+UK_VAT_RATE = 0.20
+
+# UK children's clothing and footwear is zero-rated. HMRC bases this on garment
+# measurements rather than a label, so this is a best-effort signal from the way
+# the catalogue tags products, not a substitute for checking borderline items.
+_KIDS_HINTS = ("kids", "kid's", "children", "childrens", "children's", "junior", "infant", "toddler", "baby")
+
+
+def is_zero_rated(p: Dict) -> bool:
+    if (p.get("gender_fit") or "").strip().lower() == "kids":
+        return True
+    name = f"{p.get('name', '')} {p.get('category', '')}".lower()
+    return any(h in name for h in _KIDS_HINTS)
+
+
+def _vat_fields(p: Dict) -> Dict:
+    """Both figures, worked out once on the server.
+
+    Doing this per page in the browser would mean every card needed gender_fit
+    and every page needed to remember the zero-rating rule — one page forgetting
+    it would quietly show VAT on children's clothing.
+    """
+    try:
+        gross = float(p.get("price") or 0)
+    except (TypeError, ValueError):
+        gross = 0.0
+    zero = is_zero_rated(p)
+    net = gross if zero else round(gross / (1 + UK_VAT_RATE), 2)
+    return {
+        "price_inc_vat": round(gross, 2),
+        "price_ex_vat": net,
+        "vat_zero_rated": zero,
+    }
+
+
 # ---------- Industry vocabulary ----------
 # Derived from the catalogue above rather than typed out again, so adding an
 # alias there can never leave this list stale — the exact failure mode that
@@ -2334,7 +2373,7 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "")
     out = []
     for p in PRODUCTS.values():
         out.append({
-            "id": p["id"], "name": p["name"], "price": float(p["price"]),
+            "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
             "category": p["category"], "image": p["image"],
             "brand": p.get("brand") or "",
             "sku": p.get("sku") or "",
@@ -2828,7 +2867,7 @@ async def list_workforce_products():
     for p in PRODUCTS.values():
         if p.get("workforce_eligible"):
             out.append({
-                "id": p["id"], "name": p["name"], "price": float(p["price"]),
+                "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
                 "image": p["image"],
                 "description": p.get("description") or "",
                 "sizes": p.get("sizes", []),
@@ -2848,7 +2887,7 @@ async def list_specials_products():
     for p in PRODUCTS.values():
         if p.get("specials_eligible"):
             out.append({
-                "id": p["id"], "name": p["name"], "price": float(p["price"]),
+                "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
                 "image": p["image"],
                 "description": p.get("description") or "",
                 "sizes": p.get("sizes", []),
@@ -3077,7 +3116,7 @@ async def shop_by_garment_type(
         if not matches(p):
             continue
         items.append({
-            "id": p["id"], "name": p["name"], "price": float(p["price"]),
+            "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
             "image": p["image"], "category": p["category"],
             "description": p.get("description") or "",
             "gender_fit": p.get("gender_fit") or "unisex",
@@ -3161,7 +3200,7 @@ async def workwear_collection(
         if not matches(p):
             continue
         items.append({
-            "id": p["id"], "name": p["name"], "price": float(p["price"]),
+            "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
             "image": p["image"], "category": p["category"],
             "description": p.get("description") or "",
             "gender_fit": p.get("gender_fit") or "unisex",
@@ -3269,7 +3308,7 @@ async def get_industry(
         if not matches(p):
             continue
         items.append({
-            "id": p["id"], "name": p["name"], "price": float(p["price"]),
+            "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
             "image": p["image"], "category": p["category"],
             "description": p.get("description") or "",
             "gender_fit": p.get("gender_fit") or "unisex",
@@ -3415,7 +3454,7 @@ async def get_sports_team(
     page = matched[offset:offset + limit]
 
     products = [{
-        "id": p["id"], "name": p["name"], "price": float(p.get("price") or 0),
+        "id": p["id"], "name": p["name"], "price": float(p.get("price") or 0), **_vat_fields(p),
         "image": p.get("image") or "", "category": p.get("category") or "",
         "description": p.get("description") or "",
         "gender_fit": p.get("gender_fit") or "unisex",
