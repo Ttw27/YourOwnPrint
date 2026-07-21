@@ -891,7 +891,7 @@ function ProductQASection({ productId, qa, qaText, qaName, setQaText, setQaName,
             {busy ? "Posting…" : "Post question"}
           </button>
         </div>
-        <div className="text-[11px] text-[#4b5563] mt-2">We typically reply within one working day. Your question will be visible to other shoppers.</div>
+        <div className="text-[11px] text-[#4b5563] mt-2">We typically reply within one working day. Once we&rsquo;ve answered, your question and our reply are shown here for other shoppers.</div>
       </div>
 
       {list.length === 0 ? (

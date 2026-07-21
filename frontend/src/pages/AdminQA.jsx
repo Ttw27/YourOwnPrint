@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchAllAdminQA, answerProductQuestion, deleteProductQuestion } from "../lib/api";
+import { fetchAllAdminQA, answerProductQuestion, deleteProductQuestion, publishProductQuestion } from "../lib/api";
 import { toast } from "sonner";
 
 export default function AdminQA() {
@@ -45,6 +45,16 @@ export default function AdminQA() {
     }
   };
 
+  const onPublish = async (id, next) => {
+    try {
+      await publishProductQuestion(id, next);
+      toast.success(next ? "Question is now visible on the site" : "Question hidden from the site");
+      load();
+    } catch {
+      toast.error("Couldn't change that");
+    }
+  };
+
   const unanswered = items.filter((q) => !q.answer);
   const answered = items.filter((q) => q.answer);
 
@@ -52,7 +62,10 @@ export default function AdminQA() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100" data-testid="admin-qa-page">
       <div className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-extrabold mb-2">Customer Q&amp;A</h1>
-        <p className="text-zinc-400 mb-8">Answer or delete questions submitted on product detail pages.</p>
+        <p className="text-zinc-400 mb-8">
+          Questions customers ask on product pages. New ones stay hidden from the site until you answer
+          them or publish them, and you&rsquo;ll get an email whenever one comes in.
+        </p>
 
         <Section title={`Awaiting answer (${unanswered.length})`} testid="qa-section-unanswered" highlight>
           {loading && <div className="text-zinc-500">Loading…</div>}
@@ -65,6 +78,7 @@ export default function AdminQA() {
               onDraftChange={(v) => setDrafts((d) => ({ ...d, [q.id]: v }))}
               onAnswer={() => onAnswer(q.id)}
               onDelete={() => onDelete(q.id)}
+              onPublish={(next) => onPublish(q.id, next)}
             />
           ))}
         </Section>
@@ -79,6 +93,7 @@ export default function AdminQA() {
               onDraftChange={(v) => setDrafts((d) => ({ ...d, [q.id]: v }))}
               onAnswer={() => onAnswer(q.id)}
               onDelete={() => onDelete(q.id)}
+              onPublish={(next) => onPublish(q.id, next)}
               compact
             />
           ))}
@@ -97,16 +112,35 @@ function Section({ title, children, testid, highlight }) {
   );
 }
 
-function QACard({ q, draft, onDraftChange, onAnswer, onDelete, compact }) {
+function QACard({ q, draft, onDraftChange, onAnswer, onDelete, onPublish, compact }) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4" data-testid={`admin-qa-card-${q.id}`}>
       <div className="flex items-start justify-between gap-4 mb-2">
         <div className="flex-1">
           <div className="text-xs text-amber-400 mb-1">{q.product_name || q.product_id}</div>
           <div className="text-sm font-semibold">{q.question}</div>
-          <div className="text-xs text-zinc-500 mt-1">{q.asker_name} · {new Date(q.asked_at).toLocaleString("en-GB")}</div>
+          <div className="text-xs text-zinc-500 mt-1 flex items-center gap-2 flex-wrap">
+            <span>{q.asker_name} · {new Date(q.asked_at).toLocaleString("en-GB")}</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${q.approved ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}
+              data-testid={`admin-qa-status-${q.id}`}
+            >
+              {q.approved ? "Visible on the site" : "Hidden from the site"}
+            </span>
+          </div>
         </div>
-        <button onClick={onDelete} className="text-xs text-zinc-400 hover:text-red-400" data-testid={`admin-qa-delete-${q.id}`}>Delete</button>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {onPublish && (
+            <button
+              onClick={() => onPublish(!q.approved)}
+              className="text-xs text-zinc-400 hover:text-emerald-300"
+              data-testid={`admin-qa-toggle-${q.id}`}
+            >
+              {q.approved ? "Hide" : "Show on site"}
+            </button>
+          )}
+          <button onClick={onDelete} className="text-xs text-zinc-400 hover:text-red-400" data-testid={`admin-qa-delete-${q.id}`}>Delete</button>
+        </div>
       </div>
 
       {q.answer ? (
@@ -128,7 +162,7 @@ function QACard({ q, draft, onDraftChange, onAnswer, onDelete, compact }) {
             className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold rounded text-sm"
             data-testid={`admin-qa-publish-${q.id}`}
           >
-            Publish
+            Answer &amp; publish
           </button>
         </div>
       )}

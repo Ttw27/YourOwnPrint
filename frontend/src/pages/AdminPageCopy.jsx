@@ -29,6 +29,7 @@ const PAGE_COPY_SLUGS = [
   { slug: "sports-outfit-configurator", label: "Sports Outfit Configurator" },
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
   { slug: "site-images", label: "Pictures used across the whole site" },
+  { slug: "site-footer", label: "Footer \u2014 social media links" },
 ];
 
 const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "", hero_image: "", images: {}, media: {} };
@@ -90,6 +91,16 @@ const PAGE_MEDIA_SLOTS = {
 
 // Header photo on each industry page, and the tile for it on Shop by Industry.
 // Slugs must match the backend INDUSTRIES_CATALOGUE canonical entries.
+// Footer social links. Leave one blank and that icon simply isn't shown.
+const SITE_SOCIALS = [
+  { key: "facebook", label: "Facebook", hint: "e.g. https://facebook.com/yourownprint" },
+  { key: "instagram", label: "Instagram", hint: "e.g. https://instagram.com/yourownprint" },
+  { key: "tiktok", label: "TikTok", hint: "e.g. https://tiktok.com/@yourownprint" },
+  { key: "youtube", label: "YouTube", hint: "e.g. https://youtube.com/@yourownprint" },
+  { key: "linkedin", label: "LinkedIn", hint: "e.g. https://linkedin.com/company/yourownprint" },
+  { key: "x", label: "X (Twitter)", hint: "e.g. https://x.com/yourownprint" },
+];
+
 const SITE_INDUSTRIES = [
   { slug: "healthcare", label: "Healthcare" },
   { slug: "construction-trades", label: "Construction & Trades" },
@@ -292,6 +303,8 @@ export default function AdminPageCopy() {
   // wording or FAQ of its own, so those fields are hidden for it.
   // Declared before the JSX below reads it.
   const isSiteImages = slug === "site-images";
+  const isSiteFooter = slug === "site-footer";
+  const setExtra = (key, v) => setCopy((c) => ({ ...c, extras: { ...(c.extras || {}), [key]: v } }));
   const setImage = (key, v) => setCopy((c) => ({ ...c, images: { ...(c.images || {}), [key]: v } }));
 
   return (
@@ -347,7 +360,7 @@ export default function AdminPageCopy() {
             <div className="py-10 grid place-items-center"><Loader2 className="animate-spin text-[#7bc67e]" /></div>
           ) : (
             <>
-              {!isSiteImages && (
+              {!isSiteImages && !isSiteFooter && (
               <div className="grid sm:grid-cols-2 gap-3">
                 <label className="block" data-testid="apc-title">
                   <div className="text-xs font-extrabold mb-1">Main heading</div>
@@ -378,13 +391,13 @@ export default function AdminPageCopy() {
                   <ImageIcon size={15} className="text-[#7bc67e]" />
                   <div className="text-sm font-extrabold">Pictures &amp; video on this page</div>
                 </div>
-                <p className="text-[11px] text-[#4b5563] mb-3">
+                <p className="text-[11px] text-[#4b5563] mb-3" hidden={isSiteFooter}>
                   Only the pictures this page actually uses are listed. Whatever you set is stored in the
                   database, so a future site update can&rsquo;t wipe it. Leave one blank and the page keeps
                   using the picture that&rsquo;s built in.
                 </p>
 
-                {(PAGE_MEDIA_SLOTS[slug] || []).length === 0 && slug !== "home" && !isSiteImages ? (
+                {(PAGE_MEDIA_SLOTS[slug] || []).length === 0 && slug !== "home" && !isSiteImages && !isSiteFooter ? (
                   <div className="bg-white border border-[#e5e7eb] rounded-xl p-3 text-[11px] text-[#4b5563]">
                     This page doesn&rsquo;t have any pictures you can swap out yet &mdash; only its wording.
                     If there&rsquo;s a photo on it you&rsquo;d like to be able to change, say which one and it can be added here.
@@ -413,6 +426,28 @@ export default function AdminPageCopy() {
                         />
                       )
                     ))}
+                  </div>
+                )}
+
+                {isSiteFooter && (
+                  <div className="space-y-3" data-testid="apc-socials">
+                    <p className="text-[11px] text-[#4b5563]">
+                      Paste the full web address of each profile. Leave one blank and that icon
+                      simply isn&rsquo;t shown in the footer &mdash; no empty button, no dead link.
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {SITE_SOCIALS.map((sn) => (
+                        <label key={sn.key} className="block" data-testid={`apc-social-${sn.key}`}>
+                          <div className="text-[11px] font-extrabold mb-1">{sn.label}</div>
+                          <input
+                            value={(copy.extras || {})[sn.key] || ""}
+                            onChange={(e) => setExtra(sn.key, e.target.value)}
+                            className="input text-xs w-full"
+                            placeholder={sn.hint}
+                          />
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -481,14 +516,14 @@ export default function AdminPageCopy() {
                 )}
               </div>
 
-              {!isSiteImages && (
+              {!isSiteImages && !isSiteFooter && (
               <label className="block" data-testid="apc-body">
                 <div className="text-xs font-extrabold mb-1">Longer description <span className="text-[#4b5563] font-normal">— leave an empty line between paragraphs</span></div>
                 <textarea value={copy.body} onChange={(e) => setCopy({ ...copy, body: e.target.value })} className="input min-h-[140px] font-mono text-[12px]" placeholder="Optional. Extra paragraphs that appear under the heading." />
               </label>
               )}
 
-              {!isSiteImages && (
+              {!isSiteImages && !isSiteFooter && (
               <div data-testid="apc-bullets">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-xs font-extrabold">Bullet points</div>
@@ -506,7 +541,7 @@ export default function AdminPageCopy() {
               </div>
               )}
 
-              {!isSiteImages && (
+              {!isSiteImages && !isSiteFooter && (
               <div data-testid="apc-faq">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-xs font-extrabold">FAQ</div>
