@@ -403,8 +403,12 @@ export async function fetchSportsTeams() {
   return data;
 }
 export async function fetchSportsTeam(slug, opts = {}) {
+  // Forwards the whole options object. An earlier version listed limit and
+  // offset explicitly, which silently dropped every filter the sidebar sent —
+  // the request succeeded and returned the unfiltered lineup, so it looked like
+  // the filters simply didn't work rather than like an error.
   const { data } = await api.get(`/sports-teams/${slug}`, {
-    params: { limit: opts.limit ?? 12, offset: opts.offset ?? 0 },
+    params: { limit: 12, offset: 0, ...opts },
   });
   return data;
 }
