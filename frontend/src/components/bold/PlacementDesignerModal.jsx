@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../../lib/api";
 import FontPicker from "./FontPicker";
 import { X, Upload, Type, Trash2, RotateCw, Loader2, Wand2, ArrowUp, ArrowDown, Copy, Pencil, Layers, Check, Lock } from "lucide-react";
+import { MobileToolBar, MobileSheet, useIsMobile } from "./MobileDesignerShell";
 
 const FONTS = [
   { label: "Nunito", value: "Nunito, sans-serif" },
@@ -44,6 +45,8 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
   const workingArea = { x: 8, y: 8, w: 84, h: 84 };
   const [items, setItems] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const isMobile = useIsMobile();
+  const [sheet, setSheet] = useState(null); // which mobile tool sheet is open
   const [editingId, setEditingId] = useState(null);
   const [drag, setDrag] = useState(null);
   const [textInput, setTextInput] = useState("");
@@ -238,9 +241,76 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
     }
   };
 
+  // The three tool panels, written once and used in both the desktop sidebar
+  // and the mobile sheets, so the two layouts can never drift apart.
+  const UploadTextPanel = () => (
+    <div className="space-y-3">
+      <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center gap-2 justify-center bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold rounded-full px-4 py-2.5 text-sm" data-testid="placement-add-image">
+        <Upload size={15} /> Add image
+      </button>
+      <div className="bg-[#f0fdf4] rounded-xl p-3 space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#166534]"><Type size={13} /> Add text</div>
+        <input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="e.g. 07123 456789" className="w-full text-sm bg-white border border-[#dcfce7] rounded-lg px-2 py-1.5" data-testid="placement-text-input" />
+        <div className="flex gap-1.5">
+          <FontPicker value={textFont} onChange={setTextFont} fonts={FONTS} className="flex-1" />
+          <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-8 h-8 rounded-lg border border-[#dcfce7]" />
+        </div>
+        <button onClick={addText} className="w-full text-xs font-extrabold bg-white border border-[#7bc67e] text-[#166534] rounded-full py-1.5 hover:bg-[#f0fdf4]" data-testid="placement-add-text">Add</button>
+      </div>
+    </div>
+  );
+
+  const AiPanel = () => (
+    selected?.type === "image" ? (
+      <div className="bg-[#f0fdf4] rounded-xl p-3 space-y-1.5">
+        <div className="text-xs font-extrabold text-[#166534] flex items-center gap-1.5"><Wand2 size={13} /> AI tools</div>
+        <button onClick={removeBgReal} disabled={!isLoggedIn} className={`w-full text-xs font-bold rounded-lg py-1.5 ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] border border-[#e5e7eb] cursor-not-allowed" : "bg-white border border-[#dcfce7] hover:border-[#7bc67e]"}`}>
+          {!isLoggedIn && <Lock size={10} className="inline mr-1 -mt-0.5" />}Remove background
+        </button>
+        <button onClick={() => aiEffectReal("enhance", "Enhance")} disabled={!isLoggedIn} className={`w-full text-xs font-bold rounded-lg py-1.5 ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] border border-[#e5e7eb] cursor-not-allowed" : "bg-white border border-[#dcfce7] hover:border-[#7bc67e]"}`}>
+          {!isLoggedIn && <Lock size={10} className="inline mr-1 -mt-0.5" />}Enhance quality
+        </button>
+        {!isLoggedIn ? (
+          <p className="text-[9px] text-[#712B13] font-bold pt-1"><Link to="/account" className="underline font-extrabold">Log in</Link> to use these — free, just stops random abuse.</p>
+        ) : aiUsage ? (
+          <p className="text-[9px] text-[#4b5563] font-bold pt-1">{aiUsage.remaining} of {aiUsage.limit} free AI edits left this month</p>
+        ) : null}
+      </div>
+    ) : (
+      <p className="text-xs text-[#4b5563]">Select an image on the canvas to use the AI tools.</p>
+    )
+  );
+
+  const LayersPanel = () => (
+    items.length > 0 ? (
+      <div className="bg-[#f0fdf4] rounded-xl p-3 space-y-1.5">
+        <div className="text-xs font-extrabold text-[#166534] flex items-center gap-1.5"><Layers size={13} /> Layers · {items.length}</div>
+        {items.map((it, i) => (
+          <div key={it.id} onClick={() => setSelectedId(it.id)} className={`flex items-center justify-between text-xs rounded-lg px-2 py-1.5 cursor-pointer ${selectedId === it.id ? "bg-white border border-[#7bc67e]" : "bg-white/60"}`}>
+            <span className="truncate flex-1">{it.type === "text" ? it.text : `Image ${i + 1}`}</span>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <button onClick={(e) => { e.stopPropagation(); moveLayer(it.id, "up"); }} disabled={i === items.length - 1} className="w-5 h-5 grid place-items-center rounded-full hover:bg-[#dcfce7] disabled:opacity-30"><ArrowUp size={9} /></button>
+              <button onClick={(e) => { e.stopPropagation(); moveLayer(it.id, "down"); }} disabled={i === 0} className="w-5 h-5 grid place-items-center rounded-full hover:bg-[#dcfce7] disabled:opacity-30"><ArrowDown size={9} /></button>
+              <button onClick={(e) => { e.stopPropagation(); duplicateItem(it.id); }} className="w-5 h-5 grid place-items-center rounded-full hover:bg-[#dcfce7]"><Copy size={9} /></button>
+              <button onClick={(e) => { e.stopPropagation(); removeItem(it.id); }} className="w-5 h-5 grid place-items-center rounded-full hover:bg-rose-100 text-rose-500"><Trash2 size={9} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p className="text-xs text-[#4b5563]">Nothing on the canvas yet. Add an image or some text.</p>
+    )
+  );
+
+  const MOBILE_TABS = [
+    { key: "add", label: "Add", icon: Upload },
+    { key: "ai", label: "AI tools", icon: Wand2 },
+    { key: "layers", label: "Layers", icon: Layers, badge: items.length },
+  ];
+
   return createPortal(
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4" data-testid="placement-designer-modal">
-      <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+      <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto pb-20 md:pb-0">
         <div className="flex items-center justify-between p-5 border-b border-[#e5e7eb]">
           <div>
             <div className="text-xs uppercase tracking-[0.2em] text-[#7bc67e] font-extrabold">Design your print</div>
@@ -330,58 +400,32 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
             <p className="text-[11px] text-[#4b5563] text-center mt-2">Drag to move · corner dot to resize · top knob to rotate · double-click text to edit</p>
           </div>
 
-          {/* Toolbar */}
-          <div className="w-full md:w-56 space-y-3">
-            <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center gap-2 justify-center bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold rounded-full px-4 py-2.5 text-sm" data-testid="placement-add-image">
-              <Upload size={15} /> Add image
-            </button>
-            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onUpload} />
-
-            <div className="bg-[#f0fdf4] rounded-xl p-3 space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#166534]"><Type size={13} /> Add text</div>
-              <input value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="e.g. 07123 456789" className="w-full text-sm bg-white border border-[#dcfce7] rounded-lg px-2 py-1.5" data-testid="placement-text-input" />
-              <div className="flex gap-1.5">
-                <FontPicker value={textFont} onChange={setTextFont} fonts={FONTS} className="flex-1" />
-                <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-8 h-8 rounded-lg border border-[#dcfce7]" />
-              </div>
-              <button onClick={addText} className="w-full text-xs font-extrabold bg-white border border-[#7bc67e] text-[#166534] rounded-full py-1.5 hover:bg-[#f0fdf4]" data-testid="placement-add-text">Add</button>
-            </div>
-
-            {selected?.type === "image" && (
-              <div className="bg-[#f0fdf4] rounded-xl p-3 space-y-1.5">
-                <div className="text-xs font-extrabold text-[#166534] flex items-center gap-1.5"><Wand2 size={13} /> AI tools</div>
-                <button onClick={removeBgReal} disabled={!isLoggedIn} className={`w-full text-xs font-bold rounded-lg py-1.5 ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] border border-[#e5e7eb] cursor-not-allowed" : "bg-white border border-[#dcfce7] hover:border-[#7bc67e]"}`}>
-                  {!isLoggedIn && <Lock size={10} className="inline mr-1 -mt-0.5" />}Remove background
-                </button>
-                <button onClick={() => aiEffectReal("enhance", "Enhance")} disabled={!isLoggedIn} className={`w-full text-xs font-bold rounded-lg py-1.5 ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] border border-[#e5e7eb] cursor-not-allowed" : "bg-white border border-[#dcfce7] hover:border-[#7bc67e]"}`}>
-                  {!isLoggedIn && <Lock size={10} className="inline mr-1 -mt-0.5" />}Enhance quality
-                </button>
-                {!isLoggedIn ? (
-                  <p className="text-[9px] text-[#712B13] font-bold pt-1"><Link to="/account" className="underline font-extrabold">Log in</Link> to use these — free, just stops random abuse.</p>
-                ) : aiUsage ? (
-                  <p className="text-[9px] text-[#4b5563] font-bold pt-1">{aiUsage.remaining} of {aiUsage.limit} free AI edits left this month</p>
-                ) : null}
-              </div>
-            )}
-
-            {items.length > 0 && (
-              <div className="bg-[#f0fdf4] rounded-xl p-3 space-y-1.5">
-                <div className="text-xs font-extrabold text-[#166534] flex items-center gap-1.5"><Layers size={13} /> Layers · {items.length}</div>
-                {items.map((it, i) => (
-                  <div key={it.id} onClick={() => setSelectedId(it.id)} className={`flex items-center justify-between text-xs rounded-lg px-2 py-1.5 cursor-pointer ${selectedId === it.id ? "bg-white border border-[#7bc67e]" : "bg-white/60"}`}>
-                    <span className="truncate flex-1">{it.type === "text" ? it.text : `Image ${i + 1}`}</span>
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                      <button onClick={(e) => { e.stopPropagation(); moveLayer(it.id, "up"); }} disabled={i === items.length - 1} className="w-5 h-5 grid place-items-center rounded-full hover:bg-[#dcfce7] disabled:opacity-30"><ArrowUp size={9} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); moveLayer(it.id, "down"); }} disabled={i === 0} className="w-5 h-5 grid place-items-center rounded-full hover:bg-[#dcfce7] disabled:opacity-30"><ArrowDown size={9} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); duplicateItem(it.id); }} className="w-5 h-5 grid place-items-center rounded-full hover:bg-[#dcfce7]"><Copy size={9} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); removeItem(it.id); }} className="w-5 h-5 grid place-items-center rounded-full hover:bg-rose-100 text-rose-500"><Trash2 size={9} /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Toolbar — desktop only; on mobile these move into the bottom sheets */}
+          <div className="hidden md:block w-full md:w-56 space-y-3">
+            <UploadTextPanel />
+            <AiPanel />
+            <LayersPanel />
           </div>
         </div>
+
+        {/* Shared hidden file input (used by both desktop panel and mobile sheet). */}
+        <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onUpload} />
+
+        {/* Mobile: tab bar + sliding sheets. Renders nothing on desktop. */}
+        {isMobile && (
+          <>
+            <MobileToolBar tabs={MOBILE_TABS} activeKey={sheet} onSelect={setSheet} testid="placement-toolbar" />
+            <MobileSheet open={sheet === "add"} title="Add image or text" onClose={() => setSheet(null)} testid="placement-sheet-add">
+              <UploadTextPanel />
+            </MobileSheet>
+            <MobileSheet open={sheet === "ai"} title="AI tools" onClose={() => setSheet(null)} testid="placement-sheet-ai">
+              <AiPanel />
+            </MobileSheet>
+            <MobileSheet open={sheet === "layers"} title="Layers" onClose={() => setSheet(null)} testid="placement-sheet-layers">
+              <LayersPanel />
+            </MobileSheet>
+          </>
+        )}
 
         <div className="flex items-center justify-end gap-3 p-5 border-t border-[#e5e7eb]">
           <button onClick={onClose} className="text-sm font-extrabold text-[#4b5563] hover:underline">Cancel</button>
