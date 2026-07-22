@@ -9,6 +9,7 @@ import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import { MobileToolBar, MobileSheet, useIsMobile } from "../components/bold/MobileDesignerShell";
 
 const FONTS = [
   { label: "Nunito", value: "Nunito, sans-serif" },
@@ -63,6 +64,8 @@ export default function DesignYourOwn() {
   }, [isLoggedIn]);
   const [backEnabled, setBackEnabled] = useState(false);     // adds back-print to checkout
   const [neckEnabled, setNeckEnabled] = useState(false);     // adds neck-label to checkout
+  const isMobile = useIsMobile();
+  const [sheet, setSheet] = useState(null); // open mobile tool sheet: art | colour | layers | sizes
   const [frontItems, setFrontItems] = useState([]);
   const [backItems, setBackItems]   = useState([]);
   const [neckItems, setNeckItems]   = useState([]);
@@ -445,85 +448,9 @@ export default function DesignYourOwn() {
     );
   }
 
-  return (
-    <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
-      <BoldNavbar />
 
-      <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-8">
-        <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#f0fdf4] text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs"><Sparkles size={12} className="text-[#7bc67e]" /> Designer</div>
-            <h1 className="font-nunito font-black text-3xl lg:text-5xl mt-2" data-testid="dyo-hero-title">{dyoCopy.title}</h1>
-          </div>
-          <div className="text-xs text-[#4b5563] font-nunito font-bold" data-testid="dyo-hero-subtitle">{dyoCopy.subtitle}</div>
-        </div>
-
-        <div className="grid lg:grid-cols-12 gap-5">
-          {/* Right aside — split into TOP (Product picker) and BOTTOM (Sizes + Total + Checkout) so mobile order is:
-              1. Product   2. Canvas + view toggle   3. Layers/Upload/Text   4. Sizes & Checkout */}
-          <aside className="lg:col-span-3 space-y-4 order-1 lg:order-3 lg:col-start-10 lg:row-start-1" data-testid="designer-product-aside">
-            <Panel title="Product">
-              <select data-testid="designer-product" value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm">
-                {products.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}
-              </select>
-              {product && (product.composition || product.description_long || (product.use_cases || []).length > 0) && (
-                <div className="mt-3 space-y-2 text-xs" data-testid="product-info-card">
-                  {product.composition && (
-                    <div className="flex items-start gap-1.5 text-[#1a1a1a]">
-                      <Info size={11} className="text-[#7bc67e] mt-0.5 flex-shrink-0" />
-                      <span className="font-nunito font-bold leading-snug" data-testid="product-composition">{product.composition}</span>
-                    </div>
-                  )}
-                  {product.description_long && (
-                    <p className="text-[#4b5563] font-nunito leading-snug" data-testid="product-description-long">{product.description_long}</p>
-                  )}
-                  {(product.use_cases || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1" data-testid="product-use-cases">
-                      {product.use_cases.map((uc) => (
-                        <span key={uc} data-testid={`product-use-case-${uc}`} className="inline-flex items-center gap-1 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-2 py-0.5 text-[10px] font-nunito font-extrabold text-[#1a1a1a]">
-                          {USE_CASE_LABELS[uc] || uc}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="text-[10px] text-[#4b5563] mt-2 font-bold">{products.length} products available · admin manages list</div>
-            </Panel>
-
-            {product?.colors?.length > 0 && (
-              <Panel title="Colour">
-                <div className="flex flex-wrap gap-2" data-testid="designer-colour-swatches">
-                  {/* This isn't a colour — it's "show the product photo we have",
-                      which is whatever colour that photo happens to be. Labelled
-                      plainly so it doesn't read as a duplicate of White. */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedColour(null)}
-                    className={`h-8 px-2.5 rounded-full border-2 grid place-items-center bg-white ${!selectedColour ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
-                    title="Show the product photo as-is, rather than a specific colour"
-                    data-testid="designer-colour-default"
-                  >
-                    <span className="text-[9px] font-extrabold text-[#4b5563] whitespace-nowrap">As shown</span>
-                  </button>
-                  {product.colors.map((c) => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      onClick={() => setSelectedColour(c.name)}
-                      className={`w-8 h-8 rounded-full border-2 ${selectedColour === c.name ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
-                      style={{ background: c.hex || "#ccc" }}
-                      title={c.name}
-                      data-testid={`designer-colour-${c.name}`}
-                    />
-                  ))}
-                </div>
-                {selectedColour && <p className="text-[10px] text-[#4b5563] mt-2 font-bold">{selectedColour}</p>}
-              </Panel>
-            )}
-          </aside>
-
-          <aside className="lg:col-span-2 space-y-4 order-3 lg:order-1 lg:col-start-1 lg:row-start-1 lg:row-span-2" data-testid="designer-left-aside">
+  const toolPanels = (
+    <>
             <Panel title="Upload">
               <button data-testid="designer-upload-btn" onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#7bc67e] hover:bg-[#f0fdf4] text-[#7bc67e] py-6 rounded-2xl transition-colors">
                 <Upload size={18} /><span className="font-nunito font-extrabold text-sm">Upload image</span>
@@ -623,6 +550,247 @@ export default function DesignYourOwn() {
                 </button>
               )}
             </Panel>
+    </>
+  );
+
+  const addEditPanels = (
+    <>
+            <Panel title="Upload">
+              <button data-testid="designer-upload-btn" onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#7bc67e] hover:bg-[#f0fdf4] text-[#7bc67e] py-6 rounded-2xl transition-colors">
+                <Upload size={18} /><span className="font-nunito font-extrabold text-sm">Upload image</span>
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onUpload} />
+              <button
+                data-testid="designer-removebg-btn"
+                onClick={removeBgReal}
+                disabled={!isLoggedIn}
+                className={`w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-full font-nunito font-extrabold text-xs transition-colors ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] cursor-not-allowed" : "bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a]"}`}
+              >
+                {!isLoggedIn ? <Lock size={13} /> : <Wand2 size={14} />} Remove Background
+              </button>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {[
+                  { id: "poster",  label: "Poster" },
+                  { id: "sketch",  label: "Sketch" },
+                  { id: "cartoon", label: "Cartoon" },
+                  { id: "enhance", label: "Enhance" },
+                ].map((fx) => (
+                  <button
+                    key={fx.id}
+                    data-testid={`designer-ai-${fx.id}`}
+                    onClick={() => aiEffectReal(fx.id, fx.label)}
+                    disabled={!isLoggedIn}
+                    className={`text-xs font-nunito font-extrabold py-2 rounded-full transition-colors ${!isLoggedIn ? "bg-[#f9fafb] text-[#9ca3af] cursor-not-allowed" : "bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#1a1a1a]"}`}
+                  >
+                    {fx.label}
+                  </button>
+                ))}
+              </div>
+              {!isLoggedIn ? (
+                <div className="mt-2 bg-[#fff7ed] border border-[#fed7aa] rounded-xl p-2.5 text-center" data-testid="designer-ai-login-prompt">
+                  <p className="text-[10px] font-bold text-[#712B13]">
+                    <Lock size={10} className="inline mr-1 -mt-0.5" />
+                    <Link to="/account" className="underline font-extrabold">Log in</Link> to use AI tools — free, just keeps this from being spammed on random images.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-[10px] text-[#4b5563] mt-2 font-bold text-center" data-testid="designer-ai-usage">
+                  AI effects via Cutout.pro · background removal via remove.bg
+                  {aiUsage && <div className="mt-0.5">{aiUsage.remaining} of {aiUsage.limit} free AI edits left this month</div>}
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Add Text">
+              <input data-testid="designer-text-input" value={textInput} onChange={(e) => setTextInput(e.target.value)} placeholder="Your text" className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm" />
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <FontPicker value={textFont} onChange={setTextFont} fonts={FONTS} />
+                <input data-testid="designer-color" type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-full h-9 bg-white border border-[#e5e7eb] rounded-xl" />
+              </div>
+              <button data-testid="designer-add-text" onClick={addText} className="mt-3 w-full bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs py-2.5 rounded-full transition-colors flex items-center justify-center gap-2">
+                <Type size={14} /> Add to design
+              </button>
+              {view === "neck" && (
+                <button data-testid="designer-add-size-token" onClick={addSizeToken} className="mt-2 w-full bg-[#1a1a1a] hover:bg-black text-[#7bc67e] font-nunito font-extrabold text-xs py-2 rounded-full transition-colors flex items-center justify-center gap-2">
+                  <Tag size={12} /> Add &#123;SIZE&#125; token
+                </button>
+              )}
+              {view === "neck" && (
+                <div className="text-[10px] text-[#4b5563] mt-2 font-bold leading-snug">
+                  The &#123;SIZE&#125; token is swapped for the actual garment size (M, L, XL…) when we print — one label per size in your order.
+                </div>
+              )}
+            </Panel>
+    </>
+  );
+
+  const layersPanel = (
+    <>
+            <Panel title={`Layers · ${view} ${items.length}${(backEnabled || neckEnabled) && view !== "back" && backEnabled ? ` · back ${backItems.length}` : ""}${(backEnabled || neckEnabled) && view !== "neck" && neckEnabled ? ` · neck ${neckItems.length}` : ""}${view !== "front" ? ` · front ${frontItems.length}` : ""}`}>
+              {items.length === 0 ? (
+                <div className="text-xs text-[#4b5563] text-center py-2">No layers yet</div>
+              ) : (
+                <ul className="space-y-1.5" data-testid="layers-list">
+                  {items.slice().reverse().map((it, revIdx) => {
+                    const idx = items.length - 1 - revIdx;
+                    const isTop = idx === items.length - 1;
+                    const isBottom = idx === 0;
+                    return (
+                      <li key={it.id}
+                          onClick={() => setSelectedId(it.id)}
+                          data-testid={`layer-${it.id}`}
+                          className={`flex items-center gap-1 p-1.5 rounded-xl border cursor-pointer transition-colors ${selectedId === it.id ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:bg-[#f0fdf4]"}`}>
+                        <div className="w-7 h-7 rounded-md bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
+                          {it.type === "image" ? <img src={it.src} alt="" className="w-full h-full object-contain" /> : <Type size={12} className="text-[#7bc67e]" />}
+                        </div>
+                        <div className="text-xs font-nunito font-extrabold truncate flex-1">{it.type === "text" ? (it.text || "Text") : "Image"}</div>
+                        <button onClick={(e) => { e.stopPropagation(); moveLayer(it.id, "up"); }} disabled={isTop} data-testid={`layer-up-${it.id}`} title="Bring forward" className="w-6 h-6 grid place-items-center rounded-full bg-white border border-[#dcfce7] disabled:opacity-30 hover:bg-[#dcfce7]"><ArrowUp size={10} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); moveLayer(it.id, "down"); }} disabled={isBottom} data-testid={`layer-down-${it.id}`} title="Send back" className="w-6 h-6 grid place-items-center rounded-full bg-white border border-[#dcfce7] disabled:opacity-30 hover:bg-[#dcfce7]"><ArrowDown size={10} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); removeItem(it.id); }} data-testid={`layer-remove-${it.id}`} title="Delete" className="w-6 h-6 grid place-items-center rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100"><Trash2 size={11} /></button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {items.length > 0 && (
+                <button data-testid="designer-clear" onClick={clearAll} className="w-full mt-3 flex items-center justify-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 py-2 rounded-full transition-colors text-[11px] font-nunito font-extrabold">
+                  <Trash2 size={12} /> Clear all layers
+                </button>
+              )}
+            </Panel>
+    </>
+  );
+
+  const sizesPanels = (
+    <>
+            <Panel title={`Sizes & quantity · ${totalQty}`}>
+              {(product?.sizes || []).length === 0 ? (
+                <div className="text-xs text-[#4b5563]">No sizes configured</div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {(product?.sizes || []).map((sz) => {
+                    const q = sizeQtys[sz] || 0;
+                    const up = product?.size_upcharges?.[sz] || 0;
+                    return (
+                      <div key={sz} data-testid={`designer-size-${sz}`} className={`rounded-xl border-2 p-2 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-nunito font-extrabold text-xs">{sz}</span>
+                          {up > 0 && <span className="text-[9px] text-[#4b5563]">+£{up.toFixed(2)}</span>}
+                        </div>
+                        <div className="flex items-center gap-0.5 mt-1">
+                          <button data-testid={`designer-size-${sz}-minus`} onClick={() => bumpSize(sz, -1)} className="w-5 h-5 grid place-items-center rounded-full bg-white border disabled:opacity-40" disabled={q === 0}><Minus size={9} /></button>
+                          <input data-testid={`designer-size-${sz}-qty`} type="number" min={0} value={q} onChange={(e) => setSizeQty(sz, e.target.value)} className="w-full text-center bg-transparent text-xs font-bold focus:outline-none" />
+                          <button data-testid={`designer-size-${sz}-plus`} onClick={() => bumpSize(sz, 1)} className="w-5 h-5 grid place-items-center rounded-full bg-white border"><Plus size={9} /></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Total">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}{neckEnabled && <> + £{neckLabelPrice.toFixed(2)} neck</>}</span>
+                <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
+              </div>
+              {totalQty > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5" data-testid="size-breakdown">
+                  {(product?.sizes || []).filter(sz => (sizeQtys[sz] || 0) > 0).map(sz => (
+                    <span key={sz} data-testid={`size-breakdown-${sz}`} className="inline-flex items-center gap-1 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-2 py-0.5 text-[11px] font-nunito font-extrabold text-[#1a1a1a]">
+                      {sizeQtys[sz]} × <span className="text-[#7bc67e]">{sz}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <button data-testid="designer-checkout" onClick={checkout} disabled={checkingOut} className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold rounded-full px-6 py-4 shadow-md hover:-translate-y-0.5 transition-transform">
+                {checkingOut ? <><Loader2 className="animate-spin" size={16} /> Saving design…</> : <><ShoppingCart size={16} /> Checkout with Stripe</>}
+              </button>
+              <div className="text-[10px] text-[#4b5563] mt-3 font-bold text-center">Test mode — no real charge<br /><ImageIcon size={9} className="inline" /> transparent PNG sent to production on checkout</div>
+            </Panel>
+    </>
+  );
+
+  return (
+    <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
+      <BoldNavbar />
+
+      <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-8 pb-24 lg:pb-8">
+        <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#f0fdf4] text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs"><Sparkles size={12} className="text-[#7bc67e]" /> Designer</div>
+            <h1 className="font-nunito font-black text-3xl lg:text-5xl mt-2" data-testid="dyo-hero-title">{dyoCopy.title}</h1>
+          </div>
+          <div className="text-xs text-[#4b5563] font-nunito font-bold" data-testid="dyo-hero-subtitle">{dyoCopy.subtitle}</div>
+        </div>
+
+        <div className="grid lg:grid-cols-12 gap-5">
+          {/* Right aside — split into TOP (Product picker) and BOTTOM (Sizes + Total + Checkout) so mobile order is:
+              1. Product   2. Canvas + view toggle   3. Layers/Upload/Text   4. Sizes & Checkout */}
+          <aside className="lg:col-span-3 space-y-4 order-1 lg:order-3 lg:col-start-10 lg:row-start-1" data-testid="designer-product-aside">
+            <Panel title="Product">
+              <select data-testid="designer-product" value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm">
+                {products.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}
+              </select>
+              {product && (product.composition || product.description_long || (product.use_cases || []).length > 0) && (
+                <div className="mt-3 space-y-2 text-xs" data-testid="product-info-card">
+                  {product.composition && (
+                    <div className="flex items-start gap-1.5 text-[#1a1a1a]">
+                      <Info size={11} className="text-[#7bc67e] mt-0.5 flex-shrink-0" />
+                      <span className="font-nunito font-bold leading-snug" data-testid="product-composition">{product.composition}</span>
+                    </div>
+                  )}
+                  {product.description_long && (
+                    <p className="text-[#4b5563] font-nunito leading-snug" data-testid="product-description-long">{product.description_long}</p>
+                  )}
+                  {(product.use_cases || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1" data-testid="product-use-cases">
+                      {product.use_cases.map((uc) => (
+                        <span key={uc} data-testid={`product-use-case-${uc}`} className="inline-flex items-center gap-1 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-2 py-0.5 text-[10px] font-nunito font-extrabold text-[#1a1a1a]">
+                          {USE_CASE_LABELS[uc] || uc}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="text-[10px] text-[#4b5563] mt-2 font-bold">{products.length} products available · admin manages list</div>
+            </Panel>
+
+            {product?.colors?.length > 0 && (
+              <Panel title="Colour">
+                <div className="flex flex-wrap gap-2" data-testid="designer-colour-swatches">
+                  {/* This isn't a colour — it's "show the product photo we have",
+                      which is whatever colour that photo happens to be. Labelled
+                      plainly so it doesn't read as a duplicate of White. */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedColour(null)}
+                    className={`h-8 px-2.5 rounded-full border-2 grid place-items-center bg-white ${!selectedColour ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
+                    title="Show the product photo as-is, rather than a specific colour"
+                    data-testid="designer-colour-default"
+                  >
+                    <span className="text-[9px] font-extrabold text-[#4b5563] whitespace-nowrap">As shown</span>
+                  </button>
+                  {product.colors.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => setSelectedColour(c.name)}
+                      className={`w-8 h-8 rounded-full border-2 ${selectedColour === c.name ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
+                      style={{ background: c.hex || "#ccc" }}
+                      title={c.name}
+                      data-testid={`designer-colour-${c.name}`}
+                    />
+                  ))}
+                </div>
+                {selectedColour && <p className="text-[10px] text-[#4b5563] mt-2 font-bold">{selectedColour}</p>}
+              </Panel>
+            )}
+          </aside>
+
+          <aside className="hidden lg:block lg:col-span-2 space-y-4 order-3 lg:order-1 lg:col-start-1 lg:row-start-1 lg:row-span-2" data-testid="designer-left-aside">
+            {toolPanels}
           </aside>
 
           <main className="lg:col-span-7 order-2 lg:order-2 lg:col-start-3 lg:row-start-1 lg:row-span-2" data-testid="designer-canvas-main">
@@ -846,52 +1014,8 @@ export default function DesignYourOwn() {
             )}
           </main>
 
-          <aside className="lg:col-span-3 space-y-4 order-4 lg:order-3 lg:col-start-10 lg:row-start-2" data-testid="designer-right-aside">
-            <Panel title={`Sizes & quantity · ${totalQty}`}>
-              {(product?.sizes || []).length === 0 ? (
-                <div className="text-xs text-[#4b5563]">No sizes configured</div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {(product?.sizes || []).map((sz) => {
-                    const q = sizeQtys[sz] || 0;
-                    const up = product?.size_upcharges?.[sz] || 0;
-                    return (
-                      <div key={sz} data-testid={`designer-size-${sz}`} className={`rounded-xl border-2 p-2 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
-                        <div className="flex items-center justify-between">
-                          <span className="font-nunito font-extrabold text-xs">{sz}</span>
-                          {up > 0 && <span className="text-[9px] text-[#4b5563]">+£{up.toFixed(2)}</span>}
-                        </div>
-                        <div className="flex items-center gap-0.5 mt-1">
-                          <button data-testid={`designer-size-${sz}-minus`} onClick={() => bumpSize(sz, -1)} className="w-5 h-5 grid place-items-center rounded-full bg-white border disabled:opacity-40" disabled={q === 0}><Minus size={9} /></button>
-                          <input data-testid={`designer-size-${sz}-qty`} type="number" min={0} value={q} onChange={(e) => setSizeQty(sz, e.target.value)} className="w-full text-center bg-transparent text-xs font-bold focus:outline-none" />
-                          <button data-testid={`designer-size-${sz}-plus`} onClick={() => bumpSize(sz, 1)} className="w-5 h-5 grid place-items-center rounded-full bg-white border"><Plus size={9} /></button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Panel>
-
-            <Panel title="Total">
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}{neckEnabled && <> + £{neckLabelPrice.toFixed(2)} neck</>}</span>
-                <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
-              </div>
-              {totalQty > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5" data-testid="size-breakdown">
-                  {(product?.sizes || []).filter(sz => (sizeQtys[sz] || 0) > 0).map(sz => (
-                    <span key={sz} data-testid={`size-breakdown-${sz}`} className="inline-flex items-center gap-1 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-2 py-0.5 text-[11px] font-nunito font-extrabold text-[#1a1a1a]">
-                      {sizeQtys[sz]} × <span className="text-[#7bc67e]">{sz}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <button data-testid="designer-checkout" onClick={checkout} disabled={checkingOut} className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold rounded-full px-6 py-4 shadow-md hover:-translate-y-0.5 transition-transform">
-                {checkingOut ? <><Loader2 className="animate-spin" size={16} /> Saving design…</> : <><ShoppingCart size={16} /> Checkout with Stripe</>}
-              </button>
-              <div className="text-[10px] text-[#4b5563] mt-3 font-bold text-center">Test mode — no real charge<br /><ImageIcon size={9} className="inline" /> transparent PNG sent to production on checkout</div>
-            </Panel>
+          <aside className="hidden lg:block lg:col-span-3 space-y-4 order-4 lg:order-3 lg:col-start-10 lg:row-start-2" data-testid="designer-right-aside">
+            {sizesPanels}
           </aside>
         </div>
 
@@ -906,6 +1030,32 @@ export default function DesignYourOwn() {
           />
         </div>
       </div>
+
+      {/* Mobile: the tool asides above are hidden; their panels surface here in
+          sliding sheets over a pinned canvas. Renders nothing on desktop. */}
+      {isMobile && (
+        <>
+          <MobileToolBar
+            tabs={[
+              { key: "art", label: "Add & edit", icon: Upload },
+              { key: "layers", label: "Layers", icon: Layers, badge: items.length + backItems.length + neckItems.length },
+              { key: "sizes", label: "Sizes", icon: Tag, badge: totalQty },
+            ]}
+            activeKey={sheet}
+            onSelect={setSheet}
+            testid="dyo-toolbar"
+          />
+          <MobileSheet open={sheet === "art"} title="Add image or text" onClose={() => setSheet(null)} testid="dyo-sheet-art">
+            {addEditPanels}
+          </MobileSheet>
+          <MobileSheet open={sheet === "layers"} title="Layers" onClose={() => setSheet(null)} testid="dyo-sheet-layers">
+            {layersPanel}
+          </MobileSheet>
+          <MobileSheet open={sheet === "sizes"} title="Sizes & checkout" onClose={() => setSheet(null)} testid="dyo-sheet-sizes">
+            {sizesPanels}
+          </MobileSheet>
+        </>
+      )}
 
       <BoldFooter />
       <DesignerHelpFAB />
@@ -927,6 +1077,7 @@ function IconBtn({ children, onClick, title, testId, className = "" }) {
   );
 }
 function Slider({ label, testId, min, max, v, onV, unit }) {
+
   return (
     <div className="col-span-2 flex items-center gap-2">
       <span className="text-[10px] font-nunito font-extrabold text-[#4b5563] w-12">{label}</span>
