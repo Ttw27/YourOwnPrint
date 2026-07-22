@@ -289,6 +289,8 @@ export default function DesignYourOwn() {
 
   const onPointerMove = (e) => {
     if (!drag || !printAreaRef.current) return;
+    // The gesture is a drag, not a scroll — keep the page still under the finger.
+    if (e.cancelable) e.preventDefault();
     const rect = printAreaRef.current.getBoundingClientRect();
     if (drag.mode === "move") {
       const x = ((e.clientX - drag.dx - rect.left) / rect.width) * 100;
@@ -315,9 +317,19 @@ export default function DesignYourOwn() {
   const onPointerUp = () => setDrag(null);
 
   useEffect(() => {
-    window.addEventListener("mousemove", onPointerMove);
-    window.addEventListener("mouseup", onPointerUp);
-    return () => { window.removeEventListener("mousemove", onPointerMove); window.removeEventListener("mouseup", onPointerUp); };
+    // Pointer events unify mouse, touch and pen, so a finger drag on a phone
+    // fires the same move logic a mouse does. The old code listened only for
+    // mouse events, which never fire from touch — so on a phone a drag on an
+    // item fell through to the browser and scrolled the page instead. passive:
+    // false lets us preventDefault the scroll during an active drag.
+    window.addEventListener("pointermove", onPointerMove, { passive: false });
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
   });
 
   // ---- Render to transparent PNG ----
@@ -846,7 +858,7 @@ export default function DesignYourOwn() {
                   it fell below the fold. */}
               <div
                 ref={canvasRef}
-                onMouseDown={() => { setSelectedId(null); setEditingId(null); }}
+                onPointerDown={() => { setSelectedId(null); setEditingId(null); }}
                 className={`relative bg-white rounded-2xl overflow-hidden select-none mx-auto max-h-[calc(100vh-190px)] ${view === "neck" ? "aspect-[2/1]" : "aspect-[4/5]"}`}
                 data-testid="design-canvas"
               >
@@ -882,7 +894,7 @@ export default function DesignYourOwn() {
                       return (
                         <div
                           key={item.id}
-                          onMouseDown={(e) => onPointerDownItem(e, item, "move")}
+                          onPointerDown={(e) => onPointerDownItem(e, item, "move")}
                           onDoubleClick={(e) => { e.stopPropagation(); if (!item.isSizeToken) setEditingId(item.id); }}
                           style={{
                             position: "absolute",
@@ -891,6 +903,7 @@ export default function DesignYourOwn() {
                             display: "inline-block",
                             transform: `rotate(${item.rot}deg)`,
                             transformOrigin: "top left",
+                            touchAction: "none",
                             cursor: isEditing ? "text" : "grab",
                             outline: isSelected ? "2px solid #7bc67e" : "none",
                             outlineOffset: 2,
@@ -906,7 +919,7 @@ export default function DesignYourOwn() {
                               onChange={(e) => updateItem(item.id, { text: e.target.value })}
                               onBlur={() => setEditingId(null)}
                               onKeyDown={(e) => { if (e.key === "Enter") setEditingId(null); }}
-                              onMouseDown={(e) => e.stopPropagation()}
+                              onPointerDown={(e) => e.stopPropagation()}
                               style={{ color: item.color, fontFamily: item.font, fontSize: `${item.fontSize}px`, fontWeight: 800, lineHeight: 1.1, background: "rgba(255,255,255,0.6)", border: "1px dashed #7bc67e", borderRadius: 4, outline: "none", padding: "2px 6px", width: `${Math.max(10, (item.text?.length || 4) + 2)}ch` }}
                             />
                           ) : (
@@ -918,7 +931,7 @@ export default function DesignYourOwn() {
                             <>
                               <span
                                 data-testid={`handle-rotate-${item.id}`}
-                                onMouseDown={(e) => onPointerDownItem(e, item, "rotate")}
+                                onPointerDown={(e) => onPointerDownItem(e, item, "rotate")}
                                 className="absolute -top-7 left-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-[#7bc67e] rounded-full cursor-grab grid place-items-center"
                                 title="Rotate"
                               >
@@ -926,16 +939,16 @@ export default function DesignYourOwn() {
                               </span>
                               <span
                                 data-testid={`handle-resize-${item.id}`}
-                                onMouseDown={(e) => onPointerDownItem(e, item, "resize")}
+                                onPointerDown={(e) => onPointerDownItem(e, item, "resize")}
                                 className="absolute -right-2 -bottom-2 w-4 h-4 bg-[#7bc67e] rounded-full cursor-se-resize border-2 border-white"
                                 title="Resize"
                               />
                               {!item.isSizeToken && (
-                                <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setEditingId(item.id)} data-testid={`design-item-edit-${item.id}`} className="absolute -top-3 -left-3 w-6 h-6 bg-white border-2 border-[#7bc67e] text-[#7bc67e] rounded-full text-xs grid place-items-center" title="Edit text">
+                                <button onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditingId(item.id)} data-testid={`design-item-edit-${item.id}`} className="absolute -top-3 -left-3 w-6 h-6 bg-white border-2 border-[#7bc67e] text-[#7bc67e] rounded-full text-xs grid place-items-center" title="Edit text">
                                   <Pencil size={10} />
                                 </button>
                               )}
-                              <button onMouseDown={(e) => e.stopPropagation()} onClick={() => removeItem(item.id)} data-testid={`design-item-delete-${item.id}`} className="absolute -top-3 -right-3 w-6 h-6 bg-[#1a1a1a] text-white rounded-full text-xs grid place-items-center" title="Delete">×</button>
+                              <button onPointerDown={(e) => e.stopPropagation()} onClick={() => removeItem(item.id)} data-testid={`design-item-delete-${item.id}`} className="absolute -top-3 -right-3 w-6 h-6 bg-[#1a1a1a] text-white rounded-full text-xs grid place-items-center" title="Delete">×</button>
                             </>
                           )}
                         </div>
@@ -945,7 +958,7 @@ export default function DesignYourOwn() {
                     return (
                       <div
                         key={item.id}
-                        onMouseDown={(e) => onPointerDownItem(e, item, "move")}
+                        onPointerDown={(e) => onPointerDownItem(e, item, "move")}
                         style={{
                           position: "absolute",
                           left: `${item.x}%`,
@@ -955,6 +968,7 @@ export default function DesignYourOwn() {
                           transform: `rotate(${item.rot}deg)`,
                           transformOrigin: "center",
                           cursor: "grab",
+                          touchAction: "none",
                           outline: isSelected ? "2px solid #7bc67e" : "none",
                         }}
                         data-testid={`design-item-${item.id}`}
@@ -964,7 +978,7 @@ export default function DesignYourOwn() {
                           <>
                             <span
                               data-testid={`handle-rotate-${item.id}`}
-                              onMouseDown={(e) => onPointerDownItem(e, item, "rotate")}
+                              onPointerDown={(e) => onPointerDownItem(e, item, "rotate")}
                               className="absolute -top-7 left-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-[#7bc67e] rounded-full cursor-grab grid place-items-center"
                               title="Rotate"
                             >
@@ -972,11 +986,11 @@ export default function DesignYourOwn() {
                             </span>
                             <span
                               data-testid={`handle-resize-${item.id}`}
-                              onMouseDown={(e) => onPointerDownItem(e, item, "resize")}
+                              onPointerDown={(e) => onPointerDownItem(e, item, "resize")}
                               className="absolute -right-2 -bottom-2 w-4 h-4 bg-[#7bc67e] rounded-full cursor-se-resize border-2 border-white"
                               title="Resize"
                             />
-                            <button onMouseDown={(e) => e.stopPropagation()} onClick={() => removeItem(item.id)} data-testid={`design-item-delete-${item.id}`} className="absolute -top-3 -right-3 w-6 h-6 bg-[#1a1a1a] text-white rounded-full text-xs grid place-items-center" title="Delete">×</button>
+                            <button onPointerDown={(e) => e.stopPropagation()} onClick={() => removeItem(item.id)} data-testid={`design-item-delete-${item.id}`} className="absolute -top-3 -right-3 w-6 h-6 bg-[#1a1a1a] text-white rounded-full text-xs grid place-items-center" title="Delete">×</button>
                           </>
                         )}
                       </div>
