@@ -104,3 +104,15 @@ body {
 @layer base {
     * { @apply border-border; }
 }
+
+/* When a mobile designer tool bar owns the bottom of the screen, the floating
+   WhatsApp / Help buttons would stack on top of it — three fixed elements in the
+   same strip, exactly the crowding in the designer screenshots. Hide them while
+   the bar is up; they return the moment the designer closes. Desktop is
+   unaffected (the bar is lg:hidden, so this class is only ever set on mobile). */
+@media (max-width: 1023px) {
+  body.designer-bar-open .whatsapp-fab,
+  body.designer-bar-open .designer-help-fab {
+    display: none !important;
+  }
+}
