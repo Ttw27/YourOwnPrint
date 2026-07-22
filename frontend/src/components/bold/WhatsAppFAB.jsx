@@ -19,7 +19,7 @@ export default function WhatsAppFAB({ preset, label = "Chat on WhatsApp", classN
       rel="noopener noreferrer"
       data-testid="whatsapp-fab"
       aria-label={`${label} ${number}`}
-      className={`fixed bottom-5 right-5 z-50 group inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white font-nunito font-extrabold pl-3 pr-4 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 ${className}`}
+      className={`whatsapp-fab fixed bottom-5 right-5 z-50 group inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white font-nunito font-extrabold pl-3 pr-4 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 ${className}`}
     >
       <span className="w-9 h-9 grid place-items-center bg-white rounded-full text-[#25D366]">
         <WhatsAppGlyph size={20} />

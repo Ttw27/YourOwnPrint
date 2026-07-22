@@ -41,9 +41,17 @@ function Tab({ icon: Icon, label, active, badge, onClick, testid }) {
  * `tabs` is an array of { key, label, icon, badge }.
  */
 export function MobileToolBar({ tabs, activeKey, onSelect, testid = "designer-toolbar" }) {
+  // Tell the rest of the page a designer bar owns the bottom of the screen, so
+  // the WhatsApp / Help FABs can hide rather than stack on top of it. Cleared
+  // on unmount and only ever set on mobile (this whole component is lg:hidden).
+  useEffect(() => {
+    document.body.classList.add("designer-bar-open");
+    return () => document.body.classList.remove("designer-bar-open");
+  }, []);
+
   return (
     <div
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#e5e7eb] flex items-stretch pb-[env(safe-area-inset-bottom)]"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-[60] bg-white border-t border-[#e5e7eb] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-stretch pb-[env(safe-area-inset-bottom)]"
       data-testid={testid}
     >
       {tabs.map((t) => (
@@ -87,13 +95,13 @@ export function MobileSheet({ open, title, onClose, children, testid = "designer
           sheet (on the canvas) dismisses it. */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-black/20 transition-opacity ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-[65] bg-black/25 transition-opacity ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         data-testid={`${testid}-backdrop`}
       />
       <div
-        className={`fixed inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl border-t border-[#e5e7eb] transition-transform duration-200 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}
+        className={`fixed inset-x-0 z-[70] bg-white rounded-t-3xl shadow-2xl border-t border-[#e5e7eb] transition-transform duration-200 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}
         // Sits just above the tab bar; height capped so the canvas stays in view.
-        style={{ bottom: "62px", maxHeight: "62vh" }}
+        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))", maxHeight: "60vh" }}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#f0fdf4]">
           <div className="font-nunito font-extrabold text-sm">{title}</div>
@@ -107,7 +115,7 @@ export function MobileSheet({ open, title, onClose, children, testid = "designer
             ✕
           </button>
         </div>
-        <div className="overflow-y-auto px-4 py-4" style={{ maxHeight: "calc(62vh - 52px)" }}>
+        <div className="overflow-y-auto px-4 py-4" style={{ maxHeight: "calc(60vh - 52px)" }}>
           {children}
         </div>
       </div>

@@ -27,7 +27,7 @@ export default function DesignerHelpFAB() {
         onClick={() => setOpen(true)}
         data-testid="designer-help-fab"
         aria-label="Help using the designer"
-        className="fixed bottom-5 left-5 z-40 inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-nunito font-extrabold pl-3 pr-4 py-3 rounded-full shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all"
+        className="designer-help-fab fixed bottom-5 left-5 z-40 inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-nunito font-extrabold pl-3 pr-4 py-3 rounded-full shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all"
       >
         <span className="w-9 h-9 grid place-items-center bg-[#fde68a] rounded-full text-[#1a1a1a]">
           <HelpCircle size={20} />
