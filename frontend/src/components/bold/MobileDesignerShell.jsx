@@ -51,7 +51,7 @@ export function MobileToolBar({ tabs, activeKey, onSelect, testid = "designer-to
 
   return (
     <div
-      className="lg:hidden fixed bottom-0 inset-x-0 z-[60] bg-white border-t border-[#e5e7eb] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-stretch pb-[env(safe-area-inset-bottom)]"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-[80] bg-white border-t border-[#e5e7eb] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-stretch pb-[env(safe-area-inset-bottom)]"
       data-testid={testid}
     >
       {tabs.map((t) => (
@@ -95,11 +95,13 @@ export function MobileSheet({ open, title, onClose, children, testid = "designer
           sheet (on the canvas) dismisses it. */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-[65] bg-black/25 transition-opacity ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-x-0 top-0 z-[65] bg-black/25 transition-opacity ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        // Stops at the top of the tab bar so the bar stays visible and tappable.
+        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
         data-testid={`${testid}-backdrop`}
       />
       <div
-        className={`fixed inset-x-0 z-[70] bg-white rounded-t-3xl shadow-2xl border-t border-[#e5e7eb] transition-transform duration-200 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}
+        className={`fixed inset-x-0 z-[70] bg-white rounded-t-3xl shadow-2xl border-t border-[#e5e7eb] transition-transform duration-200 ease-out ${open ? "translate-y-0" : "translate-y-full pointer-events-none"}`}
         // Sits just above the tab bar; height capped so the canvas stays in view.
         style={{ bottom: "calc(64px + env(safe-area-inset-bottom))", maxHeight: "60vh" }}
       >
