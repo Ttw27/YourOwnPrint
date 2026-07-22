@@ -103,10 +103,10 @@ export function MobileSheet({ open, title, onClose, children, testid = "designer
       <div
         className={`fixed inset-x-0 z-[70] bg-white rounded-t-3xl shadow-2xl border-t border-[#e5e7eb] transition-transform duration-200 ease-out ${open ? "translate-y-0" : "translate-y-full pointer-events-none"}`}
         // Sits just above the tab bar; height capped so the canvas stays in view.
-        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))", maxHeight: "60vh" }}
+        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))", maxHeight: "78vh" }}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#f0fdf4]">
-          <div className="font-nunito font-extrabold text-sm">{title}</div>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[#f0fdf4]">
+          <div className="font-nunito font-extrabold text-sm truncate min-w-0">{title}</div>
           <button
             type="button"
             onClick={onClose}
@@ -117,7 +117,7 @@ export function MobileSheet({ open, title, onClose, children, testid = "designer
             ✕
           </button>
         </div>
-        <div className="overflow-y-auto px-4 py-4" style={{ maxHeight: "calc(60vh - 52px)" }}>
+        <div className="overflow-y-auto overscroll-contain px-4 py-4 pb-6" style={{ maxHeight: "calc(78vh - 52px)" }}>
           {children}
         </div>
       </div>

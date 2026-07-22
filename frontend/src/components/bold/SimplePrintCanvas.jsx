@@ -40,34 +40,45 @@ export default function SimplePrintCanvas({ background, printArea, artworkUrl, o
   // (0-1) of the print area's own size — starts centred, fills the area.
   const [art, setArt] = useState({ x: 0.5, y: 0.5, scale: 0.9 });
   const dragRef = useRef(null);
+  const lastPointRef = useRef(null);
 
   useEffect(() => { setArt({ x: 0.5, y: 0.5, scale: 0.9 }); }, [artworkUrl]);
 
   useEffect(() => {
     function onMove(e) {
       if (!dragRef.current || !containerRef.current) return;
+      // A drag, not a scroll — hold the page still under the finger.
+      if (e.cancelable) e.preventDefault();
       const rect = containerRef.current.getBoundingClientRect();
       const areaWpx = (printArea.w / 100) * rect.width;
       const areaHpx = (printArea.h / 100) * rect.height;
+      // Touch pointers don't report movementX/Y, so track the delta ourselves
+      // from the last pointer position rather than relying on the browser.
+      const last = lastPointRef.current;
+      const dx = last ? e.clientX - last.x : 0;
+      const dy = last ? e.clientY - last.y : 0;
+      lastPointRef.current = { x: e.clientX, y: e.clientY };
       if (dragRef.current === "move") {
         setArt((a) => ({
           ...a,
-          x: Math.min(Math.max(a.x + e.movementX / areaWpx, 0), 1),
-          y: Math.min(Math.max(a.y + e.movementY / areaHpx, 0), 1),
+          x: Math.min(Math.max(a.x + dx / areaWpx, 0), 1),
+          y: Math.min(Math.max(a.y + dy / areaHpx, 0), 1),
         }));
       } else if (dragRef.current === "resize") {
         setArt((a) => ({
           ...a,
-          scale: Math.min(Math.max(a.scale + e.movementX / areaWpx, 0.15), 1.5),
+          scale: Math.min(Math.max(a.scale + dx / areaWpx, 0.15), 1.5),
         }));
       }
     }
-    function onUp() { dragRef.current = null; }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    function onUp() { dragRef.current = null; lastPointRef.current = null; }
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     };
   }, [printArea]);
 
@@ -104,13 +115,15 @@ export default function SimplePrintCanvas({ background, printArea, artworkUrl, o
                 left: `${art.x * 100}%`, top: `${art.y * 100}%`,
                 width: `${art.scale * 100}%`,
                 transform: "translate(-50%, -50%)",
+                touchAction: "none",
               }}
-              onMouseDown={(e) => { e.preventDefault(); dragRef.current = "move"; }}
+              onPointerDown={(e) => { e.preventDefault(); lastPointRef.current = { x: e.clientX, y: e.clientY }; dragRef.current = "move"; }}
               data-testid="print-canvas-artwork"
             >
               <img src={artworkUrl} alt="Your artwork" className="w-full h-auto pointer-events-none drop-shadow" draggable={false} />
               <div
-                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); dragRef.current = "resize"; }}
+                onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); lastPointRef.current = { x: e.clientX, y: e.clientY }; dragRef.current = "resize"; }}
+                style={{ touchAction: "none" }}
                 className="absolute -right-1.5 -bottom-1.5 w-4 h-4 bg-[#7bc67e] rounded-full border-2 border-white cursor-nwse-resize"
                 data-testid="print-canvas-resize-handle"
               />
