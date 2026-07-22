@@ -449,6 +449,69 @@ export default function DesignYourOwn() {
   }
 
 
+  const productColourPanel = (
+    <>
+            <Panel title="Product">
+              <select data-testid="designer-product" value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm">
+                {products.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}
+              </select>
+              {product && (product.composition || product.description_long || (product.use_cases || []).length > 0) && (
+                <div className="mt-3 space-y-2 text-xs" data-testid="product-info-card">
+                  {product.composition && (
+                    <div className="flex items-start gap-1.5 text-[#1a1a1a]">
+                      <Info size={11} className="text-[#7bc67e] mt-0.5 flex-shrink-0" />
+                      <span className="font-nunito font-bold leading-snug" data-testid="product-composition">{product.composition}</span>
+                    </div>
+                  )}
+                  {product.description_long && (
+                    <p className="text-[#4b5563] font-nunito leading-snug" data-testid="product-description-long">{product.description_long}</p>
+                  )}
+                  {(product.use_cases || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1" data-testid="product-use-cases">
+                      {product.use_cases.map((uc) => (
+                        <span key={uc} data-testid={`product-use-case-${uc}`} className="inline-flex items-center gap-1 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-2 py-0.5 text-[10px] font-nunito font-extrabold text-[#1a1a1a]">
+                          {USE_CASE_LABELS[uc] || uc}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="text-[10px] text-[#4b5563] mt-2 font-bold">{products.length} products available · admin manages list</div>
+            </Panel>
+
+            {product?.colors?.length > 0 && (
+              <Panel title="Colour">
+                <div className="flex flex-wrap gap-2" data-testid="designer-colour-swatches">
+                  {/* This isn't a colour — it's "show the product photo we have",
+                      which is whatever colour that photo happens to be. Labelled
+                      plainly so it doesn't read as a duplicate of White. */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedColour(null)}
+                    className={`h-8 px-2.5 rounded-full border-2 grid place-items-center bg-white ${!selectedColour ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
+                    title="Show the product photo as-is, rather than a specific colour"
+                    data-testid="designer-colour-default"
+                  >
+                    <span className="text-[9px] font-extrabold text-[#4b5563] whitespace-nowrap">As shown</span>
+                  </button>
+                  {product.colors.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => setSelectedColour(c.name)}
+                      className={`w-8 h-8 rounded-full border-2 ${selectedColour === c.name ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
+                      style={{ background: c.hex || "#ccc" }}
+                      title={c.name}
+                      data-testid={`designer-colour-${c.name}`}
+                    />
+                  ))}
+                </div>
+                {selectedColour && <p className="text-[10px] text-[#4b5563] mt-2 font-bold">{selectedColour}</p>}
+              </Panel>
+            )}
+    </>
+  );
   const toolPanels = (
     <>
             <Panel title="Upload">
@@ -727,66 +790,8 @@ export default function DesignYourOwn() {
         <div className="grid lg:grid-cols-12 gap-5">
           {/* Right aside — split into TOP (Product picker) and BOTTOM (Sizes + Total + Checkout) so mobile order is:
               1. Product   2. Canvas + view toggle   3. Layers/Upload/Text   4. Sizes & Checkout */}
-          <aside className="lg:col-span-3 space-y-4 order-1 lg:order-3 lg:col-start-10 lg:row-start-1" data-testid="designer-product-aside">
-            <Panel title="Product">
-              <select data-testid="designer-product" value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm">
-                {products.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}</option>)}
-              </select>
-              {product && (product.composition || product.description_long || (product.use_cases || []).length > 0) && (
-                <div className="mt-3 space-y-2 text-xs" data-testid="product-info-card">
-                  {product.composition && (
-                    <div className="flex items-start gap-1.5 text-[#1a1a1a]">
-                      <Info size={11} className="text-[#7bc67e] mt-0.5 flex-shrink-0" />
-                      <span className="font-nunito font-bold leading-snug" data-testid="product-composition">{product.composition}</span>
-                    </div>
-                  )}
-                  {product.description_long && (
-                    <p className="text-[#4b5563] font-nunito leading-snug" data-testid="product-description-long">{product.description_long}</p>
-                  )}
-                  {(product.use_cases || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1" data-testid="product-use-cases">
-                      {product.use_cases.map((uc) => (
-                        <span key={uc} data-testid={`product-use-case-${uc}`} className="inline-flex items-center gap-1 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-2 py-0.5 text-[10px] font-nunito font-extrabold text-[#1a1a1a]">
-                          {USE_CASE_LABELS[uc] || uc}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="text-[10px] text-[#4b5563] mt-2 font-bold">{products.length} products available · admin manages list</div>
-            </Panel>
-
-            {product?.colors?.length > 0 && (
-              <Panel title="Colour">
-                <div className="flex flex-wrap gap-2" data-testid="designer-colour-swatches">
-                  {/* This isn't a colour — it's "show the product photo we have",
-                      which is whatever colour that photo happens to be. Labelled
-                      plainly so it doesn't read as a duplicate of White. */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedColour(null)}
-                    className={`h-8 px-2.5 rounded-full border-2 grid place-items-center bg-white ${!selectedColour ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
-                    title="Show the product photo as-is, rather than a specific colour"
-                    data-testid="designer-colour-default"
-                  >
-                    <span className="text-[9px] font-extrabold text-[#4b5563] whitespace-nowrap">As shown</span>
-                  </button>
-                  {product.colors.map((c) => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      onClick={() => setSelectedColour(c.name)}
-                      className={`w-8 h-8 rounded-full border-2 ${selectedColour === c.name ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}
-                      style={{ background: c.hex || "#ccc" }}
-                      title={c.name}
-                      data-testid={`designer-colour-${c.name}`}
-                    />
-                  ))}
-                </div>
-                {selectedColour && <p className="text-[10px] text-[#4b5563] mt-2 font-bold">{selectedColour}</p>}
-              </Panel>
-            )}
+          <aside className="hidden lg:block lg:col-span-3 space-y-4 order-1 lg:order-3 lg:col-start-10 lg:row-start-1" data-testid="designer-product-aside">
+            {productColourPanel}
           </aside>
 
           <aside className="hidden lg:block lg:col-span-2 space-y-4 order-3 lg:order-1 lg:col-start-1 lg:row-start-1 lg:row-span-2" data-testid="designer-left-aside">
@@ -1037,14 +1042,18 @@ export default function DesignYourOwn() {
         <>
           <MobileToolBar
             tabs={[
+              { key: "product", label: "Product", icon: Tag },
               { key: "art", label: "Add & edit", icon: Upload },
               { key: "layers", label: "Layers", icon: Layers, badge: items.length + backItems.length + neckItems.length },
-              { key: "sizes", label: "Sizes", icon: Tag, badge: totalQty },
+              { key: "sizes", label: "Sizes", icon: ShoppingCart, badge: totalQty },
             ]}
             activeKey={sheet}
             onSelect={setSheet}
             testid="dyo-toolbar"
           />
+          <MobileSheet open={sheet === "product"} title="Product & colour" onClose={() => setSheet(null)} testid="dyo-sheet-product">
+            {productColourPanel}
+          </MobileSheet>
           <MobileSheet open={sheet === "art"} title="Add image or text" onClose={() => setSheet(null)} testid="dyo-sheet-art">
             {addEditPanels}
           </MobileSheet>
