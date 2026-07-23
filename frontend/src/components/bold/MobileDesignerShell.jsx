@@ -41,6 +41,7 @@ function Tab({ icon: Icon, label, active, badge, onClick, testid }) {
  * `tabs` is an array of { key, label, icon, badge }.
  */
 export function MobileToolBar({ tabs, activeKey, onSelect, testid = "designer-toolbar" }) {
+  const bottomInset = useBottomInset();
   // Tell the rest of the page a designer bar owns the bottom of the screen, so
   // the WhatsApp / Help FABs can hide rather than stack on top of it. Cleared
   // on unmount and only ever set on mobile (this whole component is lg:hidden).
@@ -52,6 +53,7 @@ export function MobileToolBar({ tabs, activeKey, onSelect, testid = "designer-to
   return (
     <div
       className="lg:hidden fixed bottom-0 inset-x-0 z-[80] bg-white border-t border-[#e5e7eb] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-stretch pb-[env(safe-area-inset-bottom)]"
+      style={{ transform: bottomInset ? `translateY(-${bottomInset}px)` : undefined }}
       data-testid={testid}
     >
       {tabs.map((t) => (
@@ -71,10 +73,11 @@ export function MobileToolBar({ tabs, activeKey, onSelect, testid = "designer-to
 
 /**
  * MobileSheet — the panel that slides up over the canvas when a tab is active.
- * Capped at 62vh so the garment above stays visible; the point of the whole
+ * Capped at 78vh so the garment above stays visible; the point of the whole
  * exercise is that you can see what you're editing while you edit it.
  */
 export function MobileSheet({ open, title, onClose, children, testid = "designer-sheet" }) {
+  const bottomInset = useBottomInset();
   // Close on Escape, and lock body scroll so the page behind doesn't move while
   // a sheet is open — otherwise a drag inside the sheet can scroll the canvas away.
   useEffect(() => {
@@ -97,13 +100,13 @@ export function MobileSheet({ open, title, onClose, children, testid = "designer
         onClick={onClose}
         className={`fixed inset-x-0 top-0 z-[65] bg-black/25 transition-opacity ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         // Stops at the top of the tab bar so the bar stays visible and tappable.
-        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
+        style={{ bottom: `calc(64px + env(safe-area-inset-bottom) + ${bottomInset}px)` }}
         data-testid={`${testid}-backdrop`}
       />
       <div
         className={`fixed inset-x-0 z-[70] bg-white rounded-t-3xl shadow-2xl border-t border-[#e5e7eb] transition-transform duration-200 ease-out ${open ? "translate-y-0" : "translate-y-full pointer-events-none"}`}
         // Sits just above the tab bar; height capped so the canvas stays in view.
-        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))", maxHeight: "78vh" }}
+        style={{ bottom: `calc(64px + env(safe-area-inset-bottom) + ${bottomInset}px)`, maxHeight: "78vh" }}
       >
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[#f0fdf4]">
           <div className="font-nunito font-extrabold text-sm truncate min-w-0">{title}</div>
@@ -123,6 +126,49 @@ export function MobileSheet({ open, title, onClose, children, testid = "designer
       </div>
     </div>
   );
+}
+
+/**
+ * useBottomInset — how far the bottom of what you can actually see sits above
+ * the bottom of the page's layout box.
+ *
+ * On iOS Safari these are not the same thing. With the address bar expanded
+ * (which it always is at the top of a page) the layout viewport is taller than
+ * the visible area, so a `bottom: 0` fixed element is positioned *below* the
+ * screen and simply isn't there. Scroll down, the address bar collapses, the
+ * two line up, and the element appears — which is exactly the bar vanishing at
+ * the top of the page and coming back further down.
+ *
+ * Measuring the gap and lifting the bar by it pins it to the bottom of what the
+ * customer can see, in every scroll state. It also handles the on-screen
+ * keyboard for free: when that opens the visible area shrinks, the gap grows,
+ * and the bar rides up above the keyboard instead of hiding behind it.
+ *
+ * Returns 0 where the API is unavailable, so behaviour is unchanged rather than
+ * broken on anything that doesn't support it.
+ */
+export function useBottomInset() {
+  const [inset, setInset] = React.useState(0);
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return undefined;
+    const update = () => {
+      const gap = window.innerHeight - (vv.height + vv.offsetTop);
+      // Rounded, and only written when it actually changes — visualViewport
+      // scroll fires continuously during a drag and would otherwise re-render
+      // the bar on every frame.
+      const next = Math.max(0, Math.round(gap));
+      setInset((prev) => (prev === next ? prev : next));
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+  return inset;
 }
 
 /**

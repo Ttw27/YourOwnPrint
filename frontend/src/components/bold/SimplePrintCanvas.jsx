@@ -96,6 +96,7 @@ export default function SimplePrintCanvas({ background, printArea, artworkUrl, o
         style={{
           width: "100%", maxWidth: size, aspectRatio: "1 / 1",
           background: background?.type === "color" ? background.value : "#f0fdf4",
+          touchAction: "none",
         }}
         data-testid="simple-print-canvas"
       >
