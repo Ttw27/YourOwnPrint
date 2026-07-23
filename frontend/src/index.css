@@ -116,3 +116,21 @@ body {
     display: none !important;
   }
 }
+
+/* iOS zooms the page in whenever a focused input has a font smaller than 16px,
+   and never zooms back out — which is why the designer stayed zoomed after you
+   tapped "Add text". Force at least 16px on designer inputs on small screens.
+   Visually near-identical to the 14px it replaces, but below the zoom trigger. */
+@media (max-width: 1023px) {
+  [data-testid="designer-sheet"] input,
+  [data-testid="designer-sheet"] select,
+  [data-testid="designer-sheet"] textarea,
+  [data-testid^="placement-sheet"] input,
+  [data-testid^="placement-sheet"] select,
+  [data-testid^="placement-sheet"] textarea,
+  [data-testid^="dyo-sheet"] input,
+  [data-testid^="dyo-sheet"] select,
+  [data-testid^="dyo-sheet"] textarea {
+    font-size: 16px !important;
+  }
+}
