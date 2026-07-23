@@ -272,6 +272,9 @@ export default function DesignYourOwn() {
   // ---- Pointer interactions (in print-area coordinate space) ----
   const onPointerDownItem = (e, item, mode = "move") => {
     e.stopPropagation();
+    // Claim the gesture immediately so the browser doesn't treat the first
+    // move as a page scroll before our window handler takes over.
+    if (e.cancelable) e.preventDefault();
     if (editingId === item.id && mode === "move") return;
     setSelectedId(item.id);
     const rect = printAreaRef.current.getBoundingClientRect();
@@ -859,6 +862,7 @@ export default function DesignYourOwn() {
               <div
                 ref={canvasRef}
                 onPointerDown={() => { setSelectedId(null); setEditingId(null); }}
+                style={{ touchAction: "none" }}
                 className={`relative bg-white rounded-2xl overflow-hidden select-none mx-auto max-h-[calc(100vh-190px)] ${view === "neck" ? "aspect-[2/1]" : "aspect-[4/5]"}`}
                 data-testid="design-canvas"
               >
