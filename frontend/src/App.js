@@ -10,6 +10,7 @@ import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Returns from "@/pages/Returns";
 import Workwear from "@/pages/Workwear";
+import ForBusiness from "@/pages/ForBusiness";
 import TeamsSchools from "@/pages/TeamsSchools";
 import DesignYourOwn from "@/pages/DesignYourOwn";
 import Contact from "@/pages/Contact";
@@ -74,6 +75,7 @@ function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/returns" element={<Returns />} />
           <Route path="/workwear" element={<Workwear />} />
+          <Route path="/for-business" element={<ForBusiness />} />
           <Route path="/workforce" element={<KitYourWorkforce />} />
           <Route path="/kit-your-workforce" element={<KitYourWorkforce />} />
           <Route path="/specials" element={<Specials />} />
