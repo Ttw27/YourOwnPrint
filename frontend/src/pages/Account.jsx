@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Package, MapPin, Bookmark, LogOut, ArrowRight, Loader2, Trash2, Plus, ShoppingBag } from "lucide-react";
+import { Package, MapPin, Bookmark, LogOut, ArrowRight, Loader2, Trash2, Plus, ShoppingBag, RotateCcw, Building2, Upload, Check } from "lucide-react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import {
   customerOrders,
   customerAddresses, customerAddAddress, customerDeleteAddress,
   customerDesigns, customerDeleteDesign,
+  customerSaveBusiness,
 } from "../lib/api";
+import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 
 const TABS = [
   { key: "orders", label: "Orders", icon: Package },
+  { key: "business", label: "Business", icon: Building2 },
   { key: "addresses", label: "Addresses", icon: MapPin },
   { key: "designs", label: "Saved designs", icon: Bookmark },
 ];
@@ -64,6 +67,7 @@ export default function Account() {
 
           <section>
             {tab === "orders" && <OrdersTab token={token} />}
+            {tab === "business" && <BusinessTab token={token} />}
             {tab === "addresses" && <AddressesTab token={token} />}
             {tab === "designs" && <DesignsTab token={token} />}
           </section>
@@ -76,14 +80,39 @@ export default function Account() {
 
 function OrdersTab({ token }) {
   const [orders, setOrders] = useState(null);
+  const { addLine } = useCart();
   useEffect(() => {
     customerOrders(token).then((res) => setOrders(res.orders || [])).catch(() => setOrders([]));
   }, [token]);
+
+  // One-click reorder — the whole point of the account for a returning business.
+  // Order lines were stored in the same shape the cart expects, so each line
+  // drops straight back in; the drawer opens and the customer confirms sizes.
+  const reorder = (o) => {
+    const lines = (o.items || []).filter((it) => it && it.product_id && it.size_qtys);
+    if (lines.length === 0) {
+      toast.error("This order can't be reordered automatically — please add the items again.");
+      return;
+    }
+    lines.forEach((it) => addLine({
+      product_id: it.product_id,
+      size_qtys: it.size_qtys,
+      color: it.color,
+      placements: it.placements,
+      blank: it.blank,
+      design_meta: it.design_meta,
+      name: it.product_name,
+    }));
+    toast.success(`Added ${lines.length} item${lines.length > 1 ? "s" : ""} back to your cart`);
+  };
+
   if (orders === null) return <Loading />;
   if (orders.length === 0) return <Empty icon={ShoppingBag} title="No orders yet" body="When you check out, your order history and status updates will appear here." ctaTo="/" ctaLabel="Start shopping" />;
   return (
     <ul className="space-y-3" data-testid="account-orders-list">
-      {orders.map((o, i) => (
+      {orders.map((o, i) => {
+        const canReorder = (o.items || []).some((it) => it && it.product_id && it.size_qtys);
+        return (
         <li key={o.session_id || i} className="border-2 border-[#dcfce7] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[11px] uppercase tracking-widest text-[#4b5563] font-extrabold">{o.kind}</p>
@@ -97,8 +126,18 @@ function OrdersTab({ token }) {
             </p>
           </div>
           <p className="font-black text-lg">£{Number(o.amount).toFixed(2)}</p>
+          {canReorder && (
+            <button
+              onClick={() => reorder(o)}
+              className="inline-flex items-center justify-center gap-1.5 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold text-xs px-4 py-2 rounded-full flex-shrink-0"
+              data-testid={`reorder-${o.session_id || i}`}
+            >
+              <RotateCcw size={13} /> Reorder
+            </button>
+          )}
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
@@ -192,6 +231,96 @@ function DesignsTab({ token }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function BusinessTab({ token }) {
+  const { customer, updateCustomer } = useCustomerAuth();
+  const biz = customer?.business || {};
+  const [companyName, setCompanyName] = useState(biz.company_name || "");
+  const [notes, setNotes] = useState(biz.notes || "");
+  const [logoPreview, setLogoPreview] = useState(biz.logo_url || "");
+  const [logoDataUrl, setLogoDataUrl] = useState(null);   // only set when a new file is chosen
+  const [busy, setBusy] = useState(false);
+
+  const onPickLogo = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 6_000_000) { toast.error("That logo is over 6MB — please use a smaller file."); return; }
+    const reader = new FileReader();
+    reader.onload = () => { setLogoDataUrl(reader.result); setLogoPreview(reader.result); };
+    reader.readAsDataURL(file);
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await customerSaveBusiness(token, {
+        is_business: true,
+        company_name: companyName,
+        notes,
+        logo_data_url: logoDataUrl || undefined,
+        logo_url: logoDataUrl ? undefined : logoPreview,
+        brand_colors: biz.brand_colors || [],
+      });
+      if (res?.customer) updateCustomer(res.customer);
+      setLogoDataUrl(null);
+      toast.success("Business details saved");
+    } catch {
+      toast.error("Couldn't save — please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6" data-testid="account-business-tab">
+      <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4">
+        <p className="text-sm text-[#166534] font-nunito">
+          Save your logo and company details once. We&rsquo;ll keep your artwork on file, so your next order is a
+          reorder &mdash; not a redesign &mdash; and every job comes back with your branding exactly as before.
+        </p>
+      </div>
+
+      <div>
+        <span className="text-[10px] uppercase tracking-widest font-extrabold text-[#4b5563]">Your logo</span>
+        <div className="mt-1 flex items-center gap-4">
+          <div className="w-24 h-24 rounded-2xl border-2 border-[#dcfce7] bg-white grid place-items-center overflow-hidden flex-shrink-0">
+            {logoPreview
+              ? <img src={logoPreview} alt="Your logo" className="w-full h-full object-contain" data-testid="business-logo-preview" />
+              : <Building2 size={28} className="text-[#7bc67e] opacity-50" />}
+          </div>
+          <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#7bc67e] text-[#166534] font-extrabold text-xs px-4 py-2.5 rounded-full hover:bg-[#f0fdf4]" data-testid="business-logo-upload">
+            <Upload size={14} /> {logoPreview ? "Replace logo" : "Upload logo"}
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={onPickLogo} />
+          </label>
+        </div>
+        <p className="text-[11px] text-[#4b5563] mt-2">PNG with a transparent background works best. Up to 6MB.</p>
+      </div>
+
+      <Input label="Company name" value={companyName} onChange={setCompanyName} testid="business-company-name" />
+
+      <label className="block">
+        <span className="text-[10px] uppercase tracking-widest font-extrabold text-[#4b5563]">Notes for our team (optional)</span>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          placeholder="e.g. logo goes left chest, back print in white, usual sizes S–XXL"
+          className="w-full mt-0.5 px-3 py-2 rounded-xl border-2 border-[#dcfce7] focus:border-[#7bc67e] outline-none text-sm"
+          data-testid="business-notes"
+        />
+      </label>
+
+      <button
+        onClick={save}
+        disabled={busy}
+        className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-extrabold text-sm px-6 py-3 rounded-full"
+        data-testid="business-save"
+      >
+        {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Save business details
+      </button>
+    </div>
   );
 }
 

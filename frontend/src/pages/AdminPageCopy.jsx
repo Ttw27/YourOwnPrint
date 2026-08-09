@@ -15,6 +15,7 @@ const PAGE_COPY_SLUGS = [
   { slug: "teams-schools", label: "Teams, Schools & Clubs hub" },
   { slug: "sports", label: "Sports & Fitness index" },
   { slug: "workwear", label: "Workwear index" },
+  { slug: "for-business", label: "For Business (switchers) page" },
   { slug: "portfolio", label: "Portfolio page" },
   { slug: "reviews", label: "Reviews page" },
   { slug: "specials", label: "Specials collection" },

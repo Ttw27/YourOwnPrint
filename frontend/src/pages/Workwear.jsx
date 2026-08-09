@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
+import ProofPromise from "../components/bold/ProofPromise";
 import { fetchWorkwearCollection, fetchReviewsAggregate } from "../lib/api";
 import { SECTORS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
@@ -248,6 +249,7 @@ export default function Workwear() {
         </div>
       </div>
 
+      <ProofPromise variant="band" />
       <BoldFooter />
     </div>
   );

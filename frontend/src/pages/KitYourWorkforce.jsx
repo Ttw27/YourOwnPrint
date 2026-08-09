@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import PricePromise from "../components/bold/PricePromise";
+import ProofPromise from "../components/bold/ProofPromise";
 import { fetchWorkforceProducts, fetchWorkforceTiers, workforceCheckout, workforceQuote } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
@@ -426,6 +427,7 @@ export default function KitYourWorkforce() {
         </aside>
       </div>
 
+      <ProofPromise variant="band" />
       <PricePromise variant="band" />
       <BoldFooter />
     </div>

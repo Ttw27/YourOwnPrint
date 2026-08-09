@@ -6,6 +6,7 @@ import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import FontPicker from "../components/bold/FontPicker";
 import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
+import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
@@ -57,6 +58,8 @@ export default function DesignYourOwn() {
   const [selectedColour, setSelectedColour] = useState(null); // colour name, or null for the product's default
   const [aiUsage, setAiUsage] = useState(null); // {used, limit, remaining} once we know the customer's logged in
   const isLoggedIn = !!getCustomerToken();
+  const { customer } = useCustomerAuth();
+  const savedLogoUrl = customer?.business?.logo_url || "";
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -188,6 +191,27 @@ export default function DesignYourOwn() {
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
+  };
+
+  const addSavedLogo = () => {
+    if (!savedLogoUrl) return;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const id = `img-${Date.now()}`;
+      const aspect = img.width / Math.max(img.height, 1);
+      const w = 50;
+      const h = w / aspect;
+      setItems((prev) => [...prev, { id, type: "image", src: savedLogoUrl, x: 25, y: 25, w, h, rot: 0, naturalW: img.width, naturalH: img.height }]);
+      setSelectedId(id);
+    };
+    // If measuring fails (e.g. CORS), still add it with a sane default box.
+    img.onerror = () => {
+      const id = `img-${Date.now()}`;
+      setItems((prev) => [...prev, { id, type: "image", src: savedLogoUrl, x: 25, y: 25, w: 50, h: 30, rot: 0 }]);
+      setSelectedId(id);
+    };
+    img.src = savedLogoUrl;
   };
 
   const addText = () => {
@@ -534,6 +558,16 @@ export default function DesignYourOwn() {
                 <Upload size={18} /><span className="font-nunito font-extrabold text-sm">Upload image</span>
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onUpload} />
+              {savedLogoUrl && (
+                <button
+                  onClick={addSavedLogo}
+                  className="w-full mt-2 flex items-center justify-center gap-2 bg-[#f0fdf4] hover:bg-[#dcfce7] border-2 border-[#7bc67e] text-[#166534] py-2.5 rounded-2xl transition-colors"
+                  data-testid="designer-use-saved-logo"
+                >
+                  <img src={savedLogoUrl} alt="" className="w-5 h-5 object-contain" />
+                  <span className="font-nunito font-extrabold text-sm">Use my saved logo</span>
+                </button>
+              )}
               <button
                 data-testid="designer-removebg-btn"
                 onClick={removeBgReal}
@@ -638,6 +672,16 @@ export default function DesignYourOwn() {
                 <Upload size={18} /><span className="font-nunito font-extrabold text-sm">Upload image</span>
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onUpload} />
+              {savedLogoUrl && (
+                <button
+                  onClick={addSavedLogo}
+                  className="w-full mt-2 flex items-center justify-center gap-2 bg-[#f0fdf4] hover:bg-[#dcfce7] border-2 border-[#7bc67e] text-[#166534] py-2.5 rounded-2xl transition-colors"
+                  data-testid="designer-use-saved-logo"
+                >
+                  <img src={savedLogoUrl} alt="" className="w-5 h-5 object-contain" />
+                  <span className="font-nunito font-extrabold text-sm">Use my saved logo</span>
+                </button>
+              )}
               <button
                 data-testid="designer-removebg-btn"
                 onClick={removeBgReal}
