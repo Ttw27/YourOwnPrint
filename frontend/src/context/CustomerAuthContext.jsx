@@ -71,6 +71,9 @@ export function CustomerAuthProvider({ children }) {
     isAuthenticated: !!(customer && customer.id),
     loading,
     login, register, logout,
+    // Lets the account page push an updated profile (e.g. after saving the
+    // business logo) into context without a full re-login round-trip.
+    updateCustomer: setCustomer,
   };
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
