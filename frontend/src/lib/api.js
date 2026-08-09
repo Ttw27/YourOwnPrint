@@ -733,6 +733,11 @@ export async function customerDeleteAddress(token, id) {
   const { data } = await api.delete(`/customer/addresses/${id}`, { headers: { Authorization: `Bearer ${token}` } });
   return data;
 }
+export async function customerSaveBusiness(token, profile) {
+  const { data } = await api.put("/customer/business", profile, { headers: { Authorization: `Bearer ${token}` } });
+  return data;
+}
+
 export async function customerDesigns(token) {
   const { data } = await api.get("/customer/designs", { headers: { Authorization: `Bearer ${token}` } });
   return data;

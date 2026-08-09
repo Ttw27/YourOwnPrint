@@ -68,6 +68,7 @@ export const NAV_LINKS = [
   { label: "Specials", to: "/specials", highlight: true },
   { label: "Workwear", to: "/workwear" },
   { label: "Kit Workforce", to: "/workforce" },
+  { label: "For Business", to: "/for-business" },
   { label: "Teams & Schools", to: "/teams-schools" },
   { label: "Sports & Combat", to: "/sports" },
   { label: "Team Kits", to: "/team-kits" },
@@ -85,6 +86,7 @@ export const NAV_MENU = [
       {
         heading: "Featured",
         links: [
+          { label: "For Business", to: "/for-business", badge: "Switch" },
           { label: "Your Own Print Specials", to: "/specials", badge: "Starter" },
           { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
           { label: "Workwear", to: "/workwear" },
