@@ -45,7 +45,7 @@ def _parse_thumbnail_data_url(data_url: str, max_bytes: int = 2_000_000):
         raw = base64.b64decode(b64)
         if len(raw) > max_bytes:
             return None, None
-        ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}.get(content_type, "png")
+        ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/svg+xml": "svg"}.get(content_type, "png")
         return raw, (content_type, ext)
     except Exception:
         return None, None
@@ -77,12 +77,32 @@ class CustomerLogin(BaseModel):
     password: str = Field(min_length=1, max_length=200)
 
 
+class BusinessProfileOut(BaseModel):
+    is_business: bool = False
+    company_name: str = ""
+    logo_url: str = ""
+    brand_colors: List[str] = Field(default_factory=list)
+    notes: str = ""
+
+
 class CustomerOut(BaseModel):
     id: str
     email: EmailStr
     name: str
     role: str = "customer"
     created_at: str
+    business: BusinessProfileOut = Field(default_factory=BusinessProfileOut)
+
+
+class BusinessProfileIn(BaseModel):
+    is_business: bool = False
+    company_name: str = Field(default="", max_length=160)
+    # Logo comes in as a data URL on first save; stored to R2 and replaced with a
+    # public URL, mirroring how saved-design thumbnails are handled below.
+    logo_data_url: Optional[str] = Field(default=None, max_length=8_000_000)
+    logo_url: Optional[str] = Field(default=None, max_length=1000)
+    brand_colors: List[str] = Field(default_factory=list, max_length=12)
+    notes: str = Field(default="", max_length=2000)
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -161,12 +181,23 @@ def _create_customer_token(customer_id: str, email: str) -> str:
 
 
 def _serialise_customer(doc: Dict) -> Dict:
+    biz = doc.get("business") or {}
     return {
         "id": doc["id"],
         "email": doc["email"],
         "name": doc.get("name", ""),
         "role": "customer",
         "created_at": doc.get("created_at", ""),
+        # Business profile — everything that lets a company reorder without
+        # re-explaining who they are. Absent/empty for personal accounts, which
+        # is what keeps the business UI hidden for them.
+        "business": {
+            "is_business": bool(biz.get("is_business")),
+            "company_name": biz.get("company_name", ""),
+            "logo_url": biz.get("logo_url", ""),
+            "brand_colors": biz.get("brand_colors", []),
+            "notes": biz.get("notes", ""),
+        },
     }
 
 
@@ -483,6 +514,46 @@ async def customer_delete_address(addr_id: str, customer: Dict = Depends(require
     if r.deleted_count == 0:
         raise HTTPException(404, "Address not found")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Business profile — company name, saved logo, brand colours
+#
+# This is the heart of the "reorder without re-explaining who you are" flow.
+# A logo saved once here is offered on every future design and shown on the
+# account, so a company's second order is a reorder, not a rebuild.
+# ---------------------------------------------------------------------------
+@api_router.put("/customer/business")
+async def customer_save_business(payload: BusinessProfileIn, customer: Dict = Depends(require_customer)):
+    biz = {
+        "is_business": bool(payload.is_business),
+        "company_name": (payload.company_name or "").strip(),
+        "brand_colors": [c.strip() for c in (payload.brand_colors or []) if c and c.strip()][:12],
+        "notes": (payload.notes or "").strip(),
+    }
+
+    # A fresh logo arrives as a data URL; push it to R2 and keep the public URL,
+    # exactly as saved-design thumbnails are handled. A logo can be larger than a
+    # thumbnail, so allow up to 6MB before we refuse it.
+    logo_url = (payload.logo_url or "").strip()
+    if payload.logo_data_url and payload.logo_data_url.startswith("data:"):
+        raw, meta = _parse_thumbnail_data_url(payload.logo_data_url, max_bytes=6_000_000)
+        if raw:
+            content_type, ext = meta
+            path = f"business-logos/{customer['id']}.{ext}"
+            try:
+                await _r2_put(path, raw, content_type)
+                r2 = _r2_public_url(path)
+                if r2:
+                    # Cache-bust so a re-uploaded logo actually refreshes in the browser.
+                    logo_url = f"{r2}?v={int(datetime.now(timezone.utc).timestamp())}"
+            except Exception:
+                pass  # keep whatever logo_url we already had rather than lose it
+    biz["logo_url"] = logo_url
+
+    await db.customers.update_one({"id": customer["id"]}, {"$set": {"business": biz}})
+    doc = await db.customers.find_one({"id": customer["id"]})
+    return {"ok": True, "customer": _serialise_customer(doc)}
 
 
 # ---------------------------------------------------------------------------

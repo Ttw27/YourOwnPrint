@@ -19,6 +19,7 @@ PAGE_COPY_SLUGS = [
     "home", "contact", "sports", "workwear", "portfolio", "reviews",
     "teams-schools", "specials", "fight-night", "leavers-hoodies",
     "kit-your-workforce", "design-your-own", "full-squad-configurator",
+    "for-business",
     "sports-outfit-configurator", "team-kits", "team-kit-builder",
     "festival-tees-brands",
     # Not a page — a holder for imagery that appears across many pages at once
