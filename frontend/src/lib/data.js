@@ -73,6 +73,7 @@ export const NAV_LINKS = [
   { label: "Sports & Combat", to: "/sports" },
   { label: "Team Kits", to: "/team-kits" },
   { label: "Leavers'", to: "/leavers-hoodies" },
+  { label: "School Trips", to: "/school-trips" },
   { label: "Design Your Own", to: "/design" },
   { label: "Get a Quote", to: "/contact" },
 ];
@@ -99,6 +100,7 @@ export const NAV_MENU = [
           { label: "Fight Night Tees", to: "/fight-night-tee" },
           { label: "Festival & DJ Merch", to: "/festival-tees-and-brands" },
           { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
+          { label: "School Trip Tees", to: "/school-trips", badge: "New" },
           { label: "Team Kits", to: "/team-kits" },
           { label: "Teams & Schools", to: "/teams-schools" },
         ],
