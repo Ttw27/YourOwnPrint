@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
+import AccountManagerPromise from "../components/bold/AccountManagerPromise";
 import usePageCopy from "../hooks/usePageCopy";
 import usePageTitle from "../hooks/usePageTitle";
 import {
@@ -151,6 +152,11 @@ export default function ForBusiness() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Dedicated account manager — the "real human, not a bot" promise. */}
+      <section className="max-w-6xl mx-auto px-6 pb-10">
+        <AccountManagerPromise variant="hero" preset="Hi! I run a business and I'd like to know more about having a dedicated account manager." />
       </section>
 
       {/* WhatsApp / proof CTA */}

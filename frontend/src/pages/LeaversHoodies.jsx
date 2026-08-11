@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversBespoke } from "../lib/api";
+import { buildWhatsAppLink } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { Sparkles, GraduationCap, Users, CalendarDays, Mail, Truck, ShieldCheck, Star, Package, ArrowRight, ChevronLeft, ChevronRight, Brush } from "lucide-react";
@@ -247,8 +248,7 @@ function BespokeModal({ onClose }) {
       toast.error(typeof d === "string" ? d : "Couldn't send your request — please try WhatsApp instead.");
     } finally { setBusy(false); }
   };
-  const waMsg = encodeURIComponent(`Hi! Bespoke leavers' hoodie enquiry — ${form.school || "(school)"} ${form.year_group || "(year)"}, around ${form.estimated_qty || "?"} hoodies. ${form.notes || ""}`.trim());
-  const waLink = `https://wa.me/447000000000?text=${waMsg}`;
+  const waLink = buildWhatsAppLink(`Hi! Bespoke leavers' hoodie enquiry — ${form.school || "(school)"} ${form.year_group || "(year)"}, around ${form.estimated_qty || "?"} hoodies. ${form.notes || ""}`.trim());
   return (
     <div className="fixed inset-0 bg-black/50 grid place-items-center z-50 p-4" onClick={onClose} data-testid="leavers-bespoke-modal">
       <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-lg w-full p-6 relative">

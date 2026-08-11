@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Package, MapPin, Bookmark, LogOut, ArrowRight, Loader2, Trash2, Plus, ShoppingBag, RotateCcw, Building2, Upload, Check } from "lucide-react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
+import AccountManagerPromise from "../components/bold/AccountManagerPromise";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import {
   customerOrders,
@@ -320,6 +321,8 @@ function BusinessTab({ token }) {
       >
         {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Save business details
       </button>
+
+      <AccountManagerPromise variant="card" preset="Hi! I'm a business account customer and I'd like to speak to my account manager." />
     </div>
   );
 }

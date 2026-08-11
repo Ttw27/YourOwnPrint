@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import PricePromise from "../components/bold/PricePromise";
 import ProofPromise from "../components/bold/ProofPromise";
+import AccountManagerPromise from "../components/bold/AccountManagerPromise";
 import { fetchWorkforceProducts, fetchWorkforceTiers, workforceCheckout, workforceQuote } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
@@ -427,6 +428,7 @@ export default function KitYourWorkforce() {
         </aside>
       </div>
 
+      <AccountManagerPromise variant="band" preset="Hi! I'm kitting out my workforce and would like to speak to an account manager." />
       <ProofPromise variant="band" />
       <PricePromise variant="band" />
       <BoldFooter />

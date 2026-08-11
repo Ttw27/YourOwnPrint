@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ProofPromise from "../components/bold/ProofPromise";
+import AccountManagerPromise from "../components/bold/AccountManagerPromise";
 import { fetchWorkwearCollection, fetchReviewsAggregate } from "../lib/api";
 import { SECTORS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
@@ -249,6 +250,7 @@ export default function Workwear() {
         </div>
       </div>
 
+      <AccountManagerPromise variant="band" preset="Hi! I'd like to speak to an account manager about workwear for my business." />
       <ProofPromise variant="band" />
       <BoldFooter />
     </div>
