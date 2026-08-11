@@ -16,6 +16,7 @@ const PAGE_COPY_SLUGS = [
   { slug: "sports", label: "Sports & Fitness index" },
   { slug: "workwear", label: "Workwear index" },
   { slug: "for-business", label: "For Business (switchers) page" },
+  { slug: "school-trips", label: "School Trip T-shirts page" },
   { slug: "portfolio", label: "Portfolio page" },
   { slug: "reviews", label: "Reviews page" },
   { slug: "specials", label: "Specials collection" },
