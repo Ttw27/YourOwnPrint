@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Package, MapPin, Bookmark, LogOut, ArrowRight, Loader2, Trash2, Plus, ShoppingBag, RotateCcw, Building2, Upload, Check } from "lucide-react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import AccountManagerPromise from "../components/bold/AccountManagerPromise";
+import ConciergeService from "../components/bold/ConciergeService";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import {
   customerOrders,
@@ -323,6 +324,8 @@ function BusinessTab({ token }) {
       </button>
 
       <AccountManagerPromise variant="card" preset="Hi! I'm a business account customer and I'd like to speak to my account manager." />
+
+      <ConciergeService variant="card" preset="Hi! I'm an existing customer — please reuse the logo from my last order and sort a new order over WhatsApp." />
     </div>
   );
 }

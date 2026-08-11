@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import AccountManagerPromise from "../components/bold/AccountManagerPromise";
+import ConciergeService from "../components/bold/ConciergeService";
 import usePageCopy from "../hooks/usePageCopy";
 import usePageTitle from "../hooks/usePageTitle";
 import {
@@ -94,6 +95,8 @@ export default function ForBusiness() {
           </div>
         </div>
       </section>
+
+      <ConciergeService variant="band" preset="Hi! I run a business and haven't got time to design online — can you sort my order over WhatsApp?" />
 
       {/* Worries → answers */}
       <section className="max-w-6xl mx-auto px-6 py-14 sm:py-20">
