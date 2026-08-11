@@ -37,6 +37,7 @@ import TeamKits from "@/pages/TeamKits";
 import TeamKitBuilder from "@/pages/TeamKitBuilder";
 import FightNightTee from "@/pages/FightNightTee";
 import LeaversHoodies from "@/pages/LeaversHoodies";
+import SchoolTrips from "@/pages/SchoolTrips";
 import LeaversStart from "@/pages/LeaversFlow";
 import Portfolio from "@/pages/Portfolio";
 import FullSquadConfigurator from "@/pages/FullSquadConfigurator";
@@ -90,6 +91,7 @@ function App() {
           <Route path="/team-kit-builder" element={<TeamKitBuilder />} />
           <Route path="/fight-night-tee" element={<FightNightTee />} />
           <Route path="/leavers-hoodies" element={<LeaversHoodies />} />
+          <Route path="/school-trips" element={<SchoolTrips />} />
           <Route path="/leavers-hoodies/start" element={<LeaversStart />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/full-squad-configurator" element={<FullSquadConfigurator />} />
