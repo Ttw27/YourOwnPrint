@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { initWhatsAppNumber } from "@/lib/data";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -61,6 +62,10 @@ import Account from "@/pages/Account";
 import ResetPassword from "@/pages/ResetPassword";
 
 function App() {
+  // Pull the admin-set WhatsApp number once on load so every WhatsApp link
+  // reflects it (falls back silently if unset/unreachable).
+  useEffect(() => { initWhatsAppNumber(); }, []);
+
   return (
     <div className="App">
       <BrowserRouter>
