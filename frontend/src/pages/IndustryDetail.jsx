@@ -7,7 +7,7 @@ import { ArrowRight, ShieldCheck, Loader2, X, ChevronDown, SlidersHorizontal } f
 import usePageTitle from "../hooks/usePageTitle";
 import FacetBlock from "../components/bold/FacetBlock";
 import PriceTag from "../components/bold/PriceTag";
-import { useSiteImages } from "../hooks/usePageCopy";
+import usePageCopy, { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 
 /**
@@ -32,6 +32,9 @@ export default function IndustryDetail() {
   // Header photo is admin-editable under
   // /admin/page-copy → "Pictures used across the whole site".
   const site = useSiteImages();
+  // Admin page-copy for this industry. Called unconditionally (before any early
+  // return) so hook order is stable; defaults fill in once data has loaded.
+  const copy = usePageCopy(slug, {});
 
   useEffect(() => { fetchReviewsAggregate().then(setAggregates).catch(() => {}); }, []);
 
@@ -91,7 +94,16 @@ export default function IndustryDetail() {
   if (loading && !data) return <div className="min-h-screen grid place-items-center bg-white" data-testid="industry-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   if (!data) return null;
 
-  const { title, subtitle, blurb, hero_image, products, facets = {}, total, matched_total } = data;
+  const { hero_image, products, facets = {}, total, matched_total } = data;
+  // Backend supplies sensible defaults for every industry; admin page-copy
+  // (Admin → Page Copy → the industry's entry) overrides them where set, so you
+  // can write a bespoke heading/intro per industry for SEO and conversion
+  // without losing the defaults if you leave a field blank.
+  // Merge backend defaults with any admin override (copy hook is called above,
+  // before the early returns, to satisfy the Rules of Hooks).
+  const title = copy.title || data.title;
+  const subtitle = copy.subtitle || data.subtitle;
+  const blurb = copy.body || copy.blurb || data.blurb;  // admin "body" = the intro
   // Declared before the JSX below reads it.
   const heroPhoto = site.image(`industry:${data.slug || slug}`, hero_image);
 

@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchAllPortfolio } from "../lib/api";
 import { Loader2, Image as ImageIcon, ArrowRight } from "lucide-react";
+import usePageCopy from "../hooks/usePageCopy";
 
 const PRETTY = {
   workwear: "Workwear",
@@ -24,6 +25,12 @@ export default function Portfolio() {
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState("all");
   const [lightbox, setLightbox] = useState(null);
+  // Admin → Page Copy → "Portfolio": edit the heading/intro without code.
+  const copy = usePageCopy("portfolio", {
+    title: "Real work, printed in the UK",
+    subtitle: "Portfolio",
+    body: "A live gallery of jobs we've turned around — workwear, team kits, leavers' hoodies, fight nights and more. Tap any image to see it big.",
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -50,11 +57,9 @@ export default function Portfolio() {
       <header className="relative overflow-hidden bg-[#1a1a1a] text-white">
         <div className="absolute inset-0 opacity-25 bg-gradient-to-br from-[#7bc67e] via-[#fde68a] to-[#f87171]" />
         <div className="relative max-w-7xl mx-auto px-6 py-16">
-          <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Portfolio</span>
-          <h1 className="font-black text-4xl lg:text-6xl mt-2">Real work, printed in the UK</h1>
-          <p className="text-zinc-300 mt-3 max-w-2xl">
-            A live gallery of jobs we've turned around — workwear, team kits, leavers' hoodies, fight nights and more. Tap any image to see it big.
-          </p>
+          <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">{copy.subtitle}</span>
+          <h1 className="font-black text-4xl lg:text-6xl mt-2">{copy.title}</h1>
+          <p className="text-zinc-300 mt-3 max-w-2xl">{copy.body}</p>
         </div>
       </header>
 

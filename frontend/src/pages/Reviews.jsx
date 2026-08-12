@@ -7,6 +7,7 @@ import {
   fetchProducts, fetchRecentReviews, fetchReviewsAggregate, fetchStoreReviews,
 } from "../lib/api";
 import usePageTitle from "../hooks/usePageTitle";
+import usePageCopy from "../hooks/usePageCopy";
 import {
   ShieldCheck, Camera, Search, X, ChevronLeft, ChevronRight,
   AlertTriangle, RefreshCw, Store, PenLine,
@@ -19,6 +20,8 @@ const STORE_ID = "store";
 
 export default function ReviewsPage() {
   usePageTitle("Customer Reviews");
+  // Admin → Page Copy → "Reviews": edit the heading without code.
+  const copy = usePageCopy("reviews", { title: "Customer Reviews" });
 
   const [products, setProducts] = useState([]);
   const [aggregates, setAggregates] = useState({});
@@ -94,7 +97,7 @@ export default function ReviewsPage() {
       <div className="relative overflow-hidden border-b border-[#dcfce7]">
         <div className="absolute -top-16 -left-16 w-[360px] h-[360px] rounded-full bg-[#7bc67e]/20 blur-3xl" />
         <div className="max-w-7xl mx-auto px-6 py-16 relative">
-          <h1 className="font-nunito font-black text-5xl lg:text-6xl">Customer Reviews</h1>
+          <h1 className="font-nunito font-black text-5xl lg:text-6xl">{copy.title}</h1>
           <div className="mt-4 flex items-center gap-3 text-[#1a1a1a]">
             <StarRating value={Number(overallAvg) || 0} size={22} />
             <span className="text-xl font-nunito font-extrabold">{overallAvg}</span>
