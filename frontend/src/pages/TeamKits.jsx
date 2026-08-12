@@ -75,6 +75,9 @@ export default function TeamKits() {
               <Link to="/full-squad-configurator" data-testid="team-kits-full-squad-cta" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md transition-transform hover:-translate-y-1">
                 Full Squad Configurator <ArrowRight size={16} />
               </Link>
+              <Link to="/team-kit-builder" data-testid="team-kits-builder-cta" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full transition-colors">
+                Price up a custom kit <ArrowRight size={16} />
+              </Link>
               <WhatsAppInline preset="Hi! I need team kits for my club — can you advise?" label="WhatsApp the team" />
             </div>
           </div>
