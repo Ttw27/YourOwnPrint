@@ -58,11 +58,44 @@ export const TRUST_ITEMS = [
 export const RATING = { value: 4.5, count: 404 };
 
 // ---- WhatsApp ----
-// Swap this number whenever you're ready (placeholder for now).
-export const WHATSAPP_NUMBER_RAW = "+447000000000";  // E.164
-export const WHATSAPP_NUMBER_DISPLAY = "+44 7000 000000";
+// The real number is configured in Admin → Integrations ("WhatsApp Number")
+// and served by GET /site/whatsapp. initWhatsAppNumber() fetches it once on app
+// load, and every WhatsApp link across the site uses it from then on. Setting
+// the number in admin is what changes the site — no code edit needed.
+const WHATSAPP_FALLBACK_RAW = "+447000000000";  // placeholder until admin is set
+
+let _whatsappRaw = WHATSAPP_FALLBACK_RAW;  // mutable; updated at runtime
+
+// Kept for backwards-compat with existing imports.
+export const WHATSAPP_NUMBER_RAW = WHATSAPP_FALLBACK_RAW;
+
+const _formatDisplay = (raw) => {
+  const d = (raw || "").replace(/[^0-9]/g, "");
+  if (d.startsWith("44") && d.length === 12) return `+44 ${d.slice(2, 6)} ${d.slice(6)}`;
+  return raw || "";
+};
+
+export let WHATSAPP_NUMBER_DISPLAY = _formatDisplay(_whatsappRaw);
+export const getWhatsAppNumber = () => _whatsappRaw;
+
 export const buildWhatsAppLink = (preset = "Hi! I'd like some help with my custom print order.") =>
-  `https://wa.me/${WHATSAPP_NUMBER_RAW.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(preset)}`;
+  `https://wa.me/${_whatsappRaw.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(preset)}`;
+
+// Call once on app mount. Pulls the admin-set number and points every WhatsApp
+// link at it. Any failure silently leaves the fallback in place.
+let _whatsappInit = null;
+export function initWhatsAppNumber() {
+  if (_whatsappInit) return _whatsappInit;
+  const base = process.env.REACT_APP_BACKEND_URL || "";
+  _whatsappInit = fetch(`${base}/api/site/whatsapp`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => {
+      const n = d && typeof d.number === "string" ? d.number.trim() : "";
+      if (n) { _whatsappRaw = n; WHATSAPP_NUMBER_DISPLAY = _formatDisplay(n); }
+    })
+    .catch(() => {});
+  return _whatsappInit;
+}
 
 export const NAV_LINKS = [
   { label: "Specials", to: "/specials", highlight: true },
@@ -200,7 +233,7 @@ export const TOOLS_SHOWCASE = [
   { key: "specials", title: "Your Own Print Specials", tagline: "Starter lineup. No MOQ. Breast logo included.", to: "/specials", image: "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#7bc67e", accent: "#1a1a1a" },
   { key: "workforce", title: "Kit Your Workforce", tagline: "Mixed garments, bulk tiers, one logo across the lot.", to: "/workforce", image: "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#fbbf24", accent: "#1a1a1a" },
   { key: "team-kits", title: "Team Kits", tagline: "Configurator for clubs and squads — front, back, sleeves.", to: "/team-kits", image: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#a78bfa", accent: "#1a1a1a" },
-  { key: "fight-night", title: "Fight Night Tees", tagline: "Branded tees for fight cards, gyms and combat events.", to: "/sports/fight-night", image: "https://images.pexels.com/photos/4761792/pexels-photo-4761792.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#f87171", accent: "#ffffff" },
+  { key: "fight-night", title: "Fight Night Tees", tagline: "Branded tees for fight cards, gyms and combat events.", to: "/fight-night-tee", image: "https://images.pexels.com/photos/4761792/pexels-photo-4761792.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#f87171", accent: "#ffffff" },
 ];
 
 export const GENDER_FITS = [
