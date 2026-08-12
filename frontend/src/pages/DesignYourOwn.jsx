@@ -828,7 +828,7 @@ export default function DesignYourOwn() {
               <button data-testid="designer-checkout" onClick={checkout} disabled={checkingOut} className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold rounded-full px-6 py-4 shadow-md hover:-translate-y-0.5 transition-transform">
                 {checkingOut ? <><Loader2 className="animate-spin" size={16} /> Saving design…</> : <><ShoppingCart size={16} /> Checkout with Stripe</>}
               </button>
-              <div className="text-[10px] text-[#4b5563] mt-3 font-bold text-center">Test mode — no real charge<br /><ImageIcon size={9} className="inline" /> transparent PNG sent to production on checkout</div>
+              <div className="text-[10px] text-[#4b5563] mt-3 font-bold text-center"><ImageIcon size={9} className="inline" /> Your print-ready, transparent PNG is sent to production when you check out.</div>
             </Panel>
     </>
   );
