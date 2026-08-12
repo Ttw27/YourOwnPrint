@@ -23,6 +23,12 @@ PAGE_COPY_SLUGS = [
     "school-trips",
     "sports-outfit-configurator", "team-kits", "team-kit-builder",
     "festival-tees-brands",
+    # Industry landing pages — now read admin copy (IndustryDetail overrides its
+    # backend defaults with these where set). Canonical slugs only; the page
+    # canonicalises aliases before requesting.
+    "healthcare", "construction-trades", "retail", "security", "corporate",
+    "sports-fitness", "industrial", "beauty-wellness", "cleaning",
+    "hospitality-catering",
     # Not a page — a holder for imagery that appears across many pages at once
     # (the Price Promise photo, the tool tiles, industry + sports-team headers).
     "site-images",
