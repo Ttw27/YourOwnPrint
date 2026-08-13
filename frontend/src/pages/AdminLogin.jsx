@@ -6,7 +6,7 @@ import { toast } from "sonner";
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const redirectTo = state?.from || "/admin/product-settings";
+  const redirectTo = state?.from || "/admin";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
