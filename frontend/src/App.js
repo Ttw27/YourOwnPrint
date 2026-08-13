@@ -26,6 +26,8 @@ import AdminProductSettings from "@/pages/AdminProductSettings";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminQA from "@/pages/AdminQA";
 import RequireAdmin from "@/pages/RequireAdmin";
+import AdminLayout from "@/components/bold/AdminLayout";
+import AdminDashboard from "@/pages/AdminDashboard";
 import KitYourWorkforce from "@/pages/KitYourWorkforce";
 import Specials from "@/pages/Specials";
 import IndustriesIndex from "@/pages/IndustriesIndex";
@@ -101,17 +103,17 @@ function App() {
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/full-squad-configurator" element={<FullSquadConfigurator />} />
           <Route path="/sports-outfit-configurator" element={<SportsOutfitConfigurator />} />
-          <Route path="/admin/portfolio" element={<RequireAdmin><AdminPortfolio /></RequireAdmin>} />
-          <Route path="/admin/bundle-variants" element={<RequireAdmin><AdminBundleVariants /></RequireAdmin>} />
-          <Route path="/admin/collection-seo" element={<RequireAdmin><AdminCollectionSeo /></RequireAdmin>} />
-          <Route path="/admin/products-import" element={<RequireAdmin><AdminProductsImport /></RequireAdmin>} />
-          <Route path="/admin/page-copy" element={<RequireAdmin><AdminPageCopy /></RequireAdmin>} />
-          <Route path="/admin/configurator-settings" element={<RequireAdmin><AdminConfiguratorSettings /></RequireAdmin>} />
-          <Route path="/admin/navigation" element={<RequireAdmin><AdminNavigation /></RequireAdmin>} />
-          <Route path="/admin/integrations" element={<RequireAdmin><AdminIntegrations /></RequireAdmin>} />
-          <Route path="/admin/orders" element={<RequireAdmin><AdminOrders /></RequireAdmin>} />
-          <Route path="/admin/enquiries" element={<RequireAdmin><AdminEnquiries /></RequireAdmin>} />
-          <Route path="/admin/leavers-templates" element={<RequireAdmin><AdminLeaversTemplates /></RequireAdmin>} />
+          <Route path="/admin/portfolio" element={<RequireAdmin><AdminLayout><AdminPortfolio /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/bundle-variants" element={<RequireAdmin><AdminLayout><AdminBundleVariants /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/collection-seo" element={<RequireAdmin><AdminLayout><AdminCollectionSeo /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/products-import" element={<RequireAdmin><AdminLayout><AdminProductsImport /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/page-copy" element={<RequireAdmin><AdminLayout><AdminPageCopy /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/configurator-settings" element={<RequireAdmin><AdminLayout><AdminConfiguratorSettings /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/navigation" element={<RequireAdmin><AdminLayout><AdminNavigation /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/integrations" element={<RequireAdmin><AdminLayout><AdminIntegrations /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/orders" element={<RequireAdmin><AdminLayout><AdminOrders /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/enquiries" element={<RequireAdmin><AdminLayout><AdminEnquiries /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/leavers-templates" element={<RequireAdmin><AdminLayout><AdminLeaversTemplates /></AdminLayout></RequireAdmin>} />
           <Route path="/design" element={<DesignYourOwn />} />
           <Route path="/design-your-own" element={<DesignYourOwn />} />
           <Route path="/account" element={<Account />} />
@@ -122,12 +124,13 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/import-reviews" element={<RequireAdmin><AdminImport /></RequireAdmin>} />
-          <Route path="/admin/reviews" element={<RequireAdmin><AdminReviews /></RequireAdmin>} />
-          <Route path="/admin/team-kits" element={<RequireAdmin><AdminTeamKits /></RequireAdmin>} />
-          <Route path="/admin/designer-products" element={<RequireAdmin><AdminDesignerProducts /></RequireAdmin>} />
-          <Route path="/admin/product-settings" element={<RequireAdmin><AdminProductSettings /></RequireAdmin>} />
-          <Route path="/admin/qa" element={<RequireAdmin><AdminQA /></RequireAdmin>} />
+          <Route path="/admin/import-reviews" element={<RequireAdmin><AdminLayout><AdminImport /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/reviews" element={<RequireAdmin><AdminLayout><AdminReviews /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/team-kits" element={<RequireAdmin><AdminLayout><AdminTeamKits /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/designer-products" element={<RequireAdmin><AdminLayout><AdminDesignerProducts /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/product-settings" element={<RequireAdmin><AdminLayout><AdminProductSettings /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin" element={<RequireAdmin><AdminLayout><AdminDashboard /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/qa" element={<RequireAdmin><AdminLayout><AdminQA /></AdminLayout></RequireAdmin>} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
           {/* Catch-all — must stay last. Without it, unknown URLs rendered a blank page. */}
           <Route path="*" element={<NotFound />} />
