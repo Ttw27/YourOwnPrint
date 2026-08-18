@@ -2365,16 +2365,18 @@ async def get_product_bulk_tiers(product_id: str):
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
 @api_router.get("/admin/products", dependencies=[Depends(require_admin)])
-async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = ""):
+async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = ""):
     """Admin overview of all products with editable meta fields.
-    Paginated (default 25/page) and searchable — this list can run into the
-    thousands once a supplier catalogue (e.g. PenCarrie) has been imported, so
-    it's never returned in one go."""
+    Paginated (default 25/page), searchable, and filterable by category and
+    source (supplier). This list runs into the thousands once supplier
+    catalogues (PenCarrie, Ralawise, …) are imported, so it's never returned in
+    one go."""
     out = []
     for p in PRODUCTS.values():
         out.append({
             "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
             "category": p["category"], "image": p["image"],
+            "source": p.get("source") or p.get("_source") or "native",
             "brand": p.get("brand") or "",
             "sku": p.get("sku") or "",
             "description_full": p.get("description_full") or "",
@@ -2394,10 +2396,21 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "")
     if q:
         q_lower = q.strip().lower()
         out = [it for it in out if q_lower in f"{it['name']} {it['id']} {it['brand']} {it['sku']}".lower()]
+    if category:
+        cat = category.strip().lower()
+        out = [it for it in out if (it.get("category") or "").lower() == cat]
+    if source:
+        src = source.strip().lower()
+        out = [it for it in out if (it.get("source") or "native").lower() == src]
     total = len(out)
     limit = min(limit, 200)
     page = out[offset:offset + limit]
-    return {"items": page, "total": total, "offset": offset, "returned": len(page)}
+    # Distinct categories + sources present, so the admin UI can build filter
+    # dropdowns from real data rather than a hardcoded list.
+    all_cats = sorted({(pp.get("category") or "").lower() for pp in PRODUCTS.values() if pp.get("category")})
+    all_srcs = sorted({(pp.get("source") or pp.get("_source") or "native").lower() for pp in PRODUCTS.values()})
+    return {"items": page, "total": total, "offset": offset, "returned": len(page),
+            "categories": all_cats, "sources": all_srcs}
 
 
 @api_router.get("/products/{product_id}/allowed-placements")
