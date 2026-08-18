@@ -22,6 +22,10 @@ export default function AdminProductSettings() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState(null);
+  const [view, setView] = useState("compact");    // "compact" | "detailed"
+  const [catFilter, setCatFilter] = useState("");  // category dropdown
+  const [srcFilter, setSrcFilter] = useState("");  // supplier/source dropdown
+  const [facets, setFacets] = useState({ categories: [], sources: [] });
 
   // Debounce the search box so we're not firing a request on every keystroke
   useEffect(() => {
@@ -34,12 +38,13 @@ export default function AdminProductSettings() {
     setLoading(true);
     try {
       const [ps, ds, wf] = await Promise.all([
-        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter),
+        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter),
         fetchBulkDefaults(),
         fetchWorkforceTiers().catch(() => null),
       ]);
       setProducts(ps.items || []);
       setTotal(ps.total || 0);
+      if (ps.categories || ps.sources) setFacets({ categories: ps.categories || [], sources: ps.sources || [] });
       setDefaults(ds);
       if (wf) setWorkforce({ tiers: wf.tiers || [], quote_threshold: wf.quote_threshold || 100 });
     } finally { setLoading(false); }
@@ -56,7 +61,7 @@ export default function AdminProductSettings() {
   };
 
   useEffect(() => { loadAllLite(); }, []);
-  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { reload({ page }); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
@@ -171,20 +176,40 @@ export default function AdminProductSettings() {
           </div>
         </div>
 
-        <input data-testid="aps-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search products by name, brand, or SKU…" className="mt-6 bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-96" />
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <input data-testid="aps-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search products by name, brand, or SKU…" className="bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-72" />
+          <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="bg-white border border-[#dcfce7] rounded-full px-3 py-2 text-sm" data-testid="aps-cat-filter">
+            <option value="">All categories</option>
+            {facets.categories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {facets.sources.length > 1 && (
+            <select value={srcFilter} onChange={(e) => setSrcFilter(e.target.value)} className="bg-white border border-[#dcfce7] rounded-full px-3 py-2 text-sm" data-testid="aps-src-filter">
+              <option value="">All suppliers</option>
+              {facets.sources.map((sc) => <option key={sc} value={sc}>{sc}</option>)}
+            </select>
+          )}
+          <div className="inline-flex rounded-full border-2 border-[#dcfce7] overflow-hidden" data-testid="aps-view-toggle">
+            <button onClick={() => setView("compact")} className={`px-3 py-1.5 text-xs font-extrabold ${view === "compact" ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-white text-[#4b5563]"}`}>Compact</button>
+            <button onClick={() => setView("detailed")} className={`px-3 py-1.5 text-xs font-extrabold ${view === "detailed" ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-white text-[#4b5563]"}`}>Detailed</button>
+          </div>
+          {(catFilter || srcFilter || filter) && (
+            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
+          )}
+        </div>
         {total > 0 && <div className="text-[11px] text-[#4b5563] mt-2">{total} product{total === 1 ? "" : "s"}{debouncedFilter ? " matching" : " total"} · showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}</div>}
 
         {loading ? <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div> : (
-          <div className="space-y-3 mt-6" data-testid="aps-list">
+          <div className={`${view === "compact" ? "space-y-1.5" : "space-y-3"} mt-6`} data-testid="aps-list">
             {products.map((p) => (
-              <div key={p.id} data-testid={`aps-${p.id}`} className="bg-white border-2 border-[#dcfce7] rounded-3xl p-4">
+              <div key={p.id} data-testid={`aps-${p.id}`} className={`bg-white border-2 border-[#dcfce7] ${view === "compact" ? "rounded-xl p-2" : "rounded-3xl p-4"}`}>
                 <button onClick={() => setOpenId(openId === p.id ? null : p.id)} className="w-full flex items-center gap-3 text-left">
-                  <img src={p.image} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                  <img src={p.image} alt="" className={`${view === "compact" ? "w-9 h-9 rounded-lg" : "w-14 h-14 rounded-xl"} object-cover flex-shrink-0`} />
                   <div className="flex-1 min-w-0">
-                    <div className="font-nunito font-extrabold truncate">{p.name}</div>
-                    <div className="text-[10px] text-[#4b5563]">{p.category} · £{p.price.toFixed(2)}{p.brand && ` · ${p.brand}`}{p.sku && ` · ${p.sku}`}</div>
+                    <div className={`font-nunito font-extrabold truncate ${view === "compact" ? "text-sm" : ""}`}>{p.name}</div>
+                    <div className="text-[10px] text-[#4b5563] truncate">{p.category} · £{p.price.toFixed(2)}{p.brand && ` · ${p.brand}`}{view !== "compact" && p.sku && ` · ${p.sku}`}</div>
                   </div>
-                  {p.bulk_pricing_enabled && <span className="text-[10px] bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-2 py-0.5 rounded-full">BULK</span>}
+                  {p.source && p.source !== "native" && <span className="text-[9px] bg-[#eef2ff] text-[#4338ca] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 uppercase">{p.source}</span>}
+                  {p.bulk_pricing_enabled && <span className="text-[9px] bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0">BULK</span>}
                 </button>
                 {openId === p.id && (
                   <div className="mt-4 space-y-3 border-t border-[#dcfce7] pt-4">
