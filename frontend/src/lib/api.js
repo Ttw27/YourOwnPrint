@@ -206,8 +206,8 @@ export async function updateBulkDefaults(payload) {
   const { data } = await api.patch("/admin/bulk-tiers/defaults", payload);
   return data;
 }
-export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "") {
-  const { data } = await api.get("/admin/products", { params: { offset, limit, q } });
+export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "") {
+  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source } });
   return data;
 }
 export async function updateProductMeta(product_id, payload) {
