@@ -461,6 +461,7 @@ export default function AdminProductsImport() {
               <div className="text-[10px] font-extrabold mb-1">Source</div>
               <select value={defaults.default_source} onChange={(e) => setDefaults({ ...defaults, default_source: e.target.value })} className="input" data-testid="apx-default-source">
                 <option value="pencarrie">PenCarrie</option>
+                <option value="ralawise">Ralawise</option>
                 <option value="manual">Manual</option>
                 <option value="other">Other supplier</option>
               </select>
