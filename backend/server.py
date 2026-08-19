@@ -5119,6 +5119,8 @@ INTEGRATION_KEYS = {
                        "help": "Where quote requests and bespoke leavers' enquiries are emailed."},
     "pencarrie_api_token": {"label": "PenCarrie API Token", "kind": "secret", "env": "PENCARRIE_API_TOKEN",
                              "help": "From PenCarrie: My Account > Account Settings > API Access Tokens. Used to pull the product catalogue automatically."},
+    "anthropic_api_key": {"label": "Anthropic API Key", "kind": "secret", "env": "ANTHROPIC_API_KEY",
+                           "help": "From https://console.anthropic.com (Settings > API Keys). Powers Smart Re-classify, which sorts products into the right collections and industries."},
 }
 
 
@@ -6622,6 +6624,7 @@ import routers.cms_page_copy  # noqa: F401 — registers /page-copy/*, /admin/pa
 import routers.configurator_addons  # noqa: F401 — registers /admin/full-squad/addons, /admin/sports-outfit/addons, /admin/configurator-settings
 import routers.customer_auth  # noqa: F401 — registers /customer/register, /customer/login, /customer/cart, /customer/orders, addresses, designs
 import routers.admin_reviews  # noqa: F401 — registers /admin/reviews list/edit/delete
+import routers.ai_classify  # noqa: F401 — registers /admin/ai-classify/* (Smart Re-classify)
 
 # Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
