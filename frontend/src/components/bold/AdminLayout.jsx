@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingBag, MessageSquare, HelpCircle, Star,
-  Package, Upload, Wand2, Tags, Layers,
+  Package, Upload, Sparkles, Wand2, Tags, Layers,
   FileText, Menu as MenuIcon, Image, Shirt, GraduationCap,
   Plug, SlidersHorizontal, LogOut, X, Store,
 } from "lucide-react";
@@ -28,6 +28,7 @@ const GROUPS = [
     items: [
       { label: "Product settings", to: "/admin/product-settings", icon: Package },
       { label: "Import products", to: "/admin/products-import", icon: Upload },
+      { label: "Smart Re-classify", to: "/admin/reclassify", icon: Sparkles },
       { label: "Designer products", to: "/admin/designer-products", icon: Wand2 },
       { label: "Collections & SEO", to: "/admin/collection-seo", icon: Tags },
       { label: "Bundle variants", to: "/admin/bundle-variants", icon: Layers },
