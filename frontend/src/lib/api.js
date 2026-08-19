@@ -210,6 +210,28 @@ export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", cate
   const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source } });
   return data;
 }
+
+// ----- Smart Re-classify (AI product classification) -----
+export async function aiClassifyStatus() {
+  const { data } = await api.get("/admin/ai-classify/status");
+  return data;
+}
+export async function aiClassifyPreview(payload) {
+  const { data } = await api.post("/admin/ai-classify/preview", payload);
+  return data;
+}
+export async function aiClassifyProposals(params = {}) {
+  const { data } = await api.get("/admin/ai-classify/proposals", { params });
+  return data;
+}
+export async function aiClassifyApply(payload = {}) {
+  const { data } = await api.post("/admin/ai-classify/apply", payload);
+  return data;
+}
+export async function aiClassifyClear() {
+  const { data } = await api.post("/admin/ai-classify/clear", {});
+  return data;
+}
 export async function updateProductMeta(product_id, payload) {
   const { data } = await api.patch(`/admin/products/${product_id}/meta`, payload);
   return data;
