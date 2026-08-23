@@ -38,7 +38,7 @@ from deps import api_router, db, require_admin, _get_integration_value
 CATEGORIES = [
     "t-shirts", "hoodies", "polos", "shirts", "sweatshirts", "jackets",
     "hi-vis", "shorts", "bottoms", "aprons", "hats", "footwear",
-    "towels", "promotional", "kids-baby", "accessories",
+    "towels", "promotional", "kids-baby", "bags", "accessories",
 ]
 INDUSTRIES = [
     "healthcare", "construction-trades", "retail", "security", "corporate",
@@ -54,7 +54,8 @@ CATEGORY_HELP = (
     "aprons, hats (caps/beanies/bucket hats), footwear (boots/shoes/wellies), "
     "towels (towels/robes), promotional (mugs/bottles/pens/gifts), "
     "kids-baby (anything sized for children/babies/toddlers, incl. pyjamas & lounge sets), "
-    "accessories (bags/socks/gloves/knee pads/lanyards/scarves/anything not a garment)"
+    "bags (backpacks/duffles/holdalls/drawstring bags/tote bags/shoe bags/kit bags/gym bags), "
+    "accessories (socks/gloves/knee pads/lanyards/scarves/beanies-if-not-hats/anything else that is not a garment or a bag)"
 )
 INDUSTRY_HELP = (
     "healthcare (clinics, dental, care, vets — tunics, scrubs, soft polos), "
@@ -107,7 +108,8 @@ def _system_prompt() -> str:
         "Rules: Judge by the product NAME. Children's/baby/toddler items go to category kids-baby, "
         "fit kids, and industries [] (never trade pages). Pyjamas, lounge sets, nightwear, dressing gowns, "
         "and rain suits are consumer wear — never construction-trades. Boots/shoes go to footwear. "
-        "Bags, socks, gloves, knee pads, lanyards go to accessories. Only tag an industry when the garment is "
+        "Bags of any kind (backpacks, duffles, holdalls, drawstring, tote, shoe/gym/kit bags) go to bags. "
+        "Socks, gloves, knee pads, lanyards, scarves go to accessories. Only tag an industry when the garment is "
         "genuinely used as that trade's uniform — be conservative; [] is a valid, common answer. "
         "Respond with ONLY a JSON array, one object per product, no prose:\n"
         '[{"id":"<id>","category":"<one>","industries":["<..>"],"fit":"<one>"}]'
