@@ -28,7 +28,7 @@ PAGE_COPY_SLUGS = [
     # canonicalises aliases before requesting.
     "healthcare", "construction-trades", "retail", "security", "corporate",
     "sports-fitness", "industrial", "beauty-wellness", "cleaning",
-    "hospitality-catering",
+    "hospitality-catering", "education-schools",
     # Not a page — a holder for imagery that appears across many pages at once
     # (the Price Promise photo, the tool tiles, industry + sports-team headers).
     "site-images",

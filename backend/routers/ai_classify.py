@@ -43,7 +43,7 @@ CATEGORIES = [
 INDUSTRIES = [
     "healthcare", "construction-trades", "retail", "security", "corporate",
     "sports-fitness", "industrial", "beauty-wellness", "cleaning",
-    "hospitality-catering",
+    "hospitality-catering", "education-schools",
 ]
 FITS = ["mens", "womens", "unisex", "kids"]
 
@@ -66,7 +66,8 @@ INDUSTRY_HELP = (
     "industrial (factory/warehouse/logistics durable workwear), "
     "beauty-wellness (salons, spa, barber, hair — tunics, aprons), "
     "cleaning (cleaners/janitorial — tabards, polos, hi-vis), "
-    "hospitality-catering (chefs, waiting, bar, hotel — aprons, chef wear, tunics)"
+    "hospitality-catering (chefs, waiting, bar, hotel — aprons, chef wear, tunics), "
+    "education-schools (school/college/nursery staff and teams — polos, sweatshirts, hoodies, fleeces)"
 )
 
 BATCH_SIZE = 25   # products per AI call — keeps each prompt small and reliable
@@ -103,14 +104,21 @@ def _system_prompt() -> str:
         "You are a product classifier for a UK custom-print & workwear shop. "
         "For each product you are given (an id and a name), decide:\n"
         f"1. category — EXACTLY ONE of: {', '.join(CATEGORIES)}.\n   Meanings: {CATEGORY_HELP}.\n"
-        f"2. industries — ZERO OR MORE of: {', '.join(INDUSTRIES)} (0 to 3).\n   Meanings: {INDUSTRY_HELP}.\n"
+        f"2. industries — choose EVERY industry this product genuinely suits, from: {', '.join(INDUSTRIES)}.\n"
+        f"   Meanings: {INDUSTRY_HELP}.\n"
         f"3. fit — EXACTLY ONE of: {', '.join(FITS)}.\n"
         "Rules: Judge by the product NAME. Children's/baby/toddler items go to category kids-baby, "
         "fit kids, and industries [] (never trade pages). Pyjamas, lounge sets, nightwear, dressing gowns, "
         "and rain suits are consumer wear — never construction-trades. Boots/shoes go to footwear. "
         "Bags of any kind (backpacks, duffles, holdalls, drawstring, tote, shoe/gym/kit bags) go to bags. "
         "Socks, gloves, knee pads, lanyards, scarves go to accessories. Only tag an industry when the garment is "
-        "genuinely used as that trade's uniform — be conservative; [] is a valid, common answer. "
+        "genuinely a natural, common choice for that trade's uniform — not merely possible. "
+        "There is NO limit: tag EVERY industry the product genuinely suits. A plain, versatile garment "
+        "(a classic polo, basic tee, crew sweatshirt, softshell) honestly suits many trades — corporate, retail, "
+        "hospitality-catering, industrial, cleaning, security, education-schools, healthcare — so list ALL of them. "
+        "A niche or specialised item should get few or none: [] is a valid, common answer. Judge each product on its "
+        "own merits — never force an industry that isn't a real fit, and never invent fit to reach a number. "
+        "Never tag kids/baby, pyjamas, lounge, nightwear or leisure items with any trade. "
         "Respond with ONLY a JSON array, one object per product, no prose:\n"
         '[{"id":"<id>","category":"<one>","industries":["<..>"],"fit":"<one>"}]'
     )
@@ -154,7 +162,13 @@ async def _classify_batch(api_key: str, items: List[Dict]) -> List[Dict]:
         cat = r.get("category")
         if cat not in CATEGORIES:
             cat = None
-        inds = [i for i in (r.get("industries") or []) if i in INDUSTRIES][:3]
+        # No cap: Claude judges per product which industries genuinely fit. We only
+        # keep valid, de-duplicated slugs (order preserved).
+        seen = set()
+        inds = []
+        for i in (r.get("industries") or []):
+            if i in INDUSTRIES and i not in seen:
+                seen.add(i); inds.append(i)
         fit = r.get("fit") if r.get("fit") in FITS else None
         out.append({
             "id": pid,
