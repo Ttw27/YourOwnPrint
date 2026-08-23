@@ -217,6 +217,7 @@ export const NAV_MENU = [
           { label: "Corporate", to: "/industries/corporate" },
           { label: "Security", to: "/industries/security" },
           { label: "Sports & Fitness", to: "/industries/sports-fitness" },
+          { label: "Education & Schools", to: "/industries/education-schools" },
           { label: "All Industries →", to: "/industries" },
         ],
       },

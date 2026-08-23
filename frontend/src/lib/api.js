@@ -340,7 +340,7 @@ export async function adminUpdateCollectionSeo(slug, payload) {
 }
 
 export const GENDER_FIT_VALUES = ["mens", "womens", "unisex", "kids"];
-export const INDUSTRY_SLUGS = ["healthcare", "construction-trades", "retail", "security", "corporate", "sports-fitness", "industrial", "beauty-wellness", "cleaning", "hospitality-catering"];
+export const INDUSTRY_SLUGS = ["healthcare", "construction-trades", "retail", "security", "corporate", "sports-fitness", "industrial", "beauty-wellness", "cleaning", "hospitality-catering", "education-schools"];
 
 // ----- Leavers' templates + checkout + bespoke -----
 export async function fetchLeaversTemplates() {
