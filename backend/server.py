@@ -2944,6 +2944,7 @@ GARMENT_TYPE_CATALOGUE = [
     {"slug": "towels",      "title": "Towels & Robes", "image": "https://images.pexels.com/photos/3997379/pexels-photo-3997379.jpeg"},
     {"slug": "promotional", "title": "Promotional & Gifts", "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
     {"slug": "kids-baby",   "title": "Kids & Baby",   "image": "https://images.pexels.com/photos/3933281/pexels-photo-3933281.jpeg"},
+    {"slug": "bags",        "title": "Bags",         "image": "https://images.pexels.com/photos/2905238/pexels-photo-2905238.jpeg"},
     {"slug": "accessories", "title": "Accessories",  "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
 ]
 
