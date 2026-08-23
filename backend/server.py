@@ -1732,7 +1732,7 @@ class ProductMeta(BaseModel):
 
 
 GENDER_FIT_OPTIONS = ["mens", "womens", "unisex", "kids"]
-INDUSTRY_SLUGS = ["healthcare", "construction-trades", "retail", "security", "corporate", "sports-fitness", "industrial", "beauty-wellness", "cleaning", "hospitality-catering"]
+INDUSTRY_SLUGS = ["healthcare", "construction-trades", "retail", "security", "corporate", "sports-fitness", "industrial", "beauty-wellness", "cleaning", "hospitality-catering", "education-schools"]
 INDUSTRIES_CATALOGUE = [
     {"slug": "healthcare", "title": "Healthcare", "subtitle": "Clinics, dental, mobile carers", "hero_image": "https://images.pexels.com/photos/4173324/pexels-photo-4173324.jpeg", "blurb": "Polos, tunics and sweatshirts customers recognise — soft fabrics, clean print, easy on hot washes."},
     {"slug": "construction-trades", "title": "Construction & Trades", "subtitle": "Builders, sparks, plumbers, joiners, site crews", "hero_image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg", "blurb": "Hi-vis vests, workwear tees, jackets and trousers that survive site life. EN ISO 20471 options ready to print."},
@@ -1744,6 +1744,7 @@ INDUSTRIES_CATALOGUE = [
     {"slug": "beauty-wellness", "title": "Beauty & Wellness", "subtitle": "Salons, spas, beauticians, hair & barbering, holistic studios", "hero_image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg", "blurb": "Branded tees, aprons and sweatshirts that look as polished as the treatments. Statement prints land beautifully."},
     {"slug": "cleaning", "title": "Cleaning & Maintenance", "subtitle": "Cleaning crews, facilities, janitorial", "hero_image": "https://images.pexels.com/photos/4099235/pexels-photo-4099235.jpeg", "blurb": "Identifiable, easy-care polos and tees. Branded right, your team is recognisable on every site."},
     {"slug": "hospitality-catering", "title": "Hospitality & Catering", "subtitle": "Cafés, bars, pubs, restaurants, mobile caterers", "hero_image": "https://images.pexels.com/photos/3007355/pexels-photo-3007355.jpeg", "blurb": "Smart polos, tees and aprons that look right behind the bar and front of house. Tidy logo print on the chest."},
+    {"slug": "education-schools", "title": "Education & Schools", "subtitle": "Schools, colleges, nurseries, tutors, staff teams", "hero_image": "https://images.pexels.com/photos/8500353/pexels-photo-8500353.jpeg", "blurb": "Polos, sweatshirts and hoodies for staff, departments and school teams — soft, hard-wearing and easy to reorder every term."},
 
     # Back-compat aliases (legacy routes still resolve)
     {"slug": "trades", "title": "Trades", "subtitle": "Builders, sparks, plumbers, joiners", "hero_image": "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg", "blurb": "Hard-wearing tees, hoodies and hi-vis kitted out with your logo. Built for site, washed at 60°.", "alias_of": "construction-trades"},
