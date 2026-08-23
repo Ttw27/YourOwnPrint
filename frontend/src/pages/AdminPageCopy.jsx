@@ -114,6 +114,7 @@ const SITE_INDUSTRIES = [
   { slug: "beauty-wellness", label: "Beauty & Wellness" },
   { slug: "cleaning", label: "Cleaning & Maintenance" },
   { slug: "hospitality-catering", label: "Hospitality & Catering" },
+  { slug: "education-schools", label: "Education & Schools" },
 ];
 
 // Header photo on each sports landing page. Slugs match SPORTS_TEAMS_CATALOGUE.
