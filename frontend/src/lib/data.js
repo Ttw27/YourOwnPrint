@@ -120,6 +120,7 @@ export const NAV_MENU = [
       {
         heading: "Featured",
         links: [
+          { label: "Find My Kit", to: "/find-my-kit", badge: "AI" },
           { label: "For Business", to: "/for-business", badge: "Switch" },
           { label: "Your Own Print Specials", to: "/specials", badge: "Starter" },
           { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
@@ -151,6 +152,7 @@ export const NAV_MENU = [
           { label: "Aprons", to: "/shop/aprons" },
           { label: "Shorts", to: "/shop/shorts" },
           { label: "Promotional & Gifts", to: "/shop/promotional" },
+          { label: "Bags", to: "/shop/bags" },
           { label: "Accessories", to: "/shop/accessories" },
         ],
       },
