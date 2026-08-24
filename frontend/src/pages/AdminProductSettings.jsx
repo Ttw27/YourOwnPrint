@@ -14,7 +14,7 @@ export default function AdminProductSettings() {
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState(() => { try { return new URLSearchParams(window.location.search).get("q") || ""; } catch { return ""; } });
   const [debouncedFilter, setDebouncedFilter] = useState("");
   const [allProductsLite, setAllProductsLite] = useState([]); // {id, name} across the WHOLE catalogue — for cross-sell pickers only, never rendered as one giant list
   const [defaults, setDefaults] = useState({ tiers: [] });
