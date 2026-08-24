@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import FindMyKitPromo from "../components/bold/FindMyKitPromo";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
@@ -275,6 +276,7 @@ export default function IndustryDetail() {
       </section>
 
       <ToolsShowcase variant="compact" />
+      <div className="max-w-6xl mx-auto px-6 pb-14"><FindMyKitPromo variant="inline" trade={(data && (data.title || data.slug)) || ""} /></div>
       <BoldFooter />
     </div>
   );

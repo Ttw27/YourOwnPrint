@@ -39,8 +39,15 @@ export default function FindMyKit() {
           setResult(saved.result);
           setIndustry(saved.industry || "");
           setTrade(saved.trade || "");
+          return;
         }
       }
+    } catch { /* ignore */ }
+
+    // Deep-link support: /find-my-kit?trade=plumber pre-fills the box.
+    try {
+      const q = new URLSearchParams(window.location.search).get("trade");
+      if (q) setTrade(q);
     } catch { /* ignore */ }
   }, []);
 

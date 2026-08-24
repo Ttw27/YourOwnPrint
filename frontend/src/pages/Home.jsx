@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
+import FindMyKitPromo from "../components/bold/FindMyKitPromo";
 import PortfolioStrip from "../components/bold/PortfolioStrip";
 import PricePromise from "../components/bold/PricePromise";
 import { SECTORS, REVIEWS as STATIC_REVIEWS, RATING } from "../lib/data";
@@ -208,6 +209,9 @@ export default function Home() {
 
       {/* Built-in tools showcase */}
       <ToolsShowcase />
+
+      {/* Find My Kit — AI concierge */}
+      <FindMyKitPromo variant="hero" className="my-16" />
 
       {/* Portfolio strip — only renders when admin has marked items as featured */}
       <PortfolioStrip />
