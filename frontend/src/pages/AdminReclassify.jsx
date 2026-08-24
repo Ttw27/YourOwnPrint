@@ -42,21 +42,62 @@ export default function AdminReclassify() {
     let done = false;
     let grandTotal = 0;
     let seen = 0;
+    let failedBatches = 0;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // Run one batch with up to 3 attempts (transient API timeouts / rate limits
+    // are common over a long run, so a single blip must not kill everything).
+    const runBatchWithRetry = async (ofs) => {
+      let lastErr = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          return await aiClassifyPreview({ offset: ofs, limit: 25 });
+        } catch (e) {
+          lastErr = e;
+          // brief backoff before retrying
+          // eslint-disable-next-line no-await-in-loop
+          await sleep(attempt * 1500);
+        }
+      }
+      throw lastErr;
+    };
+
     try {
       while (!done) {
-        // eslint-disable-next-line no-await-in-loop
-        const res = await aiClassifyPreview({ offset, limit: 25 });
+        let res;
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          res = await runBatchWithRetry(offset);
+        } catch (e) {
+          // This batch failed all retries — skip it and keep going rather than
+          // aborting the whole catalogue. We advance by one batch worth.
+          failedBatches += 1;
+          offset += 25;
+          if (grandTotal && offset >= grandTotal) { done = true; break; }
+          // eslint-disable-next-line no-await-in-loop
+          await sleep(500);
+          continue;
+        }
         grandTotal = res.total || grandTotal;
         seen += res.processed || 0;
         setTotal(grandTotal);
         setProcessed(seen);
         if (res.next_offset === null || res.done) { done = true; break; }
         offset = res.next_offset;
+        // small gap between batches eases API rate limits
+        // eslint-disable-next-line no-await-in-loop
+        await sleep(300);
       }
       await loadProposals();
-      toast.success("Classification finished — review the proposed changes below.");
+      if (failedBatches > 0) {
+        toast.success(`Classification finished — ${failedBatches} batch${failedBatches === 1 ? "" : "es"} had trouble and were skipped. You can re-run to pick those up.`);
+      } else {
+        toast.success("Classification finished — review the proposed changes below.");
+      }
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Something went wrong during classification.");
+      // Even on a hard failure, show whatever proposals we did gather.
+      await loadProposals().catch(() => {});
+      toast.error(e?.response?.data?.detail || "Something went wrong, but any changes gathered so far are shown below.");
     } finally {
       setRunning(false);
       refreshStatus();
