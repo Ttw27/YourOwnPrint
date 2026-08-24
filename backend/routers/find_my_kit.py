@@ -35,6 +35,27 @@ from deps import api_router, db, _get_integration_value
 
 MODEL = "claude-haiku-4-5-20251001"
 
+# The fixed head-to-toe uniform skeleton. Every kit is built from these sections
+# in this order; each maps to the collections it draws from and the primary
+# collection its "see all" link points to. Sections with nothing to fill are
+# dropped, so a hairdresser simply won't get a Hi-vis & Safety section.
+UNIFORM_SECTIONS = [
+    {"title": "Headwear",          "cats": ["hats"],                         "see_all": "hats"},
+    {"title": "Tops",              "cats": ["t-shirts", "polos", "shirts"],  "see_all": "polos"},
+    {"title": "Mid layers",        "cats": ["sweatshirts", "hoodies"],       "see_all": "hoodies"},
+    {"title": "Outerwear",         "cats": ["jackets"],                      "see_all": "jackets"},
+    {"title": "Hi-vis & Safety",   "cats": ["hi-vis"],                       "see_all": "hi-vis"},
+    {"title": "Legwear",           "cats": ["bottoms", "shorts"],            "see_all": "bottoms"},
+    {"title": "Footwear",          "cats": ["footwear"],                     "see_all": "footwear"},
+    {"title": "Gloves & Extras",   "cats": ["accessories", "aprons", "towels", "bags"], "see_all": "accessories"},
+]
+_SECTION_ORDER = [x["title"] for x in UNIFORM_SECTIONS]
+_SEE_ALL = {x["title"]: x["see_all"] for x in UNIFORM_SECTIONS}
+_CAT_TO_SECTION = {}
+for _sec in UNIFORM_SECTIONS:
+    for _c in _sec["cats"]:
+        _CAT_TO_SECTION[_c] = _sec["title"]
+
 # The canonical industries a trade can map to (must match the site's tags).
 CANONICAL_INDUSTRIES = [
     "healthcare", "construction-trades", "retail", "security", "corporate",
@@ -166,9 +187,12 @@ def _system_prompt() -> str:
         "- Build a BALANCED kit ACROSS categories — not many of one type. Think like kitting out a "
         "team: everyday tops, a mid-layer/warm option, outerwear if relevant, appropriate legwear, "
         "headwear, and the genuinely useful extras (e.g. gloves, aprons, bags, towels) for THAT trade.\n"
-        "- Aim for about 12-15 items total, but fewer is fine if the range is thin.\n"
-        "- Group them into sensible sections. Use short section titles like 'Everyday tops', "
-        "'Warm layers', 'Outerwear', 'Legwear', 'Headwear', 'Extras' — only sections you actually fill.\n"
+        "- Organise the kit into these FIXED sections, in this order: "
+        "Headwear, Tops, Mid layers, Outerwear, Hi-vis & Safety, Legwear, Footwear, Gloves & Extras.\n"
+        "- Fill EVERY section you genuinely can from the available products — e.g. a plumber or builder "
+        "should get Footwear (safety boots) and Hi-vis & Safety; don't skip those when suitable items exist. "
+        "SKIP a section only when nothing in stock genuinely fits that trade (e.g. no Hi-vis for a hairdresser).\n"
+        "- Put 1-3 items in each section you fill. Aim for a complete uniform, not a huge list.\n"
         "- For each item give a SHORT reason (max ~10 words) why it suits this trade.\n"
         "- STRONGLY prefer items marked BESTSELLER — lead each section with them; these are the shop's proven "
         "popular choices and should appear first whenever they fit the trade.\n"
@@ -221,28 +245,43 @@ async def find_my_kit(payload: KitRequest):
     # that isn't a real candidate (defends against hallucinated ids).
     by_id = {c["id"]: c for c in candidates}
     from server import PRODUCTS
-    out_sections = []
+
+    # Bucket every chosen product into the FIXED uniform skeleton by its category,
+    # regardless of how the AI labelled its own sections. This guarantees a
+    # consistent head-to-toe structure across trades.
+    buckets = {sec["title"]: [] for sec in UNIFORM_SECTIONS}
     used = set()
     for sec in (result.get("sections") or []):
-        items = []
         for it in (sec.get("items") or []):
             pid = str(it.get("id", ""))
             if pid in by_id and pid not in used and pid in PRODUCTS:
                 used.add(pid)
-                p = PRODUCTS[pid]
-                items.append({
+                prod = PRODUCTS[pid]
+                cat = prod.get("category") or ""
+                title = _CAT_TO_SECTION.get(cat, "Gloves & Extras")
+                buckets[title].append({
                     "id": pid,
-                    "name": p["name"],
-                    "price": round(float(p.get("price") or 0), 2),
-                    "image": p.get("image") or "",
-                    "category": p.get("category") or "",
+                    "name": prod["name"],
+                    "price": round(float(prod.get("price") or 0), 2),
+                    "image": prod.get("image") or "",
+                    "category": cat,
                     "reason": (it.get("reason") or "")[:120],
-                    "bestseller": bool(p.get("is_bestseller")),
+                    "bestseller": bool(prod.get("is_bestseller")),
                 })
-        if items:
-            # bestsellers first within the section, otherwise keep AI order
-            items.sort(key=lambda x: not x.get("bestseller"))
-            out_sections.append({"title": (sec.get("title") or "Kit")[:40], "items": items})
+
+    # Emit sections in the fixed order, dropping any that stayed empty, and
+    # attaching a "see all" link (whole collection) for each.
+    out_sections = []
+    for sec in UNIFORM_SECTIONS:
+        items = buckets[sec["title"]]
+        if not items:
+            continue
+        items.sort(key=lambda x: not x.get("bestseller"))  # bestsellers first
+        out_sections.append({
+            "title": sec["title"],
+            "items": items,
+            "see_all_slug": sec["see_all"],
+        })
 
     if not out_sections:
         return _fallback_kit(candidates, industries)
@@ -252,7 +291,7 @@ async def find_my_kit(payload: KitRequest):
         "intro": (result.get("intro") or "")[:240],
         "industries": industries,
         "sections": out_sections,
-        "count": sum(len(s["items"]) for s in out_sections),
+        "count": sum(len(x["items"]) for x in out_sections),
     }
 
 
@@ -296,46 +335,36 @@ def _trim_candidates(cands: List[Dict], per_category: int, total_cap: int) -> Li
     return out[:total_cap]
 
 
-# Section order for the no-AI fallback.
-_FALLBACK_GROUPS = [
-    ("Everyday tops", ["t-shirts", "polos", "shirts"]),
-    ("Warm layers", ["sweatshirts", "hoodies"]),
-    ("Outerwear", ["jackets", "hi-vis"]),
-    ("Legwear", ["bottoms", "shorts"]),
-    ("Headwear", ["hats"]),
-    ("Extras", ["aprons", "bags", "towels", "accessories", "footwear"]),
-]
-
-
 def _fallback_kit(candidates: List[Dict], industries: List[str]) -> Dict:
-    """Simple balanced spread by category when the AI isn't available."""
+    """Simple balanced spread using the fixed skeleton when the AI isn't available."""
     from server import PRODUCTS
     by_cat: Dict[str, List[Dict]] = {}
     for c in candidates:
         by_cat.setdefault(c["category"], []).append(c)
 
     sections = []
-    for title, cats in _FALLBACK_GROUPS:
+    for sec in UNIFORM_SECTIONS:
         items = []
-        for cat in cats:
+        for cat in sec["cats"]:
             for c in by_cat.get(cat, [])[:2]:
-                p = PRODUCTS.get(c["id"])
-                if not p:
+                prod = PRODUCTS.get(c["id"])
+                if not prod:
                     continue
                 items.append({
-                    "id": c["id"], "name": p["name"],
-                    "price": round(float(p.get("price") or 0), 2),
-                    "image": p.get("image") or "", "category": cat,
-                    "reason": "",
+                    "id": c["id"], "name": prod["name"],
+                    "price": round(float(prod.get("price") or 0), 2),
+                    "image": prod.get("image") or "", "category": cat,
+                    "reason": "", "bestseller": bool(prod.get("is_bestseller")),
                 })
         if items:
-            sections.append({"title": title, "items": items[:4]})
+            items.sort(key=lambda x: not x.get("bestseller"))
+            sections.append({"title": sec["title"], "items": items[:3], "see_all_slug": sec["see_all"]})
 
     return {
         "ok": True,
         "intro": "Here's a starter kit based on what we stock for your trade.",
         "industries": industries,
         "sections": sections,
-        "count": sum(len(s["items"]) for s in sections),
+        "count": sum(len(x["items"]) for x in sections),
         "fallback": True,
     }
