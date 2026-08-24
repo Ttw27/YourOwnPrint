@@ -108,8 +108,12 @@ def _system_prompt() -> str:
         f"   Meanings: {INDUSTRY_HELP}.\n"
         f"3. fit — EXACTLY ONE of: {', '.join(FITS)}.\n"
         "Rules: Judge by the product NAME. Children's/baby/toddler items go to category kids-baby, "
-        "fit kids, and industries [] (never trade pages). Pyjamas, lounge sets, nightwear, dressing gowns, "
-        "and rain suits are consumer wear — never construction-trades. Boots/shoes go to footwear. "
+        "fit kids, and NO trade industries (never construction-trades, industrial, healthcare, security, "
+        "cleaning, corporate, retail, hospitality-catering, beauty-wellness). The ONLY industry a kids item "
+        "may carry is education-schools, and only when it's the kind of thing a school actually buys — "
+        "e.g. a kids' PE/sports top, school polo, school sweatshirt/hoodie, or team kit. Everyday kids' "
+        "leisure wear, pyjamas, lounge sets, nightwear, dressing gowns and rain suits get industries [] "
+        "(not even education). Boots/shoes go to footwear. "
         "Bags of any kind (backpacks, duffles, holdalls, drawstring, tote, shoe/gym/kit bags) go to bags. "
         "Socks, gloves, knee pads, lanyards, scarves go to accessories. Only tag an industry when the garment is "
         "genuinely a natural, common choice for that trade's uniform — not merely possible. "
@@ -118,7 +122,7 @@ def _system_prompt() -> str:
         "hospitality-catering, industrial, cleaning, security, education-schools, healthcare — so list ALL of them. "
         "A niche or specialised item should get few or none: [] is a valid, common answer. Judge each product on its "
         "own merits — never force an industry that isn't a real fit, and never invent fit to reach a number. "
-        "Never tag kids/baby, pyjamas, lounge, nightwear or leisure items with any trade. "
+        "For kids items: never a trade industry; education-schools only if it's school-bought kit (PE/sports top, school polo/sweatshirt/hoodie, team kit). Pyjamas/lounge/nightwear/leisure get none. "
         "Respond with ONLY a JSON array, one object per product, no prose:\n"
         '[{"id":"<id>","category":"<one>","industries":["<..>"],"fit":"<one>"}]'
     )
