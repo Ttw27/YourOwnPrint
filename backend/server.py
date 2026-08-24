@@ -6627,6 +6627,7 @@ import routers.configurator_addons  # noqa: F401 — registers /admin/full-squad
 import routers.customer_auth  # noqa: F401 — registers /customer/register, /customer/login, /customer/cart, /customer/orders, addresses, designs
 import routers.admin_reviews  # noqa: F401 — registers /admin/reviews list/edit/delete
 import routers.ai_classify  # noqa: F401 — registers /admin/ai-classify/* (Smart Re-classify)
+import routers.find_my_kit  # noqa: F401 — registers /find-my-kit (AI kit concierge)
 
 # Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
