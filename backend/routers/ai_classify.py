@@ -22,6 +22,7 @@ never has to hold or round-trip thousands of rows.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from typing import Dict, List, Optional
@@ -133,23 +134,42 @@ async def _classify_batch(api_key: str, items: List[Dict]) -> List[Dict]:
     user = "Classify these products:\n" + "\n".join(
         f'- id={it["id"]} name="{it["name"]}"' for it in items
     )
-    async with httpx.AsyncClient(timeout=120) as http:
-        resp = await http.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json={
-                "model": MODEL,
-                "max_tokens": 4000,
-                "system": _system_prompt(),
-                "messages": [{"role": "user", "content": user}],
-            },
-        )
-    if resp.status_code != 200:
-        raise HTTPException(502, f"AI request failed ({resp.status_code}): {resp.text[:300]}")
+    payload = {
+        "model": MODEL,
+        "max_tokens": 4000,
+        "system": _system_prompt(),
+        "messages": [{"role": "user", "content": user}],
+    }
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    # Transient API conditions (overload 529, rate limit 429, 5xx, timeouts) are
+    # common across a long run — retry a few times with backoff before failing.
+    resp = None
+    last_exc = None
+    for attempt in range(1, 4):
+        try:
+            async with httpx.AsyncClient(timeout=120) as http:
+                resp = await http.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers=headers, json=payload,
+                )
+            if resp.status_code == 200:
+                break
+            if resp.status_code in (429, 500, 502, 503, 529):
+                last_exc = HTTPException(502, f"AI transient {resp.status_code}")
+                await asyncio.sleep(attempt * 2)
+                continue
+            # Non-transient (e.g. 400/401) — fail immediately with detail
+            raise HTTPException(502, f"AI request failed ({resp.status_code}): {resp.text[:300]}")
+        except (httpx.TimeoutException, httpx.TransportError) as e:
+            last_exc = e
+            await asyncio.sleep(attempt * 2)
+            continue
+    if resp is None or resp.status_code != 200:
+        raise HTTPException(502, f"AI request failed after retries: {str(last_exc)[:200]}")
     data = resp.json()
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     try:
