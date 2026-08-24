@@ -137,7 +137,8 @@ def _gather_candidates(industries: List[str]) -> List[Dict]:
             wanted.add(c)
 
     cands = []
-    for p in PRODUCTS.values():
+    _iter = sorted(PRODUCTS.values(), key=lambda x: (not bool(x.get("is_bestseller")), str(x.get("name") or "")))
+    for p in _iter:
         tags = set(canonical_industries(p.get("industry_tags") or []))
         # A product is a candidate if it suits one of the wanted industries.
         # (If we found no industries at all, fall back to everything so the AI
@@ -150,6 +151,7 @@ def _gather_candidates(industries: List[str]) -> List[Dict]:
             "category": p.get("category") or "",
             "price": round(float(p.get("price") or 0), 2),
             "fit": p.get("gender_fit") or "unisex",
+            "bestseller": bool(p.get("is_bestseller")),
         })
     return cands
 
@@ -168,7 +170,11 @@ def _system_prompt() -> str:
         "- Group them into sensible sections. Use short section titles like 'Everyday tops', "
         "'Warm layers', 'Outerwear', 'Legwear', 'Headwear', 'Extras' — only sections you actually fill.\n"
         "- For each item give a SHORT reason (max ~10 words) why it suits this trade.\n"
-        "- Prefer good all-rounders and bestsellers; spread price points where you can.\n"
+        "- STRONGLY prefer items marked BESTSELLER — lead each section with them; these are the shop's proven "
+        "popular choices and should appear first whenever they fit the trade.\n"
+        "- Favour sensible, good-value everyday all-rounders over niche or premium items. Don't fill the kit "
+        "with the most expensive options; pick the practical choice a typical customer in that trade would want.\n"
+        "- Be consistent: for the same trade, choose the same core items rather than varying them.\n"
         "Respond with ONLY JSON, no prose:\n"
         '{"intro":"<one friendly sentence>","sections":[{"title":"<section>","items":['
         '{"id":"<product id>","reason":"<short why>"}]}]}'
@@ -199,6 +205,7 @@ async def find_my_kit(payload: KitRequest):
 
     menu = "\n".join(
         f'- id={c["id"]} | {c["name"]} | {c["category"]} | £{c["price"]:.2f} | {c["fit"]}'
+        + (" | BESTSELLER" if c.get("bestseller") else "")
         for c in trimmed
     )
     who = payload.trade or (industries[0] if industries else "general workwear")
@@ -230,8 +237,11 @@ async def find_my_kit(payload: KitRequest):
                     "image": p.get("image") or "",
                     "category": p.get("category") or "",
                     "reason": (it.get("reason") or "")[:120],
+                    "bestseller": bool(p.get("is_bestseller")),
                 })
         if items:
+            # bestsellers first within the section, otherwise keep AI order
+            items.sort(key=lambda x: not x.get("bestseller"))
             out_sections.append({"title": (sec.get("title") or "Kit")[:40], "items": items})
 
     if not out_sections:
