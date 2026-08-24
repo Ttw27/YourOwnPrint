@@ -2,6 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, Loader2, ArrowRight, Search } from "lucide-react";
 import { findMyKit, fetchIndustries } from "../lib/api";
+import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
+
+// Cache the last kit + inputs for this browser session, so returning from a
+// product page shows the SAME kit instead of a blank form or a fresh (different)
+// generation. Keyed simply since it's one active kit at a time.
+const CACHE_KEY = "fmk:last";
 
 /**
  * Find My Kit — the concierge. A customer picks their industry or types their
@@ -22,6 +28,20 @@ export default function FindMyKit() {
       const list = Array.isArray(d) ? d : (d?.industries || d?.items || []);
       setIndustries(list.filter((i) => i && i.slug));
     }).catch(() => setIndustries([]));
+
+    // Restore a previously built kit (so the back button from a product returns
+    // you to the same results rather than regenerating a different kit).
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved?.result) {
+          setResult(saved.result);
+          setIndustry(saved.industry || "");
+          setTrade(saved.trade || "");
+        }
+      }
+    } catch { /* ignore */ }
   }, []);
 
   const run = async () => {
@@ -38,6 +58,9 @@ export default function FindMyKit() {
         setError(res?.message || "We couldn't build a kit for that just yet — try a broader trade.");
       } else {
         setResult(res);
+        try {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ result: res, industry, trade: trade.trim() }));
+        } catch { /* ignore */ }
       }
     } catch (e) {
       setError("Something went wrong building your kit. Please try again in a moment.");
@@ -50,6 +73,7 @@ export default function FindMyKit() {
 
   return (
     <div className="min-h-screen bg-white font-nunito text-[#1a1a1a]">
+      <BoldNavbar />
       {/* Hero */}
       <div className="bg-gradient-to-b from-[#f0fdf4] to-white border-b border-[#dcfce7]">
         <div className="max-w-4xl mx-auto px-6 pt-14 pb-10 text-center">
@@ -157,11 +181,12 @@ export default function FindMyKit() {
             <p className="text-[#4b5563] text-sm mt-1">Tap any item to pick colours, sizes and print — or get a quote for the whole kit.</p>
             <div className="mt-4 flex flex-wrap gap-3 justify-center">
               <Link to="/contact" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-5 py-2.5">Get a quote <ArrowRight size={15} /></Link>
-              <button onClick={() => { setResult(null); setTrade(""); setIndustry(""); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="inline-flex items-center gap-2 border-2 border-[#7bc67e] text-[#166534] hover:bg-white font-extrabold rounded-full px-5 py-2.5">Try another trade</button>
+              <button onClick={() => { setResult(null); setTrade(""); setIndustry(""); try { sessionStorage.removeItem(CACHE_KEY); } catch { /* ignore */ } window.scrollTo({ top: 0, behavior: "smooth" }); }} className="inline-flex items-center gap-2 border-2 border-[#7bc67e] text-[#166534] hover:bg-white font-extrabold rounded-full px-5 py-2.5">Try another trade</button>
             </div>
           </div>
         </div>
       )}
+      <BoldFooter />
     </div>
   );
 }
