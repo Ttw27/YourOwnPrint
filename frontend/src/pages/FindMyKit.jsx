@@ -148,9 +148,16 @@ export default function FindMyKit() {
 
           {result.sections.map((sec, si) => (
             <div key={si} className="mb-12">
-              <h2 className="font-black text-2xl mb-5 flex items-center gap-3">
-                <span className="w-8 h-[3px] bg-[#7bc67e] rounded-full" /> {sec.title}
-              </h2>
+              <div className="flex items-center justify-between gap-4 mb-5 flex-wrap">
+                <h2 className="font-black text-2xl flex items-center gap-3">
+                  <span className="w-8 h-[3px] bg-[#7bc67e] rounded-full" /> {sec.title}
+                </h2>
+                {sec.see_all_slug && (
+                  <Link to={`/shop/${sec.see_all_slug}`} className="text-sm font-extrabold text-[#166534] hover:underline inline-flex items-center gap-1" data-testid={`fmk-seeall-${sec.see_all_slug}`}>
+                    See all <ArrowRight size={14} />
+                  </Link>
+                )}
+              </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {sec.items.map((it) => (
                   <Link
