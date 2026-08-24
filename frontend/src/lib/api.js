@@ -238,6 +238,20 @@ export async function findMyKit(payload) {
   const { data } = await api.post("/find-my-kit", payload);
   return data;
 }
+
+// ----- Image Health (broken image scan) -----
+export async function imageHealthScan(payload = {}) {
+  const { data } = await api.post("/admin/image-health/scan", payload);
+  return data;
+}
+export async function imageHealthHide(product_ids) {
+  const { data } = await api.post("/admin/image-health/hide", { product_ids });
+  return data;
+}
+export async function imageHealthUnhide(product_ids) {
+  const { data } = await api.post("/admin/image-health/unhide", { product_ids });
+  return data;
+}
 export async function updateProductMeta(product_id, payload) {
   const { data } = await api.patch(`/admin/products/${product_id}/meta`, payload);
   return data;
