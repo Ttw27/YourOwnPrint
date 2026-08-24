@@ -232,6 +232,12 @@ export async function aiClassifyClear() {
   const { data } = await api.post("/admin/ai-classify/clear", {});
   return data;
 }
+
+// ----- Find My Kit (AI concierge) -----
+export async function findMyKit(payload) {
+  const { data } = await api.post("/find-my-kit", payload);
+  return data;
+}
 export async function updateProductMeta(product_id, payload) {
   const { data } = await api.patch(`/admin/products/${product_id}/meta`, payload);
   return data;
