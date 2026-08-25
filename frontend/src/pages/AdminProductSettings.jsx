@@ -99,6 +99,7 @@ export default function AdminProductSettings() {
         workforce_eligible: !!p.workforce_eligible,
         specials_eligible: !!p.specials_eligible,
         is_bestseller: !!p.is_bestseller,
+        designer_only: !!p.designer_only,
         also_bought: Array.isArray(p.also_bought) ? p.also_bought : [],
         match_with: Array.isArray(p.match_with) ? p.match_with : [],
         gender_fit: p.gender_fit || "unisex",
@@ -320,6 +321,15 @@ export default function AdminProductSettings() {
                         <div>
                           <div className="text-sm font-nunito font-extrabold">Show in Best Sellers on the homepage</div>
                           <div className="text-[11px] text-[#4b5563]">Shows in the homepage best-sellers strip. If nothing's flagged for a category, one product from it shows automatically instead.</div>
+                        </div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 bg-[#eef2ff] border-2 border-[#c7d2fe] rounded-xl p-3" data-testid={`aps-designeronly-row-${p.id}`}>
+                      <label className="inline-flex items-center gap-2 cursor-pointer flex-1">
+                        <input type="checkbox" checked={!!p.designer_only} onChange={(e) => update(p.id, { designer_only: e.target.checked })} className="w-4 h-4 accent-[#4338ca]" data-testid={`aps-designeronly-${p.id}`} />
+                        <div>
+                          <div className="text-sm font-nunito font-extrabold">Online Designer product only</div>
+                          <div className="text-[11px] text-[#4b5563]">Hides this from normal shop categories, industry pages and Find My Kit — it appears only in the Online Designer collection and the Design Your Own tool. Use for blank canvases sold for personalisation.</div>
                         </div>
                       </label>
                     </div>
