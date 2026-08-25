@@ -825,7 +825,14 @@ async def list_products(category: Optional[str] = None, industries: Optional[str
     # stored as construction-trades.
     industry_list = canonical_industries((industries or "").split(","))
 
+    want_designer = (category == "online-designer")
     def matches(p):
+        # Designer-only products live in their own "online-designer" collection and
+        # are hidden from every other listing (normal categories, industries, all).
+        if p.get("designer_only"):
+            return want_designer
+        if want_designer:
+            return False  # non-designer products never show in the designer collection
         cat_ok = bool(category) and p["category"] == category
         ind_ok = bool(industry_list) and any(t in canonical_industries(p.get("industry_tags")) for t in industry_list)
         if category and industry_list:
@@ -1607,14 +1614,25 @@ async def import_judgeme(payload: JudgeMeImportRequest):
         reviewer = str(r.get("reviewer_name") or r.get("name") or r.get("author") or "Customer")[:80]
         created = str(r.get("created_at") or r.get("date") or datetime.now(timezone.utc).isoformat())
         pictures = r.get("pictures") or r.get("photos") or []
-        photos = []
+        raw_photos = []
         for p in pictures[:4]:
             if isinstance(p, dict):
                 u = p.get("urls", {}).get("original") or p.get("url") or p.get("original")
                 if u:
-                    photos.append(u)
+                    raw_photos.append(u)
             elif isinstance(p, str):
-                photos.append(p)
+                raw_photos.append(p)
+        # Mirror each photo to our own R2 storage so it can't break later if the
+        # source CDN goes away. Falls back to the original URL if mirroring fails.
+        photos = []
+        for u in raw_photos:
+            if not (isinstance(u, str) and u.startswith("http")):
+                continue
+            try:
+                mirrored = await _mirror_external_image(u, folder="review-photos")
+            except Exception:
+                mirrored = None
+            photos.append(mirrored or u)
         doc = {
             "id": str(uuid.uuid4()),
             "product_id": mapped,
@@ -1727,6 +1745,7 @@ class ProductMeta(BaseModel):
     image_gallery: Optional[List[str]] = None
     specials_eligible: Optional[bool] = None
     is_bestseller: Optional[bool] = None
+    designer_only: Optional[bool] = None  # only shows in Online Designer collection + designer
     gender_fit: Optional[str] = None  # mens | womens | unisex | kids
     industry_tags: Optional[List[str]] = None
 
@@ -2391,6 +2410,8 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
             "match_with": p.get("match_with") or [],
             "image_gallery": p.get("image_gallery") or [],
             "specials_eligible": bool(p.get("specials_eligible")),
+            "is_bestseller": bool(p.get("is_bestseller")),
+            "designer_only": bool(p.get("designer_only")),
             "gender_fit": p.get("gender_fit") or "unisex",
             "industry_tags": p.get("industry_tags") or [],
         })
@@ -2492,6 +2513,7 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "image_gallery": payload.image_gallery,
         "specials_eligible": payload.specials_eligible if payload.specials_eligible is not None else bool(PRODUCTS[product_id].get("specials_eligible")),
         "is_bestseller": payload.is_bestseller if payload.is_bestseller is not None else bool(PRODUCTS[product_id].get("is_bestseller")),
+        "designer_only": payload.designer_only if payload.designer_only is not None else bool(PRODUCTS[product_id].get("designer_only")),
         "gender_fit": payload.gender_fit,
         "industry_tags": payload.industry_tags,
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -2500,9 +2522,9 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
               "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
               "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible", "is_bestseller",
-              "gender_fit", "industry_tags"):
+              "designer_only", "gender_fit", "industry_tags"):
         v = doc.get(k)
-        if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible", "specials_eligible"):
+        if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible", "specials_eligible", "is_bestseller", "designer_only"):
             PRODUCTS[product_id][k] = v
     return {"ok": True}
 
@@ -2946,6 +2968,7 @@ GARMENT_TYPE_CATALOGUE = [
     {"slug": "promotional", "title": "Promotional & Gifts", "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
     {"slug": "kids-baby",   "title": "Kids & Baby",   "image": "https://images.pexels.com/photos/3933281/pexels-photo-3933281.jpeg"},
     {"slug": "bags",        "title": "Bags",         "image": "https://images.pexels.com/photos/2905238/pexels-photo-2905238.jpeg"},
+    {"slug": "online-designer", "title": "Online Designer", "image": "https://images.pexels.com/photos/3826676/pexels-photo-3826676.jpeg"},
     {"slug": "accessories", "title": "Accessories",  "image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg"},
 ]
 
