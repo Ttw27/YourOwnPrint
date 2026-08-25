@@ -26,6 +26,8 @@ export default function ReviewsPage() {
   const [products, setProducts] = useState([]);
   const [aggregates, setAggregates] = useState({});
   const [recent, setRecent] = useState([]);
+  const [mediaOnly, setMediaOnly] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
   const [store, setStore] = useState({ average: 0, count: 0, reviews: [] });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
@@ -41,13 +43,18 @@ export default function ReviewsPage() {
     Promise.all([
       fetchProducts(undefined, 500),
       fetchReviewsAggregate(),
-      fetchRecentReviews(24),
+      fetchRecentReviews(60),
       fetchStoreReviews(24),
     ])
       .then(([prods, aggs, rec, st]) => {
         setProducts(prods.items || []);
         setAggregates(aggs || {});
-        setRecent(rec || []);
+        // Media-first: reviews with photos lead (they're the strongest social
+        // proof), then the rest — each group kept in its recency order.
+        const list = rec || [];
+        const withPhotos = list.filter((r) => r.photos && r.photos.length > 0);
+        const withoutPhotos = list.filter((r) => !r.photos || r.photos.length === 0);
+        setRecent([...withPhotos, ...withoutPhotos]);
         setStore(st || { average: 0, count: 0, reviews: [] });
       })
       .catch(() => setErr(true))
@@ -146,6 +153,71 @@ export default function ReviewsPage() {
             </div>
           )}
         </div>
+
+        <div className="flex items-center justify-between gap-4 flex-wrap mt-14 mb-5">
+          <h2 className="font-nunito font-extrabold text-2xl">What customers are saying</h2>
+          <label className="inline-flex items-center gap-2 text-sm font-bold cursor-pointer bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-full px-4 py-2" data-testid="reviews-media-toggle">
+            <input type="checkbox" checked={mediaOnly} onChange={(e) => setMediaOnly(e.target.checked)} className="w-4 h-4 accent-[#7bc67e]" />
+            <Camera size={15} className="text-[#7bc67e]" /> With photos only
+          </label>
+        </div>
+        {recent.length === 0 ? (
+          <div className="bg-[#f0fdf4] rounded-2xl p-8 text-center border border-[#dcfce7]">
+            <Camera className="mx-auto text-[#7bc67e]" size={28} />
+            <div className="font-nunito font-extrabold text-xl mt-2">No reviews yet &mdash; be the first!</div>
+            <div className="text-sm text-[#4b5563] mt-1">Leave a review with photos below.</div>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {(mediaOnly ? recent.filter((r) => r.photos && r.photos.length > 0) : recent).map((r) => (
+              <div key={r.id} className="bg-white rounded-2xl border-2 border-[#dcfce7] overflow-hidden flex flex-col">
+                {r.photos && r.photos.length > 0 && (
+                  <div className={`grid gap-0.5 ${r.photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                    {r.photos.slice(0, r.photos.length === 3 ? 3 : 4).map((src, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setLightbox(src)}
+                        className={`relative overflow-hidden bg-[#f1f5f9] ${r.photos.length === 1 ? "aspect-[4/3]" : "aspect-square"} ${r.photos.length === 3 && i === 0 ? "col-span-2" : ""}`}
+                        data-testid="recent-review-photo"
+                      >
+                        <SiteImage src={src} loading="lazy" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" testid="recent-review-photo-img" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <StarRating value={r.rating} />
+                    <span className="text-xs text-[#4b5563]">{new Date(r.created_at).toLocaleDateString("en-GB")}</span>
+                  </div>
+                  {r.title && <h3 className="font-nunito font-extrabold text-lg mt-2">{r.title}</h3>}
+                  <p className="text-[#4b5563] text-sm mt-1 flex-1">&ldquo;{r.body}&rdquo;</p>
+                  <div className="mt-3 flex items-center gap-2 text-xs font-nunito font-bold flex-wrap">
+                    <span className="text-[#7bc67e]">&mdash; {r.reviewer_name}</span>
+                    {r.product_id === STORE_ID && (
+                      <span className="inline-flex items-center gap-1 text-[10px] bg-[#f0fdf4] border border-[#dcfce7] text-[#4b5563] px-1.5 py-0.5 rounded-full">
+                        <Store size={9} /> About the shop
+                      </span>
+                    )}
+                    {r.verified && <span className="inline-flex items-center gap-0.5 text-[10px] bg-[#7bc67e] text-[#1a1a1a] px-1.5 py-0.5 rounded-full"><ShieldCheck size={8} /> Verified</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Lightbox for enlarging review photos */}
+        {lightbox && (
+          <div
+            className="fixed inset-0 z-[100] bg-black/80 grid place-items-center p-6 cursor-zoom-out"
+            onClick={() => setLightbox(null)}
+            data-testid="reviews-lightbox"
+          >
+            <img src={lightbox} alt="Review photo" className="max-w-full max-h-full rounded-2xl object-contain" />
+          </div>
+        )}
 
         <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
           <h2 className="font-nunito font-extrabold text-2xl">Pick a product to review</h2>
@@ -285,43 +357,6 @@ export default function ReviewsPage() {
           </>
         )}
 
-        <h2 className="font-nunito font-extrabold text-2xl mt-14 mb-5">Most Recent Reviews</h2>
-        {recent.length === 0 ? (
-          <div className="bg-[#f0fdf4] rounded-2xl p-8 text-center border border-[#dcfce7]">
-            <Camera className="mx-auto text-[#7bc67e]" size={28} />
-            <div className="font-nunito font-extrabold text-xl mt-2">No reviews yet &mdash; be the first!</div>
-            <div className="text-sm text-[#4b5563] mt-1">Pick a product above and leave a review with photos.</div>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {recent.map((r) => (
-              <div key={r.id} className="bg-[#f0fdf4] rounded-2xl p-5 border border-[#dcfce7]">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <StarRating value={r.rating} />
-                  <span className="text-xs text-[#4b5563]">{new Date(r.created_at).toLocaleDateString("en-GB")}</span>
-                </div>
-                <h3 className="font-nunito font-extrabold text-lg mt-2">{r.title}</h3>
-                <p className="text-[#4b5563] text-sm mt-1">&ldquo;{r.body}&rdquo;</p>
-                {r.photos && r.photos.length > 0 && (
-                  <div className="mt-3 flex gap-1.5">
-                    {r.photos.slice(0, 4).map((src, i) => (
-                      <SiteImage key={i} src={src} loading="lazy" className="w-14 h-14 object-cover rounded-lg" testid="recent-review-photo" />
-                    ))}
-                  </div>
-                )}
-                <div className="mt-3 flex items-center gap-2 text-xs font-nunito font-bold flex-wrap">
-                  <span className="text-[#7bc67e]">&mdash; {r.reviewer_name}</span>
-                  {r.product_id === STORE_ID && (
-                    <span className="inline-flex items-center gap-1 text-[10px] bg-white border border-[#dcfce7] text-[#4b5563] px-1.5 py-0.5 rounded-full">
-                      <Store size={9} /> About the shop
-                    </span>
-                  )}
-                  {r.verified && <span className="inline-flex items-center gap-0.5 text-[10px] bg-[#7bc67e] text-[#1a1a1a] px-1.5 py-0.5 rounded-full"><ShieldCheck size={8} /> Verified</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <BoldFooter />
