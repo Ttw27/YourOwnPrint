@@ -248,8 +248,8 @@ export default function AdminImport() {
             </div>
             <div className="mt-4 pt-4 border-t border-[#dcfce7] text-xs text-[#4b5563]">
               <strong>Photos</strong> come across automatically wherever Judge.me included a picture link.
-              The images stay hosted on Judge.me&rsquo;s servers, so keep that account open &mdash; if you
-              close it the photos will stop loading.
+              We copy each photo to our own storage during import, so they&rsquo;re permanent &mdash; you can
+              close your Judge.me account and the photos will keep working.
             </div>
             <div className="mt-4 pt-4 border-t border-[#dcfce7] text-xs text-[#4b5563]">
               Imported something wrong? Everything can be corrected or removed on the{" "}

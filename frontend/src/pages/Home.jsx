@@ -11,8 +11,10 @@ import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
+import usePageTitle from "../hooks/usePageTitle";
 
 export default function Home() {
+  usePageTitle("Custom Print & Workwear", { description: "Personalised clothing, workwear and team kit — printed and embroidered in the UK." });
   const [bestSellers, setBestSellers] = useState([]);
   const [aggregates, setAggregates] = useState({});
   const [recentReviews, setRecentReviews] = useState([]);
@@ -212,6 +214,19 @@ export default function Home() {
 
       {/* Find My Kit — AI concierge */}
       <FindMyKitPromo variant="hero" className="my-16" />
+
+      {/* The Design Shop — ready-made designs */}
+      <section className="px-6 my-16">
+        <div className="max-w-6xl mx-auto bg-gradient-to-br from-[#a855f7] to-[#7c3aed] rounded-[2rem] px-8 py-12 sm:px-14 text-white relative overflow-hidden">
+          <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full" />
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.25em] bg-white/20 rounded-full px-3 py-1.5">New</div>
+            <h2 className="font-black text-3xl sm:text-4xl mt-4 max-w-xl leading-tight">The Design Shop</h2>
+            <p className="mt-3 text-white/90 max-w-lg font-bold">Ready-made original designs on tees, hoodies and more — no designing needed. Funny, gym, festival, animals and loads more.</p>
+            <a href="/design-shop" className="mt-6 inline-flex items-center gap-2 bg-white text-[#7c3aed] hover:bg-[#f5f3ff] font-extrabold rounded-full px-6 py-3.5">Browse designs</a>
+          </div>
+        </div>
+      </section>
 
       {/* Portfolio strip — only renders when admin has marked items as featured */}
       <PortfolioStrip />

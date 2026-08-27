@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Sparkles, Loader2, ArrowRight, Search } from "lucide-react";
 import { findMyKit, fetchIndustries } from "../lib/api";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
+import usePageTitle from "../hooks/usePageTitle";
 
 // Cache the last kit + inputs for this browser session, so returning from a
 // product page shows the SAME kit instead of a blank form or a fresh (different)
@@ -15,6 +16,7 @@ const CACHE_KEY = "fmk:last";
  * what the shop actually stocks. Read-only; each item links to its product page.
  */
 export default function FindMyKit() {
+  usePageTitle("Find My Kit", { description: "Tell us your trade and we'll build your kit." });
   const [industries, setIndustries] = useState([]);
   const [industry, setIndustry] = useState("");
   const [trade, setTrade] = useState("");

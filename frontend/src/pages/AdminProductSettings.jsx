@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 
@@ -25,6 +25,7 @@ export default function AdminProductSettings() {
   const [view, setView] = useState("compact");    // "compact" | "detailed"
   const [catFilter, setCatFilter] = useState("");  // category dropdown
   const [srcFilter, setSrcFilter] = useState("");  // supplier/source dropdown
+  const [lockedFilter, setLockedFilter] = useState("");  // "" | "locked" | "unlocked"
   const [facets, setFacets] = useState({ categories: [], sources: [] });
 
   // Debounce the search box so we're not firing a request on every keystroke
@@ -38,7 +39,7 @@ export default function AdminProductSettings() {
     setLoading(true);
     try {
       const [ps, ds, wf] = await Promise.all([
-        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter),
+        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter, lockedFilter),
         fetchBulkDefaults(),
         fetchWorkforceTiers().catch(() => null),
       ]);
@@ -61,7 +62,7 @@ export default function AdminProductSettings() {
   };
 
   useEffect(() => { loadAllLite(); }, []);
-  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter, lockedFilter]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { reload({ page }); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
@@ -189,15 +190,41 @@ export default function AdminProductSettings() {
               {facets.sources.map((sc) => <option key={sc} value={sc}>{sc}</option>)}
             </select>
           )}
+          <select value={lockedFilter} onChange={(e) => setLockedFilter(e.target.value)} className="bg-white border border-[#dcfce7] rounded-full px-3 py-2 text-sm" data-testid="aps-locked-filter" title="Filter by manually-edited (locked) products">
+            <option value="">All products</option>
+            <option value="locked">🔒 Manually edited only</option>
+            <option value="unlocked">Not manually edited</option>
+          </select>
           <div className="inline-flex rounded-full border-2 border-[#dcfce7] overflow-hidden" data-testid="aps-view-toggle">
             <button onClick={() => setView("compact")} className={`px-3 py-1.5 text-xs font-extrabold ${view === "compact" ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-white text-[#4b5563]"}`}>Compact</button>
             <button onClick={() => setView("detailed")} className={`px-3 py-1.5 text-xs font-extrabold ${view === "detailed" ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-white text-[#4b5563]"}`}>Detailed</button>
           </div>
-          {(catFilter || srcFilter || filter) && (
-            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
+          {(catFilter || srcFilter || filter || lockedFilter) && (
+            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); setLockedFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
           )}
         </div>
         {total > 0 && <div className="text-[11px] text-[#4b5563] mt-2">{total} product{total === 1 ? "" : "s"}{debouncedFilter ? " matching" : " total"} · showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}</div>}
+
+        {lockedFilter === "locked" && total > 0 && (
+          <div className="mt-3 bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 flex items-center justify-between gap-3 flex-wrap" data-testid="aps-unlock-bar">
+            <div className="text-sm text-amber-800">
+              <span className="font-extrabold">{total} manually-edited product{total === 1 ? "" : "s"}.</span> These are protected — Smart Re-classify won't change them. Unlock any you want the AI to manage again.
+            </div>
+            <button
+              onClick={async () => {
+                if (!window.confirm(`Unlock all ${total} manually-edited products? Smart Re-classify will be able to change them again.`)) return;
+                setBusy(true);
+                try { const r = await unlockProducts({ all_locked: true }); alert(`Unlocked ${r.unlocked} product${r.unlocked === 1 ? "" : "s"}.`); reload({ page: 0 }); }
+                finally { setBusy(false); }
+              }}
+              disabled={busy}
+              className="text-xs font-extrabold bg-amber-500 hover:bg-amber-600 text-white rounded-full px-4 py-2 disabled:opacity-50 flex-shrink-0"
+              data-testid="aps-unlock-all"
+            >
+              Unlock all {total}
+            </button>
+          </div>
+        )}
 
         {loading ? <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div> : (
           <div className={`${view === "compact" ? "space-y-1.5" : "space-y-3"} mt-6`} data-testid="aps-list">
@@ -210,6 +237,7 @@ export default function AdminProductSettings() {
                     <div className="text-[10px] text-[#4b5563] truncate">{p.category} · £{p.price.toFixed(2)}{p.brand && ` · ${p.brand}`}{view !== "compact" && p.sku && ` · ${p.sku}`}</div>
                   </div>
                   {p.source && p.source !== "native" && <span className="text-[9px] bg-[#eef2ff] text-[#4338ca] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 uppercase">{p.source}</span>}
+                  {p.manual_edit && <span className="text-[9px] bg-amber-100 text-amber-700 font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 inline-flex items-center gap-0.5" title="Manually edited — protected from Smart Re-classify">🔒 EDITED</span>}
                   {p.bulk_pricing_enabled && <span className="text-[9px] bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0">BULK</span>}
                 </button>
                 {openId === p.id && (

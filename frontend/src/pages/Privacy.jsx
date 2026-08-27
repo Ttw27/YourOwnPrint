@@ -1,7 +1,9 @@
 import React from "react";
 import LegalPageLayout, { LegalSection } from "../components/bold/LegalPageLayout";
+import usePageTitle from "../hooks/usePageTitle";
 
 export default function Privacy() {
+  usePageTitle("Privacy Policy");
   return (
     <LegalPageLayout title="Privacy Policy" updated="July 2026">
       <LegalSection title="1. Who we are">

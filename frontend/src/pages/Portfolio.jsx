@@ -5,6 +5,7 @@ import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchAllPortfolio } from "../lib/api";
 import { Loader2, Image as ImageIcon, ArrowRight } from "lucide-react";
 import usePageCopy from "../hooks/usePageCopy";
+import usePageTitle from "../hooks/usePageTitle";
 
 const PRETTY = {
   workwear: "Workwear",
@@ -21,6 +22,7 @@ const PRETTY = {
 };
 
 export default function Portfolio() {
+  usePageTitle("Our Work", { description: "Recent custom print and embroidery projects." });
   const [data, setData] = useState({ categories: [], items: [] });
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState("all");

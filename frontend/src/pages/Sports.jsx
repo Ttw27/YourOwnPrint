@@ -7,6 +7,7 @@ import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { Trophy, Users, Zap, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
+import usePageTitle from "../hooks/usePageTitle";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
 
@@ -20,6 +21,7 @@ const SPORT_GROUPS = [
 ];
 
 export default function Sports() {
+  usePageTitle("Sports & Fitness Kit", { description: "Custom kit for gyms, clubs and teams." });
   // Curated lookups (sport-group tiles above) need specific named products regardless
   // of pagination, so they're kept on a separate, un-paginated-but-capped fetch.
   const [productsById, setProductsById] = useState({});
