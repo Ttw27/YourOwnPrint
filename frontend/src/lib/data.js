@@ -226,6 +226,7 @@ export const NAV_MENU = [
     ],
   },
   { key: "portfolio", label: "Portfolio", to: "/portfolio" },
+  { key: "design-shop", label: "The Design Shop", to: "/design-shop", badge: "New" },
   { key: "design", label: "Design Your Own", to: "/design" },
   { key: "contact", label: "Get a quote", to: "/contact", cta: true },
 ];

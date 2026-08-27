@@ -206,8 +206,19 @@ export async function updateBulkDefaults(payload) {
   const { data } = await api.patch("/admin/bulk-tiers/defaults", payload);
   return data;
 }
-export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "") {
-  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source } });
+export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "", locked = "") {
+  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source, locked } });
+  return data;
+}
+
+export async function unlockProducts(payload) {
+  // payload: { product_ids: [...] } or { all_locked: true }
+  const { data } = await api.post("/admin/products/unlock", payload);
+  return data;
+}
+
+export async function fetchLockedCount() {
+  const { data } = await api.get("/admin/products/locked-count");
   return data;
 }
 
@@ -236,6 +247,16 @@ export async function aiClassifyClear() {
 // ----- Find My Kit (AI concierge) -----
 export async function findMyKit(payload) {
   const { data } = await api.post("/find-my-kit", payload);
+  return data;
+}
+
+// ----- The Design Shop (ready-made printed designs) -----
+export async function fetchDesignCategories() {
+  const { data } = await api.get("/design-shop/categories");
+  return data;
+}
+export async function fetchDesignProducts({ category = "", garment = "", sort = "newest", limit = 60, offset = 0 } = {}) {
+  const { data } = await api.get("/design-shop/products", { params: { category, garment, sort, limit, offset } });
   return data;
 }
 
