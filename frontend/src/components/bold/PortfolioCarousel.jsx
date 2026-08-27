@@ -58,7 +58,7 @@ export default function PortfolioCarousel({
         <div className="bg-[#f0fdf4] border border-[#dcfce7] rounded-2xl p-4 flex items-start gap-3">
           <ImageIcon size={22} className="text-[#7bc67e] mt-0.5 flex-shrink-0" />
           <div className="flex-1">
-            <div className="text-sm font-nunito font-extrabold text-[#1a1a1a]">Gallery coming soon</div>
+            <div className="text-sm font-nunito font-extrabold text-[#1a1a1a]">Be one of our first features here</div>
             <div className="text-xs text-[#4b5563] mt-0.5">{emptyCTA}</div>
           </div>
           <WhatsAppInline preset={emptyPreset} label="Send" />
