@@ -796,7 +796,11 @@ async def search_products(q: str = "", limit: int = 25, offset: int = 0):
         return {"items": [], "total": 0, "offset": offset, "returned": 0, "query": q}
 
     def matches(p: Dict) -> bool:
-        hay = f"{p.get('name', '')} {p.get('brand', '') or p.get('_brand', '')}".lower()
+        # Design Shop products have their own browse/search — keep them out of the
+        # main (workwear) search results.
+        if p.get("design_shop"):
+            return False
+        hay = f"{p.get('name', '')} {p.get('brand', '') or p.get('_brand', '')} {p.get('id', '')} {p.get('sku', '') or ''} {p.get('source_sku', '') or ''}".lower()
         return query in hay
 
     results = [p for p in PRODUCTS.values() if matches(p)]
@@ -827,6 +831,10 @@ async def list_products(category: Optional[str] = None, industries: Optional[str
 
     want_designer = (category == "online-designer")
     def matches(p):
+        # Design Shop (ready-made printed designs) products are a separate store and
+        # never appear in the workwear catalogue, industry pages, or "all".
+        if p.get("design_shop"):
+            return False
         # Designer-only products live in their own "online-designer" collection and
         # are hidden from every other listing (normal categories, industries, all).
         if p.get("designer_only"):
@@ -1746,6 +1754,10 @@ class ProductMeta(BaseModel):
     specials_eligible: Optional[bool] = None
     is_bestseller: Optional[bool] = None
     designer_only: Optional[bool] = None  # only shows in Online Designer collection + designer
+    design_shop: Optional[bool] = None  # ready-made printed design (separate store)
+    design_categories: Optional[List[str]] = None  # Design Shop themed collections
+    design_garments: Optional[List[str]] = None  # garments this design prints on
+    design_image: Optional[str] = None  # the print artwork (used as main image)
     gender_fit: Optional[str] = None  # mens | womens | unisex | kids
     industry_tags: Optional[List[str]] = None
 
@@ -2026,7 +2038,8 @@ async def _merge_designer_overrides():
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
                      "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
                      "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible", "is_bestseller",
-                     "gender_fit", "industry_tags"):
+                     "designer_only", "design_shop", "design_categories", "design_garments", "design_image",
+                     "_manual_edit", "gender_fit", "industry_tags"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
 
@@ -2385,7 +2398,7 @@ async def get_product_bulk_tiers(product_id: str):
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
 @api_router.get("/admin/products", dependencies=[Depends(require_admin)])
-async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = ""):
+async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = ""):
     """Admin overview of all products with editable meta fields.
     Paginated (default 25/page), searchable, and filterable by category and
     source (supplier). This list runs into the thousands once supplier
@@ -2412,6 +2425,7 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
             "specials_eligible": bool(p.get("specials_eligible")),
             "is_bestseller": bool(p.get("is_bestseller")),
             "designer_only": bool(p.get("designer_only")),
+            "manual_edit": bool(p.get("_manual_edit")),
             "gender_fit": p.get("gender_fit") or "unisex",
             "industry_tags": p.get("industry_tags") or [],
         })
@@ -2424,6 +2438,10 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
     if source:
         src = source.strip().lower()
         out = [it for it in out if (it.get("source") or "native").lower() == src]
+    if locked == "locked":
+        out = [it for it in out if it.get("manual_edit")]
+    elif locked == "unlocked":
+        out = [it for it in out if not it.get("manual_edit")]
     total = len(out)
     limit = min(limit, 200)
     page = out[offset:offset + limit]
@@ -2435,6 +2453,38 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
             "categories": all_cats, "sources": all_srcs}
 
 
+class UnlockIn(BaseModel):
+    product_ids: Optional[List[str]] = None   # specific products, or…
+    all_locked: Optional[bool] = False        # …unlock every locked product
+
+
+@api_router.post("/admin/products/unlock", dependencies=[Depends(require_admin)])
+async def unlock_products(payload: UnlockIn):
+    """Remove the manual-edit lock so Smart Re-classify can manage these again."""
+    ids = list(payload.product_ids or [])
+    if payload.all_locked:
+        # every product currently carrying the lock
+        cur = db.product_meta.find({"_manual_edit": True}, {"product_id": 1})
+        async for d in cur:
+            pid = d.get("product_id")
+            if pid:
+                ids.append(pid)
+    ids = list(dict.fromkeys(ids))  # dedupe
+    if not ids:
+        return {"ok": True, "unlocked": 0}
+    await db.product_meta.update_many({"product_id": {"$in": ids}}, {"$set": {"_manual_edit": False}})
+    for pid in ids:
+        if pid in PRODUCTS:
+            PRODUCTS[pid]["_manual_edit"] = False
+    return {"ok": True, "unlocked": len(ids)}
+
+
+@api_router.get("/admin/products/locked-count", dependencies=[Depends(require_admin)])
+async def locked_count():
+    n = sum(1 for p in PRODUCTS.values() if p.get("_manual_edit"))
+    return {"locked": n}
+
+
 @api_router.get("/products/{product_id}/allowed-placements")
 async def get_allowed_placements(product_id: str):
     """Public endpoint — used by PDP and Designer to hide disallowed placements."""
@@ -2444,9 +2494,12 @@ async def get_allowed_placements(product_id: str):
     stored = p.get("allowed_placements")
     # `stored` can legitimately be an empty list (e.g. footwear/socks — no
     # print placement makes sense at all), which is different from it never
-    # having been set. `or` treats both the same (empty list is falsy), which
-    # was wrongly falling back to the full unrestricted set for those products.
-    return {"allowed_placements": stored if stored is not None else list(ALLOWED_PLACEMENT_OPTIONS)}
+    # having been set. When it was never set, fall back to SENSIBLE per-category
+    # defaults (e.g. a hat won't offer sleeve/pocket prints) rather than the full
+    # unrestricted 9-option set, which was showing daft placements on some items.
+    if stored is not None:
+        return {"allowed_placements": stored}
+    return {"allowed_placements": _auto_allowed_placements(p.get("name") or "", p.get("category") or "")}
 
 
 @api_router.patch("/admin/products/{product_id}/meta", dependencies=[Depends(require_admin)])
@@ -2514,11 +2567,22 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         "specials_eligible": payload.specials_eligible if payload.specials_eligible is not None else bool(PRODUCTS[product_id].get("specials_eligible")),
         "is_bestseller": payload.is_bestseller if payload.is_bestseller is not None else bool(PRODUCTS[product_id].get("is_bestseller")),
         "designer_only": payload.designer_only if payload.designer_only is not None else bool(PRODUCTS[product_id].get("designer_only")),
+        "design_shop": payload.design_shop if payload.design_shop is not None else bool(PRODUCTS[product_id].get("design_shop")),
+        "design_categories": payload.design_categories if payload.design_categories is not None else (PRODUCTS[product_id].get("design_categories") or []),
+        "design_garments": payload.design_garments if payload.design_garments is not None else (PRODUCTS[product_id].get("design_garments") or []),
+        "design_image": payload.design_image if payload.design_image is not None else PRODUCTS[product_id].get("design_image"),
         "gender_fit": payload.gender_fit,
         "industry_tags": payload.industry_tags,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+    # Auto-lock: if this edit touches an AI-managed field (industry tags or print
+    # placements), mark the product as manually edited so Smart Re-classify won't
+    # overwrite the human's decision on a later run.
+    if payload.industry_tags is not None or payload.allowed_placements is not None:
+        doc["_manual_edit"] = True
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
+    if doc.get("_manual_edit"):
+        PRODUCTS[product_id]["_manual_edit"] = True
     for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
               "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
               "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible", "is_bestseller",
@@ -5593,6 +5657,12 @@ async def upsert_product_override(pid: str, patch: ProductOverride):
     up["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.product_overrides.update_one({"product_id": pid}, {"$set": up}, upsert=True)
     _apply_product_override(pid, up)
+    # Auto-lock when the collection (category) is changed by hand, so a later
+    # Smart Re-classify won't move it back.
+    if "category" in up:
+        await db.product_meta.update_one({"product_id": pid}, {"$set": {"_manual_edit": True}}, upsert=True)
+        if pid in PRODUCTS:
+            PRODUCTS[pid]["_manual_edit"] = True
     return {"ok": True, "override": up}
 
 
@@ -6652,6 +6722,7 @@ import routers.admin_reviews  # noqa: F401 — registers /admin/reviews list/edi
 import routers.ai_classify  # noqa: F401 — registers /admin/ai-classify/* (Smart Re-classify)
 import routers.find_my_kit  # noqa: F401 — registers /find-my-kit (AI kit concierge)
 import routers.image_health  # noqa: F401 — registers /admin/image-health/* (broken image scan/hide)
+import routers.design_shop  # noqa: F401 — registers /design-shop/* (ready-made designs)
 
 # Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
