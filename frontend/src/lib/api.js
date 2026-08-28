@@ -260,6 +260,26 @@ export async function fetchDesignProducts({ category = "", garment = "", sort = 
   return data;
 }
 
+// ----- Design Shop admin (upload tool) -----
+export async function uploadDesignImage(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post("/admin/upload-image?folder=design-shop", form, { headers: { "Content-Type": "multipart/form-data" } });
+  return data; // { url }
+}
+export async function createDesign(payload) {
+  const { data } = await api.post("/admin/design-shop/create", payload);
+  return data;
+}
+export async function listDesigns(offset = 0, limit = 60) {
+  const { data } = await api.get("/admin/design-shop/list", { params: { offset, limit } });
+  return data;
+}
+export async function deleteDesign(product_id) {
+  const { data } = await api.post("/admin/design-shop/delete", { product_id });
+  return data;
+}
+
 // ----- Image Health (broken image scan) -----
 export async function imageHealthScan(payload = {}) {
   const { data } = await api.post("/admin/image-health/scan", payload);
