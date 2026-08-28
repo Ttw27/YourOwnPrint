@@ -77,8 +77,23 @@ export default function DesignShop() {
           <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.25em] text-[#a855f7]">
             <Sparkles size={14} /> The Design Shop
           </div>
-          <h1 className="font-black text-3xl sm:text-4xl mt-3">Ready-made designs, printed to order</h1>
-          <p className="text-[#4b5563] mt-2 max-w-2xl">Original artwork on your choice of tee, hoodie, sweater and more. Pick a design, pick your garment, done — no designing required.</p>
+          <h1 className="font-black text-3xl sm:text-5xl mt-3 leading-tight">Ready-made designs,<br className="hidden sm:block" /> printed to order</h1>
+          <p className="text-[#4b5563] mt-3 max-w-2xl">Original artwork on your choice of tee, hoodie, sweater and more. Pick a design, pick your garment, done — no designing required.</p>
+
+          {/* Visual category cards — quick colourful entry points */}
+          {!activeCat && cats.length > 0 && (
+            <div className="mt-7 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" data-testid="design-cat-cards">
+              {cats.slice(0, 10).map((c, i) => {
+                const shades = ["from-[#a855f7] to-[#7c3aed]", "from-[#ec4899] to-[#db2777]", "from-[#f59e0b] to-[#d97706]", "from-[#10b981] to-[#059669]", "from-[#3b82f6] to-[#2563eb]", "from-[#ef4444] to-[#dc2626]", "from-[#8b5cf6] to-[#6d28d9]", "from-[#14b8a6] to-[#0d9488]", "from-[#f43f5e] to-[#e11d48]"];
+                return (
+                  <button key={c.slug} onClick={() => navigate(`/design-shop/${c.slug}`)} className={`bg-gradient-to-br ${shades[i % shades.length]} rounded-2xl px-4 py-5 text-white text-left hover:scale-[1.03] transition-transform`} data-testid={`design-cat-card-${c.slug}`}>
+                    <div className="font-black text-sm leading-tight">{c.title}</div>
+                    {typeof c.count === "number" && <div className="text-[11px] opacity-80 mt-1">{c.count} design{c.count === 1 ? "" : "s"}</div>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
