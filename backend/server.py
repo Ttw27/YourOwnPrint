@@ -5976,6 +5976,11 @@ def _apply_imported_product(doc: Dict) -> None:
         "designer_image": doc.get("designer_image") or "",
         "designer_print_area": doc.get("designer_print_area"),
         "designer_images_by_colour": doc.get("designer_images_by_colour") or {},
+        "design_shop": bool(doc.get("design_shop")),
+        "design_categories": doc.get("design_categories") or [],
+        "design_garments": doc.get("design_garments") or [],
+        "design_image": doc.get("design_image") or "",
+        "created_at": doc.get("created_at") or doc.get("imported_at") or "",
         "_imported": True,
         "_source": doc.get("source") or "manual",
         "_brand": doc.get("brand") or "",  # kept for backward compatibility with any code still reading this key
@@ -6723,6 +6728,7 @@ import routers.ai_classify  # noqa: F401 — registers /admin/ai-classify/* (Sma
 import routers.find_my_kit  # noqa: F401 — registers /find-my-kit (AI kit concierge)
 import routers.image_health  # noqa: F401 — registers /admin/image-health/* (broken image scan/hide)
 import routers.design_shop  # noqa: F401 — registers /design-shop/* (ready-made designs)
+import routers.design_shop_admin  # noqa: F401 — registers /admin/design-shop/* (design upload tool)
 
 # Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
