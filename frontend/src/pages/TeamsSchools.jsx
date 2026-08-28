@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchPortfolio, fetchReviewsAggregate } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
+import { useSiteImages } from "../hooks/usePageCopy";
+import SiteImage from "../components/bold/SiteImage";
 import {
   GraduationCap, Dumbbell, Music2, Shirt, MessageSquare, ArrowRight,
   ShieldCheck, Truck, MessageCircle, Loader2, Sparkles, Star, Users, Trophy,
@@ -123,6 +125,7 @@ export default function TeamsSchools() {
   const [portfolio, setPortfolio] = useState([]);
   const [aggs, setAggs] = useState({});
   const [loading, setLoading] = useState(true);
+  const site = useSiteImages();
 
   useEffect(() => {
     Promise.all([
@@ -187,9 +190,11 @@ export default function TeamsSchools() {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" data-testid="ts-tiles">
           {TILES.map(({ id, to, testid, Icon, accent, accentText, title, tagline, bullets, cta }) => (
             <Link key={id} to={to} data-testid={testid} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md rounded-3xl overflow-hidden transition-all flex flex-col">
-              <div className={`${accent} px-5 pt-5 pb-4 flex items-start justify-between`}>
-                <Icon size={28} className={accentText} />
-                <span className={`text-[10px] uppercase tracking-wider font-extrabold ${accentText} opacity-70 group-hover:opacity-100`}>Configure &rarr;</span>
+              <div className="aspect-[5/3] overflow-hidden bg-[#f0fdf4] relative">
+                <SiteImage src={site.image(`ts-tile:${id}`, "")} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" testid={`ts-tile-image-${id}`} />
+                <span className={`absolute top-3 left-3 w-10 h-10 rounded-xl ${accent} grid place-items-center shadow-sm`}>
+                  <Icon size={20} className={accentText} />
+                </span>
               </div>
               <div className="p-5 flex-1 flex flex-col">
                 <div className="font-black text-xl">{title}</div>
