@@ -30,6 +30,7 @@ const GROUPS = [
       { label: "Import products", to: "/admin/products-import", icon: Upload },
       { label: "Smart Re-classify", to: "/admin/reclassify", icon: Sparkles },
       { label: "Image Health", to: "/admin/image-health", icon: ImageOff },
+      { label: "The Design Shop", to: "/admin/design-shop", icon: Sparkles },
       { label: "Designer products", to: "/admin/designer-products", icon: Wand2 },
       { label: "Collections & SEO", to: "/admin/collection-seo", icon: Tags },
       { label: "Bundle variants", to: "/admin/bundle-variants", icon: Layers },
