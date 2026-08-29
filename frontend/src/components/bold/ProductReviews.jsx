@@ -31,7 +31,7 @@ export default function ProductReviews({ productId, productName }) {
   const hasFilter = filter.rating !== null || filter.withPhotos;
 
   return (
-    <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-6 lg:p-8" data-testid="product-reviews-block">
+    <div id="reviews" className="bg-white rounded-3xl border-2 border-[#dcfce7] p-6 lg:p-8 scroll-mt-24" data-testid="product-reviews-block">
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
           <div className="font-nunito font-extrabold text-4xl text-[#1a1a1a]" data-testid="reviews-average">{data.average.toFixed(1)}</div>
