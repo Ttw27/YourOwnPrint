@@ -213,17 +213,24 @@ export default function Home() {
       <ToolsShowcase />
 
       {/* Find My Kit — AI concierge */}
-      <FindMyKitPromo variant="hero" className="my-16" />
+      <FindMyKitPromo variant="hero" className="my-16" image={(copy.images && copy.images["promo:find-my-kit"]) || ""} />
 
       {/* The Design Shop — ready-made designs */}
       <section className="px-6 my-16">
-        <div className="max-w-6xl mx-auto bg-gradient-to-br from-[#a855f7] to-[#7c3aed] rounded-[2rem] px-8 py-12 sm:px-14 text-white relative overflow-hidden">
-          <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full" />
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.25em] bg-white/20 rounded-full px-3 py-1.5">New</div>
-            <h2 className="font-black text-3xl sm:text-4xl mt-4 max-w-xl leading-tight">The Design Shop</h2>
-            <p className="mt-3 text-white/90 max-w-lg font-bold">Ready-made original designs on tees, hoodies and more — no designing needed. Funny, gym, festival, animals and loads more.</p>
-            <a href="/design-shop" className="mt-6 inline-flex items-center gap-2 bg-white text-[#7c3aed] hover:bg-[#f5f3ff] font-extrabold rounded-full px-6 py-3.5">Browse designs</a>
+        <div className="max-w-6xl mx-auto bg-gradient-to-br from-[#a855f7] to-[#7c3aed] rounded-[2rem] overflow-hidden text-white grid md:grid-cols-[1.4fr_1fr]">
+          <div className="px-8 py-12 sm:px-14 relative">
+            <div className="absolute -bottom-10 -left-6 w-32 h-32 bg-white/10 rounded-full" />
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.25em] bg-white/20 rounded-full px-3 py-1.5">New</div>
+              <h2 className="font-black text-3xl sm:text-4xl mt-4 max-w-xl leading-tight">The Design Shop</h2>
+              <p className="mt-3 text-white/90 max-w-lg font-bold">Ready-made original designs on tees, hoodies and more — no designing needed. Funny, gym, festival, animals and loads more.</p>
+              <a href="/design-shop" className="mt-6 inline-flex items-center gap-2 bg-white text-[#7c3aed] hover:bg-[#f5f3ff] font-extrabold rounded-full px-6 py-3.5">Browse designs</a>
+            </div>
+          </div>
+          <div className="hidden md:block relative bg-[#9333ea] min-h-[220px]">
+            {(copy.images && copy.images["promo:design-shop"])
+              ? <img src={copy.images["promo:design-shop"]} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              : <div className="absolute inset-0 grid place-items-center text-white/40"><Sparkles size={54} /></div>}
           </div>
         </div>
       </section>

@@ -4,6 +4,8 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import ProofPromise from "../components/bold/ProofPromise";
 import usePageCopy from "../hooks/usePageCopy";
+import { useSiteImages } from "../hooks/usePageCopy";
+import SiteImage from "../components/bold/SiteImage";
 import usePageTitle from "../hooks/usePageTitle";
 import {
   Eye, ShieldCheck, Users, Palette, Truck, PoundSterling,
@@ -29,6 +31,7 @@ export default function SchoolTrips() {
       "Bright, matching school trip t-shirts with your school name on the back. Easy to spot and count on any trip. No minimum order, free proof, UK printed.",
   });
   const copy = usePageCopy("school-trips", {});
+  const site = useSiteImages();
 
   const hero = {
     eyebrow: copy.eyebrow || "For schools & trip organisers",
@@ -122,6 +125,27 @@ export default function SchoolTrips() {
               <h3 className="font-black text-lg mt-4">{b.title}</h3>
               <p className="text-sm text-[#4b5563] mt-2 leading-relaxed">{b.body}</p>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Garment examples — admin-editable photos so schools can picture it */}
+      <section className="max-w-6xl mx-auto px-6 pb-4">
+        <h2 className="font-black text-3xl sm:text-4xl text-center">Popular for school trips</h2>
+        <p className="text-center text-[#4b5563] mt-2">Tap a style to start — or ask us and we'll help you pick.</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+          {[
+            { key: "t-shirt", label: "Trip T-Shirts", to: "/shop/t-shirts" },
+            { key: "hoodie", label: "Hoodies", to: "/shop/hoodies" },
+            { key: "polo", label: "Polo Shirts", to: "/shop/polos" },
+            { key: "cap", label: "Caps & Hats", to: "/shop/hats" },
+          ].map((g) => (
+            <Link key={g.key} to={g.to} data-testid={`school-garment-${g.key}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md rounded-3xl overflow-hidden transition-all">
+              <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
+                <SiteImage src={site.image(`school-trip:${g.key}`, "")} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" testid={`school-garment-image-${g.key}`} />
+              </div>
+              <div className="p-4 text-center font-black">{g.label}</div>
+            </Link>
           ))}
         </div>
       </section>
