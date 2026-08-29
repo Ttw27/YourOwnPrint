@@ -495,15 +495,15 @@ export default function DesignYourOwn() {
                 {products.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}{p.review_count ? `  ★ ${p.rating} (${p.review_count})` : ""}</option>)}
               </select>
               {product && product.review_count > 0 && (
-                <div className="mt-2 flex items-center gap-2 text-xs" data-testid="designer-rating">
+                <Link to={`/product/${product.id}#reviews`} className="mt-2 inline-flex items-center gap-2 text-xs hover:underline group" data-testid="designer-rating" title={`Read all ${product.review_count} reviews for ${product.name}`}>
                   <div className="flex items-center gap-0.5 text-amber-400">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i < Math.round(product.rating) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
                     ))}
                   </div>
                   <span className="font-extrabold text-[#1a1a1a]">{product.rating}</span>
-                  <span className="text-[#4b5563]">from {product.review_count} review{product.review_count === 1 ? "" : "s"}</span>
-                </div>
+                  <span className="text-[#4b5563] group-hover:text-[#166534]">from {product.review_count} review{product.review_count === 1 ? "" : "s"} →</span>
+                </Link>
               )}
               {product && (product.composition || product.description_long || (product.use_cases || []).length > 0) && (
                 <div className="mt-3 space-y-2 text-xs" data-testid="product-info-card">

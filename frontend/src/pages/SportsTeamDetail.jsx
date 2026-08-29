@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchSportsTeam } from "../lib/api";
-import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2, ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2, ChevronLeft, ChevronRight, SlidersHorizontal, X, Zap } from "lucide-react";
 import FacetBlock from "../components/bold/FacetBlock";
 import PriceTag from "../components/bold/PriceTag";
 import { useSiteImages } from "../hooks/usePageCopy";
@@ -196,6 +196,24 @@ export default function SportsTeamDetail() {
         <h2 className="text-2xl font-black mb-3">Why teams choose us for {data.title.toLowerCase()}</h2>
         <p className="text-[#4b5563] leading-relaxed">{data.seo_paragraph}</p>
       </section>
+
+      {/* Fight Night Tee callout — combat sports only */}
+      {["boxing-gyms", "thai-boxing", "kick-boxing", "kickboxing", "mma"].includes(slug) && (
+        <section className="max-w-5xl mx-auto px-6 pb-12">
+          <div className="bg-[#1a1a1a] text-white rounded-3xl px-8 py-10 sm:px-12 grid md:grid-cols-[1.4fr_1fr] gap-6 items-center" data-testid="sports-team-fight-night">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#7bc67e] text-[#1a1a1a] font-extrabold rounded-full text-xs">
+                <Zap size={14} /> Fight Night Sponsor Tees
+              </div>
+              <h2 className="font-black text-2xl sm:text-3xl mt-3 leading-tight">Got a fight night or show coming up?</h2>
+              <p className="text-zinc-300 mt-2">Sponsor tees with your main backer plus supporting logos on the back — pay, get a free proof, and we print. Perfect for walk-outs, corners and the crowd.</p>
+            </div>
+            <Link to="/fight-night-tee" className="justify-self-start md:justify-self-end inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-white text-[#1a1a1a] font-extrabold rounded-full px-6 py-3.5 transition" data-testid="sports-team-fight-night-cta">
+              <Zap size={17} /> Fight Night Tees →
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Products grid */}
       {(data.total ?? 0) > 0 && (
