@@ -118,28 +118,6 @@ export const NAV_MENU = [
     label: "Shop",
     columns: [
       {
-        heading: "Featured",
-        links: [
-          { label: "Find My Kit", to: "/find-my-kit", badge: "AI" },
-          { label: "For Business", to: "/for-business", badge: "Switch" },
-          { label: "Your Own Print Specials", to: "/specials", badge: "Starter" },
-          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
-          { label: "Workwear", to: "/workwear" },
-          { label: "Portfolio", to: "/portfolio" },
-        ],
-      },
-      {
-        heading: "By collection",
-        links: [
-          { label: "Fight Night Tees", to: "/fight-night-tee" },
-          { label: "Festival & DJ Merch", to: "/festival-tees-and-brands" },
-          { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
-          { label: "School Trip Tees", to: "/school-trips", badge: "New" },
-          { label: "Team Kits", to: "/team-kits" },
-          { label: "Teams & Schools", to: "/teams-schools" },
-        ],
-      },
-      {
         heading: "By garment",
         links: [
           { label: "T-shirts", to: "/shop/t-shirts" },
@@ -150,82 +128,93 @@ export const NAV_MENU = [
           { label: "Hi-Vis", to: "/shop/hi-vis" },
           { label: "Joggers & Trousers", to: "/shop/bottoms" },
           { label: "Aprons", to: "/shop/aprons" },
-          { label: "Shorts", to: "/shop/shorts" },
-          { label: "Promotional & Gifts", to: "/shop/promotional" },
           { label: "Bags", to: "/shop/bags" },
+          { label: "Promotional & Gifts", to: "/shop/promotional" },
           { label: "Accessories", to: "/shop/accessories" },
         ],
       },
-    ],
-  },
-  {
-    key: "teams",
-    label: "Sports & Fitness",
-    columns: [
       {
-        heading: "Sports",
+        heading: "Featured",
         links: [
-          { label: "Football Kits", to: "/sports-teams/football" },
-          { label: "Rugby Kits", to: "/sports-teams/rugby" },
-          { label: "Team Kits configurator", to: "/team-kits" },
-        ],
-      },
-      {
-        heading: "Fitness",
-        links: [
-          { label: "Gyms", to: "/sports-teams/gyms" },
-          { label: "Personal Trainers", to: "/sports-teams/personal-trainers" },
-          { label: "Boxing Gyms", to: "/sports-teams/boxing-gyms" },
-          { label: "Thai Boxing", to: "/sports-teams/thai-boxing" },
-          { label: "Kickboxing", to: "/sports-teams/kick-boxing" },
-          { label: "Dance Studios", to: "/sports-teams/dance-studios" },
-        ],
-      },
-      {
-        heading: "Schools & Leavers",
-        links: [
-          { label: "Teams & Schools", to: "/teams-schools" },
-          { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
+          { label: "The Design Shop", to: "/design-shop", badge: "New" },
+          { label: "Find My Kit", to: "/find-my-kit", badge: "AI" },
+          { label: "Your Own Print Specials", to: "/specials", badge: "Starter" },
+          { label: "Festival & DJ Merch", to: "/festival-tees-and-brands" },
           { label: "Fight Night Tees", to: "/fight-night-tee" },
+          { label: "Portfolio", to: "/portfolio" },
         ],
       },
     ],
   },
   {
-    key: "industries",
+    key: "workwear",
     label: "Workwear",
     columns: [
+      {
+        heading: "Shop workwear",
+        links: [
+          { label: "All Workwear", to: "/workwear" },
+          { label: "For Business", to: "/for-business", badge: "Switch" },
+          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
+          { label: "Hi-Vis", to: "/shop/hi-vis" },
+        ],
+      },
       {
         heading: "Trades & Site",
         links: [
           { label: "Construction & Trades", to: "/industries/construction-trades" },
           { label: "Industrial", to: "/industries/industrial" },
           { label: "Cleaning & Maintenance", to: "/industries/cleaning" },
-          { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
+          { label: "Security", to: "/industries/security" },
         ],
       },
       {
-        heading: "Front-of-house",
+        heading: "Front-of-house & office",
         links: [
           { label: "Healthcare", to: "/industries/healthcare" },
           { label: "Hospitality & Catering", to: "/industries/hospitality-catering" },
           { label: "Retail", to: "/industries/retail" },
           { label: "Beauty & Wellness", to: "/industries/beauty-wellness" },
-        ],
-      },
-      {
-        heading: "Office & Field",
-        links: [
           { label: "Corporate", to: "/industries/corporate" },
-          { label: "Security", to: "/industries/security" },
-          { label: "Sports & Fitness", to: "/industries/sports-fitness" },
-          { label: "Education & Schools", to: "/industries/education-schools" },
-          { label: "All Industries →", to: "/industries" },
+          { label: "All Industries \u2192", to: "/industries" },
         ],
       },
     ],
   },
-  { key: "portfolio", label: "Portfolio", to: "/portfolio" },
+  {
+    key: "teams-schools",
+    label: "Teams & Schools",
+    columns: [
+      {
+        heading: "Schools",
+        links: [
+          { label: "Teams & Schools Home", to: "/teams-schools" },
+          { label: "Leavers' Hoodies", to: "/leavers-hoodies" },
+          { label: "School Trip Tees", to: "/school-trips", badge: "New" },
+          { label: "Education & Schools", to: "/industries/education-schools" },
+        ],
+      },
+      {
+        heading: "Sports & Clubs",
+        links: [
+          { label: "Football Kits", to: "/sports-teams/football" },
+          { label: "Rugby Kits", to: "/sports-teams/rugby" },
+          { label: "Team Kits configurator", to: "/team-kits" },
+          { label: "Gyms & PTs", to: "/sports-teams/gyms" },
+        ],
+      },
+      {
+        heading: "Fitness & Dance",
+        links: [
+          { label: "Boxing Gyms", to: "/sports-teams/boxing-gyms" },
+          { label: "Thai Boxing", to: "/sports-teams/thai-boxing" },
+          { label: "Kickboxing", to: "/sports-teams/kick-boxing" },
+          { label: "Dance Studios", to: "/sports-teams/dance-studios" },
+          { label: "Personal Trainers", to: "/sports-teams/personal-trainers" },
+        ],
+      },
+    ],
+  },
   { key: "design-shop", label: "The Design Shop", to: "/design-shop", badge: "New" },
   { key: "design", label: "Design Your Own", to: "/design" },
   { key: "contact", label: "Get a quote", to: "/contact", cta: true },
