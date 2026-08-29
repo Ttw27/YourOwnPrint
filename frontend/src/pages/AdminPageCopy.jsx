@@ -78,6 +78,11 @@ const PAGE_MEDIA_SLOTS = {
       label: "Photo or video beside 'Start your own clothing line'",
       hint: "The square block on the left of the dark section further down. A short clip here plays silently on a loop." },
   ],
+  "fight-night": [
+    { key: "hero", kind: "media",
+      label: "Photo or video beside the headline",
+      hint: "The block on the right of the Fight Night hero. A short clip here plays silently on a loop, or use a photo." },
+  ],
   "site-images": [
     { key: "pricepromise", kind: "image",
       label: "Price Promise photo",

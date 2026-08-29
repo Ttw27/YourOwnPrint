@@ -7,6 +7,7 @@ import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Plus, Minus, Loader2, Send, Zap, Sparkles, ShieldCheck, Info, Camera, Upload } from "lucide-react";
 import PortfolioCarousel from "../components/bold/PortfolioCarousel";
+import MediaBlock from "../components/bold/MediaBlock";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 
 const SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
@@ -17,6 +18,8 @@ export default function FightNightTee() {
   const fnCopy = usePageCopy("fight-night", {
     title: "",
     subtitle: "Upload your sponsors, pay securely, and we'll send a free artwork proof before we print a thing. Nothing goes to print until you're happy.",
+    // Admin-managed hero media — an image or a short looping video beside the headline.
+    media: {},
   });
   const [addons, setAddons] = useState([]);
   const [tiers, setTiers] = useState([]);
@@ -208,14 +211,22 @@ export default function FightNightTee() {
       <div className="relative overflow-hidden border-b border-[#dcfce7]">
         <div className="absolute -top-16 -left-16 w-[400px] h-[400px] rounded-full bg-[#fde68a]/35 blur-3xl" />
         <div className="absolute -bottom-20 -right-16 w-[400px] h-[400px] rounded-full bg-[#7bc67e]/25 blur-3xl" />
-        <div className="relative max-w-5xl mx-auto px-6 py-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#1a1a1a] text-[#7bc67e] font-nunito font-extrabold rounded-full text-xs">
-            <Zap size={14} /> Fight Night Sponsor Tee · Pay → Free Proof → Print
+        <div className="relative max-w-6xl mx-auto px-6 py-10 grid lg:grid-cols-[1.2fr_1fr] gap-8 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#1a1a1a] text-[#7bc67e] font-nunito font-extrabold rounded-full text-xs">
+              <Zap size={14} /> Fight Night Sponsor Tee · Pay → Free Proof → Print
+            </div>
+            <h1 className="mt-3 font-nunito font-black text-4xl lg:text-6xl leading-[1.05]" data-testid="fn-hero-title">
+              {fnCopy.title ? fnCopy.title : (<>Walk-out tees, <span className="text-[#7bc67e]">sorted.</span></>)}
+            </h1>
+            <p className="text-[#4b5563] mt-3 text-lg max-w-2xl" data-testid="fn-hero-subtitle">{fnCopy.subtitle}</p>
           </div>
-          <h1 className="mt-3 font-nunito font-black text-4xl lg:text-6xl leading-[1.05]" data-testid="fn-hero-title">
-            {fnCopy.title ? fnCopy.title : (<>Walk-out tees, <span className="text-[#7bc67e]">sorted.</span></>)}
-          </h1>
-          <p className="text-[#4b5563] mt-3 text-lg max-w-2xl" data-testid="fn-hero-subtitle">{fnCopy.subtitle}</p>
+          {/* Admin-managed hero media — image or short looping video */}
+          <MediaBlock media={fnCopy.media?.hero} ratio="4:5" testid="fn-hero-media" className="w-full">
+            <div className="w-full h-full grid place-items-center text-[#7bc67e] bg-[#f0fdf4]">
+              <Zap size={54} />
+            </div>
+          </MediaBlock>
         </div>
       </div>
 
