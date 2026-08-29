@@ -2055,10 +2055,25 @@ async def _designer_startup():
 @api_router.get("/designer/products")
 async def list_designer_products():
     """Products available in the Design Your Own canvas."""
+    # Pull review rating + count per product so the picker can show how well-loved
+    # each garment is (e.g. the personalised tee with 396 reviews).
+    ratings = {}
+    try:
+        pipeline = [
+            {"$match": APPROVED_ONLY},
+            {"$group": {"_id": "$product_id", "avg": {"$avg": "$rating"}, "count": {"$sum": 1}}},
+        ]
+        async for doc in db.reviews.aggregate(pipeline):
+            ratings[doc["_id"]] = {"average": round(doc["avg"], 2), "count": doc["count"]}
+    except Exception:
+        ratings = {}
     out = []
     for p in PRODUCTS.values():
         if p.get("designer_enabled"):
+            r = ratings.get(p["id"]) or {}
             out.append({
+                "rating": r.get("average", 0),
+                "review_count": r.get("count", 0),
                 "id": p["id"],
                 "name": p["name"],
                 "price": p["price"],
@@ -4571,24 +4586,11 @@ async def get_artwork(filename: str):
 # ============================================================================
 
 DEFAULT_NAV_CONFIG = {
-    "version": 1,
+    "version": 2,
     "menu": [
         {
             "key": "shop", "label": "Shop", "to": None,
             "columns": [
-                {"heading": "Featured", "links": [
-                    {"label": "Your Own Print Specials", "to": "/specials", "badge": "Starter"},
-                    {"label": "Kit Your Workforce", "to": "/workforce", "badge": "Bulk"},
-                    {"label": "Workwear", "to": "/workwear"},
-                    {"label": "Portfolio", "to": "/portfolio"},
-                ]},
-                {"heading": "By collection", "links": [
-                    {"label": "Fight Night Tees", "to": "/fight-night-tee"},
-                    {"label": "Festival & DJ Merch", "to": "/festival-tees-and-brands"},
-                    {"label": "Leavers' Hoodies", "to": "/leavers-hoodies"},
-                    {"label": "Team Kits", "to": "/team-kits"},
-                    {"label": "Teams & Schools", "to": "/teams-schools"},
-                ]},
                 {"heading": "By garment", "links": [
                     {"label": "T-shirts", "to": "/shop/t-shirts"},
                     {"label": "Hoodies", "to": "/shop/hoodies"},
@@ -4598,72 +4600,97 @@ DEFAULT_NAV_CONFIG = {
                     {"label": "Hi-Vis", "to": "/shop/hi-vis"},
                     {"label": "Joggers & Trousers", "to": "/shop/bottoms"},
                     {"label": "Aprons", "to": "/shop/aprons"},
-                    {"label": "Shorts", "to": "/shop/shorts"},
+                    {"label": "Bags", "to": "/shop/bags"},
                     {"label": "Promotional & Gifts", "to": "/shop/promotional"},
                     {"label": "Accessories", "to": "/shop/accessories"},
                 ]},
-            ],
-        },
-        {
-            "key": "teams", "label": "Sports & Fitness", "to": None,
-            "columns": [
-                {"heading": "Sports", "links": [
-                    {"label": "Football Kits", "to": "/sports-teams/football"},
-                    {"label": "Rugby Kits", "to": "/sports-teams/rugby"},
-                    {"label": "Team Kits configurator", "to": "/team-kits"},
-                    {"label": "Full Squad Configurator", "to": "/full-squad-configurator", "badge": "New"},
-                ]},
-                {"heading": "Fitness", "links": [
-                    {"label": "Sports Outfit Configurator", "to": "/sports-outfit-configurator", "badge": "New"},
-                    {"label": "Gyms", "to": "/sports-teams/gyms"},
-                    {"label": "Personal Trainers", "to": "/sports-teams/personal-trainers"},
-                    {"label": "Boxing Gyms", "to": "/sports-teams/boxing-gyms"},
-                    {"label": "Thai Boxing", "to": "/sports-teams/thai-boxing"},
-                    {"label": "Kickboxing", "to": "/sports-teams/kick-boxing"},
-                    {"label": "Dance Studios", "to": "/sports-teams/dance-studios"},
-                ]},
-                {"heading": "Schools & Leavers", "links": [
-                    {"label": "Teams & Schools", "to": "/teams-schools"},
-                    {"label": "Leavers' Hoodies", "to": "/leavers-hoodies"},
+                {"heading": "Featured", "links": [
+                    {"label": "The Design Shop", "to": "/design-shop", "badge": "New"},
+                    {"label": "Find My Kit", "to": "/find-my-kit", "badge": "AI"},
+                    {"label": "Your Own Print Specials", "to": "/specials", "badge": "Starter"},
+                    {"label": "Festival & DJ Merch", "to": "/festival-tees-and-brands"},
                     {"label": "Fight Night Tees", "to": "/fight-night-tee"},
+                    {"label": "Portfolio", "to": "/portfolio"},
                 ]},
             ],
         },
         {
-            "key": "industries", "label": "Workwear", "to": None,
+            "key": "workwear", "label": "Workwear", "to": None,
             "columns": [
+                {"heading": "Shop workwear", "links": [
+                    {"label": "All Workwear", "to": "/workwear"},
+                    {"label": "For Business", "to": "/for-business", "badge": "Switch"},
+                    {"label": "Kit Your Workforce", "to": "/workforce", "badge": "Bulk"},
+                    {"label": "Hi-Vis", "to": "/shop/hi-vis"},
+                ]},
                 {"heading": "Trades & Site", "links": [
                     {"label": "Construction & Trades", "to": "/industries/construction-trades"},
                     {"label": "Industrial", "to": "/industries/industrial"},
                     {"label": "Cleaning & Maintenance", "to": "/industries/cleaning"},
-                    {"label": "Kit Your Workforce", "to": "/workforce", "badge": "Bulk"},
+                    {"label": "Security", "to": "/industries/security"},
                 ]},
-                {"heading": "Front-of-house", "links": [
+                {"heading": "Front-of-house & office", "links": [
                     {"label": "Healthcare", "to": "/industries/healthcare"},
                     {"label": "Hospitality & Catering", "to": "/industries/hospitality-catering"},
                     {"label": "Retail", "to": "/industries/retail"},
                     {"label": "Beauty & Wellness", "to": "/industries/beauty-wellness"},
-                ]},
-                {"heading": "Office & Field", "links": [
                     {"label": "Corporate", "to": "/industries/corporate"},
-                    {"label": "Security", "to": "/industries/security"},
-                    {"label": "Sports & Fitness", "to": "/industries/sports-fitness"},
-                    {"label": "All Industries →", "to": "/industries"},
+                    {"label": "All Industries \u2192", "to": "/industries"},
                 ]},
             ],
         },
-        {"key": "portfolio", "label": "Portfolio", "to": "/portfolio"},
+        {
+            "key": "teams-schools", "label": "Teams & Schools", "to": None,
+            "columns": [
+                {"heading": "Schools", "links": [
+                    {"label": "Teams & Schools Home", "to": "/teams-schools"},
+                    {"label": "Leavers' Hoodies", "to": "/leavers-hoodies"},
+                    {"label": "School Trip Tees", "to": "/school-trips", "badge": "New"},
+                    {"label": "Education & Schools", "to": "/industries/education-schools"},
+                ]},
+                {"heading": "Sports & Clubs", "links": [
+                    {"label": "Football Kits", "to": "/sports-teams/football"},
+                    {"label": "Rugby Kits", "to": "/sports-teams/rugby"},
+                    {"label": "Team Kits configurator", "to": "/team-kits"},
+                    {"label": "Gyms & PTs", "to": "/sports-teams/gyms"},
+                ]},
+                {"heading": "Fitness & Dance", "links": [
+                    {"label": "Boxing Gyms", "to": "/sports-teams/boxing-gyms"},
+                    {"label": "Thai Boxing", "to": "/sports-teams/thai-boxing"},
+                    {"label": "Kickboxing", "to": "/sports-teams/kick-boxing"},
+                    {"label": "Dance Studios", "to": "/sports-teams/dance-studios"},
+                    {"label": "Personal Trainers", "to": "/sports-teams/personal-trainers"},
+                ]},
+            ],
+        },
+        {"key": "design-shop", "label": "The Design Shop", "to": "/design-shop", "badge": "New"},
         {"key": "design", "label": "Design Your Own", "to": "/design"},
         {"key": "contact", "label": "Get a quote", "to": "/contact", "cta": True},
     ],
 }
 
-
 @api_router.get("/navigation")
 async def get_navigation():
     doc = await db.settings.find_one({"key": "navigation_config"})
-    if doc and doc.get("config"):
-        return doc["config"]
+    stored = doc.get("config") if doc else None
+    # If a newer default nav has shipped (higher version), it supersedes an older
+    # stored one — this lets a deploy roll out nav changes without a manual reset,
+    # while still respecting admin edits made on the current version.
+    default_v = DEFAULT_NAV_CONFIG.get("version", 0)
+    stored_v = (stored or {}).get("version", 0) if stored else 0
+    if stored and stored_v >= default_v and stored.get("config" if False else "menu"):
+        return stored
+    # otherwise (no stored config, or it's an older version) serve the default
+    # and persist it so admin edits start from the fresh structure.
+    try:
+        await db.settings.update_one(
+            {"key": "navigation_config"},
+            {"$set": {"key": "navigation_config", "config": DEFAULT_NAV_CONFIG,
+                      "updated_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+    except Exception:
+        pass
     return DEFAULT_NAV_CONFIG
 
 
