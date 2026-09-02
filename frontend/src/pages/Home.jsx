@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayou
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import FindMyKitPromo from "../components/bold/FindMyKitPromo";
 import PortfolioStrip from "../components/bold/PortfolioStrip";
+import HowWePrint from "../components/bold/HowWePrint";
 import PricePromise from "../components/bold/PricePromise";
 import { SECTORS, REVIEWS as STATIC_REVIEWS, RATING } from "../lib/data";
 import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews, fetchBestSellers } from "../lib/api";
@@ -236,6 +237,8 @@ export default function Home() {
       </section>
 
       {/* Portfolio strip — only renders when admin has marked items as featured */}
+      <HowWePrint className="my-16" />
+
       <PortfolioStrip />
 
       <BoldFooter />

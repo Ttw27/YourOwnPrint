@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ProductReviews from "../components/bold/ProductReviews";
+import HowWePrint from "../components/bold/HowWePrint";
 import RelatedProductsStrip from "../components/bold/RelatedProductsStrip";
 import PricePromise from "../components/bold/PricePromise";
 import BespokeQuoteCard from "../components/bold/BespokeQuoteCard";
@@ -242,6 +243,7 @@ export default function ProductDetail() {
                 </div>
               </div>
             </div>
+            <HowWePrint variant="compact" className="mb-6" />
             <ProductReviews productId={product.id} productName={product.name} />
           </>
         ) : product && (
@@ -613,6 +615,7 @@ export default function ProductDetail() {
               }}
             />
 
+            <HowWePrint variant="compact" className="mb-6" />
             <ProductReviews productId={product.id} productName={product.name} />
           </>
         )}

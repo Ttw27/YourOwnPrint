@@ -21,6 +21,7 @@ const PAGE_COPY_SLUGS = [
   { slug: "reviews", label: "Reviews page" },
   { slug: "specials", label: "Specials collection" },
   { slug: "contact", label: "Contact page" },
+  { slug: "how-we-print", label: "How We Print (DTF) block" },
   { slug: "fight-night", label: "Fight Night Tee" },
   { slug: "leavers-hoodies", label: "Leavers Hoodies" },
   { slug: "kit-your-workforce", label: "Kit Your Workforce" },
