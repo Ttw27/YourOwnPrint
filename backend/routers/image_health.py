@@ -51,12 +51,22 @@ async def _url_ok(client: httpx.AsyncClient, url: str) -> bool:
     """True if the image URL responds with a success status and image-ish type."""
     if url.startswith("data:"):
         return True
+    # Many supplier CDNs (Ralawise, PenCarrie, etc.) block requests that don't
+    # look like a real browser — a bare python-httpx request gets 403'd even
+    # though the image loads fine for customers. Send browser-like headers so
+    # the check reflects what a real visitor sees, not a bot block.
+    browser_headers = {
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"),
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "Referer": "https://www.yourownprint.co.uk/",
+    }
     try:
         # Try a lightweight HEAD first; some CDNs don't support it, so fall back
         # to a ranged GET that only pulls the first byte.
-        r = await client.head(url, follow_redirects=True)
+        r = await client.head(url, headers=browser_headers, follow_redirects=True)
         if r.status_code >= 400 or r.status_code == 405:
-            r = await client.get(url, headers={"Range": "bytes=0-0"}, follow_redirects=True)
+            r = await client.get(url, headers={**browser_headers, "Range": "bytes=0-0"}, follow_redirects=True)
         if r.status_code >= 400:
             return False
         ctype = (r.headers.get("content-type") or "").lower()
