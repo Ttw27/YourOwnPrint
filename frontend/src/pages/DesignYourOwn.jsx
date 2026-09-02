@@ -106,13 +106,12 @@ export default function DesignYourOwn() {
   useEffect(() => { setSelectedColour(null); }, [productId]);
   const garmentPrintArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
   const garmentPrintAreaBack = product?.print_area_back || garmentPrintArea;
-  // Print areas are a % of the canvas. On a real garment photo the garment only
-  // fills part of the frame, so the admin-set % is correct. On the garment
-  // SILHOUETTE fallback the shape sits roughly centred and fills most of the
-  // frame, so the admin-set print area (chest position) is meaningful and is
-  // respected — nudged onto the garment body so it lands on the chest, not the
-  // collar or hem.
-  const SILHOUETTE_PRINT_AREA = { x: 30, y: 30, w: 40, h: 40 };
+  // Print areas are a % of the canvas. On the traced garment silhouette the tee
+  // sits centred with the chest roughly in the middle, so use a chest-centred
+  // default box that matches the shape. Admins can still fine-tune per product
+  // in Admin → Designer Products; that stays the same across every colour.
+  const SILHOUETTE_PRINT_AREA = { x: 40, y: 34, w: 32, h: 38 };
+  const SILHOUETTE_PRINT_AREA_BACK = { x: 40, y: 30, w: 32, h: 42 };
   const rawPrintArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
   const colourImageFront = selectedColour && product?.images_by_colour?.[selectedColour];
   const colourImageBack = selectedColour && product?.images_by_colour_back?.[selectedColour];
@@ -131,12 +130,13 @@ export default function DesignYourOwn() {
     if (selectedColour) return { type: "color", hex: selectedColourHex || "#e5e7eb" };
     return { type: "image", src: product?.image };
   })();
-  // On the silhouette, prefer the admin-set print area (so what you set in
-  // Admin → Designer Products is honoured and stays the same across every
-  // colour). If none is set, use a sensible chest zone on the shape.
-  const printArea = (view !== "neck" && garmentBackground.type === "color")
-    ? (garmentPrintArea ? rawPrintArea : SILHOUETTE_PRINT_AREA)
-    : rawPrintArea;
+  // On the silhouette use the chest-centred default that matches the traced
+  // shape (front/back). Real photos keep their admin-set print areas.
+  const printArea = (view === "neck")
+    ? rawPrintArea
+    : (garmentBackground.type === "color")
+      ? (view === "back" ? SILHOUETTE_PRINT_AREA_BACK : SILHOUETTE_PRINT_AREA)
+      : rawPrintArea;
   const unitPrice = product?.price ?? 0;
   const backPrintPrice = product?.back_print_price ?? 0;
   const neckLabelPrice = product?.neck_label_price ?? 1.5;
@@ -932,7 +932,7 @@ export default function DesignYourOwn() {
                   </div>
                 ) : garmentBackground.type === "color" ? (
                   <div className="absolute inset-0 pointer-events-none grid place-items-center p-2" data-testid="designer-flat-colour-bg">
-                    <GarmentSilhouette color={garmentBackground.hex} name={product?.name} category={product?.category} className="w-full h-full" />
+                    <GarmentSilhouette color={garmentBackground.hex} view={view} className="w-full h-full" />
                   </div>
                 ) : (
                   <img src={garmentBackground.src} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
