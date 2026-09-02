@@ -275,6 +275,20 @@ export async function listDesigns(offset = 0, limit = 60) {
   const { data } = await api.get("/admin/design-shop/list", { params: { offset, limit } });
   return data;
 }
+export async function ralawisePreview(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post("/admin/ralawise/preview", form, { headers: { "Content-Type": "multipart/form-data" }, timeout: 120000 });
+  return data;
+}
+export async function ralawiseImport(file, mirrorImages = true) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("mirror_images", mirrorImages ? "true" : "false");
+  const { data } = await api.post("/admin/ralawise/import", form, { headers: { "Content-Type": "multipart/form-data" }, timeout: 600000 });
+  return data;
+}
+
 export async function deleteDesign(product_id) {
   const { data } = await api.post("/admin/design-shop/delete", { product_id });
   return data;
