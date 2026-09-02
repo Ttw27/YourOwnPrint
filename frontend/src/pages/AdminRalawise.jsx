@@ -43,7 +43,7 @@ export default function AdminRalawise() {
     try {
       const r = await ralawiseImport(file, mirror);
       setResult(r);
-      toast.success(`Done — ${r.updated} updated, ${r.imported} new, ${r.images_mirrored} images copied to storage.`);
+      toast.success(`Done — ${r.updated} updated, ${r.imported} new. Images are copying to storage in the background.`);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Import failed — try again, or split the file if it's very large.");
     } finally { setBusy(false); }
@@ -125,10 +125,8 @@ export default function AdminRalawise() {
             <Stat label="Products" value={result.products} />
             <Stat label="Updated" value={result.updated} />
             <Stat label="New" value={result.imported} />
-            <Stat label="Images copied" value={result.images_mirrored} />
-            {result.images_failed > 0 && <Stat label="Images failed" value={result.images_failed} warn />}
           </div>
-          <p className="text-sm text-[#4b5563] mt-3">Products are live now. Run an Image Health scan to confirm, and check a product page to see the colour swatches.</p>
+          <p className="text-sm text-[#4b5563] mt-3">Products are live now with their images and colour swatches. Images are being copied to our own storage in the background over the next few minutes — no need to wait. Re-run an Image Health scan in a bit to confirm.</p>
         </div>
       )}
     </div>
