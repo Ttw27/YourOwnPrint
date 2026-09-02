@@ -22,7 +22,7 @@ import re
 from collections import OrderedDict
 from typing import Dict, List, Optional
 
-from fastapi import Depends, UploadFile, File, Form, HTTPException
+from fastapi import Depends, UploadFile, File, Form, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
 from deps import api_router, db, require_admin
@@ -222,63 +222,30 @@ async def ralawise_preview(file: UploadFile = File(...)):
 
 
 @api_router.post("/admin/ralawise/import", dependencies=[Depends(require_admin)])
-async def ralawise_import(file: UploadFile = File(...), mirror_images: bool = Form(True)):
-    """Parse, import/update products, and mirror images to R2."""
+async def ralawise_import(background_tasks: BackgroundTasks, file: UploadFile = File(...), mirror_images: bool = Form(True)):
+    """Parse and import/update products FAST, then mirror images to R2 in the
+    background so the request returns in seconds instead of timing out.
+
+    Products go live immediately using the supplier image URLs (which do load in
+    browsers); the background task then swaps each to its mirrored R2 copy, so a
+    minute or two later they're all self-hosted. Safe to re-run."""
     from server import (
         PRODUCTS, _apply_imported_product, _slugify_source_sku,
-        _mirror_external_image,
     )
-    import asyncio
     from datetime import datetime, timezone
 
     data = await file.read()
     docs = _parse_workbook(data)
     now = datetime.now(timezone.utc).isoformat()
 
-    # Resolve ids + detect update vs create against the current catalogue.
     for d in docs:
         d["id"] = _slugify_source_sku(d["name"], d["source_sku"])
     existing_ids = set(PRODUCTS.keys())
     imported = sum(1 for d in docs if d["id"] not in existing_ids)
     updated = sum(1 for d in docs if d["id"] in existing_ids)
 
-    # Mirror images to R2 (browser headers inside _mirror_external_image protect
-    # against CDN blocking). Mirror the main image + each colour image.
-    images_mirrored = 0
-    images_failed = 0
-    if mirror_images:
-        urls = set()
-        for d in docs:
-            if d["image"]:
-                urls.add(d["image"])
-            for c in d["colors"]:
-                if c.get("image"):
-                    urls.add(c["image"])
-        sem = asyncio.Semaphore(15)
-
-        async def _mir(u):
-            async with sem:
-                try:
-                    return u, await _mirror_external_image(u)
-                except Exception:
-                    return u, None
-
-        results = await asyncio.gather(*[_mir(u) for u in urls])
-        url_map = {}
-        for original, mirrored in results:
-            if mirrored:
-                url_map[original] = mirrored
-                images_mirrored += 1
-            else:
-                images_failed += 1
-        for d in docs:
-            if d["image"] in url_map:
-                d["image"] = url_map[d["image"]]
-            for c in d["colors"]:
-                if c.get("image") in url_map:
-                    c["image"] = url_map[c["image"]]
-
-    # Write to Mongo + apply to memory.
+    # ---- Write products immediately (fast — no network). Images use the
+    # supplier URL for now; the background task mirrors them to R2 next. ----
     for d in docs:
         doc = {
             "id": d["id"],
@@ -300,8 +267,64 @@ async def ralawise_import(file: UploadFile = File(...), mirror_images: bool = Fo
         _apply_imported_product(doc)
 
     with_images = sum(1 for d in docs if d["image"])
+
+    # ---- Queue image mirroring to run AFTER the response is sent. ----
+    if mirror_images:
+        ids = [d["id"] for d in docs]
+        background_tasks.add_task(_mirror_ralawise_images, ids)
+
     return RalawiseImportResult(
         ok=True, products=len(docs), with_images=with_images,
         imported=imported, updated=updated,
-        images_mirrored=images_mirrored, images_failed=images_failed,
+        images_mirrored=0, images_failed=0,
     )
+
+
+async def _mirror_ralawise_images(product_ids: List[str]) -> None:
+    """Background task: copy each product's images (main + per-colour) to R2 and
+    update the stored records. Runs after the import response is already sent, so
+    it never blocks / times out the request."""
+    from server import PRODUCTS, _apply_imported_product, _mirror_external_image
+    import asyncio
+
+    sem = asyncio.Semaphore(10)
+    cache: Dict[str, Optional[str]] = {}
+
+    async def mirror(u: str) -> Optional[str]:
+        if not u or u.startswith("data:"):
+            return None
+        if u in cache:
+            return cache[u]
+        async with sem:
+            try:
+                res = await _mirror_external_image(u)
+            except Exception:
+                res = None
+        cache[u] = res
+        return res
+
+    for pid in product_ids:
+        p = PRODUCTS.get(pid)
+        if not p:
+            continue
+        changed = False
+        main = p.get("image")
+        if main and "r2.dev" not in str(main) and "/imported-products/" not in str(main):
+            m = await mirror(main)
+            if m:
+                p["image"] = m
+                changed = True
+        for c in (p.get("colors") or []):
+            ci = c.get("image")
+            if ci and "r2.dev" not in str(ci):
+                m = await mirror(ci)
+                if m:
+                    c["image"] = m
+                    changed = True
+        if changed:
+            try:
+                await db.imported_products.update_one(
+                    {"id": pid}, {"$set": {"image": p.get("image"), "colors": p.get("colors")}}
+                )
+            except Exception:
+                pass
