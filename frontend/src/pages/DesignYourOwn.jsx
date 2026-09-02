@@ -110,8 +110,8 @@ export default function DesignYourOwn() {
   // sits centred with the chest roughly in the middle, so use a chest-centred
   // default box that matches the shape. Admins can still fine-tune per product
   // in Admin → Designer Products; that stays the same across every colour.
-  const SILHOUETTE_PRINT_AREA = { x: 40, y: 34, w: 32, h: 38 };
-  const SILHOUETTE_PRINT_AREA_BACK = { x: 40, y: 30, w: 32, h: 42 };
+  const SILHOUETTE_PRINT_AREA = { x: 33, y: 30, w: 34, h: 44 };
+  const SILHOUETTE_PRINT_AREA_BACK = { x: 33, y: 26, w: 34, h: 46 };
   const rawPrintArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
   const colourImageFront = selectedColour && product?.images_by_colour?.[selectedColour];
   const colourImageBack = selectedColour && product?.images_by_colour_back?.[selectedColour];
@@ -931,7 +931,7 @@ export default function DesignYourOwn() {
                     <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-300 font-nunito font-extrabold">Neck label · approx 60 × 30 mm</div>
                   </div>
                 ) : garmentBackground.type === "color" ? (
-                  <div className="absolute inset-0 pointer-events-none grid place-items-center p-2" data-testid="designer-flat-colour-bg">
+                  <div className="absolute inset-0 pointer-events-none grid place-items-center" data-testid="designer-flat-colour-bg">
                     <GarmentSilhouette color={garmentBackground.hex} view={view} className="w-full h-full" />
                   </div>
                 ) : (
