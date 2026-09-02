@@ -18,6 +18,45 @@ import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, Shoppi
 import usePageTitle from "../hooks/usePageTitle";
 import PriceTag from "../components/bold/PriceTag";
 
+// Common garment colour names → hex, so a swatch still shows a colour when the
+// supplier data didn't include a hex value.
+const COLOUR_NAME_HEX = {
+  white: "#ffffff", black: "#1a1a1a", navy: "#1e3a5f", "navy blue": "#1e3a5f",
+  red: "#d32f2f", royal: "#1e40af", "royal blue": "#1e40af", blue: "#2563eb",
+  green: "#166534", "bottle green": "#0b3d2e", "kelly green": "#1b7a3d", emerald: "#059669",
+  grey: "#9ca3af", gray: "#9ca3af", "grey marl": "#b0b3b8", charcoal: "#374151",
+  yellow: "#f5c518", gold: "#d4af37", orange: "#ea580c", purple: "#7c3aed",
+  pink: "#ec4899", "hot pink": "#db2777", burgundy: "#6b1f2e", maroon: "#6b1f2e",
+  brown: "#78350f", sand: "#d8c9a3", khaki: "#8f8b66", olive: "#5b5327",
+  sky: "#7dd3fc", "sky blue": "#7dd3fc", teal: "#0d9488", cream: "#f5f0e1",
+  silver: "#c0c0c0", lime: "#84cc16", turquoise: "#14b8a6", "light blue": "#93c5fd",
+};
+
+function hexForName(name = "") {
+  const n = name.trim().toLowerCase();
+  if (COLOUR_NAME_HEX[n]) return COLOUR_NAME_HEX[n];
+  // try individual words (e.g. "heather grey" → grey)
+  for (const word of n.split(/\s+/)) {
+    if (COLOUR_NAME_HEX[word]) return COLOUR_NAME_HEX[word];
+  }
+  return null;
+}
+
+// Returns a style object for a colour swatch. Handles single colours, missing
+// hex (derives from the name), and two-tone names like "Black/Red" (split fill).
+function swatchBackground(c) {
+  const name = c?.name || "";
+  // Multi-colour name → split the swatch between the parts
+  if (name.includes("/")) {
+    const parts = name.split("/").map((p) => hexForName(p) || "#d1d5db");
+    if (parts.length >= 2) {
+      return { background: `linear-gradient(135deg, ${parts[0]} 0 50%, ${parts[1]} 50% 100%)` };
+    }
+  }
+  const hex = (c?.hex && String(c.hex).trim()) || hexForName(name) || "#d1d5db";
+  return { background: hex };
+}
+
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -285,17 +324,20 @@ export default function ProductDetail() {
                 {product.colors?.length > 0 && (
                   <Section title="1. Colour" right={<span className="text-xs text-[#4b5563]">{color || "Pick one"}</span>}>
                     <div className="flex gap-2 flex-wrap" data-testid="color-swatches">
-                      {product.colors.map((c) => (
-                        <button
-                          key={c.name}
-                          data-testid={`color-${c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-                          onClick={() => setColor(c.name)}
-                          title={c.name}
-                          aria-label={c.name}
-                          className={`w-10 h-10 rounded-full border-2 transition-transform hover:scale-110 ${color === c.name ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-[#e5e7eb]"}`}
-                          style={{ background: c.hex }}
-                        />
-                      ))}
+                      {product.colors.map((c) => {
+                        const bg = swatchBackground(c);
+                        return (
+                          <button
+                            key={c.name}
+                            data-testid={`color-${c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                            onClick={() => setColor(c.name)}
+                            title={c.name}
+                            aria-label={c.name}
+                            className={`w-10 h-10 rounded-full border-2 transition-transform hover:scale-110 ${color === c.name ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-[#e5e7eb]"}`}
+                            style={bg}
+                          />
+                        );
+                      })}
                     </div>
                   </Section>
                 )}
