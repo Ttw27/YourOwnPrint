@@ -33,6 +33,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import AdminReclassify from "@/pages/AdminReclassify";
 import AdminImageHealth from "@/pages/AdminImageHealth";
 import AdminDesignShop from "@/pages/AdminDesignShop";
+import AdminRalawise from "@/pages/AdminRalawise";
 import KitYourWorkforce from "@/pages/KitYourWorkforce";
 import Specials from "@/pages/Specials";
 import IndustriesIndex from "@/pages/IndustriesIndex";
@@ -118,6 +119,7 @@ function App() {
           <Route path="/admin/reclassify" element={<RequireAdmin><AdminLayout><AdminReclassify /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/image-health" element={<RequireAdmin><AdminLayout><AdminImageHealth /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/design-shop" element={<RequireAdmin><AdminLayout><AdminDesignShop /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/ralawise" element={<RequireAdmin><AdminLayout><AdminRalawise /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/page-copy" element={<RequireAdmin><AdminLayout><AdminPageCopy /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/configurator-settings" element={<RequireAdmin><AdminLayout><AdminConfiguratorSettings /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/navigation" element={<RequireAdmin><AdminLayout><AdminNavigation /></AdminLayout></RequireAdmin>} />
