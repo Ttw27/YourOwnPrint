@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import FontPicker from "../components/bold/FontPicker";
+import GarmentSilhouette from "../components/bold/GarmentSilhouette";
 import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
@@ -106,11 +107,12 @@ export default function DesignYourOwn() {
   const garmentPrintArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
   const garmentPrintAreaBack = product?.print_area_back || garmentPrintArea;
   // Print areas are a % of the canvas. On a real garment photo the garment only
-  // fills part of the frame, so the admin-set % is correct. On the flat-colour
-  // fallback there IS no surrounding photo — the colour block *is* the garment —
-  // so the same % leaves a needlessly tiny box to work in. Use a roomier area
-  // in that case only; products with real photos keep their admin-set values.
-  const FLAT_COLOUR_PRINT_AREA = { x: 14, y: 14, w: 72, h: 72 };
+  // fills part of the frame, so the admin-set % is correct. On the garment
+  // SILHOUETTE fallback the shape sits roughly centred and fills most of the
+  // frame, so the admin-set print area (chest position) is meaningful and is
+  // respected — nudged onto the garment body so it lands on the chest, not the
+  // collar or hem.
+  const SILHOUETTE_PRINT_AREA = { x: 30, y: 30, w: 40, h: 40 };
   const rawPrintArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
   const colourImageFront = selectedColour && product?.images_by_colour?.[selectedColour];
   const colourImageBack = selectedColour && product?.images_by_colour_back?.[selectedColour];
@@ -129,8 +131,11 @@ export default function DesignYourOwn() {
     if (selectedColour) return { type: "color", hex: selectedColourHex || "#e5e7eb" };
     return { type: "image", src: product?.image };
   })();
+  // On the silhouette, prefer the admin-set print area (so what you set in
+  // Admin → Designer Products is honoured and stays the same across every
+  // colour). If none is set, use a sensible chest zone on the shape.
   const printArea = (view !== "neck" && garmentBackground.type === "color")
-    ? FLAT_COLOUR_PRINT_AREA
+    ? (garmentPrintArea ? rawPrintArea : SILHOUETTE_PRINT_AREA)
     : rawPrintArea;
   const unitPrice = product?.price ?? 0;
   const backPrintPrice = product?.back_print_price ?? 0;
@@ -926,7 +931,9 @@ export default function DesignYourOwn() {
                     <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-300 font-nunito font-extrabold">Neck label · approx 60 × 30 mm</div>
                   </div>
                 ) : garmentBackground.type === "color" ? (
-                  <div className="absolute inset-0 pointer-events-none" style={{ background: garmentBackground.hex }} data-testid="designer-flat-colour-bg" />
+                  <div className="absolute inset-0 pointer-events-none grid place-items-center p-2" data-testid="designer-flat-colour-bg">
+                    <GarmentSilhouette color={garmentBackground.hex} name={product?.name} category={product?.category} className="w-full h-full" />
+                  </div>
                 ) : (
                   <img src={garmentBackground.src} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
                 )}
