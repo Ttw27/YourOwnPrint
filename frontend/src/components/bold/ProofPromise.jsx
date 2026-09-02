@@ -67,7 +67,7 @@ export default function ProofPromise({ variant = "band" }) {
   // Default: slim band
   return (
     <div className="bg-[#f0fdf4] border-y-2 border-[#dcfce7]" data-testid="proof-promise-band">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-center gap-3 flex-wrap text-center">
+      <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-center gap-4 flex-wrap text-center">
         <span className="inline-flex items-center gap-2 text-[#166534] font-nunito font-extrabold text-xs uppercase tracking-[0.25em]">
           <Eye size={16} /> Free proof first
         </span>
