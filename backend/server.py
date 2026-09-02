@@ -6756,6 +6756,7 @@ import routers.find_my_kit  # noqa: F401 — registers /find-my-kit (AI kit conc
 import routers.image_health  # noqa: F401 — registers /admin/image-health/* (broken image scan/hide)
 import routers.design_shop  # noqa: F401 — registers /design-shop/* (ready-made designs)
 import routers.design_shop_admin  # noqa: F401 — registers /admin/design-shop/* (design upload tool)
+import routers.ralawise_import  # noqa: F401 — registers /admin/ralawise/* (Ralawise xlsm importer)
 
 # Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
