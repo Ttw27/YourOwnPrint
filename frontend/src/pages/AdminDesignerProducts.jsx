@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { fetchAdminDesignerProducts, updateDesignerSettings, uploadAdminImage } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon, ChevronLeft, ChevronRight, Upload } from "lucide-react";
+import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon, ChevronLeft, ChevronRight, Upload, Plus } from "lucide-react";
 
 const PAGE_SIZE = 25;
 const DEFAULT_PA = { x: 22, y: 20, w: 56, h: 55 };
@@ -43,6 +43,13 @@ export default function AdminDesignerProducts() {
   const updatePA = (id, key, value) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, designer_print_area: { ...(p.designer_print_area || DEFAULT_PA), [key]: Number(value) } } : p));
   const updatePABack = (id, key, value) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, designer_print_area_back: { ...(p.designer_print_area_back || p.designer_print_area || DEFAULT_PA), [key]: Number(value) } } : p));
 
+  // ---- Colour list editing ----
+  const setColours = (id, colors) => update(id, { colors });
+  const addColour = (p) => setColours(p.id, [...(p.colors || []), { name: "New colour", hex: "#888888" }]);
+  const removeColour = (p, idx) => setColours(p.id, (p.colors || []).filter((_, i) => i !== idx));
+  const renameColour = (p, idx, name) => setColours(p.id, (p.colors || []).map((c, i) => i === idx ? { ...c, name } : c));
+  const recolourColour = (p, idx, hex) => setColours(p.id, (p.colors || []).map((c, i) => i === idx ? { ...c, hex } : c));
+
   const save = async (p) => {
     setBusy(true);
     try {
@@ -53,6 +60,7 @@ export default function AdminDesignerProducts() {
         designer_image: p.designer_image || p.main_image,
         designer_print_area: { x: Number(pa.x), y: Number(pa.y), w: Number(pa.w), h: Number(pa.h) },
         designer_images_by_colour: p.designer_images_by_colour || {},
+        designer_colors: p.colors || null,
         designer_image_back: p.designer_image_back || null,
         designer_print_area_back: paBack ? { x: Number(paBack.x), y: Number(paBack.y), w: Number(paBack.w), h: Number(paBack.h) } : null,
         designer_images_by_colour_back: p.designer_images_by_colour_back || {},
@@ -194,6 +202,35 @@ export default function AdminDesignerProducts() {
                             </div>
                           ))}
                         </div>
+                      </div>
+
+                      {/* Colour editor — add / rename / recolour / remove */}
+                      <div data-testid={`dp-colours-${p.id}`}>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Colours</label>
+                        <p className="text-[10px] text-[#4b5563] mb-2">These are the colours customers can pick in the designer. Click the swatch to change the colour, type to rename, or remove one. Add as many as you stock.</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(p.colors || []).map((c, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5 bg-white border border-[#e5e7eb] rounded-xl p-1.5" data-testid={`dp-colour-row-${p.id}-${idx}`}>
+                              <input
+                                type="color"
+                                value={/^#[0-9a-fA-F]{6}$/.test(c.hex || "") ? c.hex : "#888888"}
+                                onChange={(e) => recolourColour(p, idx, e.target.value)}
+                                className="w-7 h-7 rounded-lg border border-[#e5e7eb] cursor-pointer flex-shrink-0 p-0"
+                                title="Pick colour"
+                              />
+                              <input
+                                value={c.name}
+                                onChange={(e) => renameColour(p, idx, e.target.value)}
+                                className="text-[11px] font-bold flex-1 min-w-0 bg-transparent border-b border-transparent focus:border-[#7bc67e] outline-none"
+                                placeholder="Colour name"
+                              />
+                              <button onClick={() => removeColour(p, idx)} className="text-rose-500 hover:bg-rose-50 rounded-full p-1 flex-shrink-0" title="Remove colour"><X size={11} /></button>
+                            </div>
+                          ))}
+                        </div>
+                        <button onClick={() => addColour(p)} className="mt-2 inline-flex items-center gap-1 text-[10px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-3 py-1.5 hover:bg-[#f0fdf4]" data-testid={`dp-add-colour-${p.id}`}>
+                          <Plus size={11} /> Add colour
+                        </button>
                       </div>
 
                       {p.colors?.length > 0 && (
