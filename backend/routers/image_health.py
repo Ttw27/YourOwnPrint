@@ -48,13 +48,16 @@ def _looks_missing(url: Optional[str]) -> bool:
 
 
 async def _url_ok(client: httpx.AsyncClient, url: str) -> bool:
-    """True if the image URL responds with a success status and image-ish type."""
-    if url.startswith("data:"):
-        return True
-    # Many supplier CDNs (Ralawise, PenCarrie, etc.) block requests that don't
-    # look like a real browser — a bare python-httpx request gets 403'd even
-    # though the image loads fine for customers. Send browser-like headers so
-    # the check reflects what a real visitor sees, not a bot block.
+    """Return True unless the image is DEFINITIVELY gone (404/410).
+
+    Server-side image checks get blocked by many supplier CDNs (pimber.ly,
+    Ralawise, etc.) — they return 403 or time out for a bot even though the image
+    loads perfectly in a customer's browser. Treating those as "broken" produces
+    thousands of false alarms, so we only mark an image broken when the server
+    gives a definitive "gone" (404/410) or the URL is malformed. Blocks, timeouts
+    and other errors are treated as OK (assume it loads for real visitors)."""
+    if not url or url.startswith("data:"):
+        return bool(url)
     browser_headers = {
         "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                        "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"),
@@ -62,21 +65,18 @@ async def _url_ok(client: httpx.AsyncClient, url: str) -> bool:
         "Referer": "https://www.yourownprint.co.uk/",
     }
     try:
-        # Try a lightweight HEAD first; some CDNs don't support it, so fall back
-        # to a ranged GET that only pulls the first byte.
         r = await client.head(url, headers=browser_headers, follow_redirects=True)
-        if r.status_code >= 400 or r.status_code == 405:
+        if r.status_code in (404, 410):
+            return False
+        if r.status_code == 405:  # HEAD not allowed — try a tiny GET
             r = await client.get(url, headers={**browser_headers, "Range": "bytes=0-0"}, follow_redirects=True)
-        if r.status_code >= 400:
-            return False
-        ctype = (r.headers.get("content-type") or "").lower()
-        # If a content-type is given, it should look like an image. If none is
-        # given we don't fail it (some CDNs omit it on HEAD).
-        if ctype and not ctype.startswith("image/") and "octet-stream" not in ctype:
-            return False
+            if r.status_code in (404, 410):
+                return False
+        # Any other outcome (200, 403 block, timeout handled below) → assume OK.
         return True
     except Exception:
-        return False
+        # Timeout / connection blocked → NOT evidence the image is broken.
+        return True
 
 
 @api_router.post("/admin/image-health/scan", dependencies=[Depends(require_admin)])
