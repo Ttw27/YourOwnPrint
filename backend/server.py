@@ -1668,6 +1668,7 @@ class DesignerSettings(BaseModel):
     designer_image: str
     designer_print_area: Dict[str, float]  # {x,y,w,h} percent
     designer_images_by_colour: Optional[Dict[str, str]] = None  # colour name -> image URL override
+    designer_colors: Optional[List[Dict[str, str]]] = None  # custom colour list [{name, hex}] — overrides the garment default
     # Back-view equivalents — optional. If not set, the designer falls back
     # to showing the front photo/print area when a customer switches to back
     # view, same as it always has (not ideal, but not a regression either).
@@ -2031,6 +2032,9 @@ async def _merge_designer_overrides():
                      "composition", "description_long", "use_cases"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
+            # Custom colour list overrides the garment default when set.
+            if doc.get("designer_colors"):
+                PRODUCTS[pid]["colors"] = doc["designer_colors"]
     # Product meta overlay (brand/SKU/size guide/bulk pricing)
     async for doc in db.product_meta.find({}):
         pid = doc.get("product_id")
@@ -2259,6 +2263,7 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
         "designer_image": payload.designer_image,
         "designer_print_area": pa,
         "designer_images_by_colour": payload.designer_images_by_colour or {},
+        "designer_colors": payload.designer_colors if payload.designer_colors is not None else None,
         "designer_image_back": payload.designer_image_back or None,
         "designer_print_area_back": pa_back,
         "designer_images_by_colour_back": payload.designer_images_by_colour_back or {},
