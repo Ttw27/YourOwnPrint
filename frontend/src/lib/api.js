@@ -285,7 +285,12 @@ export async function ralawiseImport(file, mirrorImages = true) {
   const form = new FormData();
   form.append("file", file);
   form.append("mirror_images", mirrorImages ? "true" : "false");
-  const { data } = await api.post("/admin/ralawise/import", form, { headers: { "Content-Type": "multipart/form-data" }, timeout: 600000 });
+  // Returns quickly with a job_id; poll ralawiseStatus for progress.
+  const { data } = await api.post("/admin/ralawise/import", form, { headers: { "Content-Type": "multipart/form-data" }, timeout: 180000 });
+  return data;
+}
+export async function ralawiseStatus(jobId) {
+  const { data } = await api.get("/admin/ralawise/status", { params: { job_id: jobId } });
   return data;
 }
 
