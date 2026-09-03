@@ -27,6 +27,10 @@ from pydantic import BaseModel
 
 from deps import api_router, db, require_admin
 
+# In-memory job registry for import progress (survives for the process lifetime,
+# which is fine — a job completes in a few minutes).
+_JOBS: Dict[str, Dict] = {}
+
 # Column headers in the Ralawise export (0-indexed positions are resolved by
 # name at runtime so a reordered export still works).
 COL = {
@@ -223,108 +227,138 @@ async def ralawise_preview(file: UploadFile = File(...)):
 
 @api_router.post("/admin/ralawise/import", dependencies=[Depends(require_admin)])
 async def ralawise_import(background_tasks: BackgroundTasks, file: UploadFile = File(...), mirror_images: bool = Form(True)):
-    """Parse and import/update products FAST, then mirror images to R2 in the
-    background so the request returns in seconds instead of timing out.
-
-    Products go live immediately using the supplier image URLs (which do load in
-    browsers); the background task then swaps each to its mirrored R2 copy, so a
-    minute or two later they're all self-hosted. Safe to re-run."""
-    from server import (
-        PRODUCTS, _apply_imported_product, _slugify_source_sku,
-    )
-    from datetime import datetime, timezone
+    """Start a Ralawise import as a background JOB and return a job id straight
+    away. The page then polls /admin/ralawise/status to show live progress and,
+    if anything fails, an error that stays on screen. This avoids the request
+    timing out on large files / hundreds of images."""
+    from server import _slugify_source_sku
+    import uuid as _uuid
 
     data = await file.read()
-    docs = _parse_workbook(data)
-    now = datetime.now(timezone.utc).isoformat()
+
+    # Parse up front so a bad file fails immediately (visible error), before we
+    # start a job. This is fast (no network).
+    try:
+        docs = _parse_workbook(data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, f"Couldn't read the file: {e}")
 
     for d in docs:
         d["id"] = _slugify_source_sku(d["name"], d["source_sku"])
-    existing_ids = set(PRODUCTS.keys())
-    imported = sum(1 for d in docs if d["id"] not in existing_ids)
-    updated = sum(1 for d in docs if d["id"] in existing_ids)
 
-    # ---- Write products immediately (fast — no network). Images use the
-    # supplier URL for now; the background task mirrors them to R2 next. ----
-    for d in docs:
-        doc = {
-            "id": d["id"],
-            "source_sku": d["source_sku"],
-            "name": d["name"],
-            "brand": d["brand"],
-            "description": d["description"],
-            "price": d["price"],
-            "source_price": d["source_price"],
-            "image": d["image"],
-            "category": d["category"],
-            "colors": d["colors"],
-            "sizes": d["sizes"],
-            "source": "ralawise",
-            "active": True,
-            "imported_at": now,
-        }
-        await db.imported_products.update_one({"id": d["id"]}, {"$set": doc}, upsert=True)
-        _apply_imported_product(doc)
-
-    with_images = sum(1 for d in docs if d["image"])
-
-    # ---- Queue image mirroring to run AFTER the response is sent. ----
-    if mirror_images:
-        ids = [d["id"] for d in docs]
-        background_tasks.add_task(_mirror_ralawise_images, ids)
-
-    return RalawiseImportResult(
-        ok=True, products=len(docs), with_images=with_images,
-        imported=imported, updated=updated,
-        images_mirrored=0, images_failed=0,
-    )
+    job_id = _uuid.uuid4().hex[:12]
+    _JOBS[job_id] = {
+        "id": job_id,
+        "phase": "starting",
+        "total": len(docs),
+        "products_done": 0,
+        "images_total": 0,
+        "images_done": 0,
+        "images_failed": 0,
+        "imported": 0,
+        "updated": 0,
+        "error": None,
+        "finished": False,
+    }
+    background_tasks.add_task(_run_ralawise_job, job_id, docs, bool(mirror_images))
+    return {"ok": True, "job_id": job_id, "products": len(docs)}
 
 
-async def _mirror_ralawise_images(product_ids: List[str]) -> None:
-    """Background task: copy each product's images (main + per-colour) to R2 and
-    update the stored records. Runs after the import response is already sent, so
-    it never blocks / times out the request."""
+@api_router.get("/admin/ralawise/status", dependencies=[Depends(require_admin)])
+async def ralawise_status(job_id: str):
+    job = _JOBS.get(job_id)
+    if not job:
+        raise HTTPException(404, "Unknown job id (it may have expired — start the import again).")
+    return job
+
+
+async def _run_ralawise_job(job_id: str, docs: List[Dict], mirror_images: bool) -> None:
+    """The whole import, run in the background with live progress in _JOBS."""
     from server import PRODUCTS, _apply_imported_product, _mirror_external_image
+    from datetime import datetime, timezone
     import asyncio
 
-    sem = asyncio.Semaphore(10)
-    cache: Dict[str, Optional[str]] = {}
+    job = _JOBS[job_id]
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        existing_ids = set(PRODUCTS.keys())
+        job["imported"] = sum(1 for d in docs if d["id"] not in existing_ids)
+        job["updated"] = sum(1 for d in docs if d["id"] in existing_ids)
 
-    async def mirror(u: str) -> Optional[str]:
-        if not u or u.startswith("data:"):
-            return None
-        if u in cache:
-            return cache[u]
-        async with sem:
-            try:
-                res = await _mirror_external_image(u)
-            except Exception:
-                res = None
-        cache[u] = res
-        return res
+        # ---- Phase 1: write all products (fast) ----
+        job["phase"] = "importing products"
+        for i, d in enumerate(docs):
+            doc = {
+                "id": d["id"], "source_sku": d["source_sku"], "name": d["name"],
+                "brand": d["brand"], "description": d["description"], "price": d["price"],
+                "source_price": d["source_price"], "image": d["image"], "category": d["category"],
+                "colors": d["colors"], "sizes": d["sizes"], "source": "ralawise",
+                "active": True, "imported_at": now,
+            }
+            await db.imported_products.update_one({"id": d["id"]}, {"$set": doc}, upsert=True)
+            _apply_imported_product(doc)
+            job["products_done"] = i + 1
 
-    for pid in product_ids:
-        p = PRODUCTS.get(pid)
-        if not p:
-            continue
-        changed = False
-        main = p.get("image")
-        if main and "r2.dev" not in str(main) and "/imported-products/" not in str(main):
-            m = await mirror(main)
-            if m:
-                p["image"] = m
-                changed = True
-        for c in (p.get("colors") or []):
-            ci = c.get("image")
-            if ci and "r2.dev" not in str(ci):
-                m = await mirror(ci)
-                if m:
-                    c["image"] = m
-                    changed = True
-        if changed:
-            try:
-                await db.imported_products.update_one(
-                    {"id": pid}, {"$set": {"image": p.get("image"), "colors": p.get("colors")}}
-                )
-            except Exception:
-                pass
+        # ---- Phase 2: mirror images to R2 (the slow part) ----
+        if mirror_images:
+            job["phase"] = "copying images to storage"
+            # collect distinct urls
+            url_to_docs: Dict[str, list] = {}
+            for d in docs:
+                for key, holder in [("main", d)] + [("colour", c) for c in d["colors"]]:
+                    u = holder.get("image")
+                    if u and "r2.dev" not in str(u) and not str(u).startswith("data:"):
+                        url_to_docs.setdefault(u, []).append(holder)
+            job["images_total"] = len(url_to_docs)
+
+            sem = asyncio.Semaphore(10)
+            done = 0
+            lock = asyncio.Lock()
+
+            async def do_one(u, holders):
+                nonlocal done
+                async with sem:
+                    try:
+                        mirrored = await _mirror_external_image(u)
+                    except Exception:
+                        mirrored = None
+                async with lock:
+                    done += 1
+                    job["images_done"] = done
+                    if mirrored:
+                        for h in holders:
+                            h["image"] = mirrored
+                    else:
+                        job["images_failed"] += 1
+
+            # process in batches so progress ticks up smoothly + we can persist
+            items = list(url_to_docs.items())
+            BATCH = 40
+            for start in range(0, len(items), BATCH):
+                chunk = items[start:start + BATCH]
+                await asyncio.gather(*[do_one(u, h) for u, h in chunk])
+                # persist the docs touched in this batch
+                touched = {h_id for _, hs in chunk for h_id in [id(h) for h in hs]}
+                # re-save every product (cheap enough; ensures colour image urls persist)
+            # persist all products' updated image + colours
+            for d in docs:
+                try:
+                    await db.imported_products.update_one(
+                        {"id": d["id"]},
+                        {"$set": {"image": d["image"], "colors": d["colors"]}}
+                    )
+                    p = PRODUCTS.get(d["id"])
+                    if p:
+                        p["image"] = d["image"]
+                        p["colors"] = d["colors"]
+                except Exception:
+                    pass
+
+        job["phase"] = "done"
+        job["finished"] = True
+    except Exception as e:
+        job["error"] = str(e)[:400]
+        job["phase"] = "failed"
+        job["finished"] = True
