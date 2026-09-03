@@ -121,9 +121,16 @@ async def mirror_external_image(url: str, folder: str = "imported-products") -> 
 
     try:
         async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            # Use real browser-like headers — supplier CDNs (pimber.ly, Ralawise,
+            # etc.) block obvious bots, so a bot UA silently fails the download.
             resp = await client.get(
                 url,
-                headers={"User-Agent": "Mozilla/5.0 (compatible; YourOwnPrintBot/1.0)"},
+                headers={
+                    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                                   "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"),
+                    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+                    "Referer": "https://www.yourownprint.co.uk/",
+                },
             )
             resp.raise_for_status()
             data = resp.content
