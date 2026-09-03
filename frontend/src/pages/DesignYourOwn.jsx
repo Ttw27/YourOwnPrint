@@ -4,7 +4,6 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import FontPicker from "../components/bold/FontPicker";
-import GarmentSilhouette from "../components/bold/GarmentSilhouette";
 import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
@@ -106,12 +105,17 @@ export default function DesignYourOwn() {
   useEffect(() => { setSelectedColour(null); }, [productId]);
   const garmentPrintArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
   const garmentPrintAreaBack = product?.print_area_back || garmentPrintArea;
-  // Print areas are a % of the canvas. On the traced garment silhouette the tee
-  // sits centred with the chest roughly in the middle, so use a chest-centred
-  // default box that matches the shape. Admins can still fine-tune per product
-  // in Admin → Designer Products; that stays the same across every colour.
-  const SILHOUETTE_PRINT_AREA = { x: 33, y: 30, w: 34, h: 44 };
-  const SILHOUETTE_PRINT_AREA_BACK = { x: 33, y: 26, w: 34, h: 46 };
+  // Print areas are a % of the canvas. The traced tee silhouette is centred and
+  // fills the frame, so the admin-set print_area (dragged in Admin → Designer
+  // Products) maps directly onto it — set it there and it applies here, the same
+  // across every colour. If a product has no admin print area saved, use a
+  // generous chest-centred default.
+  // Flat-colour fallback fills the whole canvas, so give a roomy default print
+  // area when a product has no admin-set one. When the product HAS a print area
+  // set in Admin → Designer Products, that's used (and stays the same across
+  // every colour).
+  const FLAT_COLOUR_PRINT_AREA = { x: 16, y: 14, w: 68, h: 70 };
+  const FLAT_COLOUR_PRINT_AREA_BACK = { x: 16, y: 12, w: 68, h: 72 };
   const rawPrintArea = view === "neck" ? NECK_LABEL_PRINT_AREA : view === "back" ? garmentPrintAreaBack : garmentPrintArea;
   const colourImageFront = selectedColour && product?.images_by_colour?.[selectedColour];
   const colourImageBack = selectedColour && product?.images_by_colour_back?.[selectedColour];
@@ -130,12 +134,15 @@ export default function DesignYourOwn() {
     if (selectedColour) return { type: "color", hex: selectedColourHex || "#e5e7eb" };
     return { type: "image", src: product?.image };
   })();
-  // On the silhouette use the chest-centred default that matches the traced
-  // shape (front/back). Real photos keep their admin-set print areas.
+  // On the silhouette, use the admin-set print area when the product has one
+  // (so dragging the box in admin actually controls the designer). Only fall
+  // back to the generous default when no print area has been set for the product.
   const printArea = (view === "neck")
     ? rawPrintArea
     : (garmentBackground.type === "color")
-      ? (view === "back" ? SILHOUETTE_PRINT_AREA_BACK : SILHOUETTE_PRINT_AREA)
+      ? (view === "back"
+          ? (product?.print_area_back ? garmentPrintAreaBack : FLAT_COLOUR_PRINT_AREA_BACK)
+          : (product?.print_area ? garmentPrintArea : FLAT_COLOUR_PRINT_AREA))
       : rawPrintArea;
   const unitPrice = product?.price ?? 0;
   const backPrintPrice = product?.back_print_price ?? 0;
@@ -931,9 +938,7 @@ export default function DesignYourOwn() {
                     <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-300 font-nunito font-extrabold">Neck label · approx 60 × 30 mm</div>
                   </div>
                 ) : garmentBackground.type === "color" ? (
-                  <div className="absolute inset-0 pointer-events-none grid place-items-center" data-testid="designer-flat-colour-bg">
-                    <GarmentSilhouette color={garmentBackground.hex} view={view} className="w-full h-full" />
-                  </div>
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: garmentBackground.hex }} data-testid="designer-flat-colour-bg" />
                 ) : (
                   <img src={garmentBackground.src} alt={product?.name || "garment"} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
                 )}
