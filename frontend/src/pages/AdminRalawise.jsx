@@ -1,7 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, Upload, CheckCircle2, Image as ImageIcon } from "lucide-react";
-import { ralawisePreview, ralawiseImport } from "../lib/api";
+import { Loader2, Upload, CheckCircle2, Image as ImageIcon, AlertTriangle } from "lucide-react";
+import { ralawisePreview, ralawiseImport, ralawiseStatus } from "../lib/api";
 
 /**
  * Admin — Ralawise importer. Upload the Ralawise spreadsheet (.xlsm/.xlsx) to
@@ -13,14 +13,19 @@ export default function AdminRalawise() {
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
+  const [progress, setProgress] = useState(null);  // live job status (stays on screen)
   const [mirror, setMirror] = useState(true);
   const fileRef = useRef(null);
+  const pollRef = useRef(null);
+
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   const onFile = (e) => {
     const f = e.target.files?.[0];
     setFile(f || null);
     setPreview(null);
     setResult(null);
+    setProgress(null);
   };
 
   const doPreview = async () => {
@@ -37,17 +42,46 @@ export default function AdminRalawise() {
 
   const doImport = async () => {
     if (!file) return toast.error("Choose the Ralawise file first.");
-    if (!window.confirm("Import/update all products from this file? Existing Ralawise products will be updated with images, colours and sizes. This can take a few minutes while images copy to storage.")) return;
+    if (!window.confirm("Import/update all products from this file? Existing Ralawise products will be updated with images, colours and sizes. Progress will show below.")) return;
     setBusy(true);
     setResult(null);
+    setProgress({ phase: "uploading file", finished: false });
     try {
-      const r = await ralawiseImport(file, mirror);
-      setResult(r);
-      toast.success(`Done — ${r.updated} updated, ${r.imported} new. Images are copying to storage in the background.`);
+      const start = await ralawiseImport(file, mirror);
+      const jobId = start.job_id;
+      if (!jobId) throw new Error("No job id returned");
+      setProgress({ phase: "starting", total: start.products, finished: false });
+      // Poll the status every 1.5s — this keeps a live view AND leaves errors on screen.
+      pollRef.current = setInterval(async () => {
+        try {
+          const st = await ralawiseStatus(jobId);
+          setProgress(st);
+          if (st.finished) {
+            clearInterval(pollRef.current); pollRef.current = null;
+            setBusy(false);
+            if (st.error) {
+              setResult({ failed: true, ...st });
+            } else {
+              setResult({ failed: false, ...st });
+              toast.success(`Done — ${st.updated} updated, ${st.imported} new.`);
+            }
+          }
+        } catch (err) {
+          // status fetch failed — keep the last progress on screen, note it
+          clearInterval(pollRef.current); pollRef.current = null;
+          setBusy(false);
+          setProgress((p) => ({ ...(p || {}), phase: "lost connection to job — it may still be running; re-scan Image Health in a few minutes", finished: true, error: "Couldn't reach the job status. The import may still be finishing in the background." }));
+        }
+      }, 1500);
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Import failed — try again, or split the file if it's very large.");
-    } finally { setBusy(false); }
+      setBusy(false);
+      const msg = e?.response?.data?.detail || e?.message || "Import failed to start.";
+      setProgress({ phase: "failed", finished: true, error: msg });
+      toast.error(msg);
+    }
   };
+
+  const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 font-nunito text-[#1a1a1a]">
@@ -82,7 +116,6 @@ export default function AdminRalawise() {
             {busy ? <Loader2 size={15} className="animate-spin" /> : null} Import / update products
           </button>
         </div>
-        {busy && <p className="text-xs text-[#4b5563] mt-3">Working… large files with image copying can take a few minutes. Leave this tab open.</p>}
       </div>
 
       {/* Preview summary */}
@@ -117,16 +150,69 @@ export default function AdminRalawise() {
         </div>
       )}
 
-      {/* Import result */}
-      {result && (
+      {/* Live progress — stays on screen through the whole job */}
+      {progress && !progress.error && !(result && !result.failed) && (
+        <div className="mt-6 bg-white border-2 border-[#dcfce7] rounded-3xl p-6" data-testid="ralawise-progress">
+          <h2 className="font-black text-lg flex items-center gap-2">
+            {progress.finished ? <CheckCircle2 className="text-[#7bc67e]" size={20} /> : <Loader2 className="animate-spin text-[#7bc67e]" size={20} />}
+            {progress.phase === "done" ? "Finishing up…" : `In progress — ${progress.phase || "starting"}`}
+          </h2>
+
+          {/* products bar */}
+          {typeof progress.total === "number" && progress.total > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-[#4b5563] mb-1">
+                <span>Products imported</span>
+                <span>{progress.products_done || 0} / {progress.total} ({pct(progress.products_done || 0, progress.total)}%)</span>
+              </div>
+              <div className="h-2.5 rounded-full bg-[#f0fdf4] overflow-hidden">
+                <div className="h-full bg-[#7bc67e] transition-all" style={{ width: `${pct(progress.products_done || 0, progress.total)}%` }} />
+              </div>
+            </div>
+          )}
+
+          {/* images bar */}
+          {progress.images_total > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-[#4b5563] mb-1">
+                <span>Images copied to storage</span>
+                <span>{progress.images_done || 0} / {progress.images_total} ({pct(progress.images_done || 0, progress.images_total)}%){progress.images_failed ? ` · ${progress.images_failed} skipped` : ""}</span>
+              </div>
+              <div className="h-2.5 rounded-full bg-[#f0fdf4] overflow-hidden">
+                <div className="h-full bg-[#7bc67e] transition-all" style={{ width: `${pct(progress.images_done || 0, progress.images_total)}%` }} />
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-[#4b5563] mt-4">You can leave this page — the import keeps running. This panel updates live while it's open.</p>
+        </div>
+      )}
+
+      {/* Persistent error — stays until you start again */}
+      {((progress && progress.error) || (result && result.failed)) && (
+        <div className="mt-6 bg-rose-50 border-2 border-rose-200 rounded-3xl p-6" data-testid="ralawise-error">
+          <h2 className="font-black text-lg flex items-center gap-2 text-rose-700"><AlertTriangle size={20} /> Import failed</h2>
+          <p className="text-sm text-rose-700 mt-2">{(result && result.error) || (progress && progress.error)}</p>
+          <p className="text-xs text-[#4b5563] mt-3">
+            {(progress && progress.products_done)
+              ? `${progress.products_done} products were imported before this stopped. It's safe to try again — re-running updates, it won't duplicate.`
+              : "Nothing was imported. Check the file and try again."}
+          </p>
+        </div>
+      )}
+
+      {/* Success result */}
+      {result && !result.failed && (
         <div className="mt-6 bg-white border-2 border-[#7bc67e] rounded-3xl p-6" data-testid="ralawise-result">
           <h2 className="font-black text-lg flex items-center gap-2"><CheckCircle2 className="text-[#7bc67e]" size={20} /> Import complete</h2>
           <div className="flex gap-6 mt-3 flex-wrap">
-            <Stat label="Products" value={result.products} />
+            <Stat label="Products" value={result.total} />
             <Stat label="Updated" value={result.updated} />
             <Stat label="New" value={result.imported} />
+            {result.images_total > 0 && <Stat label="Images copied" value={result.images_done} />}
+            {result.images_failed > 0 && <Stat label="Images skipped" value={result.images_failed} warn />}
           </div>
-          <p className="text-sm text-[#4b5563] mt-3">Products are live now with their images and colour swatches. Images are being copied to our own storage in the background over the next few minutes — no need to wait. Re-run an Image Health scan in a bit to confirm.</p>
+          <p className="text-sm text-[#4b5563] mt-3">Products are live now with their images and colour swatches. Re-run an Image Health scan to confirm.</p>
         </div>
       )}
     </div>
