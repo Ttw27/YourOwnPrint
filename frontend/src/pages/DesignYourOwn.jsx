@@ -8,7 +8,7 @@ import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRem
 import usePageCopy from "../hooks/usePageCopy";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { toast } from "sonner";
-import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock } from "lucide-react";
+import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock, Eye } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import { MobileToolBar, MobileSheet, useIsMobile } from "../components/bold/MobileDesignerShell";
 
@@ -55,6 +55,7 @@ export default function DesignYourOwn() {
   });
   const [sizeQtys, setSizeQtys] = useState({});
   const [view, setView] = useState("front");                 // "front" | "back" | "neck"
+  const [previewMode, setPreviewMode] = useState(false);     // true = zoomed-out clean preview, no green box
   const [selectedColour, setSelectedColour] = useState(null); // colour name, or null for the product's default
   const [aiUsage, setAiUsage] = useState(null); // {used, limit, remaining} once we know the customer's logged in
   const isLoggedIn = !!getCustomerToken();
@@ -900,6 +901,13 @@ export default function DesignYourOwn() {
                   className={`px-4 py-1.5 rounded-full font-nunito font-extrabold text-sm transition-colors ${view === "neck" ? "bg-[#7bc67e] text-[#1a1a1a]" : "text-[#4b5563] hover:text-[#1a1a1a]"}`}
                 >Neck label {neckEnabled && <span className="ml-1 text-[10px]">+£{neckLabelPrice.toFixed(2)}</span>}</button>
               </div>
+              <button
+                data-testid="designer-preview-toggle"
+                onClick={() => { setPreviewMode((v) => !v); setSelectedId(null); setEditingId(null); }}
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 font-nunito font-extrabold text-sm border-2 transition-colors ${previewMode ? "bg-[#1a1a1a] text-white border-[#1a1a1a]" : "bg-white text-[#1a1a1a] border-[#dcfce7] hover:border-[#7bc67e]"}`}
+              >
+                {previewMode ? <><Pencil size={14} /> Back to editing</> : <><Eye size={14} /> Preview</>}
+              </button>
               <div className="flex items-center gap-2">
                 <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-back-toggle">
                   <input
@@ -933,6 +941,32 @@ export default function DesignYourOwn() {
                 className={`relative bg-white rounded-2xl overflow-hidden select-none mx-auto max-h-[calc(100vh-190px)] ${view === "neck" ? "aspect-[2/1]" : "aspect-[4/5]"}`}
                 data-testid="design-canvas"
               >
+                {/* Zoom layer: in edit mode we zoom into the print area so the
+                    customer gets a big working canvas; Preview zooms back out to
+                    show the whole garment as it'll look. The design coordinates
+                    are all relative to the print box, so scaling the view keeps
+                    them valid — we're only changing zoom, not the data. */}
+                <div
+                  className="absolute inset-0"
+                  style={(() => {
+                    if (previewMode || view === "neck") {
+                      return { transform: "none", transition: "transform 0.35s ease" };
+                    }
+                    // Zoom so the print area fills ~86% of the canvas, centred on it.
+                    const pad = 0.86;
+                    const scale = Math.max(1, Math.min(2.4, pad / (Math.max(printArea.w, printArea.h) / 100)));
+                    const cx = printArea.x + printArea.w / 2;   // % centre of print box
+                    const cy = printArea.y + printArea.h / 2;
+                    // translate so the print-box centre moves to the canvas centre, then scale
+                    const tx = (50 - cx);
+                    const ty = (50 - cy);
+                    return {
+                      transform: `scale(${scale}) translate(${tx}%, ${ty}%)`,
+                      transformOrigin: "center center",
+                      transition: "transform 0.35s ease",
+                    };
+                  })()}
+                >
                 {view === "neck" ? (
                   <div className="absolute inset-0 bg-gradient-to-b from-neutral-50 to-neutral-100 grid place-items-center pointer-events-none">
                     <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-300 font-nunito font-extrabold">Neck label · approx 60 × 30 mm</div>
@@ -949,12 +983,12 @@ export default function DesignYourOwn() {
                 {/* Print area rectangle — the design overlay lives strictly inside this box */}
                 <div
                   ref={printAreaRef}
-                  className="absolute border-2 border-dashed border-[#7bc67e]"
+                  className={`absolute ${previewMode ? "" : "border-2 border-dashed border-[#7bc67e]"}`}
                   style={{
                     left: `${printArea.x}%`, top: `${printArea.y}%`, width: `${printArea.w}%`, height: `${printArea.h}%`,
                     // White halo keeps the boundary readable on dark garments —
-                    // the old black/25 border was invisible on black/navy.
-                    boxShadow: "0 0 0 1px rgba(255,255,255,0.85)",
+                    // hidden in preview so the customer sees a clean mockup.
+                    boxShadow: previewMode ? "none" : "0 0 0 1px rgba(255,255,255,0.85)",
                   }}
                   data-testid="design-print-area"
                 >
@@ -1067,6 +1101,7 @@ export default function DesignYourOwn() {
                       </div>
                     );
                   })}
+                </div>
                 </div>
               </div>
             </div>
