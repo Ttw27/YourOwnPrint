@@ -242,52 +242,16 @@ export default function AdminProductSettings() {
                 </button>
                 {openId === p.id && (
                   <div className="mt-4 space-y-3 border-t border-[#dcfce7] pt-4">
+                    {/* Basics — name, price, category, descriptions (in ProductOverridePanel) */}
                     <ProductOverridePanel product={p} onSaved={reload} />
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      <Lab label="Brand"><input data-testid={`aps-brand-${p.id}`} value={p.brand || ""} onChange={(e) => update(p.id, { brand: e.target.value })} className={ic} /></Lab>
-                      <Lab label="SKU"><input data-testid={`aps-sku-${p.id}`} value={p.sku || ""} onChange={(e) => update(p.id, { sku: e.target.value })} className={ic} /></Lab>
-                    </div>
-                    <Lab label="Full description"><textarea data-testid={`aps-desc-${p.id}`} value={p.description_full || ""} onChange={(e) => update(p.id, { description_full: e.target.value })} rows={3} className={ic + " resize-none"} /></Lab>
-                    <Lab label="Size guide image URL (optional)"><input data-testid={`aps-sg-img-${p.id}`} value={p.size_guide_image || ""} onChange={(e) => update(p.id, { size_guide_image: e.target.value })} className={ic} placeholder="https://…" /></Lab>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Size guide table</div>
-                      <div className="space-y-1.5">
-                        {(p.size_guide_table || []).map((r, i) => (
-                          <div key={i} className="grid grid-cols-12 gap-1 items-center" data-testid={`aps-sg-row-${p.id}-${i}`}>
-                            <input value={r.size || ""} onChange={(e) => setRow(p.id, i, "size", e.target.value)} placeholder="Size" className={ic + " col-span-3"} />
-                            <input value={r.chest || ""} onChange={(e) => setRow(p.id, i, "chest", e.target.value)} placeholder="Chest cm" className={ic + " col-span-4"} />
-                            <input value={r.length || ""} onChange={(e) => setRow(p.id, i, "length", e.target.value)} placeholder="Length cm" className={ic + " col-span-4"} />
-                            <button onClick={() => delRow(p.id, i)} className="col-span-1 grid place-items-center text-rose-500"><Trash2 size={12} /></button>
-                          </div>
-                        ))}
+
+                    {/* Product details */}
+                    <Section title="Product details" hint="Brand, code and the full description shown on the product page.">
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        <Lab label="Brand"><input data-testid={`aps-brand-${p.id}`} value={p.brand || ""} onChange={(e) => update(p.id, { brand: e.target.value })} className={ic} /></Lab>
+                        <Lab label="Product code (SKU)"><input data-testid={`aps-sku-${p.id}`} value={p.sku || ""} onChange={(e) => update(p.id, { sku: e.target.value })} className={ic} /></Lab>
                       </div>
-                      <button data-testid={`aps-sg-add-${p.id}`} onClick={() => addRow(p.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={11} /> Add size row</button>
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Where customers can print on this</div>
-                      <div className="text-[11px] text-[#4b5563] mb-2">Tick which print locations are physically possible on this garment. Disallowed options are hidden from customers in the product page and designer.</div>
-                      <div className="flex flex-wrap gap-2" data-testid={`aps-placements-${p.id}`}>
-                        {ALL_PLACEMENTS.map((opt) => {
-                          const list = Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS;
-                          const on = list.includes(opt);
-                          return (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => {
-                                const next = on ? list.filter((x) => x !== opt) : [...list, opt];
-                                update(p.id, { allowed_placements: next });
-                              }}
-                              className={`px-3 py-1 rounded-full text-xs font-nunito font-extrabold border-2 transition ${on ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#e5e7eb] text-[#4b5563] hover:border-[#7bc67e]"}`}
-                              data-testid={`aps-placement-${p.id}-${opt}`}
-                            >
-                              {on ? "✓ " : ""}{PLACEMENT_LABELS[opt]}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-3" data-testid={`aps-fit-industry-row-${p.id}`}>
+                      <Lab label="Full description"><textarea data-testid={`aps-desc-${p.id}`} value={p.description_full || ""} onChange={(e) => update(p.id, { description_full: e.target.value })} rows={3} className={ic + " resize-none"} /></Lab>
                       <div>
                         <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Gender / fit</div>
                         <select
@@ -299,8 +263,21 @@ export default function AdminProductSettings() {
                           {GENDER_FIT_VALUES.map((g) => <option key={g} value={g}>{g[0].toUpperCase() + g.slice(1)}</option>)}
                         </select>
                       </div>
+                    </Section>
+
+                    {/* Photos */}
+                    <Section title="Photos" hint="Extra product photos shown as thumbnails on the product page. The main image is set above; these are additional shots (back view, lifestyle, detail). Up to 8.">
+                      <ImageGalleryEditor
+                        productId={p.id}
+                        urls={Array.isArray(p.image_gallery) ? p.image_gallery : []}
+                        onChange={(next) => update(p.id, { image_gallery: next })}
+                      />
+                    </Section>
+
+                    {/* Where it shows on the site */}
+                    <Section title="Where it shows on the site" hint="Choose which industry pages this product appears on, and whether it features in special collections.">
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Which industry pages this appears on</div>
+                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Industry pages this appears on</div>
                         <div className="flex flex-wrap gap-1.5">
                           {INDUSTRY_SLUGS.map((slug) => {
                             const list = Array.isArray(p.industry_tags) ? p.industry_tags : [];
@@ -322,80 +299,120 @@ export default function AdminProductSettings() {
                           })}
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 bg-[#fef3c7] border-2 border-[#fde68a] rounded-xl p-3" data-testid={`aps-workforce-row-${p.id}`}>
-                      <label className="inline-flex items-center gap-2 cursor-pointer flex-1">
-                        <input type="checkbox" checked={!!p.workforce_eligible} onChange={(e) => update(p.id, { workforce_eligible: e.target.checked })} className="w-4 h-4 accent-amber-500" data-testid={`aps-workforce-${p.id}`} />
-                        <div>
-                          <div className="text-sm font-nunito font-extrabold">Include in &quot;Kit Your Workforce&quot;</div>
-                          <div className="text-[11px] text-[#4b5563]">Show this garment in the /workforce mixed-bulk builder.</div>
-                        </div>
+                      <label className="flex items-center justify-between gap-3 bg-[#fef3c7] border-2 border-[#fde68a] rounded-xl p-3 cursor-pointer" data-testid={`aps-workforce-row-${p.id}`}>
+                        <span className="inline-flex items-center gap-2 flex-1">
+                          <input type="checkbox" checked={!!p.workforce_eligible} onChange={(e) => update(p.id, { workforce_eligible: e.target.checked })} className="w-4 h-4 accent-amber-500" data-testid={`aps-workforce-${p.id}`} />
+                          <span>
+                            <span className="block text-sm font-nunito font-extrabold">Show in &quot;Kit Your Workforce&quot;</span>
+                            <span className="block text-[11px] text-[#4b5563]">Appears in the /workforce mixed-bulk builder.</span>
+                          </span>
+                        </span>
+                        <Briefcase size={16} className="text-amber-600" />
                       </label>
-                      <Briefcase size={16} className="text-amber-600" />
-                    </div>
-                    <div className="flex items-center justify-between gap-3 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-xl p-3" data-testid={`aps-specials-row-${p.id}`}>
-                      <label className="inline-flex items-center gap-2 cursor-pointer flex-1">
-                        <input type="checkbox" checked={!!p.specials_eligible} onChange={(e) => update(p.id, { specials_eligible: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-specials-${p.id}`} />
-                        <div>
-                          <div className="text-sm font-nunito font-extrabold">Include in &quot;Your Own Print Specials&quot;</div>
-                          <div className="text-[11px] text-[#4b5563]">Starter lineup, no MOQ, single breast-logo print. Shown on /specials.</div>
-                        </div>
+                      <label className="flex items-center justify-between gap-3 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-xl p-3 cursor-pointer" data-testid={`aps-specials-row-${p.id}`}>
+                        <span className="inline-flex items-center gap-2 flex-1">
+                          <input type="checkbox" checked={!!p.specials_eligible} onChange={(e) => update(p.id, { specials_eligible: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-specials-${p.id}`} />
+                          <span>
+                            <span className="block text-sm font-nunito font-extrabold">Show in &quot;Your Own Print Specials&quot;</span>
+                            <span className="block text-[11px] text-[#4b5563]">Starter lineup, no minimum order. Shown on /specials.</span>
+                          </span>
+                        </span>
+                        <Sparkles size={16} className="text-[#7bc67e]" />
                       </label>
-                      <Sparkles size={16} className="text-[#7bc67e]" />
-                    </div>
-                    <div className="flex items-center justify-between gap-3 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-xl p-3" data-testid={`aps-bestseller-row-${p.id}`}>
-                      <label className="inline-flex items-center gap-2 cursor-pointer flex-1">
-                        <input type="checkbox" checked={!!p.is_bestseller} onChange={(e) => update(p.id, { is_bestseller: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-bestseller-${p.id}`} />
-                        <div>
-                          <div className="text-sm font-nunito font-extrabold">Show in Best Sellers on the homepage</div>
-                          <div className="text-[11px] text-[#4b5563]">Shows in the homepage best-sellers strip. If nothing's flagged for a category, one product from it shows automatically instead.</div>
-                        </div>
+                      <label className="flex items-center justify-between gap-3 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-xl p-3 cursor-pointer" data-testid={`aps-bestseller-row-${p.id}`}>
+                        <span className="inline-flex items-center gap-2 flex-1">
+                          <input type="checkbox" checked={!!p.is_bestseller} onChange={(e) => update(p.id, { is_bestseller: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-bestseller-${p.id}`} />
+                          <span>
+                            <span className="block text-sm font-nunito font-extrabold">Show in Best Sellers on the homepage</span>
+                            <span className="block text-[11px] text-[#4b5563]">Features in the homepage best-sellers strip.</span>
+                          </span>
+                        </span>
                       </label>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 bg-[#eef2ff] border-2 border-[#c7d2fe] rounded-xl p-3" data-testid={`aps-designeronly-row-${p.id}`}>
-                      <label className="inline-flex items-center gap-2 cursor-pointer flex-1">
-                        <input type="checkbox" checked={!!p.designer_only} onChange={(e) => update(p.id, { designer_only: e.target.checked })} className="w-4 h-4 accent-[#4338ca]" data-testid={`aps-designeronly-${p.id}`} />
-                        <div>
-                          <div className="text-sm font-nunito font-extrabold">Online Designer product only</div>
-                          <div className="text-[11px] text-[#4b5563]">Hides this from normal shop categories, industry pages and Find My Kit — it appears only in the Online Designer collection and the Design Your Own tool. Use for blank canvases sold for personalisation.</div>
-                        </div>
+                      <label className="flex items-center justify-between gap-3 bg-[#eef2ff] border-2 border-[#c7d2fe] rounded-xl p-3 cursor-pointer" data-testid={`aps-designeronly-row-${p.id}`}>
+                        <span className="inline-flex items-center gap-2 flex-1">
+                          <input type="checkbox" checked={!!p.designer_only} onChange={(e) => update(p.id, { designer_only: e.target.checked })} className="w-4 h-4 accent-[#4338ca]" data-testid={`aps-designeronly-${p.id}`} />
+                          <span>
+                            <span className="block text-sm font-nunito font-extrabold">Design Your Own product only</span>
+                            <span className="block text-[11px] text-[#4b5563]">Hidden from shop categories, industry pages and Find My Kit — appears only in the Design Your Own tool. Use for blank canvases sold for personalisation.</span>
+                          </span>
+                        </span>
                       </label>
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Image gallery (extra product photos — shown as thumbnails)</div>
-                      <div className="text-[11px] text-[#4b5563] mb-2">Paste public image URLs (https://…) — up to 8. Main product image is always first; these are additional shots (back view, lifestyle, detail).</div>
-                      <ImageGalleryEditor
-                        productId={p.id}
-                        urls={Array.isArray(p.image_gallery) ? p.image_gallery : []}
-                        onChange={(next) => update(p.id, { image_gallery: next })}
-                      />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">&quot;Customers also bought&quot; (cross-sells on this PDP)</div>
-                      <div className="text-[11px] text-[#4b5563] mb-2">Pick up to 6 products to show on this PDP. Leave empty to auto-pick from the same category.</div>
-                      <CrossSellPicker
-                        selectedIds={Array.isArray(p.also_bought) ? p.also_bought : []}
-                        allProducts={allProductsLite}
-                        excludeId={p.id}
-                        maxItems={6}
-                        onChange={(next) => update(p.id, { also_bought: next })}
-                        testid={`aps-also-bought-${p.id}`}
-                      />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">&quot;Match with&quot; (complete-the-look complementary items)</div>
-                      <div className="text-[11px] text-[#4b5563] mb-2">Pick up to 4 complementary products (e.g. matching joggers, beanie). Hidden on PDP if empty (no auto-fallback).</div>
-                      <CrossSellPicker
-                        selectedIds={Array.isArray(p.match_with) ? p.match_with : []}
-                        allProducts={allProductsLite}
-                        excludeId={p.id}
-                        maxItems={4}
-                        accent="amber"
-                        onChange={(next) => update(p.id, { match_with: next })}
-                        testid={`aps-match-with-${p.id}`}
-                      />
-                    </div>
-                    <div>
+                    </Section>
+
+                    {/* Printing */}
+                    <Section title="Printing" hint="Tick which print locations are physically possible on this garment. Anything unticked is hidden from customers on the product page and in the designer.">
+                      <div className="flex flex-wrap gap-2" data-testid={`aps-placements-${p.id}`}>
+                        {ALL_PLACEMENTS.map((opt) => {
+                          const list = Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS;
+                          const on = list.includes(opt);
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => {
+                                const next = on ? list.filter((x) => x !== opt) : [...list, opt];
+                                update(p.id, { allowed_placements: next });
+                              }}
+                              className={`px-3 py-1 rounded-full text-xs font-nunito font-extrabold border-2 transition ${on ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#e5e7eb] text-[#4b5563] hover:border-[#7bc67e]"}`}
+                              data-testid={`aps-placement-${p.id}-${opt}`}
+                            >
+                              {on ? "✓ " : ""}{PLACEMENT_LABELS[opt]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Section>
+
+                    {/* Size guide */}
+                    <Section title="Size guide" hint="Optional. A size chart shown on the product page.">
+                      <Lab label="Size guide image URL"><input data-testid={`aps-sg-img-${p.id}`} value={p.size_guide_image || ""} onChange={(e) => update(p.id, { size_guide_image: e.target.value })} className={ic} placeholder="https://…" /></Lab>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Size guide table</div>
+                        <div className="space-y-1.5">
+                          {(p.size_guide_table || []).map((r, i) => (
+                            <div key={i} className="grid grid-cols-12 gap-1 items-center" data-testid={`aps-sg-row-${p.id}-${i}`}>
+                              <input value={r.size || ""} onChange={(e) => setRow(p.id, i, "size", e.target.value)} placeholder="Size" className={ic + " col-span-3"} />
+                              <input value={r.chest || ""} onChange={(e) => setRow(p.id, i, "chest", e.target.value)} placeholder="Chest cm" className={ic + " col-span-4"} />
+                              <input value={r.length || ""} onChange={(e) => setRow(p.id, i, "length", e.target.value)} placeholder="Length cm" className={ic + " col-span-4"} />
+                              <button onClick={() => delRow(p.id, i)} className="col-span-1 grid place-items-center text-rose-500"><Trash2 size={12} /></button>
+                            </div>
+                          ))}
+                        </div>
+                        <button data-testid={`aps-sg-add-${p.id}`} onClick={() => addRow(p.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={11} /> Add size row</button>
+                      </div>
+                    </Section>
+
+                    {/* Related products */}
+                    <Section title="Related products" hint="Suggest other products on this product's page.">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Customers also bought</div>
+                        <div className="text-[11px] text-[#4b5563] mb-2">Up to 6. Leave empty to auto-pick from the same category.</div>
+                        <CrossSellPicker
+                          selectedIds={Array.isArray(p.also_bought) ? p.also_bought : []}
+                          allProducts={allProductsLite}
+                          excludeId={p.id}
+                          maxItems={6}
+                          onChange={(next) => update(p.id, { also_bought: next })}
+                          testid={`aps-also-bought-${p.id}`}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Match with (complete the look)</div>
+                        <div className="text-[11px] text-[#4b5563] mb-2">Up to 4 complementary items (e.g. matching joggers, beanie). Hidden if empty.</div>
+                        <CrossSellPicker
+                          selectedIds={Array.isArray(p.match_with) ? p.match_with : []}
+                          allProducts={allProductsLite}
+                          excludeId={p.id}
+                          maxItems={4}
+                          accent="amber"
+                          onChange={(next) => update(p.id, { match_with: next })}
+                          testid={`aps-match-with-${p.id}`}
+                        />
+                      </div>
+                    </Section>
+
+                    {/* Bulk pricing */}
+                    <Section title="Bulk pricing" hint="Optional. Give discounts for larger quantities.">
                       <label className="inline-flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" checked={!!p.bulk_pricing_enabled} onChange={(e) => update(p.id, { bulk_pricing_enabled: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" data-testid={`aps-bulk-${p.id}`} />
                         <span className="text-sm font-nunito font-extrabold">Give discounts for larger quantities</span>
@@ -417,7 +434,7 @@ export default function AdminProductSettings() {
                           <button data-testid={`aps-bulk-add-${p.id}`} onClick={() => addOverride(p.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={11} /> Add override</button>
                         </div>
                       )}
-                    </div>
+                    </Section>
                     <div className="flex justify-end">
                       <button data-testid={`aps-save-${p.id}`} onClick={() => save(p)} disabled={busy} className="inline-flex items-center gap-1.5 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold text-xs px-4 py-2 rounded-full"><Save size={11} /> Save</button>
                     </div>
@@ -446,6 +463,16 @@ export default function AdminProductSettings() {
 
 const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7bc67e]";
 function Lab({ label, children }) { return <div><div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">{label}</div>{children}</div>; }
+// Shopify-style section card — a titled group of related fields with breathing room.
+function Section({ title, hint, children }) {
+  return (
+    <div className="bg-white border-2 border-[#eef2f7] rounded-2xl p-4 sm:p-5">
+      <div className="font-nunito font-black text-sm text-[#1a1a1a]">{title}</div>
+      {hint && <div className="text-[11px] text-[#4b5563] mt-0.5 mb-3">{hint}</div>}
+      <div className={hint ? "space-y-3" : "space-y-3 mt-3"}>{children}</div>
+    </div>
+  );
+}
 
 
 /**
