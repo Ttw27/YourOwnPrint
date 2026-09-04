@@ -2281,6 +2281,12 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
     PRODUCTS[product_id]["designer_image_back"] = payload.designer_image_back or None
     PRODUCTS[product_id]["designer_print_area_back"] = pa_back
     PRODUCTS[product_id]["designer_images_by_colour_back"] = payload.designer_images_by_colour_back or {}
+    # Custom colour list: apply immediately so the live designer reflects it
+    # without waiting for a server restart. Empty list / None leaves the garment
+    # default in place.
+    if payload.designer_colors is not None:
+        if payload.designer_colors:
+            PRODUCTS[product_id]["colors"] = payload.designer_colors
     if payload.composition is not None:
         PRODUCTS[product_id]["composition"] = payload.composition or None
     if payload.description_long is not None:
