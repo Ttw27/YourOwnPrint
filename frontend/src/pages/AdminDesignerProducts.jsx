@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { fetchAdminDesignerProducts, updateDesignerSettings, uploadAdminImage } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon, ChevronLeft, ChevronRight, Upload, Plus } from "lucide-react";
+import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon, ChevronLeft, ChevronRight, Upload, Plus, Trash2 } from "lucide-react";
 
 const PAGE_SIZE = 25;
 const DEFAULT_PA = { x: 22, y: 20, w: 56, h: 55 };
@@ -45,8 +45,26 @@ export default function AdminDesignerProducts() {
 
   // ---- Colour list editing ----
   const setColours = (id, colors) => update(id, { colors });
-  const addColour = (p) => setColours(p.id, [...(p.colors || []), { name: "New colour", hex: "#888888" }]);
-  const removeColour = (p, idx) => setColours(p.id, (p.colors || []).filter((_, i) => i !== idx));
+  const addColour = (p) => {
+    const list = p.colors || [];
+    // Don't stack multiple unnamed "New colour" rows — nudge to rename the existing one.
+    if (list.some((c) => (c.name || "").trim().toLowerCase() === "new colour")) {
+      toast("Rename the existing 'New colour' first, then add another.");
+      return;
+    }
+    setColours(p.id, [...list, { name: "New colour", hex: "#888888" }]);
+  };
+  const removeColour = (p, idx) => {
+    if (idx < 0) return;
+    const removed = (p.colors || [])[idx];
+    const nextColors = (p.colors || []).filter((_, i) => i !== idx);
+    // Also drop any per-colour photo tied to that colour name, so it can't
+    // linger as an orphan in the photo list.
+    const imgs = { ...(p.designer_images_by_colour || {}) };
+    const imgsBack = { ...(p.designer_images_by_colour_back || {}) };
+    if (removed) { delete imgs[removed.name]; delete imgsBack[removed.name]; }
+    update(p.id, { colors: nextColors, designer_images_by_colour: imgs, designer_images_by_colour_back: imgsBack });
+  };
   const renameColour = (p, idx, name) => setColours(p.id, (p.colors || []).map((c, i) => i === idx ? { ...c, name } : c));
   const recolourColour = (p, idx, hex) => setColours(p.id, (p.colors || []).map((c, i) => i === idx ? { ...c, hex } : c));
 
@@ -247,7 +265,8 @@ export default function AdminDesignerProducts() {
                                     {img ? <img src={img} className="w-full h-full object-contain" alt="" /> : <span className="w-full h-full block" style={{ background: c.hex || "#ccc" }} />}
                                   </div>
                                   <span className="text-[10px] font-bold truncate flex-1">{c.name}</span>
-                                  {img && <button onClick={() => clearColourImage(p, c.name)} className="text-rose-500 hover:bg-rose-50 rounded-full p-1"><X size={10} /></button>}
+                                  {img && <button onClick={() => clearColourImage(p, c.name)} className="text-rose-500 hover:bg-rose-50 rounded-full p-1" title="Remove photo"><X size={10} /></button>}
+                                  <button onClick={() => removeColour(p, (p.colors || []).findIndex((x) => x.name === c.name))} className="text-rose-500 hover:bg-rose-50 rounded-full p-1" title="Remove this colour"><Trash2 size={10} /></button>
                                   <label className="text-[9px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-1.5 py-1 hover:bg-[#f0fdf4] cursor-pointer whitespace-nowrap">
                                     {uploadingId === key ? <Loader2 size={9} className="animate-spin" /> : <Upload size={9} />}
                                     <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadColourImage(p, c.name, e.target.files[0])} />
