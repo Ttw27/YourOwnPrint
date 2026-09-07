@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { fetchPortfolio } from "../../lib/api";
+import { fetchPortfolio, mediaUrl } from "../../lib/api";
 import { ChevronLeft, ChevronRight, Loader2, Image as ImageIcon } from "lucide-react";
 import { WhatsAppInline } from "./WhatsAppFAB";
 
@@ -105,7 +105,7 @@ export default function PortfolioCarousel({
             data-testid={`${testid}-item-${it.id}`}
           >
             <img
-              src={it.image_url}
+              src={mediaUrl(it.image_url)}
               alt={it.alt_text || it.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
@@ -124,7 +124,7 @@ export default function PortfolioCarousel({
           data-testid={`${testid}-lightbox`}
         >
           <div className="max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
-            <img src={lightbox.image_url} alt={lightbox.alt_text || lightbox.title} className="w-full max-h-[80vh] object-contain rounded-2xl bg-white" />
+            <img src={mediaUrl(lightbox.image_url)} alt={lightbox.alt_text || lightbox.title} className="w-full max-h-[80vh] object-contain rounded-2xl bg-white" />
             {lightbox.title && (
               <div className="text-white mt-3">
                 <div className="font-black text-lg">{lightbox.title}</div>
