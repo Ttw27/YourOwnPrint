@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchSportsOutfitConfig, submitQuoteRequest, uploadArtwork } from "../lib/api";
+import { fetchSportsOutfitConfig, submitQuoteRequest, uploadArtwork, mediaUrl } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { toast } from "sonner";
 import {
@@ -292,7 +292,7 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
                 className="w-full text-left p-3 flex items-center gap-3"
               >
                 {variant.image
-                  ? <img src={variant.image} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" />
+                  ? <img src={mediaUrl(variant.image)} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" />
                   : <div className="w-16 h-16 rounded-xl bg-[#dcfce7] grid place-items-center flex-shrink-0"><Check size={22} className="text-[#7bc67e]" /></div>}
                 <div className="flex-1 min-w-0">
                   <div className="font-extrabold text-sm truncate">{variant.brand} {variant.name}</div>

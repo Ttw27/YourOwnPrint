@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchPortfolio, fetchReviewsAggregate } from "../lib/api";
+import { fetchPortfolio, fetchReviewsAggregate, mediaUrl } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
@@ -231,7 +231,7 @@ export default function TeamsSchools() {
               {portfolio.map((it) => (
                 <div key={it.id} className="group rounded-2xl overflow-hidden bg-white border-2 border-[#dcfce7]">
                   <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                    <img src={it.image_url} alt={it.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src={mediaUrl(it.image_url)} alt={it.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   </div>
                   <div className="p-3">
                     <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">{it.category}</div>

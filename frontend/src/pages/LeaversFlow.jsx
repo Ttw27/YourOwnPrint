@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversCheckout, fetchPortfolio, api } from "../lib/api";
+import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversCheckout, fetchPortfolio, api, mediaUrl } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { toast } from "sonner";
 import { ArrowRight, CheckCircle2, GraduationCap, Sparkles, Loader2, ShieldCheck, Package, Upload, ImageIcon, Users, FileText, Info } from "lucide-react";
@@ -474,7 +474,7 @@ function DesignLibraryGrid({ items, selectedId, onSelect, testidPrefix }) {
             data-testid={`${testidPrefix}-${it.id}`}
           >
             <div className="aspect-square overflow-hidden bg-[#f0fdf4] relative">
-              <img src={it.image_url} alt={it.alt_text || it.title} className="w-full h-full object-cover" loading="lazy" />
+              <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover" loading="lazy" />
               {active && <div className="absolute top-2 right-2 bg-[#7bc67e] text-[#1a1a1a] rounded-full p-1"><CheckCircle2 size={16} /></div>}
             </div>
             <div className="p-2">

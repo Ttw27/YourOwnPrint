@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories } from "../lib/api";
+import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl } from "../lib/api";
 import { Upload, Trash2, Star, Eye, EyeOff, Loader2, Save, Image as ImageIcon } from "lucide-react";
 
 function fileToDataUrl(file) {
@@ -154,7 +154,7 @@ export default function AdminPortfolio() {
             {items.map((it) => (
               <div key={it.id} className={`bg-white border-2 rounded-3xl overflow-hidden ${it.is_hidden ? "opacity-50 border-[#fee2e2]" : "border-[#dcfce7]"}`} data-testid={`admin-portfolio-row-${it.id}`}>
                 <div className="aspect-square bg-[#f0fdf4] relative">
-                  <img src={it.image_url} alt={it.alt_text || it.title} className="w-full h-full object-cover" />
+                  <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover" />
                   {it.featured && <span className="absolute top-2 left-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#1a1a1a]">Featured</span>}
                 </div>
                 <div className="p-4 space-y-2">
