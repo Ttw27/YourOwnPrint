@@ -3,6 +3,17 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
+// Portfolio (and some other) images are served by the backend at a relative
+// "/api/…" path. On the live site the frontend is on Vercel while the API is on
+// Railway, so a bare "/api/…" src resolves to Vercel and 404s. This prefixes any
+// relative /api path with the real backend origin; absolute URLs pass through.
+export function mediaUrl(u) {
+  if (!u) return u;
+  if (/^(https?:|data:|blob:)/i.test(u)) return u;      // already absolute
+  if (u.startsWith("/api/")) return `${BACKEND_URL}${u}`;
+  return u;
+}
+
 export const api = axios.create({ baseURL: API });
 
 // ----- Admin auth (token in localStorage) -----
