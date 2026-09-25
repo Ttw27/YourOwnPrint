@@ -1,0 +1,228 @@
+# YourOwnPrint — Project Guide for Claude Code
+
+UK custom-print & workwear e-commerce platform (yourownprint.co.uk), Leicester-based.
+A purpose-built standalone site replacing a previous Shopify + Qtomiser setup, for lower
+platform cost and full control. Owner: Tim (TEZL GROUP LTD).
+
+This file is the working brief. Read it before making changes.
+
+---
+
+## 1. Tech stack & where things run
+
+| Layer     | Tech                              | Host                                                        |
+|-----------|-----------------------------------|-------------------------------------------------------------|
+| Frontend  | React + Tailwind (CRA + **craco**)| **Vercel** — root dir `frontend`                            |
+| Backend   | FastAPI (Python)                  | **Railway** — root dir `backend`, URL `https://yourownprint-production.up.railway.app` |
+| Database  | MongoDB Atlas                     |                                                             |
+| Storage   | Cloudflare R2                     | Public base e.g. `https://pub-b995388ef13c4c14a498c874668ad48e.r2.dev` |
+| Payments  | Stripe (hosted Checkout)          |                                                             |
+| Other     | remove.bg (designer bg-removal), Judge.me (imported reviews) |                                  |
+
+Suppliers/catalogue: **PenCarrie** (API) + **Ralawise** (xlsm import). ~3,400 products.
+Live frontend: `https://your-own-print.vercel.app`.
+
+---
+
+## 2. THE most important principle: content lives in the DB, not in code
+
+Admin-editable content — product colours, per-colour designer photos, print areas,
+portfolio items, page copy, nav config, MediaBlock media, site images — is stored in
+**MongoDB / R2**, NOT in code files.
+
+**Consequences:**
+- Editing code **never** touches this content. Deploys are safe; Tim's admin edits persist.
+- You often **cannot fix a "live data" problem by editing code** — the data is in Mongo.
+- Code changes to defaults (e.g. `DEFAULT_NAV_CONFIG`, garment colour defaults) only take
+  effect where the DB has no stored override, or via a version-gate rollout.
+
+When something "isn't updating," first ask: *is this value coming from code or from the DB?*
+
+---
+
+## 3. Build & deploy
+
+### Frontend (Vercel)
+- `cd frontend`
+- Build script: `craco build` (via `npm run build`).
+- **Quirk:** `package.json` devDependency `@emergentbase/visual-edits` is a leftover from the
+  Emergent prototyping phase and can break clean installs. When building locally, strip it
+  first, and build with lint disabled:
+  ```bash
+  # remove the visual-edits dep if present, then:
+  echo "REACT_APP_BACKEND_URL=http://localhost:8000" > .env
+  npm install --legacy-peer-deps --no-audit --no-fund
+  CI=false DISABLE_ESLINT_PLUGIN=true npm run build
+  ```
+- **Env:** `REACT_APP_BACKEND_URL` must point at the Railway backend in production
+  (Vercel env). All API calls go through `frontend/src/lib/api.js` (`api` axios instance,
+  baseURL `${REACT_APP_BACKEND_URL}/api`).
+
+### Backend (Railway)
+- `cd backend`; entry is `server.py` (FastAPI app), ~6,800 lines.
+- Routers live in `backend/routers/` and are imported at the bottom of `server.py` (~line 6760).
+- Verify compiles with `python3 -m py_compile server.py routers/*.py services/*.py`.
+- **Env vars used:** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+  `R2_BUCKET_NAME`, `R2_PUBLIC_URL`, `STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  `CORS_ORIGINS`, `SENDER_EMAIL`, `SITE_BASE_URL`, `YOP_APP_ORIGIN`.
+- Healthy boot log line: `Loaded NNNN imported products from Mongo.`
+- To force a Railway rebuild when a web-UI upload didn't trigger one: push a trivial change
+  to `requirements.txt`.
+
+### Deploy reality (historically manual — Claude Code should improve this)
+- Tim has been uploading files **by hand via the GitHub web UI**, in bulk batches, with no
+  local dev/terminal. **Claude Code can and should replace this** with direct edits + commits.
+- GitHub web-UI uploads don't reliably trigger Vercel/Railway rebuilds — always confirm both
+  platforms deployed the newest commit.
+- `main.XXXXXX.js` bundle hash in the browser console is the reliable signal of whether new
+  frontend code actually reached the browser (most "still broken" reports are cache/deploy lag —
+  hard-refresh, check the hash).
+
+---
+
+## 4. Repo layout
+
+```
+backend/
+  server.py                 # main FastAPI app: models, PRODUCTS in-memory dict, startup merges,
+                            # most endpoints, DEFAULT_NAV_CONFIG, pricing, catalogue seed
+  routers/
+    ai_classify.py          # Smart Re-classify (AI categorisation)
+    find_my_kit.py          # AI kit concierge (/find-my-kit)
+    image_health.py         # broken-image scan/hide (/admin/image-health/*)
+    design_shop.py          # Design Shop storefront (/design-shop/*)
+    design_shop_admin.py    # Design Shop upload tool (/admin/design-shop/*)
+    ralawise_import.py       # Ralawise xlsm importer, job-based progress (/admin/ralawise/*)
+    designer_ai.py          # remove-bg, AI effects for the designer
+    cms_page_copy.py        # editable page copy (/page-copy/*, /admin/page-copy/*)
+    configurator_addons.py  # sports-outfit / full-squad configurator add-ons
+    customer_auth.py        # customer accounts, cart, orders, saved designs
+    admin_reviews.py        # review moderation
+  services/
+    r2_storage.py           # Cloudflare R2 put/get + mirror_external_image
+    stripe_checkout.py       # Stripe hosted Checkout session creation
+    email.py                # transactional email
+frontend/src/
+  lib/api.js                # ALL API calls + the `mediaUrl()` helper (see §6)
+  lib/data.js               # NAV_MENU frontend fallback (real nav is DB-served, see §5)
+  pages/                    # ~60 page components (public + /admin/*)
+  components/bold/          # ~29 shared components (BoldLayout nav/footer, MediaBlock,
+                            # GarmentSilhouette, PortfolioStrip/Carousel, SiteImage, etc.)
+  hooks/                    # usePageCopy, useSiteImages, usePageTitle
+```
+
+---
+
+## 5. Systems that trip people up (read before touching these)
+
+- **Navigation is DB-served.** `GET /api/navigation` returns the stored config from
+  `db.settings` (key `navigation_config`); `DEFAULT_NAV_CONFIG` in `server.py` is the source of
+  truth for new deploys. It uses a **version gate**: bump `DEFAULT_NAV_CONFIG["version"]` and the
+  endpoint auto-persists the new default over an older stored one (so nav changes roll out
+  without a manual DB reset), while respecting admin edits made on the current version.
+  `NAV_MENU` in `frontend/src/lib/data.js` is only a fallback if the API fails.
+
+- **Auto-lock / Smart Re-classify.** Manual admin edits to a product's collection, industry
+  tags, or print placements set `_manual_edit: true`, which makes Smart Re-classify skip that
+  product. Admin has a lock filter, lock badge, and mass-unlock. Don't "helpfully" re-classify
+  locked products.
+
+- **Designer products** (`/admin/designer-products`): the Personalised Tee/Hoodie etc. Colours
+  are editable per product (`designer_colors`), overriding the garment default. Per-colour
+  photos (`designer_images_by_colour`) take priority over any fallback. **When saving colours,
+  the endpoint must also update the in-memory `PRODUCTS[pid]["colors"]`** or the live designer
+  won't reflect changes until restart (this was a real bug — keep the in-memory apply).
+
+- **Design Shop** is a separate store-within-a-store: products carry `design_shop: true`,
+  `design_categories`, `design_garments`, `design_image`. They are **excluded** from the workwear
+  catalogue (`/products`), `/search`, and Find My Kit. Don't let them leak into workwear listings.
+
+- **Image import & mirroring.** Supplier images are mirrored to R2 via
+  `services/r2_storage.mirror_external_image`. **Supplier CDNs (pimber.ly, Ralawise) block bot
+  user-agents** — mirror requests and the health scanner MUST send real browser headers
+  (User-Agent + Referer), or downloads fail and working images get false-flagged as broken.
+  The health scanner only flags **definitive 404/410** as broken (not blocks/timeouts).
+
+---
+
+## 6. Known gotchas / debugging lessons (all learned the hard way)
+
+- **Backend-served image paths need the backend prefix.** Portfolio (and some other) images are
+  served at a relative `/api/portfolio/file/...` path. On the live site the frontend is on Vercel
+  and the API on Railway, so a bare `/api/...` src resolves to Vercel and 404s. **Always wrap such
+  srcs in `mediaUrl()`** (in `lib/api.js`) — it prefixes `/api/...` with the backend origin and
+  passes absolute/data URLs through. Product images use full R2 URLs and don't need it.
+
+- **ESLint is disabled in the build** (`DISABLE_ESLINT_PLUGIN=true`), so **use-before-declaration
+  (TDZ) errors are NOT caught at build time** — they compile fine and crash at runtime, often
+  blanking an entire group of pages with no warning. Be careful placing hooks/consts in order;
+  render-test after big edits.
+
+- **Substring category matching is dangerous** — e.g. "short" matches "Short Sleeve" and
+  miscategorises into Shorts. Keep keyword→category matching precise/word-boundaried.
+
+- **Mobile overflow regressions:** grid/carousel changes can introduce `min-width: auto` issues
+  causing horizontal overflow / zoom-out on mobile. Test mobile after layout changes.
+
+- **`str_replace` on non-unique strings** lands in the wrong place and breaks JSX silently.
+  Always include enough surrounding context to be unique.
+
+- The sandbox/CI **cannot reach the live Railway backend, Mongo, or R2** (allowlist). Live-data
+  checks (image counts, real URLs, whether an import worked) need Tim to look. Code is verifiable;
+  live data is not.
+
+---
+
+## 7. Conventions Tim cares about
+
+- **Plain-English admin labels** — describe *where something appears on the site*, not the code
+  concept (e.g. "Where it shows on the site", not "industry_tags"). He dislikes technical jargon
+  in admin.
+- **Shopify-style admin UX** as the reference. Product editor is organised into grouped
+  "Section" cards with clear headings + one-line hints. Extend that pattern to other admin screens.
+- Design/competitor references: workwearexpress.com, workwear.co.uk (workwear), Shopify (admin UX).
+- Brand green `#7bc67e`; Design Shop purple `#a855f7` / `#7c3aed`.
+
+---
+
+## 8. Current status & outstanding work
+
+### Code: complete and deployed. Everything built in prior sessions is in the repo.
+
+### The ONE real go-live blocker:
+- **Stripe live keys.** Swap test → live:
+  - `STRIPE_API_KEY` on Railway: `sk_test_...` → `sk_live_...` (or set via Admin → Integrations)
+  - Vercel publishable key if used: `pk_test_...` → `pk_live_...` (note: site uses **hosted
+    Checkout**, so the publishable key may not be needed)
+  - Create a **live** webhook at `…/api/webhook/stripe`, event `checkout.session.completed`,
+    and set `STRIPE_WEBHOOK_SECRET` to its `whsec_...`
+  - Test a real card for a small amount; confirm the order lands in admin (proves the webhook)
+  - Remove any hardcoded "Test mode" label if one still shows at checkout
+
+### Admin/content tasks (no code needed — Tim does these):
+- Run the two bulk passes in `/admin/products-import` (category + tagging fixes) — highest priority
+- Hide the ~58 genuinely-imageless Ralawise products via Image Health
+- Upload per-colour designer photos; compress + upload the promo video ("Good" 720p/25fps, no audio);
+  upload festival gallery photos under the right category slug
+
+### Known gaps not yet built (backlog):
+- Per-product social share images (parked due to prior deploy risk)
+- Error handling on the Reviews and Sports pages
+- Validation on the "Randomize main photo" bulk action
+- Plain-English rewording of the remaining admin screens
+- (Optional) serve portfolio images directly from the R2 public URL instead of proxying through
+  the backend — would remove the need for `mediaUrl()` on portfolio, but existing items are saved
+  with the `/api/...` path so they'd need a migration; not worth it pre-launch.
+
+---
+
+## 9. How to work in this repo (for Claude Code)
+
+1. Make changes directly, then **build the frontend** and **`py_compile` the backend** before
+   committing — this repo has no CI catching errors (ESLint is off).
+2. Prefer small, targeted commits now that direct git access is available (the old bulk-batch
+   habit was a web-UI limitation, not a preference).
+3. After a change that affects live behaviour, tell Tim exactly what to check on the live site,
+   and remind him to confirm Vercel/Railway deployed the newest commit (bundle hash).
+4. Respect the DB-vs-code split (§2) and the systems in §5 — most bugs here come from forgetting
+   one of them.
