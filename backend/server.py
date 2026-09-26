@@ -4094,14 +4094,13 @@ async def stripe_webhook(request: Request):
     signature = request.headers.get("Stripe-Signature", "")
     try:
         if not STRIPE_WEBHOOK_SECRET:
-            # No signing secret configured — accept-and-log rather than hard-fail, so
-            # local/dev setups without a configured webhook still don't 500. Set
-            # STRIPE_WEBHOOK_SECRET in production so signatures are actually verified.
-            logger.warning("STRIPE_WEBHOOK_SECRET not set — skipping signature verification")
-            import json as _json
-            event = _json.loads(body)
-        else:
-            event = construct_webhook_event(body, signature, STRIPE_WEBHOOK_SECRET)
+            # Without a signing secret we can't tell a real Stripe event from a forged
+            # "payment completed" request, so refuse it. Orders still complete: the
+            # customer's success page confirms payment directly with Stripe
+            # (/checkout/status). Set STRIPE_WEBHOOK_SECRET on Railway to enable this.
+            logger.error("Stripe webhook rejected: STRIPE_WEBHOOK_SECRET not set")
+            raise HTTPException(status_code=503, detail="Webhook not configured")
+        event = construct_webhook_event(body, signature, STRIPE_WEBHOOK_SECRET)
 
         event_type = event.get("type") if isinstance(event, dict) else event["type"]
         data_object = (event.get("data") or {}).get("object") if isinstance(event, dict) else event["data"]["object"]
@@ -4125,6 +4124,8 @@ async def stripe_webhook(request: Request):
                 full_session = await get_checkout_status(STRIPE_API_KEY, session_id)
                 await _maybe_send_order_emails(existing, full_session)
         return {"received": True}
+    except HTTPException:
+        raise
     except _stripe_sdk.error.SignatureVerificationError as e:
         logger.error(f"Stripe webhook signature error: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
