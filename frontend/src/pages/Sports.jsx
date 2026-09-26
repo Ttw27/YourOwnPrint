@@ -31,20 +31,26 @@ export default function Sports() {
   const [page, setPage] = useState(0);
   const [aggs, setAggs] = useState({});
   const [loading, setLoading] = useState(true);
+  const [gridErr, setGridErr] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    // Both are enhancements (featured picks per sport, star ratings) — if they
+    // fail the page still works without them, so fail quietly.
     fetchProducts("sports", 500).then((d) => {
       setProductsById(Object.fromEntries((d.items || []).map(p => [p.id, p])));
-    });
-    fetchReviewsAggregate().then(setAggs);
+    }).catch(() => {});
+    fetchReviewsAggregate().then((a) => setAggs(a || {})).catch(() => {});
   }, []);
 
   useEffect(() => {
     setLoading(true);
+    setGridErr(false);
     fetchProducts("sports", PAGE_SIZE, page * PAGE_SIZE)
       .then((d) => { setGridProducts(d.items || []); setGridTotal(d.total || 0); })
+      .catch(() => setGridErr(true))
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, retryKey]);
 
   const copy = usePageCopy("sports", {
     title: "Kit out your crew.",
@@ -123,6 +129,11 @@ export default function Sports() {
         </div>
         {loading ? (
           <div className="text-[#4b5563]">Loading…</div>
+        ) : gridErr ? (
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3 flex-wrap" data-testid="sports-load-error">
+            <span className="text-sm text-amber-800">We couldn't load the sports products just now.</span>
+            <button onClick={() => setRetryKey((k) => k + 1)} className="text-xs font-extrabold bg-amber-500 hover:bg-amber-600 text-white rounded-full px-4 py-2" data-testid="sports-retry">Try again</button>
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">

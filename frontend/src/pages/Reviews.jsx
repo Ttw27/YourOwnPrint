@@ -41,14 +41,18 @@ export default function ReviewsPage() {
   const load = () => {
     setLoading(true);
     setErr(false);
-    Promise.all([
+    // allSettled, not all: one slow/failed endpoint shouldn't blank the whole page.
+    // Whatever loaded is shown; a banner with a retry appears if anything failed.
+    Promise.allSettled([
       fetchProducts(undefined, 500),
       fetchReviewsAggregate(),
       fetchRecentReviews(60),
       fetchStoreReviews(24),
     ])
-      .then(([prods, aggs, rec, st]) => {
-        setProducts(prods.items || []);
+      .then((results) => {
+        if (results.some((r) => r.status === "rejected")) setErr(true);
+        const [prods, aggs, rec, st] = results.map((r) => (r.status === "fulfilled" ? r.value : null));
+        setProducts((prods && prods.items) || []);
         setAggregates(aggs || {});
         // Media-first: reviews with photos lead (they're the strongest social
         // proof), then the rest — each group kept in its recency order.
@@ -58,7 +62,6 @@ export default function ReviewsPage() {
         setRecent([...withPhotos, ...withoutPhotos]);
         setStore(st || { average: 0, count: 0, reviews: [] });
       })
-      .catch(() => setErr(true))
       .finally(() => setLoading(false));
   };
 
@@ -116,6 +119,13 @@ export default function ReviewsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-12">
+
+        {err && !loading && (
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-8 flex items-center justify-between gap-3 flex-wrap" data-testid="reviews-load-error">
+            <span className="text-sm text-amber-800">Some reviews couldn't be loaded just now.</span>
+            <button onClick={load} className="text-xs font-extrabold bg-amber-500 hover:bg-amber-600 text-white rounded-full px-4 py-2" data-testid="reviews-retry">Try again</button>
+          </div>
+        )}
 
         <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-3xl p-6 mb-12" data-testid="store-review-block">
           <div className="flex items-start gap-4 flex-wrap">
