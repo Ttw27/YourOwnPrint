@@ -137,6 +137,13 @@ frontend/src/
   `design_categories`, `design_garments`, `design_image`. They are **excluded** from the workwear
   catalogue (`/products`), `/search`, and Find My Kit. Don't let them leak into workwear listings.
 
+- **Hidden products.** Products are never deleted — they're hidden with `active: False`
+  (stored on the `imported_products` doc for supplier products, or in `product_overrides`
+  for built-in ones; always set it via `_set_product_active()`). Hidden products **stay in
+  `PRODUCTS`** so admin can see and unhide them, so **every public endpoint must iterate
+  `live_products()` / check `is_live(p)`**, never `PRODUCTS.values()` directly, or hidden
+  products leak onto the site.
+
 - **Image import & mirroring.** Supplier images are mirrored to R2 via
   `services/r2_storage.mirror_external_image`. **Supplier CDNs (pimber.ly, Ralawise) block bot
   user-agents** — mirror requests and the health scanner MUST send real browser headers

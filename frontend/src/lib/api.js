@@ -217,8 +217,14 @@ export async function updateBulkDefaults(payload) {
   const { data } = await api.patch("/admin/bulk-tiers/defaults", payload);
   return data;
 }
-export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "", locked = "") {
-  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source, locked } });
+export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "", locked = "", visibility = "") {
+  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source, locked, visibility } });
+  return data;
+}
+
+// Hide or unhide products on the live site. Products are never deleted.
+export async function setProductsVisibility(productIds, hidden) {
+  const { data } = await api.post("/admin/products/visibility", { product_ids: productIds, hidden });
   return data;
 }
 

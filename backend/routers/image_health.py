@@ -139,19 +139,12 @@ async def image_health_scan(payload: ScanIn):
 
 
 async def _set_active(product_ids: List[str], active: bool) -> int:
-    from server import _apply_imported_product, PRODUCTS
+    # Shared with the products admin so hidden state is stored the same way
+    # everywhere (and persists across restarts for built-in products too).
+    from server import _set_product_active
     changed = 0
     for pid in product_ids:
-        res = await db.imported_products.update_one({"id": pid}, {"$set": {"active": active}})
-        if res.matched_count:
-            changed += 1
-            # keep in-memory catalogue in sync
-            doc = await db.imported_products.find_one({"id": pid})
-            if doc:
-                _apply_imported_product(doc)
-        elif pid in PRODUCTS:
-            # non-imported (seed) product — update memory directly
-            PRODUCTS[pid]["active"] = active
+        if await _set_product_active(pid, active):
             changed += 1
     return changed
 

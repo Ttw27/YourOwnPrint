@@ -713,6 +713,19 @@ async def root():
 SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "https://your-own-print.vercel.app")
 
 
+def is_live(p: Dict) -> bool:
+    """Whether a product should appear on the public site.
+
+    Hidden products (active=False) stay in PRODUCTS so the admin list can still
+    show, edit and unhide them — so every public listing must go through
+    live_products() / is_live() rather than reading PRODUCTS directly."""
+    return p.get("active", True) is not False
+
+
+def live_products() -> List[Dict]:
+    return [p for p in PRODUCTS.values() if is_live(p)]
+
+
 @api_router.get("/sitemap.xml")
 async def sitemap_xml():
     """Dynamically generated sitemap — includes every product, collection,
@@ -803,7 +816,7 @@ async def search_products(q: str = "", limit: int = 25, offset: int = 0):
         hay = f"{p.get('name', '')} {p.get('brand', '') or p.get('_brand', '')} {p.get('id', '')} {p.get('sku', '') or ''} {p.get('source_sku', '') or ''}".lower()
         return query in hay
 
-    results = [p for p in PRODUCTS.values() if matches(p)]
+    results = [p for p in live_products() if matches(p)]
     # Names that start with the query rank above names that merely contain it.
     results.sort(key=lambda p: (0 if p.get("name", "").lower().startswith(query) else 1, p.get("name", "")))
     total = len(results)
@@ -851,7 +864,7 @@ async def list_products(category: Optional[str] = None, industries: Optional[str
             return ind_ok
         return True
 
-    items = [p for p in PRODUCTS.values() if matches(p)]
+    items = [p for p in live_products() if matches(p)]
     if gender_fit and gender_fit != "all":
         items = [p for p in items if (p.get("gender_fit") or "unisex") == gender_fit]
     total = len(items)
@@ -862,7 +875,7 @@ async def list_products(category: Optional[str] = None, industries: Optional[str
 
 @api_router.get("/products/{product_id}")
 async def get_product(product_id: str):
-    if product_id not in PRODUCTS:
+    if product_id not in PRODUCTS or not is_live(PRODUCTS[product_id]):
         raise HTTPException(404, "Product not found")
     return PRODUCTS[product_id]
 
@@ -2072,7 +2085,7 @@ async def list_designer_products():
     except Exception:
         ratings = {}
     out = []
-    for p in PRODUCTS.values():
+    for p in live_products():
         if p.get("designer_enabled"):
             r = ratings.get(p["id"]) or {}
             out.append({
@@ -2424,7 +2437,7 @@ async def get_product_bulk_tiers(product_id: str):
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
 @api_router.get("/admin/products", dependencies=[Depends(require_admin)])
-async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = ""):
+async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = "", visibility: str = ""):
     """Admin overview of all products with editable meta fields.
     Paginated (default 25/page), searchable, and filterable by category and
     source (supplier). This list runs into the thousands once supplier
@@ -2452,6 +2465,7 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
             "is_bestseller": bool(p.get("is_bestseller")),
             "designer_only": bool(p.get("designer_only")),
             "manual_edit": bool(p.get("_manual_edit")),
+            "hidden": not is_live(p),
             "gender_fit": p.get("gender_fit") or "unisex",
             "industry_tags": p.get("industry_tags") or [],
         })
@@ -2468,6 +2482,10 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
         out = [it for it in out if it.get("manual_edit")]
     elif locked == "unlocked":
         out = [it for it in out if not it.get("manual_edit")]
+    if visibility == "hidden":
+        out = [it for it in out if it["hidden"]]
+    elif visibility == "visible":
+        out = [it for it in out if not it["hidden"]]
     total = len(out)
     limit = min(limit, 200)
     page = out[offset:offset + limit]
@@ -2654,7 +2672,7 @@ async def get_leavers_config():
 @api_router.get("/leavers/products")
 async def list_leavers_products():
     out = []
-    for p in PRODUCTS.values():
+    for p in live_products():
         if p.get("category") == "leavers":
             item = {k: p.get(k) for k in ("id", "name", "price", "image", "description", "sizes")}
             item["allows_full_front"] = p["id"] not in LEAVERS_NO_FULL_FRONT_IDS
@@ -2990,7 +3008,7 @@ async def _get_workforce_threshold() -> int:
 async def list_workforce_products():
     """Garments admin has flagged 'workforce_eligible' in /admin/product-settings."""
     out = []
-    for p in PRODUCTS.values():
+    for p in live_products():
         if p.get("workforce_eligible"):
             out.append({
                 "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
@@ -3010,7 +3028,7 @@ async def list_workforce_products():
 async def list_specials_products():
     """Your Own Print Specials — single breast-pocket logo print, no MOQ, starter-business pricing."""
     out = []
-    for p in PRODUCTS.values():
+    for p in live_products():
         if p.get("specials_eligible"):
             out.append({
                 "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
@@ -3034,7 +3052,7 @@ async def list_industries():
             continue
         # Match by canonical slug OR any legacy alias slug pointing to it
         legacy = {a["slug"] for a in INDUSTRIES_CATALOGUE if a.get("alias_of") == ind["slug"]}
-        count = sum(1 for p in PRODUCTS.values()
+        count = sum(1 for p in live_products()
                     if any(s in (p.get("industry_tags") or []) for s in {ind["slug"], *legacy}))
         out.append({**ind, "product_count": count})
     return out
@@ -3116,7 +3134,7 @@ def _garment_type_of(product: Dict) -> Optional[str]:
 async def list_shop_garment_types():
     out = []
     for t in GARMENT_TYPE_CATALOGUE:
-        count = sum(1 for p in PRODUCTS.values() if _garment_type_of(p) == t["slug"])
+        count = sum(1 for p in live_products() if _garment_type_of(p) == t["slug"])
         out.append({**t, "product_count": count})
     return out
 
@@ -3207,7 +3225,7 @@ async def shop_by_garment_type(
     if not meta:
         raise HTTPException(404, "Garment type not found")
     # All products in this collection (used to derive facets — before applying filters).
-    all_prods = [p for p in PRODUCTS.values() if _garment_type_of(p) == slug]
+    all_prods = [p for p in live_products() if _garment_type_of(p) == slug]
     facets = _facets_from_products(all_prods)
 
     colour_set = {c.strip() for c in (colour or "").split(",") if c.strip()}
@@ -3396,7 +3414,7 @@ async def get_industry(
     # Tags to match: canonical + any aliases pointing to it
     match_slugs = {canonical_slug} | {a["slug"] for a in INDUSTRIES_CATALOGUE if a.get("alias_of") == canonical_slug}
 
-    all_prods = [p for p in PRODUCTS.values() if set(p.get("industry_tags") or []) & match_slugs]
+    all_prods = [p for p in live_products() if set(p.get("industry_tags") or []) & match_slugs]
     facets = _facets_from_products(all_prods)
     # Category facet too (which garment types show up within this industry) —
     # not part of the shared _facets_from_products helper, built here directly.
@@ -3504,7 +3522,7 @@ def _sports_team_products(s: Dict) -> List[Dict]:
 
     keywords = _sports_team_keywords(s)
     pool: List[Tuple[int, str, Dict]] = []
-    for p in PRODUCTS.values():
+    for p in live_products():
         if p.get("id") in seen:
             continue
         if "sports-fitness" not in canonical_industries(p.get("industry_tags")):
@@ -3844,7 +3862,7 @@ async def also_bought(product_id: str, limit: int = 4):
     # Auto-fallback: same category if admin hasn't picked any
     if not picks:
         same_cat = [
-            q for q in PRODUCTS.values()
+            q for q in live_products()
             if q["id"] != product_id and q["category"] == p["category"]
         ]
         # Take up to limit, stable order (by price asc then id)
@@ -3857,7 +3875,7 @@ async def also_bought(product_id: str, limit: int = 4):
             continue
         seen.add(pid)
         q = PRODUCTS.get(pid)
-        if not q:
+        if not q or not is_live(q):
             continue
         out.append({
             "id": q["id"], "name": q["name"], "price": float(q["price"]),
@@ -3881,7 +3899,7 @@ async def match_with(product_id: str, limit: int = 4):
     if not picks:
         my_tags = set(p.get("industry_tags") or [])
         candidates = [
-            q for q in PRODUCTS.values()
+            q for q in live_products()
             if q["id"] != product_id and q["category"] != p["category"]
             and (not my_tags or my_tags & set(q.get("industry_tags") or []))
         ]
@@ -3900,7 +3918,7 @@ async def match_with(product_id: str, limit: int = 4):
             continue
         seen.add(pid)
         q = PRODUCTS.get(pid)
-        if not q:
+        if not q or not is_live(q):
             continue
         out.append({
             "id": q["id"], "name": q["name"], "price": float(q["price"]),
@@ -5659,10 +5677,8 @@ def _apply_product_override(pid: str, ov: Dict) -> None:
         val = ov.get(field)
         if val is not None:
             PRODUCTS[pid][field] = val
-    if ov.get("active") is False:
-        PRODUCTS[pid]["_hidden"] = True
-    elif ov.get("active") is True:
-        PRODUCTS[pid].pop("_hidden", None)
+    if ov.get("active") is not None:
+        PRODUCTS[pid]["active"] = bool(ov["active"])
 
 
 # Snapshot the pristine hardcoded PRODUCTS entries so admin can fully revert an
@@ -5684,13 +5700,54 @@ async def _load_product_overrides():
         logging.warning(f"Product-override load skipped: {e}")
 
 
+async def _set_product_active(pid: str, active: bool) -> bool:
+    """Hide (active=False) or unhide a product, persistently.
+
+    Imported products store it on their imported_products doc; built-in products
+    store it as a product override. Either way the in-memory entry is updated so
+    the site reflects it immediately. Returns False if the product doesn't exist."""
+    active = bool(active)
+    res = await db.imported_products.update_one({"id": pid}, {"$set": {"active": active}})
+    if not res.matched_count:
+        if pid not in PRODUCTS:
+            return False
+        await db.product_overrides.update_one(
+            {"product_id": pid},
+            {"$set": {"product_id": pid, "active": active,
+                      "updated_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+    if pid in PRODUCTS:
+        PRODUCTS[pid]["active"] = active
+    return True
+
+
+class VisibilityIn(BaseModel):
+    product_ids: List[str]
+    hidden: bool
+
+
+@api_router.post("/admin/products/visibility", dependencies=[Depends(require_admin)])
+async def set_products_visibility(payload: VisibilityIn):
+    """Hide or unhide products on the live site (products are never deleted)."""
+    changed = 0
+    for pid in payload.product_ids:
+        if await _set_product_active(pid, not payload.hidden):
+            changed += 1
+    return {"ok": True, "changed": changed}
+
+
 @api_router.patch("/admin/products/{pid}/override", dependencies=[Depends(require_admin)])
 async def upsert_product_override(pid: str, patch: ProductOverride):
     if pid not in PRODUCTS:
         raise HTTPException(404, "Product not found")
     up = patch.model_dump(exclude_none=True)
+    if "active" in up:
+        # Visibility is stored in one place per product (see _set_product_active)
+        # so it survives restarts for imported products too.
+        await _set_product_active(pid, up.pop("active"))
     if not up:
-        return {"ok": True, "unchanged": True}
+        return {"ok": True}
     up["product_id"] = pid
     up["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.product_overrides.update_one({"product_id": pid}, {"$set": up}, upsert=True)
@@ -6029,12 +6086,16 @@ def _apply_imported_product(doc: Dict) -> None:
 async def _load_imported_products():
     """Hydrate PRODUCTS with any admin-imported products at boot."""
     try:
-        count = 0
-        async for d in db.imported_products.find({"active": {"$ne": False}}):
+        # Hidden (active=False) products are loaded too — public listings filter
+        # them out via live_products(), but admin needs them to show/unhide.
+        count = hidden = 0
+        async for d in db.imported_products.find():
             _apply_imported_product(d)
             count += 1
+            if d.get("active") is False:
+                hidden += 1
         if count:
-            logging.info(f"Loaded {count} imported products from Mongo.")
+            logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:
         logging.warning(f"Imported-product load skipped: {e}")
 
@@ -6614,10 +6675,7 @@ async def patch_imported_product(pid: str, patch: ImportedProductPatch):
     if up:
         await db.imported_products.update_one({"id": pid}, {"$set": up})
         doc = await db.imported_products.find_one({"id": pid})
-        if doc.get("active"):
-            _apply_imported_product(doc)
-        else:
-            PRODUCTS.pop(pid, None)
+        _apply_imported_product(doc)
     return {"ok": True}
 
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X, Eye, EyeOff } from "lucide-react";
 
 const PAGE_SIZE = 25;
 const CATEGORY_OPTIONS = [
@@ -26,6 +26,7 @@ export default function AdminProductSettings() {
   const [catFilter, setCatFilter] = useState("");  // category dropdown
   const [srcFilter, setSrcFilter] = useState("");  // supplier/source dropdown
   const [lockedFilter, setLockedFilter] = useState("");  // "" | "locked" | "unlocked"
+  const [visFilter, setVisFilter] = useState("");  // "" | "visible" | "hidden"
   const [facets, setFacets] = useState({ categories: [], sources: [] });
 
   // Debounce the search box so we're not firing a request on every keystroke
@@ -39,7 +40,7 @@ export default function AdminProductSettings() {
     setLoading(true);
     try {
       const [ps, ds, wf] = await Promise.all([
-        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter, lockedFilter),
+        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter),
         fetchBulkDefaults(),
         fetchWorkforceTiers().catch(() => null),
       ]);
@@ -62,10 +63,21 @@ export default function AdminProductSettings() {
   };
 
   useEffect(() => { loadAllLite(); }, []);
-  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter, lockedFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { reload({ page }); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+
+  const toggleHidden = async (p) => {
+    const hide = !p.hidden;
+    setBusy(true);
+    try {
+      await setProductsVisibility([p.id], hide);
+      update(p.id, { hidden: hide });
+      toast.success(hide ? `${p.name} is now hidden from the site` : `${p.name} is back on the site`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't change visibility"); }
+    finally { setBusy(false); }
+  };
 
   const addRow = (id) => update(id, { size_guide_table: [...(products.find(p => p.id === id).size_guide_table || []), { size: "", chest: "", length: "" }] });
   const setRow = (id, i, k, v) => {
@@ -195,12 +207,17 @@ export default function AdminProductSettings() {
             <option value="locked">🔒 Manually edited only</option>
             <option value="unlocked">Not manually edited</option>
           </select>
+          <select value={visFilter} onChange={(e) => setVisFilter(e.target.value)} className="bg-white border border-[#dcfce7] rounded-full px-3 py-2 text-sm" data-testid="aps-vis-filter" title="Filter by whether customers can see the product">
+            <option value="">Visible &amp; hidden</option>
+            <option value="visible">Visible on the site</option>
+            <option value="hidden">Hidden from the site</option>
+          </select>
           <div className="inline-flex rounded-full border-2 border-[#dcfce7] overflow-hidden" data-testid="aps-view-toggle">
             <button onClick={() => setView("compact")} className={`px-3 py-1.5 text-xs font-extrabold ${view === "compact" ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-white text-[#4b5563]"}`}>Compact</button>
             <button onClick={() => setView("detailed")} className={`px-3 py-1.5 text-xs font-extrabold ${view === "detailed" ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-white text-[#4b5563]"}`}>Detailed</button>
           </div>
-          {(catFilter || srcFilter || filter || lockedFilter) && (
-            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); setLockedFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
+          {(catFilter || srcFilter || filter || lockedFilter || visFilter) && (
+            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
           )}
         </div>
         {total > 0 && <div className="text-[11px] text-[#4b5563] mt-2">{total} product{total === 1 ? "" : "s"}{debouncedFilter ? " matching" : " total"} · showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}</div>}
@@ -229,21 +246,31 @@ export default function AdminProductSettings() {
         {loading ? <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div> : (
           <div className={`${view === "compact" ? "space-y-1.5" : "space-y-3"} mt-6`} data-testid="aps-list">
             {products.map((p) => (
-              <div key={p.id} data-testid={`aps-${p.id}`} className={`bg-white border-2 border-[#dcfce7] ${view === "compact" ? "rounded-xl p-2" : "rounded-3xl p-4"}`}>
+              <div key={p.id} data-testid={`aps-${p.id}`} className={`border-2 ${p.hidden ? "bg-[#f9fafb] border-[#e5e7eb]" : "bg-white border-[#dcfce7]"} ${view === "compact" ? "rounded-xl p-2" : "rounded-3xl p-4"}`}>
                 <button onClick={() => setOpenId(openId === p.id ? null : p.id)} className="w-full flex items-center gap-3 text-left">
-                  <img src={p.image} alt="" className={`${view === "compact" ? "w-9 h-9 rounded-lg" : "w-14 h-14 rounded-xl"} object-cover flex-shrink-0`} />
+                  <img src={p.image} alt="" className={`${view === "compact" ? "w-9 h-9 rounded-lg" : "w-14 h-14 rounded-xl"} object-cover flex-shrink-0 ${p.hidden ? "opacity-40" : ""}`} />
                   <div className="flex-1 min-w-0">
                     <div className={`font-nunito font-extrabold truncate ${view === "compact" ? "text-sm" : ""}`}>{p.name}</div>
                     <div className="text-[10px] text-[#4b5563] truncate">{p.category} · £{p.price.toFixed(2)}{p.brand && ` · ${p.brand}`}{view !== "compact" && p.sku && ` · ${p.sku}`}</div>
                   </div>
                   {p.source && p.source !== "native" && <span className="text-[9px] bg-[#eef2ff] text-[#4338ca] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 uppercase">{p.source}</span>}
+                  {p.hidden && <span className="text-[9px] bg-[#e5e7eb] text-[#4b5563] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 inline-flex items-center gap-0.5" title="Hidden — customers can't see or buy this product" data-testid={`aps-hidden-badge-${p.id}`}><EyeOff size={9} /> HIDDEN</span>}
                   {p.manual_edit && <span className="text-[9px] bg-amber-100 text-amber-700 font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 inline-flex items-center gap-0.5" title="Manually edited — protected from Smart Re-classify">🔒 EDITED</span>}
                   {p.bulk_pricing_enabled && <span className="text-[9px] bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0">BULK</span>}
                 </button>
                 {openId === p.id && (
                   <div className="mt-4 space-y-3 border-t border-[#dcfce7] pt-4">
+                    <div className={`rounded-2xl p-3 flex items-center justify-between gap-3 flex-wrap border-2 ${p.hidden ? "bg-[#f3f4f6] border-[#e5e7eb]" : "bg-white border-[#dcfce7]"}`} data-testid={`aps-visibility-${p.id}`}>
+                      <div className="text-sm">
+                        <span className="font-extrabold">{p.hidden ? "Hidden from the site" : "Visible on the site"}</span>
+                        <span className="block text-[11px] text-[#4b5563]">{p.hidden ? "Customers can't find, view or buy it. It stays here so you can bring it back any time." : "Hide it to take it off the shop, search and product pages without deleting it."}</span>
+                      </div>
+                      <button onClick={() => toggleHidden(p)} disabled={busy} className={`text-xs font-extrabold rounded-full px-4 py-2 inline-flex items-center gap-1.5 disabled:opacity-50 ${p.hidden ? "bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a]" : "bg-[#1a1a1a] hover:bg-black text-white"}`} data-testid={`aps-toggle-hidden-${p.id}`}>
+                        {p.hidden ? <><Eye size={12} /> Show on site</> : <><EyeOff size={12} /> Hide from site</>}
+                      </button>
+                    </div>
                     {/* Basics — name, price, category, descriptions (in ProductOverridePanel) */}
-                    <ProductOverridePanel product={p} onSaved={reload} />
+                    <ProductOverridePanel key={`${p.id}-${p.hidden}`} product={p} onSaved={reload} />
 
                     {/* Product details */}
                     <Section title="Product details" hint="Brand, code and the full description shown on the product page.">
@@ -632,7 +659,7 @@ function ProductOverridePanel({ product, onSaved }) {
     description: product.description || "",
     image: product.image || "",
     category: product.category || "",
-    active: product._hidden ? false : true,
+    active: !product.hidden,
   });
   const [override, setOverride] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
@@ -651,7 +678,7 @@ function ProductOverridePanel({ product, onSaved }) {
     draft.description !== (product.description || "") ||
     draft.image !== (product.image || "") ||
     draft.category !== (product.category || "") ||
-    draft.active !== (product._hidden ? false : true)
+    draft.active !== !product.hidden
   );
 
   const save = async () => {

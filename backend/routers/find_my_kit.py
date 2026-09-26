@@ -160,6 +160,8 @@ def _gather_candidates(industries: List[str]) -> List[Dict]:
     cands = []
     _iter = sorted(PRODUCTS.values(), key=lambda x: (not bool(x.get("is_bestseller")), str(x.get("name") or "")))
     for p in _iter:
+        if p.get("active", True) is False:  # hidden from the site
+            continue
         # Designer-only products (blank canvases for the Design-Your-Own tool) are
         # not real off-the-shelf kit, so never surface them in Find My Kit.
         if p.get("designer_only"):
