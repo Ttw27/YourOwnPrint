@@ -98,9 +98,12 @@ function AdminTopBar({ email }) {
   };
 
   return (
-    <div ref={rootRef} className="w-full bg-zinc-900 border-b border-zinc-800 text-zinc-100 px-4 py-2.5 flex items-center justify-between text-sm sticky top-0 z-50" data-testid="admin-topbar">
-      <div className="flex items-center gap-1">
+    <div ref={rootRef} className="w-full bg-zinc-900 border-b border-zinc-800 text-zinc-100 px-4 py-2.5 flex items-center justify-between text-sm lg:sticky lg:top-0 z-50" data-testid="admin-topbar">
+      <div className="flex items-center gap-1 min-w-0">
         <span className="text-amber-400 font-bold tracking-wider text-xs uppercase mr-3">YOP Admin</span>
+        {/* Dropdowns are desktop-only — on phones they overflowed the screen, and the
+            sidebar's own ☰ menu (AdminLayout) already covers every admin page. */}
+        <div className="hidden lg:flex items-center gap-1">
         {ADMIN_NAV_GROUPS.map((group) => {
           const isOpen = openKey === group.label;
           return (
@@ -125,8 +128,9 @@ function AdminTopBar({ email }) {
             </div>
           );
         })}
+        </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-shrink-0">
         <span className="text-zinc-500 hidden sm:inline" data-testid="admin-current-email">{email}</span>
         <button onClick={onLogout} className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-xs" data-testid="admin-logout">
           Sign out
