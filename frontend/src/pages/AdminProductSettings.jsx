@@ -22,7 +22,7 @@ export default function AdminProductSettings() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState(null);
-  const [view, setView] = useState("compact");    // "compact" | "detailed"
+  const [selected, setSelected] = useState(() => new Set()); // product ids ticked for bulk actions (current page)
   const [catFilter, setCatFilter] = useState("");  // category dropdown
   const [srcFilter, setSrcFilter] = useState("");  // supplier/source dropdown
   const [lockedFilter, setLockedFilter] = useState("");  // "" | "locked" | "unlocked"
@@ -45,6 +45,7 @@ export default function AdminProductSettings() {
         fetchWorkforceTiers().catch(() => null),
       ]);
       setProducts(ps.items || []);
+      setSelected(new Set());
       setTotal(ps.total || 0);
       if (ps.categories || ps.sources) setFacets({ categories: ps.categories || [], sources: ps.sources || [] });
       setDefaults(ds);
@@ -76,6 +77,40 @@ export default function AdminProductSettings() {
       update(p.id, { hidden: hide });
       toast.success(hide ? `${p.name} is now hidden from the site` : `${p.name} is back on the site`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't change visibility"); }
+    finally { setBusy(false); }
+  };
+
+  const toggleSelect = (id) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const allOnPageSelected = products.length > 0 && products.every((p) => selected.has(p.id));
+  const toggleSelectAll = () => setSelected(allOnPageSelected ? new Set() : new Set(products.map((p) => p.id)));
+
+  const bulkSetHidden = async (hide) => {
+    const ids = [...selected];
+    if (!ids.length) return;
+    setBusy(true);
+    try {
+      const r = await setProductsVisibility(ids, hide);
+      setProducts((prev) => prev.map((p) => selected.has(p.id) ? { ...p, hidden: hide } : p));
+      setSelected(new Set());
+      toast.success(`${r.changed} product${r.changed === 1 ? "" : "s"} ${hide ? "hidden from" : "shown on"} the site`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't change visibility"); }
+    finally { setBusy(false); }
+  };
+
+  const bulkUnlock = async () => {
+    const ids = [...selected];
+    if (!ids.length) return;
+    setBusy(true);
+    try {
+      const r = await unlockProducts({ product_ids: ids });
+      setProducts((prev) => prev.map((p) => selected.has(p.id) ? { ...p, manual_edit: false } : p));
+      setSelected(new Set());
+      toast.success(`Unlocked ${r.unlocked} product${r.unlocked === 1 ? "" : "s"}`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Unlock failed"); }
     finally { setBusy(false); }
   };
 
@@ -212,10 +247,6 @@ export default function AdminProductSettings() {
             <option value="visible">Visible on the site</option>
             <option value="hidden">Hidden from the site</option>
           </select>
-          <div className="inline-flex rounded-full border-2 border-[#dcfce7] overflow-hidden" data-testid="aps-view-toggle">
-            <button onClick={() => setView("compact")} className={`px-3 py-1.5 text-xs font-extrabold ${view === "compact" ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-white text-[#4b5563]"}`}>Compact</button>
-            <button onClick={() => setView("detailed")} className={`px-3 py-1.5 text-xs font-extrabold ${view === "detailed" ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-white text-[#4b5563]"}`}>Detailed</button>
-          </div>
           {(catFilter || srcFilter || filter || lockedFilter || visFilter) && (
             <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
           )}
@@ -244,22 +275,59 @@ export default function AdminProductSettings() {
         )}
 
         {loading ? <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div> : (
-          <div className={`${view === "compact" ? "space-y-1.5" : "space-y-3"} mt-6`} data-testid="aps-list">
+          <div className="mt-6 bg-white border-2 border-[#e5e7eb] rounded-2xl overflow-hidden" data-testid="aps-list">
+            {/* Header row — or, when products are ticked, the bulk action bar (Shopify-style) */}
+            {selected.size > 0 ? (
+              <div className="flex items-center gap-2 flex-wrap px-3 py-2.5 bg-[#f0fdf4] border-b-2 border-[#dcfce7]" data-testid="aps-bulk-bar">
+                <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} className="w-4 h-4 accent-[#7bc67e]" aria-label="Select all on this page" />
+                <span className="text-xs font-extrabold mr-2">{selected.size} selected</span>
+                <button onClick={() => bulkSetHidden(true)} disabled={busy} className="text-xs font-extrabold bg-[#1a1a1a] hover:bg-black text-white rounded-full px-3 py-1.5 inline-flex items-center gap-1 disabled:opacity-50" data-testid="aps-bulk-hide"><EyeOff size={12} /> Hide from site</button>
+                <button onClick={() => bulkSetHidden(false)} disabled={busy} className="text-xs font-extrabold bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] rounded-full px-3 py-1.5 inline-flex items-center gap-1 disabled:opacity-50" data-testid="aps-bulk-show"><Eye size={12} /> Show on site</button>
+                <button onClick={bulkUnlock} disabled={busy} className="text-xs font-extrabold bg-white border border-amber-300 text-amber-700 hover:bg-amber-50 rounded-full px-3 py-1.5 disabled:opacity-50" data-testid="aps-bulk-unlock" title="Let Smart Re-classify manage these products again">Unlock</button>
+                <button onClick={() => setSelected(new Set())} className="ml-auto text-xs font-bold text-[#4b5563] hover:underline">Clear</button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[auto_minmax(0,1fr)_96px_130px_100px_72px] items-center gap-3 px-3 py-2.5 bg-[#f9fafb] border-b-2 border-[#e5e7eb] text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563]">
+                <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} className="w-4 h-4 accent-[#7bc67e]" aria-label="Select all on this page" data-testid="aps-select-all" />
+                <span>Product</span>
+                <span className="hidden md:block">Status</span>
+                <span className="hidden md:block">Category</span>
+                <span className="hidden md:block">Supplier</span>
+                <span className="hidden md:block text-right">Price</span>
+              </div>
+            )}
+            {products.length === 0 && <div className="px-4 py-10 text-center text-sm text-[#4b5563]">No products match these filters.</div>}
             {products.map((p) => (
-              <div key={p.id} data-testid={`aps-${p.id}`} className={`border-2 ${p.hidden ? "bg-[#f9fafb] border-[#e5e7eb]" : "bg-white border-[#dcfce7]"} ${view === "compact" ? "rounded-xl p-2" : "rounded-3xl p-4"}`}>
-                <button onClick={() => setOpenId(openId === p.id ? null : p.id)} className="w-full flex items-center gap-3 text-left">
-                  <img src={p.image} alt="" className={`${view === "compact" ? "w-9 h-9 rounded-lg" : "w-14 h-14 rounded-xl"} object-cover flex-shrink-0 ${p.hidden ? "opacity-40" : ""}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-nunito font-extrabold truncate ${view === "compact" ? "text-sm" : ""}`}>{p.name}</div>
-                    <div className="text-[10px] text-[#4b5563] truncate">{p.category} · £{p.price.toFixed(2)}{p.brand && ` · ${p.brand}`}{view !== "compact" && p.sku && ` · ${p.sku}`}</div>
-                  </div>
-                  {p.source && p.source !== "native" && <span className="text-[9px] bg-[#eef2ff] text-[#4338ca] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 uppercase">{p.source}</span>}
-                  {p.hidden && <span className="text-[9px] bg-[#e5e7eb] text-[#4b5563] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 inline-flex items-center gap-0.5" title="Hidden — customers can't see or buy this product" data-testid={`aps-hidden-badge-${p.id}`}><EyeOff size={9} /> HIDDEN</span>}
-                  {p.manual_edit && <span className="text-[9px] bg-amber-100 text-amber-700 font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0 inline-flex items-center gap-0.5" title="Manually edited — protected from Smart Re-classify">🔒 EDITED</span>}
-                  {p.bulk_pricing_enabled && <span className="text-[9px] bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-2 py-0.5 rounded-full flex-shrink-0">BULK</span>}
-                </button>
+              <div key={p.id} data-testid={`aps-${p.id}`} className={`border-b border-[#f3f4f6] last:border-b-0 ${openId === p.id ? "bg-[#f9fafb]" : ""}`}>
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[auto_minmax(0,1fr)_96px_130px_100px_72px] items-center gap-3 px-3 py-2 hover:bg-[#f9fafb] cursor-pointer" onClick={() => setOpenId(openId === p.id ? null : p.id)} title="Click to edit" data-testid={`aps-row-${p.id}`}>
+                  <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} onClick={(e) => e.stopPropagation()} className="w-4 h-4 accent-[#7bc67e]" aria-label={`Select ${p.name}`} data-testid={`aps-select-${p.id}`} />
+                  <>
+                    <span className="flex items-center gap-3 min-w-0">
+                      <img src={p.image} alt="" className={`w-10 h-10 rounded-lg border border-[#e5e7eb] object-cover flex-shrink-0 ${p.hidden ? "opacity-40" : ""}`} />
+                      <span className="min-w-0">
+                        <span className={`block font-nunito font-extrabold text-sm truncate ${p.hidden ? "text-[#6b7280]" : ""}`}>{p.name}</span>
+                        <span className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          {(p.brand || p.sku) && <span className="text-[10px] text-[#4b5563] truncate">{[p.brand, p.sku].filter(Boolean).join(" · ")}</span>}
+                          {/* On phones the status/price columns are hidden, so show them inline here */}
+                          <span className="md:hidden text-[10px] text-[#4b5563]">£{p.price.toFixed(2)}</span>
+                          {p.hidden && <span className="md:hidden text-[9px] bg-[#e5e7eb] text-[#4b5563] font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" data-testid={`aps-hidden-badge-${p.id}`}><EyeOff size={9} /> HIDDEN</span>}
+                          {p.manual_edit && <span className="text-[9px] bg-amber-100 text-amber-700 font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" title="Manually edited — protected from Smart Re-classify">🔒 EDITED</span>}
+                          {p.bulk_pricing_enabled && <span className="text-[9px] bg-[#dcfce7] text-[#166534] font-nunito font-extrabold px-2 py-0.5 rounded-full" title="Bulk discounts switched on">BULK</span>}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="hidden md:block">
+                      {p.hidden
+                        ? <span className="text-[10px] bg-[#e5e7eb] text-[#4b5563] font-nunito font-extrabold px-2.5 py-1 rounded-full inline-flex items-center gap-1" title="Customers can't see or buy this product"><EyeOff size={10} /> Hidden</span>
+                        : <span className="text-[10px] bg-[#dcfce7] text-[#166534] font-nunito font-extrabold px-2.5 py-1 rounded-full">Active</span>}
+                    </span>
+                    <span className="hidden md:block text-xs text-[#4b5563] truncate capitalize">{(p.category || "").replace(/-/g, " ")}</span>
+                    <span className="hidden md:block text-xs text-[#4b5563] truncate capitalize">{p.source && p.source !== "native" ? p.source : "Your Own Print"}</span>
+                    <span className="hidden md:block text-sm font-extrabold text-right">£{p.price.toFixed(2)}</span>
+                  </>
+                </div>
                 {openId === p.id && (
-                  <div className="mt-4 space-y-3 border-t border-[#dcfce7] pt-4">
+                  <div className="px-3 sm:px-4 pb-4 pt-3 space-y-3 border-t border-[#e5e7eb]">
                     <div className={`rounded-2xl p-3 flex items-center justify-between gap-3 flex-wrap border-2 ${p.hidden ? "bg-[#f3f4f6] border-[#e5e7eb]" : "bg-white border-[#dcfce7]"}`} data-testid={`aps-visibility-${p.id}`}>
                       <div className="text-sm">
                         <span className="font-extrabold">{p.hidden ? "Hidden from the site" : "Visible on the site"}</span>
