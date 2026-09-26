@@ -6164,7 +6164,11 @@ class BulkUpdateImportedPayload(BaseModel):
 @api_router.post("/admin/products/bulk-update-imported", dependencies=[Depends(require_admin)])
 async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     query: Dict = {}
-    if payload.ids:
+    if payload.ids is not None:
+        # An empty "selected products" list must never fall through to an
+        # unfiltered query — that would apply the update to EVERY product.
+        if not payload.ids:
+            raise HTTPException(400, "No products selected — tick at least one product first.")
         query["id"] = {"$in": payload.ids}
     if payload.brand:
         query["brand"] = {"$regex": f"^{re.escape(payload.brand)}$", "$options": "i"}
@@ -6252,12 +6256,19 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
             try:
                 current_main = doc.get("image") or ""
                 gallery = [u for u in (doc.get("additional_images") or []) if u]
-                pool = ([current_main] if current_main else []) + gallery
+                # Only real, distinct image URLs are candidates — never promote a
+                # blank/relative/junk gallery entry to the main photo, and don't let
+                # duplicates skew the pick or get dropped from the gallery.
+                pool = []
+                for u in ([current_main] if current_main else []) + gallery:
+                    if isinstance(u, str) and u.startswith(("http://", "https://")) and u not in pool:
+                        pool.append(u)
                 if len(pool) > 1:
                     new_main = random.choice(pool)
                     if new_main != current_main:
                         update["image"] = new_main
-                        update["additional_images"] = [u for u in pool if u != new_main]
+                        # Keep any non-candidate gallery entries as they were.
+                        update["additional_images"] = [u for u in pool if u != new_main] + [u for u in gallery if u not in pool]
                         randomized += 1
             except Exception as e:
                 per_doc_error = True

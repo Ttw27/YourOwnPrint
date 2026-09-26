@@ -210,7 +210,27 @@ export default function AdminProductsImport() {
     return { errNote };
   }
 
+  // Guards run before any bulk update (preview or apply). Returns false to abort.
+  function bulkPreflight(applying) {
+    if (bulkForm.scope === "selected" && bulkSelectedIds.size === 0) {
+      toast.error("No products selected — tick at least one product in the list first.");
+      return false;
+    }
+    if (bulkForm.scope === "search" && !String(importedSearch || "").trim()) {
+      toast.error("The search box is empty — type a search first, or choose \"All imported products\".");
+      return false;
+    }
+    if (applying && bulkForm.randomize_main_image) {
+      const scopeText = bulkForm.scope === "selected" ? `the ${bulkSelectedIds.size} selected product(s)`
+        : bulkForm.scope === "search" ? `every product matching "${importedSearch}"`
+        : "EVERY imported product";
+      if (!window.confirm(`"Randomize main photo" will change the main photo on ${scopeText}. This can't be undone automatically.\n\nTip: click Preview first to see how many will change.\n\nContinue?`)) return false;
+    }
+    return true;
+  }
+
   async function runBulkUpdate(dryRun) {
+    if (!bulkPreflight(!dryRun)) return;
     setBulkBusy(true);
     try {
       const d = await bulkUpdateImported(buildBulkPayload(dryRun, 0));
@@ -230,6 +250,7 @@ export default function AdminProductsImport() {
   }
 
   async function runBulkUpdateAll() {
+    if (!bulkPreflight(true)) return;
     setBulkBusy(true);
     bulkCancelRef.current = false;
     let offset = 0;
@@ -687,7 +708,7 @@ export default function AdminProductsImport() {
                   <input type="radio" checked={bulkForm.scope === "all"} onChange={() => setBulkForm({ ...bulkForm, scope: "all" })} /> All imported products
                 </label>
                 <label className="inline-flex items-center gap-1.5">
-                  <input type="radio" checked={bulkForm.scope === "search"} onChange={() => setBulkForm({ ...bulkForm, scope: "search" })} /> Only products matching the search box above {importedSearch ? `("${importedSearch}")` : "(currently empty — same as All)"}
+                  <input type="radio" checked={bulkForm.scope === "search"} onChange={() => setBulkForm({ ...bulkForm, scope: "search" })} /> Only products matching the search box above {importedSearch ? `("${importedSearch}")` : "(type a search first)"}
                 </label>
                 <label className="inline-flex items-center gap-1.5">
                   <input type="radio" checked={bulkForm.scope === "selected"} disabled={bulkSelectedIds.size === 0} onChange={() => setBulkForm({ ...bulkForm, scope: "selected" })} /> Only the {bulkSelectedIds.size} product{bulkSelectedIds.size === 1 ? "" : "s"} I've ticked below {bulkSelectedIds.size === 0 && "(tick some first)"}
