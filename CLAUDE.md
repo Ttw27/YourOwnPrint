@@ -202,7 +202,8 @@ frontend/src/
   - Vercel publishable key if used: `pk_test_...` → `pk_live_...` (note: site uses **hosted
     Checkout**, so the publishable key may not be needed)
   - Create a **live** webhook at `…/api/webhook/stripe`, event `checkout.session.completed`,
-    and set `STRIPE_WEBHOOK_SECRET` to its `whsec_...`
+    and set `STRIPE_WEBHOOK_SECRET` to its `whsec_...` (**required** — the webhook refuses all
+    events without it; orders still complete via the success page's direct Stripe check)
   - Test a real card for a small amount; confirm the order lands in admin (proves the webhook)
   - Remove any hardcoded "Test mode" label if one still shows at checkout
 
@@ -214,8 +215,6 @@ frontend/src/
 
 ### Known gaps not yet built (backlog):
 - Per-product social share images (parked due to prior deploy risk)
-- Error handling on the Reviews and Sports pages
-- Validation on the "Randomize main photo" bulk action
 - Plain-English rewording of the remaining admin screens
 - (Optional) serve portfolio images directly from the R2 public URL instead of proxying through
   the backend — would remove the need for `mediaUrl()` on portfolio, but existing items are saved
