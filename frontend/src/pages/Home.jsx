@@ -139,7 +139,7 @@ export default function Home() {
 
       {/* Designer feature */}
       <div className="bg-[#f0fdf4] border-y border-[#dcfce7]">
-        <div className="max-w-7xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-10 items-center">          <div>
+        <div className="max-w-7xl mx-auto px-6 py-14 grid lg:grid-cols-2 gap-10 items-center">          <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs">
               <Smile size={14} className="text-[#7bc67e]" /> So easy, anyone can do it
             </div>
@@ -150,7 +150,21 @@ export default function Home() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {bestSellers.slice(0, 4).map((p) => {
+            {[0, 1].map((i) => {
+              // Photo set in Admin → Pages → Home ("designer:1" / "designer:2") wins;
+              // otherwise fall back to a best-selling product card.
+              const custom = copy.images && copy.images[`designer:${i + 1}`];
+              if (custom) {
+                return (
+                  <Link key={`designer-${i}`} to="/design" className="block bg-white rounded-2xl p-3 border border-[#dcfce7] shadow-sm hover:shadow-md transition-shadow" data-testid={`home-designer-photo-${i + 1}`}>
+                    <div className="aspect-square rounded-xl overflow-hidden bg-[#f0fdf4]">
+                      <SiteImage src={custom} alt="" loading="lazy" className="w-full h-full object-cover" testid={`home-designer-photo-img-${i + 1}`} />
+                    </div>
+                  </Link>
+                );
+              }
+              const p = bestSellers[i];
+              if (!p) return null;
               const agg = aggregates[p.id];
               return (
                 <Link key={p.id} to={`/product/${p.id}`} className="bg-white rounded-2xl p-4 border border-[#dcfce7] shadow-sm hover:shadow-md transition-shadow">
