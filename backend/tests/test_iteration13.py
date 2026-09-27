@@ -1,4 +1,4 @@
-"""Iteration 13 backend tests — generic bulk-pricing tiers + product meta (brand/SKU/size guide)."""
+"""Iteration 13 backend tests - generic bulk-pricing tiers + product meta (brand/SKU/size guide)."""
 import os
 import pytest
 import requests
@@ -33,7 +33,7 @@ def test_bulk_defaults_get_initial(s):
     # Order desc by min_qty
     qmin = [t["min_qty"] for t in data["tiers"]]
     assert qmin == sorted(qmin, reverse=True)
-    # Either still original (no patch yet) or already mutated by an earlier run — both ok;
+    # Either still original (no patch yet) or already mutated by an earlier run - both ok;
     # what matters is restored before tests finish.
     # But on a fresh DB we expect exactly the 4 original tiers.
 
@@ -81,7 +81,7 @@ def test_product_meta_patch_and_get_persisted(s):
     payload = {
         "brand": "YOP",
         "sku": "YOP-PT-01",
-        "description_full": "Long desc for personalised tee — iteration 13 test.",
+        "description_full": "Long desc for personalised tee - iteration 13 test.",
         "size_guide_image": "https://x",
         "size_guide_table": [{"size": "M", "chest": 52, "length": 71}],
         "bulk_pricing_enabled": True,

@@ -14,7 +14,7 @@ export default function Contact() {
 
   const copy = usePageCopy("contact", {
     title: "",
-    subtitle: "Tell us what you need — we'll come back with a tailored quote, fabric advice and free logo design ideas.",
+    subtitle: "Tell us what you need - we'll come back with a tailored quote, fabric advice and free logo design ideas.",
   });
 
   const update = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -80,7 +80,7 @@ export default function Contact() {
               <div>
                 <label className="block text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Sector</label>
                 <select data-testid="contact-sector" value={form.sector} onChange={update("sector")} className="w-full bg-white border border-[#e5e7eb] focus:border-[#7bc67e] outline-none rounded-xl px-3 py-2.5">
-                  <option value="">— Choose —</option>
+                  <option value="">- Choose -</option>
                   {SECTORS.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
                 </select>
               </div>

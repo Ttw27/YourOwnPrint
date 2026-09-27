@@ -11,8 +11,8 @@ import { fetchSiteWhatsApp } from "../../lib/api";
  */
 export default function NeedHelpCTA({
   title = "Not confident uploading? Let us do it for you.",
-  body = "Send over your logo, sketch, or just a rough idea. Our UK design team will mock it up for free, tidy up shonky files, and send you a proof to approve — no cost, no pressure.",
-  presetMessage = "Hi! I'd love a hand designing my order — can you sort the artwork for me?",
+  body = "Send over your logo, sketch, or just a rough idea. Our UK design team will mock it up for free, tidy up shonky files, and send you a proof to approve - no cost, no pressure.",
+  presetMessage = "Hi! I'd love a hand designing my order - can you sort the artwork for me?",
   primaryLabel = "WhatsApp us your logo",
   fallbackLabel = "Get a free mock-up",
   variant = "panel",         // "panel" | "banner" | "inline"

@@ -130,7 +130,7 @@ class TestQuoteRequest:
             "contact_name": "Test Manager",
             "contact_email": "test@example.com",
             "contact_phone": "+441234567890",
-            "message": "Full Squad quote — Roster: 3 players. Items: [Match Day set] Jersey — S×3. Estimated £56.97.",
+            "message": "Full Squad quote - Roster: 3 players. Items: [Match Day set] Jersey - S×3. Estimated £56.97.",
         }
         r = requests.post(f"{BASE_URL}/api/quote-request", json=payload)
         # This will fail with 422 because backend requires 'kind' and 'name' + 'email'

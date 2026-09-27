@@ -1,5 +1,5 @@
 """
-The Design Shop — ready-made printed designs (a store within the store).
+The Design Shop - ready-made printed designs (a store within the store).
 
 This is deliberately kept SEPARATE from the workwear/custom side:
   * Design-shop products carry `design_shop: True` and never appear in the normal
@@ -8,10 +8,10 @@ This is deliberately kept SEPARATE from the workwear/custom side:
     their own browse experience with its own sidebar + filters (garment, colour).
   * Each design is one artwork printed onto a choice of garments (tee, hoodie,
     sweater, tote, tank, long-sleeve). For v1 the print artwork itself is the main
-    image — clean and fast to maintain; real mockups can be layered on later.
+    image - clean and fast to maintain; real mockups can be layered on later.
 
 Nothing here writes to the catalogue on read. Products are created via the admin
-upload tool (see routers/design_shop_admin — Stage 2) or the normal product admin.
+upload tool (see routers/design_shop_admin - Stage 2) or the normal product admin.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from deps import api_router, db, require_admin
 DESIGN_CATEGORIES = [
     {"slug": "funny-sarcastic", "title": "Funny & Sarcastic", "blurb": "Slogans and gags that get a laugh."},
     {"slug": "gym-fitness",     "title": "Gym & Fitness",     "blurb": "For the lifters, runners and gym rats."},
-    {"slug": "food-drink",      "title": "Food & Drink",      "blurb": "Coffee, beer, pizza — the good stuff."},
+    {"slug": "food-drink",      "title": "Food & Drink",      "blurb": "Coffee, beer, pizza - the good stuff."},
     {"slug": "animals-pets",    "title": "Animals & Pets",    "blurb": "For dog people, cat people and everyone between."},
     {"slug": "family-occasions","title": "Family & Occasions","blurb": "Birthdays, retirement, mum & dad, milestones."},
     {"slug": "music-festival",  "title": "Music & Festival",  "blurb": "Festival-ready and music-lover designs."},
@@ -37,7 +37,7 @@ DESIGN_CATEGORIES = [
 DESIGN_CATEGORY_SLUGS = {c["slug"] for c in DESIGN_CATEGORIES}
 
 # The garments a design can be printed on, with the base price for each.
-# (These are the Design-Shop retail prices — flat per garment, not the blank cost.)
+# (These are the Design-Shop retail prices - flat per garment, not the blank cost.)
 DESIGN_GARMENTS = [
     {"slug": "t-shirt",      "title": "T-Shirt",           "price": 14.99},
     {"slug": "sweater",      "title": "Sweater",           "price": 26.99},

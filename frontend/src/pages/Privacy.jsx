@@ -16,11 +16,11 @@ export default function Privacy() {
 
       <LegalSection title="2. What we collect">
         <ul className="list-disc pl-5 space-y-1">
-          <li>Contact details you give us — name, email, phone number, delivery address</li>
-          <li>Order details — what you've bought, sizes, design/artwork files you upload</li>
-          <li>Account details, if you create one — email and a securely hashed password</li>
-          <li>Payment information — handled entirely by Stripe; we never see or store full card details</li>
-          <li>Basic technical data — pages visited, general usage, to help us keep the site working well</li>
+          <li>Contact details you give us - name, email, phone number, delivery address</li>
+          <li>Order details - what you've bought, sizes, design/artwork files you upload</li>
+          <li>Account details, if you create one - email and a securely hashed password</li>
+          <li>Payment information - handled entirely by Stripe; we never see or store full card details</li>
+          <li>Basic technical data - pages visited, general usage, to help us keep the site working well</li>
         </ul>
       </LegalSection>
 
@@ -37,10 +37,10 @@ export default function Privacy() {
       <LegalSection title="4. Who we share it with">
         <p>We use a small number of trusted service providers to run the business, including:</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Stripe</strong> — payment processing</li>
-          <li><strong>Resend</strong> — sending order and enquiry emails</li>
-          <li><strong>Cloudflare (R2)</strong> — secure storage for uploaded artwork and product images</li>
-          <li><strong>MongoDB Atlas</strong> — secure database hosting</li>
+          <li><strong>Stripe</strong> - payment processing</li>
+          <li><strong>Resend</strong> - sending order and enquiry emails</li>
+          <li><strong>Cloudflare (R2)</strong> - secure storage for uploaded artwork and product images</li>
+          <li><strong>MongoDB Atlas</strong> - secure database hosting</li>
         </ul>
         <p>
           We don't sell your personal data to anyone, and we only share what's needed for these
@@ -74,7 +74,7 @@ export default function Privacy() {
 
       <LegalSection title="7. Cookies">
         <p>
-          We use only the essential cookies/local storage needed to make the site function — for
+          We use only the essential cookies/local storage needed to make the site function - for
           example, keeping you logged in and remembering your cart. We don't use third-party
           advertising trackers.
         </p>

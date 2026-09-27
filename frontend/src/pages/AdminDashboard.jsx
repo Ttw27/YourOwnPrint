@@ -8,7 +8,7 @@ import {
 import { adminFetchReviewStats } from "../lib/api";
 
 /**
- * AdminDashboard — the admin home. Login lands here (instead of mid-task on
+ * AdminDashboard - the admin home. Login lands here (instead of mid-task on
  * Product Settings), giving a clear launchpad into every area. Counts are
  * best-effort: if an endpoint isn't there, the tile still works as a link.
  */

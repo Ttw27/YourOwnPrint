@@ -1,7 +1,7 @@
 import React from "react";
 
 /**
- * GarmentSilhouette — real vector t-shirt templates (traced from the supplied
+ * GarmentSilhouette - real vector t-shirt templates (traced from the supplied
  * artwork) that recolour to the selected colour. Front and back views. The
  * garment BODY takes the colour; the black line-art stays crisp on top so it
  * reads on every colour including white/yellow.

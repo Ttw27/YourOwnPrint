@@ -6,7 +6,7 @@ import { ArrowRight, Loader2, SearchX, ChevronLeft, ChevronRight } from "lucide-
 import usePageTitle from "../hooks/usePageTitle";
 import PriceTag from "../components/bold/PriceTag";
 
-const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
 export default function SearchResults() {
   usePageTitle("Search");

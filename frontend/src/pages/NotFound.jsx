@@ -6,7 +6,7 @@ import { ArrowRight, Search, Home as HomeIcon } from "lucide-react";
 
 /**
  * Catch-all 404. Without this route, any unknown or mistyped URL rendered a
- * completely blank page — no nav, no footer, no way back — which looks broken
+ * completely blank page - no nav, no footer, no way back - which looks broken
  * to customers and gives search engines nothing useful.
  */
 export default function NotFound() {
@@ -29,7 +29,7 @@ export default function NotFound() {
         <div className="text-[#7bc67e] font-extrabold text-sm uppercase tracking-[0.3em]">Error 404</div>
         <h1 className="font-black text-4xl sm:text-5xl mt-3">We can&rsquo;t find that page</h1>
         <p className="text-[#4b5563] mt-4 text-base sm:text-lg">
-          The link may be out of date, or the address might have a typo in it. Everything else is still here &mdash;
+          The link may be out of date, or the address might have a typo in it. Everything else is still here -
           try one of these:
         </p>
 

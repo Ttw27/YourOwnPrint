@@ -4,7 +4,7 @@ import { Loader2, Upload, CheckCircle2, Image as ImageIcon, AlertTriangle } from
 import { ralawisePreview, ralawiseImport, ralawiseStatus } from "../lib/api";
 
 /**
- * Admin — Ralawise importer. Upload the Ralawise spreadsheet (.xlsm/.xlsx) to
+ * Admin - Ralawise importer. Upload the Ralawise spreadsheet (.xlsm/.xlsx) to
  * import/update products with their images, colours (real RGB swatches) and
  * sizes. Images are mirrored to our own R2 so nothing hotlinks to the supplier.
  */
@@ -36,7 +36,7 @@ export default function AdminRalawise() {
       setPreview(r);
       toast.success(`Found ${r.products} products in the file.`);
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Couldn't read that file — is it the Ralawise export?");
+      toast.error(e?.response?.data?.detail || "Couldn't read that file - is it the Ralawise export?");
     } finally { setBusy(false); }
   };
 
@@ -51,7 +51,7 @@ export default function AdminRalawise() {
       const jobId = start.job_id;
       if (!jobId) throw new Error("No job id returned");
       setProgress({ phase: "starting", total: start.products, finished: false });
-      // Poll the status every 1.5s — this keeps a live view AND leaves errors on screen.
+      // Poll the status every 1.5s - this keeps a live view AND leaves errors on screen.
       pollRef.current = setInterval(async () => {
         try {
           const st = await ralawiseStatus(jobId);
@@ -63,14 +63,14 @@ export default function AdminRalawise() {
               setResult({ failed: true, ...st });
             } else {
               setResult({ failed: false, ...st });
-              toast.success(`Done — ${st.updated} updated, ${st.imported} new.`);
+              toast.success(`Done - ${st.updated} updated, ${st.imported} new.`);
             }
           }
         } catch (err) {
-          // status fetch failed — keep the last progress on screen, note it
+          // status fetch failed - keep the last progress on screen, note it
           clearInterval(pollRef.current); pollRef.current = null;
           setBusy(false);
-          setProgress((p) => ({ ...(p || {}), phase: "lost connection to job — it may still be running; re-scan Image Health in a few minutes", finished: true, error: "Couldn't reach the job status. The import may still be finishing in the background." }));
+          setProgress((p) => ({ ...(p || {}), phase: "lost connection to job - it may still be running; re-scan Image Health in a few minutes", finished: true, error: "Couldn't reach the job status. The import may still be finishing in the background." }));
         }
       }, 1500);
     } catch (e) {
@@ -90,7 +90,7 @@ export default function AdminRalawise() {
       <p className="text-[#4b5563] mt-2 max-w-2xl">
         Upload the Ralawise spreadsheet (<code>.xlsm</code> or <code>.xlsx</code>). It fills in product
         images, colours and sizes, and copies every image to our own storage so nothing breaks if Ralawise
-        changes their links. Re-uploading updates existing products — it won't create duplicates.
+        changes their links. Re-uploading updates existing products - it won't create duplicates.
       </p>
 
       {/* Upload */}
@@ -140,7 +140,7 @@ export default function AdminRalawise() {
                     <td className="pr-4">{s.price?.toFixed?.(2)}</td>
                     <td className="pr-4">{s.colours}</td>
                     <td className="pr-4">{s.sizes}</td>
-                    <td>{s.has_image ? <CheckCircle2 size={14} className="text-[#7bc67e]" /> : "—"}</td>
+                    <td>{s.has_image ? <CheckCircle2 size={14} className="text-[#7bc67e]" /> : "-"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -150,12 +150,12 @@ export default function AdminRalawise() {
         </div>
       )}
 
-      {/* Live progress — stays on screen through the whole job */}
+      {/* Live progress - stays on screen through the whole job */}
       {progress && !progress.error && !(result && !result.failed) && (
         <div className="mt-6 bg-white border-2 border-[#dcfce7] rounded-3xl p-6" data-testid="ralawise-progress">
           <h2 className="font-black text-lg flex items-center gap-2">
             {progress.finished ? <CheckCircle2 className="text-[#7bc67e]" size={20} /> : <Loader2 className="animate-spin text-[#7bc67e]" size={20} />}
-            {progress.phase === "done" ? "Finishing up…" : `In progress — ${progress.phase || "starting"}`}
+            {progress.phase === "done" ? "Finishing up…" : `In progress - ${progress.phase || "starting"}`}
           </h2>
 
           {/* products bar */}
@@ -184,18 +184,18 @@ export default function AdminRalawise() {
             </div>
           )}
 
-          <p className="text-xs text-[#4b5563] mt-4">You can leave this page — the import keeps running. This panel updates live while it's open.</p>
+          <p className="text-xs text-[#4b5563] mt-4">You can leave this page - the import keeps running. This panel updates live while it's open.</p>
         </div>
       )}
 
-      {/* Persistent error — stays until you start again */}
+      {/* Persistent error - stays until you start again */}
       {((progress && progress.error) || (result && result.failed)) && (
         <div className="mt-6 bg-rose-50 border-2 border-rose-200 rounded-3xl p-6" data-testid="ralawise-error">
           <h2 className="font-black text-lg flex items-center gap-2 text-rose-700"><AlertTriangle size={20} /> Import failed</h2>
           <p className="text-sm text-rose-700 mt-2">{(result && result.error) || (progress && progress.error)}</p>
           <p className="text-xs text-[#4b5563] mt-3">
             {(progress && progress.products_done)
-              ? `${progress.products_done} products were imported before this stopped. It's safe to try again — re-running updates, it won't duplicate.`
+              ? `${progress.products_done} products were imported before this stopped. It's safe to try again - re-running updates, it won't duplicate.`
               : "Nothing was imported. Check the file and try again."}
           </p>
         </div>

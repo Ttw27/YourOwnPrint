@@ -1,4 +1,4 @@
-"""Customer auth + account data — separate from admin auth.
+"""Customer auth + account data - separate from admin auth.
 
 Kept in one router file for simplicity: register, login, logout, me,
 forgot-password, reset-password, plus customer-scoped cart persistence,
@@ -9,7 +9,7 @@ Design decisions:
 - Uses the SAME JWT secret + algorithm as admin auth but tokens carry
   `role="customer"`, so `require_admin` can't accept a customer token and
   `require_customer` can't accept an admin token.
-- Access token = 7 days (matches admin pattern for MVP simplicity — refresh
+- Access token = 7 days (matches admin pattern for MVP simplicity - refresh
   token flow can be added later without breaking clients).
 - Brute-force: 5 failed attempts locks the account for 15min.
 - Password reset: `secrets.token_urlsafe(32)` with 1-hour TTL, dispatched via Resend.
@@ -34,7 +34,7 @@ from services.r2_storage import storage_put_async as _r2_put, get_public_url as 
 
 
 def _parse_thumbnail_data_url(data_url: str, max_bytes: int = 2_000_000):
-    """Minimal data-URL parser for design thumbnails (own copy — importing
+    """Minimal data-URL parser for design thumbnails (own copy - importing
     server.py's version here would create a circular import)."""
     import base64
     if not data_url or not data_url.startswith("data:"):
@@ -188,7 +188,7 @@ def _serialise_customer(doc: Dict) -> Dict:
         "name": doc.get("name", ""),
         "role": "customer",
         "created_at": doc.get("created_at", ""),
-        # Business profile — everything that lets a company reorder without
+        # Business profile - everything that lets a company reorder without
         # re-explaining who they are. Absent/empty for personal accounts, which
         # is what keeps the business UI hidden for them.
         "business": {
@@ -202,7 +202,7 @@ def _serialise_customer(doc: Dict) -> Dict:
 
 
 async def get_current_customer(request: Request) -> Dict:
-    # Prefer Bearer header over cookie — API clients using explicit tokens shouldn't
+    # Prefer Bearer header over cookie - API clients using explicit tokens shouldn't
     # be shadowed by a stale cookie from a previous session on the same origin.
     token = None
     auth_header = request.headers.get("Authorization", "")
@@ -261,7 +261,7 @@ def _set_customer_cookie(response: Response, token: str) -> None:
         key="customer_access_token",
         value=token,
         httponly=True,
-        secure=False,          # kubernetes ingress terminates TLS — cookie flows over http internally
+        secure=False,          # kubernetes ingress terminates TLS - cookie flows over http internally
         samesite="lax",
         max_age=_CUSTOMER_TOKEN_DAYS * 86400,
         path="/",
@@ -317,7 +317,7 @@ async def customer_me(customer: Dict = Depends(require_customer)):
 
 
 # ---------------------------------------------------------------------------
-# Password reset — Resend-backed
+# Password reset - Resend-backed
 # ---------------------------------------------------------------------------
 @api_router.post("/customer/forgot-password")
 async def customer_forgot_password(payload: ForgotPasswordRequest, request: Request):
@@ -351,7 +351,7 @@ async def customer_forgot_password(payload: ForgotPasswordRequest, request: Requ
             <p style="text-align:center;margin:24px 0">
               <a href="{reset_link}" style="display:inline-block;background:#7bc67e;color:#1a1a1a;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:900">Reset password</a>
             </p>
-            <p style="color:#4b5563;font-size:12px">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+            <p style="color:#4b5563;font-size:12px">If you didn't request this, you can safely ignore this email - your password won't change.</p>
             <p style="color:#4b5563;font-size:11px;word-break:break-all">Or paste this link into your browser: {reset_link}</p>
             """,
         )
@@ -373,7 +373,7 @@ async def customer_reset_password(payload: ResetPasswordRequest, response: Respo
     except Exception:
         raise HTTPException(400, "Reset link is invalid")
     if expires < datetime.now(timezone.utc):
-        raise HTTPException(400, "Reset link has expired — request a new one")
+        raise HTTPException(400, "Reset link has expired - request a new one")
     await db.customers.update_one({"id": tok["customer_id"]},
                                   {"$set": {"password_hash": _hash_pw(payload.new_password)}})
     await db.password_reset_tokens.update_one({"token": payload.token},
@@ -392,7 +392,7 @@ async def customer_reset_password(payload: ResetPasswordRequest, response: Respo
 # Cart persistence
 # ---------------------------------------------------------------------------
 def _line_id(line: Dict) -> str:
-    """Stable identity for a cart line — same product+colour+placements+design → same id.
+    """Stable identity for a cart line - same product+colour+placements+design → same id.
     Uses canonical JSON for design_meta so dict ordering doesn't affect the hash."""
     placements = ",".join(sorted(line.get("placements") or []))
     dm = json.dumps(line.get("design_meta") or {}, sort_keys=True)
@@ -459,7 +459,7 @@ async def customer_cart_merge(payload: CartSyncRequest, customer: Dict = Depends
 
 
 # ---------------------------------------------------------------------------
-# Order history — reads payment_transactions where the checkout session had
+# Order history - reads payment_transactions where the checkout session had
 # customer_email matching the logged-in user. Stripe automatically captures
 # customer_email on the Checkout Session.
 # ---------------------------------------------------------------------------
@@ -517,7 +517,7 @@ async def customer_delete_address(addr_id: str, customer: Dict = Depends(require
 
 
 # ---------------------------------------------------------------------------
-# Business profile — company name, saved logo, brand colours
+# Business profile - company name, saved logo, brand colours
 #
 # This is the heart of the "reorder without re-explaining who you are" flow.
 # A logo saved once here is offered on every future design and shown on the
@@ -590,7 +590,7 @@ async def customer_save_design(payload: SavedDesignIn, customer: Dict = Depends(
                 await _r2_put(path, raw, content_type)
                 r2_url = _r2_public_url(path)
                 if r2_url:
-                    doc["thumbnail_data_url"] = r2_url  # same field name — frontend renders it identically either way
+                    doc["thumbnail_data_url"] = r2_url  # same field name - frontend renders it identically either way
             except Exception:
                 pass  # fall back to the original data URL rather than lose the thumbnail entirely
 

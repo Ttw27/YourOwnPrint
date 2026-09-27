@@ -18,9 +18,9 @@ export default function LeaversStart() {
 
   const [details, setDetails] = useState({ school: "", year_group: "Year 11", contact_name: "", contact_email: "", contact_phone: "" });
   const [productId, setProductId] = useState(null);
-  // Print position — "breast" (default, included) OR "full_front" (+upcharge)
+  // Print position - "breast" (default, included) OR "full_front" (+upcharge)
   const [printPosition, setPrintPosition] = useState("breast");
-  // Design selections — either a picked library item id OR a custom upload data URL
+  // Design selections - either a picked library item id OR a custom upload data URL
   const [frontDesignId, setFrontDesignId] = useState(null);
   const [customFront, setCustomFront] = useState(null);
   const [backDesignId, setBackDesignId] = useState(null);
@@ -66,7 +66,7 @@ export default function LeaversStart() {
   useEffect(() => {
     if (product && !allowsFullFront && printPosition === "full_front") {
       setPrintPosition("breast");
-      toast.info(`${product.name} doesn't support a full-front print — switched to breast.`);
+      toast.info(`${product.name} doesn't support a full-front print - switched to breast.`);
     }
   }, [product, allowsFullFront, printPosition]);
 
@@ -148,7 +148,7 @@ export default function LeaversStart() {
           <header>
             <button onClick={() => navigate("/leavers-hoodies")} className="text-xs text-[#4b5563] hover:underline mb-2" data-testid="leavers-start-back">← Back to overview</button>
             <h1 className="font-nunito font-black text-4xl lg:text-5xl">Start your leavers&apos; order</h1>
-            <p className="text-[#4b5563] mt-2">No group sign-up needed — just tell us what you want and we&apos;ll send a free proof before printing.</p>
+            <p className="text-[#4b5563] mt-2">No group sign-up needed - just tell us what you want and we&apos;ll send a free proof before printing.</p>
           </header>
 
           {/* Step 1: details */}
@@ -193,7 +193,7 @@ export default function LeaversStart() {
             </div>
           </section>
 
-          {/* Step 3: Print position — breast (included) vs full front (+upcharge, disabled for varsity) */}
+          {/* Step 3: Print position - breast (included) vs full front (+upcharge, disabled for varsity) */}
           {product && (
             <section data-testid="leavers-step-position">
               <h2 className="font-nunito font-black text-2xl mb-3"><span className="text-[#7bc67e]">3.</span> Where does the print go?</h2>
@@ -209,7 +209,7 @@ export default function LeaversStart() {
                     <span className="font-nunito font-extrabold">Front breast pocket</span>
                     <span className="ml-auto text-xs font-extrabold text-[#7bc67e]">Included</span>
                   </div>
-                  <div className="text-xs text-[#4b5563] mt-1.5">Neat, subtle logo/design on the left chest — the standard leavers&apos; look.</div>
+                  <div className="text-xs text-[#4b5563] mt-1.5">Neat, subtle logo/design on the left chest - the standard leavers&apos; look.</div>
                 </button>
                 <button
                   type="button"
@@ -225,19 +225,19 @@ export default function LeaversStart() {
                   </div>
                   <div className="text-xs text-[#4b5563] mt-1.5">
                     {allowsFullFront
-                      ? "Full-size design across the chest — the bold statement version."
+                      ? "Full-size design across the chest - the bold statement version."
                       : `${product.name} doesn't support a full-front print (chest-panel construction). Please choose breast.`}
                   </div>
                 </button>
               </div>
               <div className="mt-2 text-xs text-[#4b5563] flex items-start gap-1.5" data-testid="ls-position-note">
                 <Info size={12} className="mt-0.5 flex-shrink-0" />
-                <span>You can only pick one front print — breast <em>or</em> full-front (not both).</span>
+                <span>You can only pick one front print - breast <em>or</em> full-front (not both).</span>
               </div>
             </section>
           )}
 
-          {/* Step 4: Front design — pick from library OR upload */}
+          {/* Step 4: Front design - pick from library OR upload */}
           {product && (
             <section data-testid="leavers-step-front-design">
               <h2 className="font-nunito font-black text-2xl mb-3"><span className="text-[#7bc67e]">4.</span> Front design {printPosition === "full_front" ? "(full front)" : "(breast pocket)"}</h2>
@@ -262,10 +262,10 @@ export default function LeaversStart() {
             </section>
           )}
 
-          {/* Step 5: Back design — pick from library OR upload (both included in price) */}
+          {/* Step 5: Back design - pick from library OR upload (both included in price) */}
           {product && (
             <section data-testid="leavers-step-back-design">
-              <h2 className="font-nunito font-black text-2xl mb-3"><span className="text-[#7bc67e]">5.</span> Back design <span className="text-xs font-normal text-[#4b5563]">— optional, included in price</span></h2>
+              <h2 className="font-nunito font-black text-2xl mb-3"><span className="text-[#7bc67e]">5.</span> Back design <span className="text-xs font-normal text-[#4b5563]">- optional, included in price</span></h2>
               <DesignLibraryGrid
                 testidPrefix="ls-back-design"
                 items={designLibs.back}
@@ -287,11 +287,11 @@ export default function LeaversStart() {
             </section>
           )}
 
-          {/* Step 6: Names — upload a file OR let us contact them after purchase */}
+          {/* Step 6: Names - upload a file OR let us contact them after purchase */}
           {product && (
             <section data-testid="leavers-step-names">
               <h2 className="font-nunito font-black text-2xl mb-3"><span className="text-[#7bc67e]">6.</span> Student names</h2>
-              <p className="text-sm text-[#4b5563] mb-3">Only needed if your design lists names on the back. If you&apos;ve uploaded your own artwork with names baked in, tick &quot;we&apos;ll be in touch&quot; — we may not need anything else.</p>
+              <p className="text-sm text-[#4b5563] mb-3">Only needed if your design lists names on the back. If you&apos;ve uploaded your own artwork with names baked in, tick &quot;we&apos;ll be in touch&quot; - we may not need anything else.</p>
               <div className="grid sm:grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -304,7 +304,7 @@ export default function LeaversStart() {
                     <Users size={16} className="text-[#7bc67e]" />
                     <span className="font-nunito font-extrabold">We&apos;ll be in touch</span>
                   </div>
-                  <div className="text-xs text-[#4b5563] mt-1.5">After you check out, we&apos;ll email you a simple form to collect names — you have up to {config.names_deadline_days || 7} days.</div>
+                  <div className="text-xs text-[#4b5563] mt-1.5">After you check out, we&apos;ll email you a simple form to collect names - you have up to {config.names_deadline_days || 7} days.</div>
                 </button>
                 <button
                   type="button"
@@ -392,7 +392,7 @@ export default function LeaversStart() {
           <NeedHelpCTA
             title="Rather we handled the design for the whole year group?"
             body="Send over your school logo, the year, colour preferences and a rough idea. We'll mock up a design (front + back), send it for approval, then handle names collection with you directly."
-            presetMessage="Hi! I'd like your team to sort our leavers' hoodie design — can I send you the info?"
+            presetMessage="Hi! I'd like your team to sort our leavers' hoodie design - can I send you the info?"
             testid="leavers-need-help"
             variant="banner"
           />
@@ -423,24 +423,24 @@ export default function LeaversStart() {
             <div className="mt-4 space-y-2 text-[11px] text-zinc-300" data-testid="ls-proof-block">
               <div className="flex items-start gap-2">
                 <ShieldCheck size={12} className="mt-0.5 flex-shrink-0 text-[#7bc67e]" />
-                <span><strong className="text-white">We&apos;ll send a proof</strong> — mock-up of the design (and names) within {config.proof_days || 2} working days. Nothing prints until you say yes.</span>
+                <span><strong className="text-white">We&apos;ll send a proof</strong> - mock-up of the design (and names) within {config.proof_days || 2} working days. Nothing prints until you say yes.</span>
               </div>
               {printPosition === "full_front" && (
                 <div className="flex items-start gap-2" data-testid="ls-summary-full-front-note">
                   <Sparkles size={12} className="mt-0.5 flex-shrink-0 text-[#fbbf24]" />
-                  <span>Full-front print upgrade — <strong className="text-white">+£{Number(config.full_front_upcharge || 0).toFixed(2)}</strong> per garment.</span>
+                  <span>Full-front print upgrade - <strong className="text-white">+£{Number(config.full_front_upcharge || 0).toFixed(2)}</strong> per garment.</span>
                 </div>
               )}
               {namesMode === "we-will-contact" && (
                 <div className="flex items-start gap-2" data-testid="ls-summary-names-note">
                   <Users size={12} className="mt-0.5 flex-shrink-0 text-[#7bc67e]" />
-                  <span>Names — we&apos;ll email you a form after checkout to collect them.</span>
+                  <span>Names - we&apos;ll email you a form after checkout to collect them.</span>
                 </div>
               )}
               {namesMode === "upload" && namesFile && (
                 <div className="flex items-start gap-2" data-testid="ls-summary-names-note">
                   <FileText size={12} className="mt-0.5 flex-shrink-0 text-[#7bc67e]" />
-                  <span>Names list uploaded — we&apos;ll double-check it on the proof.</span>
+                  <span>Names list uploaded - we&apos;ll double-check it on the proof.</span>
                 </div>
               )}
             </div>
@@ -457,7 +457,7 @@ function DesignLibraryGrid({ items, selectedId, onSelect, testidPrefix }) {
   if (!items || items.length === 0) {
     return (
       <div className="bg-[#f0fdf4] border-2 border-dashed border-[#dcfce7] rounded-2xl p-6 text-center text-sm text-[#4b5563]" data-testid={`${testidPrefix}-empty`}>
-        No preset designs live yet — <strong>upload your own below</strong> or ask us to design one for you.
+        No preset designs live yet - <strong>upload your own below</strong> or ask us to design one for you.
       </div>
     );
   }
@@ -624,7 +624,7 @@ function DrawstringBagCard({ bag, price, checked, onToggle }) {
                 <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#7bc67e] text-[#1a1a1a] font-extrabold">+£{price.toFixed(2)} / hoodie</span>
               </div>
               <div className="text-xs text-[#4b5563] mt-1 leading-relaxed">
-                Same design as your hoodie printed on the front, with the <strong className="text-[#1a1a1a]">size of the garment inside</strong> printed on the back — makes handing them out at school painless.
+                Same design as your hoodie printed on the front, with the <strong className="text-[#1a1a1a]">size of the garment inside</strong> printed on the back - makes handing them out at school painless.
               </div>
               <div className="text-[11px] text-[#4b5563] mt-2 flex items-center gap-1">
                 <ImageIcon size={11} className="text-[#7bc67e]" /> Westford Mill-style carry-all · UK printed

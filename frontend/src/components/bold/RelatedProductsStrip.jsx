@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import PriceTag from "./PriceTag";
 
 /**
- * Generic related-products strip — used by both "Customers also bought" and "Match with".
+ * Generic related-products strip - used by both "Customers also bought" and "Match with".
  * Pass a fetcher returning [{id,name,price,image,category}].
  */
 export default function RelatedProductsStrip({ productId, title, subtitle, fetcher, accentColor = "#7bc67e", testidPrefix }) {

@@ -47,7 +47,7 @@ export default function AdminDesignerProducts() {
   const setColours = (id, colors) => update(id, { colors });
   const addColour = (p) => {
     const list = p.colors || [];
-    // Don't stack multiple unnamed "New colour" rows — nudge to rename the existing one.
+    // Don't stack multiple unnamed "New colour" rows - nudge to rename the existing one.
     if (list.some((c) => (c.name || "").trim().toLowerCase() === "new colour")) {
       toast("Rename the existing 'New colour' first, then add another.");
       return;
@@ -164,7 +164,7 @@ export default function AdminDesignerProducts() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
         <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Designer Products</h1>
-        <p className="text-[#4b5563] mt-3 max-w-2xl">Choose which products customers can customise in <strong>Design Your Own</strong>. For each one, set the photo they design on top of, and drag out the area their artwork is allowed to sit in. Upload a photo per colour and the designer shows the real garment in that colour &mdash; without one, it falls back to a plain block of that colour so the customer never sees the wrong shade.</p>
+        <p className="text-[#4b5563] mt-3 max-w-2xl">Choose which products customers can customise in <strong>Design Your Own</strong>. For each one, set the photo they design on top of, and drag out the area their artwork is allowed to sit in. Upload a photo per colour and the designer shows the real garment in that colour - without one, it falls back to a plain block of that colour so the customer never sees the wrong shade.</p>
 
         <div className="flex flex-wrap items-center gap-3 mt-6">
           <input data-testid="dp-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search products…" className="bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-80" />
@@ -206,11 +206,11 @@ export default function AdminDesignerProducts() {
                             <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadMainImage(p, e.target.files[0])} />
                           </label>
                         </div>
-                        <p className="text-[10px] text-[#4b5563] mt-1">This is a separate photo just for the design canvas — it never appears in the product's normal photo gallery customers browse.</p>
+                        <p className="text-[10px] text-[#4b5563] mt-1">This is a separate photo just for the design canvas - it never appears in the product's normal photo gallery customers browse.</p>
                       </div>
 
                       <div>
-                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Print area — drag the box on the image</label>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Print area - drag the box on the image</label>
                         <PrintAreaPicker image={p.designer_image} value={pa} onChange={(next) => update(p.id, { designer_print_area: next })} />
                         <div className="grid grid-cols-4 gap-1.5 mt-2">
                           {["x","y","w","h"].map(k => (
@@ -222,7 +222,7 @@ export default function AdminDesignerProducts() {
                         </div>
                       </div>
 
-                      {/* Colour editor — add / rename / recolour / remove */}
+                      {/* Colour editor - add / rename / recolour / remove */}
                       <div data-testid={`dp-colours-${p.id}`}>
                         <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Colours</label>
                         <p className="text-[10px] text-[#4b5563] mb-2">These are the colours customers can pick in the designer. Click the swatch to change the colour, type to rename, or remove one. Add as many as you stock.</p>
@@ -279,8 +279,8 @@ export default function AdminDesignerProducts() {
                       )}
 
                       <div className="pt-2 border-t border-dashed border-[#dcfce7]">
-                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back photo (optional — used when the customer switches to Back)</label>
-                        <p className="text-[10px] text-[#4b5563] mb-1.5">Add this if the product supports back print — customers switching to "back" in the designer will see this photo instead of the front one. Leave blank and it just falls back to the front photo, same as before.</p>
+                        <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back photo (optional - used when the customer switches to Back)</label>
+                        <p className="text-[10px] text-[#4b5563] mb-1.5">Add this if the product supports back print - customers switching to "back" in the designer will see this photo instead of the front one. Leave blank and it just falls back to the front photo, same as before.</p>
                         <div className="flex items-center gap-2">
                           <input data-testid={`dp-image-back-${p.id}`} value={p.designer_image_back || ""} onChange={(e) => update(p.id, { designer_image_back: e.target.value })} className="flex-1 bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs" placeholder="https://… or upload a file" />
                           <label className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#166534] border border-[#7bc67e] rounded-full px-2.5 py-1.5 hover:bg-white cursor-pointer whitespace-nowrap">
@@ -293,7 +293,7 @@ export default function AdminDesignerProducts() {
                       {p.designer_image_back && (
                         <>
                           <div>
-                            <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back print area — drag the box on the image</label>
+                            <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back print area - drag the box on the image</label>
                             <PrintAreaPicker image={p.designer_image_back} value={paBack} onChange={(next) => update(p.id, { designer_print_area_back: next })} />
                             <div className="grid grid-cols-4 gap-1.5 mt-2">
                               {["x","y","w","h"].map(k => (
@@ -389,7 +389,7 @@ export default function AdminDesignerProducts() {
 
 /**
  * Visual print-area editor: drag the dashed box to move it, drag the corner
- * handle to resize — updates the real x/y/w/h (% of image) live rather than
+ * handle to resize - updates the real x/y/w/h (% of image) live rather than
  * requiring the admin to guess numbers blind.
  */
 function PrintAreaPicker({ image, value, onChange }) {

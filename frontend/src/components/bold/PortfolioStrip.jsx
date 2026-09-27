@@ -30,7 +30,7 @@ export default function PortfolioStrip() {
           <h2 className="font-black text-3xl mt-1">From the print room</h2>
         </div>
         <div className="flex items-center gap-2">
-          {/* arrows — hidden on small screens where you just swipe */}
+          {/* arrows - hidden on small screens where you just swipe */}
           <button onClick={() => scrollBy(-1)} aria-label="Scroll left" className="hidden sm:grid place-items-center w-9 h-9 rounded-full border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:bg-[#f0fdf4] transition" data-testid="portfolio-strip-prev">
             <ChevronLeft size={18} />
           </button>

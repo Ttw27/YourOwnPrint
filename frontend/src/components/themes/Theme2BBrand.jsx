@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { SECTORS, BEST_SELLERS, REVIEWS, RATING, NAV_LINKS } from "../../lib/data";
 import { Star, ShieldCheck, Tag, PencilRuler, Check, MessageCircle, ShoppingBag, Facebook, Instagram, ArrowRight } from "lucide-react";
 
-// Theme 2B — uses real YOP brand palette: black + white + yellow highlighter accent.
+// Theme 2B - uses real YOP brand palette: black + white + yellow highlighter accent.
 // Adds two extra sections borrowed from yourownprint.co.uk:
 //  - "Trusted By" logo strip
 //  - "2 easy ways to order" (Online vs Chat & Account Management)
@@ -24,7 +24,7 @@ export default function Theme2BBrand({ inShowcase = true, themeNumber = "2B" }) 
     <section data-testid="theme-2b-brand" className="bg-white text-black font-jakarta" id="theme-2b">
       {inShowcase && <ThemeLabel number={themeNumber} name="YOP Brand Edition" tagline="Mono · Bold · True to the YOP logo" accentColor={ACCENT} />}
 
-      {/* Navbar — pure black like the logo outline */}
+      {/* Navbar - pure black like the logo outline */}
       <nav className="sticky top-0 z-40 bg-black text-white">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" data-testid="t2b-logo" className="font-jakarta font-extrabold text-lg tracking-tight">
@@ -128,7 +128,7 @@ export default function Theme2BBrand({ inShowcase = true, themeNumber = "2B" }) 
         </div>
       </div>
 
-      {/* 2 ways to order — borrowed from your live site */}
+      {/* 2 ways to order - borrowed from your live site */}
       <div className="bg-black text-white">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-12">
@@ -164,9 +164,9 @@ export default function Theme2BBrand({ inShowcase = true, themeNumber = "2B" }) 
           <div>
             <div className="font-jakarta font-bold text-xs uppercase tracking-[0.3em]">Built-in designer</div>
             <h2 className="font-jakarta font-extrabold text-4xl lg:text-5xl text-black mt-2">Design in your browser. Order instantly.</h2>
-            <p className="mt-4 text-neutral-700">Upload your logo, remove the background, add text and preview live on a real t-shirt — then check out securely with Stripe.</p>
+            <p className="mt-4 text-neutral-700">Upload your logo, remove the background, add text and preview live on a real t-shirt - then check out securely with Stripe.</p>
             <ul className="mt-6 space-y-3">
-              {["Upload image · Remove background", "Add text — fonts & colours", "Live mockup preview", "Stripe secure checkout"].map((f) => (
+              {["Upload image · Remove background", "Add text - fonts & colours", "Live mockup preview", "Stripe secure checkout"].map((f) => (
                 <li key={f} className="flex items-center gap-3 font-medium"><span className="w-5 h-5 grid place-items-center bg-[#FFD60A]"><Check size={12} /></span>{f}</li>
               ))}
             </ul>
@@ -230,7 +230,7 @@ export default function Theme2BBrand({ inShowcase = true, themeNumber = "2B" }) 
               <div className="flex gap-1 mb-3">{Array.from({ length: r.rating }).map((_, j) => <Star key={j} size={14} className="text-black fill-black" />)}</div>
               <h3 className="font-jakarta font-extrabold text-lg">{r.title}</h3>
               <p className="text-neutral-700 text-sm mt-2 leading-relaxed">"{r.body}"</p>
-              <div className="mt-4 inline-block bg-[#FFD60A] px-2 py-0.5 text-xs font-bold">— {r.name}</div>
+              <div className="mt-4 inline-block bg-[#FFD60A] px-2 py-0.5 text-xs font-bold">- {r.name}</div>
             </div>
           ))}
         </div>
@@ -254,7 +254,7 @@ export default function Theme2BBrand({ inShowcase = true, themeNumber = "2B" }) 
         <div className="border-t border-white/10 py-5 text-center text-xs text-neutral-400">© {new Date().getFullYear()} Your Own Print</div>
       </footer>
 
-      {inShowcase && <SelectThemeBar onSelect={onSelect} testId="theme-2b-select-button" label="Select Theme 2B — YOP Brand Edition" color={ACCENT} textColor="#000" />}
+      {inShowcase && <SelectThemeBar onSelect={onSelect} testId="theme-2b-select-button" label="Select Theme 2B - YOP Brand Edition" color={ACCENT} textColor="#000" />}
     </section>
   );
 }

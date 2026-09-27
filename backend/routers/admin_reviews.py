@@ -1,11 +1,11 @@
-"""Reviews management for the admin — list, edit, delete.
+"""Reviews management for the admin - list, edit, delete.
 
 Reviews arrive from three places: the native review form on a product page, a
 one-off Judge.me migration, and anything typed in by hand here. Once they were
 in the database there was no way to correct a typo or remove a bad import, so
 this router adds that.
 
-Self-contained (only needs db + auth), so it lives in a router of its own —
+Self-contained (only needs db + auth), so it lives in a router of its own -
 same pattern as cms_page_copy.
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from deps import api_router, db, require_admin
 
 
 # Fields the admin is allowed to change. Deliberately excludes `source` and
-# `judgeme_id` — those record where a review came from, and rewriting them
+# `judgeme_id` - those record where a review came from, and rewriting them
 # would make an import impossible to audit or undo later.
 class ReviewPatch(BaseModel):
     reviewer_name: Optional[str] = Field(default=None, max_length=80)
@@ -96,7 +96,7 @@ async def admin_list_reviews(
 
 @api_router.get("/admin/reviews/stats", dependencies=[Depends(require_admin)])
 async def admin_review_stats():
-    """Totals for the filter chips — how many reviews, and where they came from."""
+    """Totals for the filter chips - how many reviews, and where they came from."""
     total = await db.reviews.count_documents({})
     by_source: Dict[str, int] = {}
     async for doc in db.reviews.aggregate([{"$group": {"_id": "$source", "n": {"$sum": 1}}}]):
@@ -119,14 +119,14 @@ async def admin_update_review(review_id: str, payload: ReviewPatch):
         raise HTTPException(404, "Review not found")
 
     # exclude_unset keeps fields the caller didn't send out of the update, and the
-    # None check drops explicit nulls. False is preserved — un-approving a review
+    # None check drops explicit nulls. False is preserved - un-approving a review
     # must actually write False rather than be treated as "no change".
     updates = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
         raise HTTPException(400, "Nothing to update")
 
     if "photos" in updates:
-        # Only real URLs — a blank row left in the editor shouldn't become a broken image.
+        # Only real URLs - a blank row left in the editor shouldn't become a broken image.
         updates["photos"] = [p.strip() for p in updates["photos"] if isinstance(p, str) and p.strip()][:8]
     if "reviewer_name" in updates:
         updates["reviewer_name"] = updates["reviewer_name"].strip() or "Anonymous"
@@ -163,20 +163,20 @@ async def admin_bulk_delete_reviews(payload: BulkDeleteRequest):
     if not ids:
         raise HTTPException(400, "No review ids supplied")
     if len(ids) > 500:
-        raise HTTPException(400, "Too many at once — 500 max per request")
+        raise HTTPException(400, "Too many at once - 500 max per request")
     res = await db.reviews.delete_many({"id": {"$in": ids}})
     return {"deleted": res.deleted_count, "requested": len(ids)}
 
 
 @api_router.post("/admin/reviews/bulk-approve", dependencies=[Depends(require_admin)])
 async def admin_bulk_approve_reviews(payload: BulkApproveRequest):
-    """Approve or hide several reviews at once. Approving is the common case —
+    """Approve or hide several reviews at once. Approving is the common case -
     a batch of genuine reviews shouldn't need one click each."""
     ids = [i for i in (payload.ids or []) if isinstance(i, str) and i.strip()]
     if not ids:
         raise HTTPException(400, "No review ids supplied")
     if len(ids) > 500:
-        raise HTTPException(400, "Too many at once — 500 max per request")
+        raise HTTPException(400, "Too many at once - 500 max per request")
     res = await db.reviews.update_many(
         {"id": {"$in": ids}},
         {"$set": {"approved": bool(payload.approved), "edited_at": datetime.now(timezone.utc).isoformat()}},

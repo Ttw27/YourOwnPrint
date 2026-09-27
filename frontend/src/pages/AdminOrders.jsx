@@ -33,13 +33,13 @@ export default function AdminOrders() {
   );
 
   const orderLabel = (o) => o.product_name || (o.flow ? `${o.flow} order` : o.kind === "cart" ? "Cart order" : "Order");
-  const customerEmail = (o) => o.customer_email || o.contact_email || (o.metadata && o.metadata.contact_email) || "—";
+  const customerEmail = (o) => o.customer_email || o.contact_email || (o.metadata && o.metadata.contact_email) || "-";
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100" data-testid="admin-orders-page">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-extrabold mb-2">Orders</h1>
-        <p className="text-zinc-400 mb-6">Every checkout attempt across the site — single products, cart, leavers hoodies and workforce orders.</p>
+        <p className="text-zinc-400 mb-6">Every checkout attempt across the site - single products, cart, leavers hoodies and workforce orders.</p>
 
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <div className="flex gap-2">

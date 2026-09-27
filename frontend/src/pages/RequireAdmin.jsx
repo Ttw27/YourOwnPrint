@@ -64,7 +64,7 @@ const ADMIN_NAV_GROUPS = [
     label: "Content",
     links: [
       ["Navigation menu", "/admin/navigation"],
-      ["Pages — text, images & video", "/admin/page-copy"],
+      ["Pages - text, images & video", "/admin/page-copy"],
       ["Configurator £", "/admin/configurator-settings"],
     ],
   },
@@ -101,7 +101,7 @@ function AdminTopBar({ email }) {
     <div ref={rootRef} className="w-full bg-zinc-900 border-b border-zinc-800 text-zinc-100 px-4 py-2.5 flex items-center justify-between text-sm lg:sticky lg:top-0 z-50" data-testid="admin-topbar">
       <div className="flex items-center gap-1 min-w-0">
         <span className="text-amber-400 font-bold tracking-wider text-xs uppercase mr-3">YOP Admin</span>
-        {/* Dropdowns are desktop-only — on phones they overflowed the screen, and the
+        {/* Dropdowns are desktop-only - on phones they overflowed the screen, and the
             sidebar's own ☰ menu (AdminLayout) already covers every admin page. */}
         <div className="hidden lg:flex items-center gap-1">
         {ADMIN_NAV_GROUPS.map((group) => {

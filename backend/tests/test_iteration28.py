@@ -1,5 +1,5 @@
 """
-Iteration 28 — Foundational CMS backend tests.
+Iteration 28 - Foundational CMS backend tests.
 
 Covers:
   * Page copy CMS (GET public, PATCH admin, slug allowlist)
@@ -45,7 +45,7 @@ def admin_headers(admin_token):
 # ============================================================================
 class TestPageCopy:
     def test_get_page_copy_home_empty_returns_object(self, api):
-        # Clear first via admin (fixture order requires admin_headers) — just check shape here
+        # Clear first via admin (fixture order requires admin_headers) - just check shape here
         r = api.get(f"{BASE_URL}/api/page-copy/home")
         assert r.status_code == 200
         data = r.json()
@@ -120,7 +120,7 @@ class TestProductOverrides:
         assert body.get("deleted") == 1 or body.get("deleted") is True
 
         # After delete + rehydrate the product should not have TEST_ name any more.
-        # NOTE: server hydrates overrides on startup — delete removes DB row, but
+        # NOTE: server hydrates overrides on startup - delete removes DB row, but
         # may keep in-memory override until reload. We just verify the DB row is gone
         # via a follow-up GET on the admin override endpoint.
         g = requests.get(f"{BASE_URL}/api/admin/products/{self.PID}/override",
@@ -167,14 +167,14 @@ class TestConfiguratorSettings:
                            json={"values": {"gym_bag_addon_price": 5.5}})
         assert r.status_code == 200, r.text
 
-        # Verify via public config — BUG: PATCH endpoint whitelist at server.py:3851
+        # Verify via public config - BUG: PATCH endpoint whitelist at server.py:3851
         # excludes 'gym_bag_addon_price'. Documented failure.
         g = api.get(f"{BASE_URL}/api/full-squad/config")
         assert g.status_code == 200
         addons = g.json().get("addons") or {}
         assert float(addons.get("gym_bag_addon_price")) == 5.5, (
             f"BUG: PATCH /admin/full-squad/addons whitelist at server.py:3851 does NOT "
-            f"include 'gym_bag_addon_price' — got {addons.get('gym_bag_addon_price')}"
+            f"include 'gym_bag_addon_price' - got {addons.get('gym_bag_addon_price')}"
         )
 
         # Restore
@@ -204,7 +204,7 @@ class TestConfiguratorSettings:
 
 
 # ============================================================================
-# Cleanup — remove any TEST_ overrides so we don't pollute Mongo
+# Cleanup - remove any TEST_ overrides so we don't pollute Mongo
 # ============================================================================
 class TestZzzCleanup:
     """Cleans up page-copy overrides created during test run."""

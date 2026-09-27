@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 /**
- * /admin/products-import — One-off bulk import for PenCarrie (or any) products.
+ * /admin/products-import - One-off bulk import for PenCarrie (or any) products.
  *
  * Three input methods:
  *   1. CSV upload (drag-drop or click)
@@ -75,7 +75,7 @@ function normaliseRow(raw) {
   const sizesRaw = pick("sizes", "size");
   let colours;
   if (Array.isArray(coloursRaw)) {
-    // Already structured (e.g. from a JSON paste with per-colour images) — keep as-is,
+    // Already structured (e.g. from a JSON paste with per-colour images) - keep as-is,
     // just make sure every entry has the shape we need.
     colours = coloursRaw.map((c) =>
       typeof c === "object" && c !== null
@@ -111,10 +111,10 @@ const EMPTY_ROW = {
 };
 
 /**
- * ⚠️ MAINTENANCE NOTE — whenever a new bulk action checkbox is added to the
+ * ⚠️ MAINTENANCE NOTE - whenever a new bulk action checkbox is added to the
  * "Bulk actions on imported products" panel below, add an entry for it HERE
  * too (key must match the payload field sent to bulkUpdateImported).
- * The "Recommended order" panel is entirely computed from this array — get
+ * The "Recommended order" panel is entirely computed from this array - get
  * this list right and that panel is automatically correct, nothing else to
  * remember to update by hand.
  *
@@ -133,7 +133,7 @@ const BULK_ACTIONS_META = [
   { key: "randomize_main_image",       label: "Randomize main photo",               conflictsWith: ["rebuild_gallery_from_colours"] },
 ];
 
-/** Groups BULK_ACTIONS_META into passes — greedy: each action joins the
+/** Groups BULK_ACTIONS_META into passes - greedy: each action joins the
  * earliest pass that doesn't already contain something it conflicts with. */
 function computeBulkActionPasses() {
   const passes = [];
@@ -213,11 +213,11 @@ export default function AdminProductsImport() {
   // Guards run before any bulk update (preview or apply). Returns false to abort.
   function bulkPreflight(applying) {
     if (bulkForm.scope === "selected" && bulkSelectedIds.size === 0) {
-      toast.error("No products selected — tick at least one product in the list first.");
+      toast.error("No products selected - tick at least one product in the list first.");
       return false;
     }
     if (bulkForm.scope === "search" && !String(importedSearch || "").trim()) {
-      toast.error("The search box is empty — type a search first, or choose \"All imported products\".");
+      toast.error("The search box is empty - type a search first, or choose \"All imported products\".");
       return false;
     }
     if (applying && bulkForm.randomize_main_image) {
@@ -235,11 +235,11 @@ export default function AdminProductsImport() {
     try {
       const d = await bulkUpdateImported(buildBulkPayload(dryRun, 0));
       const { errNote } = summarizeBatch(d);
-      const truncNote = d.truncated ? ` ${d.total_matching - d.next_offset} product(s) still remain — click Apply again (or use "Run all") to continue.` : "";
+      const truncNote = d.truncated ? ` ${d.total_matching - d.next_offset} product(s) still remain - click Apply again (or use "Run all") to continue.` : "";
       if (dryRun) {
-        toast.success(`Would match ${d.matched} product(s) — ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} would get sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} would get their photo gallery rebuilt` : ""}${d.recategorized ? `, ${d.recategorized} would get recategorized` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
+        toast.success(`Would match ${d.matched} product(s) - ${d.repriced} would be repriced${d.retagged ? `, ${d.retagged} would get updated industry tags` : ""}${d.randomized ? `, ${d.randomized} would get a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} would get updated print placements` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} would get sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} would get their photo gallery rebuilt` : ""}${d.recategorized ? `, ${d.recategorized} would get recategorized` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
       } else {
-        toast.success(`Updated ${d.matched} product(s) — ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} had sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} had their photo gallery rebuilt` : ""}${d.recategorized ? `, ${d.recategorized} recategorized` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
+        toast.success(`Updated ${d.matched} product(s) - ${d.repriced} repriced${d.retagged ? `, ${d.retagged} retagged` : ""}${d.randomized ? `, ${d.randomized} got a new main photo` : ""}${d.placements_updated ? `, ${d.placements_updated} print placements updated` : ""}${d.sizes_repaired ? `, ${d.sizes_repaired} had sizes repaired` : ""}${d.gallery_rebuilt ? `, ${d.gallery_rebuilt} had their photo gallery rebuilt` : ""}${d.recategorized ? `, ${d.recategorized} recategorized` : ""}${d.skipped_no_cost ? `, ${d.skipped_no_cost} skipped (no saved trade cost)` : ""}.${errNote}${truncNote}`);
         refresh();
       }
     } catch (e) {
@@ -259,7 +259,7 @@ export default function AdminProductsImport() {
     try {
       // First call establishes how many there are in total, for progress display.
       while (true) {
-        if (bulkCancelRef.current) { toast(`Stopped — ${offset} product(s) processed so far.`); break; }
+        if (bulkCancelRef.current) { toast(`Stopped - ${offset} product(s) processed so far.`); break; }
         const d = await bulkUpdateImported(buildBulkPayload(false, offset));
         totalMatching = d.total_matching;
         totals.repriced += d.repriced || 0;
@@ -273,11 +273,11 @@ export default function AdminProductsImport() {
         if (!d.truncated) break; // reached the end
       }
       if (!bulkCancelRef.current) {
-        toast.success(`Done — processed all ${offset} matching product(s). ${totals.repriced ? `${totals.repriced} repriced. ` : ""}${totals.retagged ? `${totals.retagged} retagged. ` : ""}${totals.randomized ? `${totals.randomized} photos randomized. ` : ""}${totals.placements_updated ? `${totals.placements_updated} placements updated. ` : ""}${totals.sizes_repaired ? `${totals.sizes_repaired} sizes repaired. ` : ""}${totals.errors ? `${totals.errors} skipped due to an issue.` : ""}`);
+        toast.success(`Done - processed all ${offset} matching product(s). ${totals.repriced ? `${totals.repriced} repriced. ` : ""}${totals.retagged ? `${totals.retagged} retagged. ` : ""}${totals.randomized ? `${totals.randomized} photos randomized. ` : ""}${totals.placements_updated ? `${totals.placements_updated} placements updated. ` : ""}${totals.sizes_repaired ? `${totals.sizes_repaired} sizes repaired. ` : ""}${totals.errors ? `${totals.errors} skipped due to an issue.` : ""}`);
       }
       refresh();
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Bulk update failed partway through — whatever completed so far is saved. Just click \"Run all\" again to pick up where it left off.");
+      toast.error(e?.response?.data?.detail || "Bulk update failed partway through - whatever completed so far is saved. Just click \"Run all\" again to pick up where it left off.");
     } finally {
       setBulkBusy(false);
       setBulkRunAllProgress(null);
@@ -313,7 +313,7 @@ export default function AdminProductsImport() {
     const normalised = list.map(normaliseRow).filter((r) => r.name);
     setRows((prev) => [...prev, ...normalised]);
     setSelected(new Set());
-    toast.success(`${normalised.length} row${normalised.length === 1 ? "" : "s"} loaded — review below then save.`);
+    toast.success(`${normalised.length} row${normalised.length === 1 ? "" : "s"} loaded - review below then save.`);
   }
 
   function onCsvFile(e) {
@@ -322,7 +322,7 @@ export default function AdminProductsImport() {
     const r = new FileReader();
     r.onload = () => {
       try { pushRows(parseCsv(String(r.result || ""))); }
-      catch { toast.error("CSV parse failed — check the file format."); }
+      catch { toast.error("CSV parse failed - check the file format."); }
     };
     r.readAsText(file);
     e.target.value = "";
@@ -348,7 +348,7 @@ export default function AdminProductsImport() {
         const list = Array.isArray(parsed) ? parsed : (parsed.items || parsed.products || []);
         if (!Array.isArray(list)) throw new Error("Not an array");
         pushRows(list);
-      } catch { toast.error("Couldn't read that file — make sure it's a JSON array of products."); }
+      } catch { toast.error("Couldn't read that file - make sure it's a JSON array of products."); }
     };
     r.readAsText(file);
     e.target.value = "";
@@ -373,7 +373,7 @@ export default function AdminProductsImport() {
       setPencarrieBrands(d.available_brands || []);
       setPencarrieOffset(nextOffset + (d.returned || 0));
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Couldn't fetch from PenCarrie — check your API token in /admin/integrations.");
+      toast.error(e?.response?.data?.detail || "Couldn't fetch from PenCarrie - check your API token in /admin/integrations.");
     } finally {
       setPencarrieLoading(false);
     }
@@ -433,12 +433,12 @@ export default function AdminProductsImport() {
           chunks[i].forEach((r) => savedRows.add(r));
           setSaveProgress({ done: i + 1, total: chunks.length });
         } catch (e) {
-          // Stop here — remove only what actually saved, so nothing's lost or double-saved on retry.
+          // Stop here - remove only what actually saved, so nothing's lost or double-saved on retry.
           setRows((prev) => prev.filter((r) => !savedRows.has(r)));
           toast.error(
             `Saved ${totalCreated} product(s) across ${i} of ${chunks.length} batches, then hit an error: `
             + (e?.response?.data?.detail || "Import failed")
-            + ". The rest are still in the preview below — safe to just click Save again to continue from here."
+            + ". The rest are still in the preview below - safe to just click Save again to continue from here."
           );
           return;
         }
@@ -573,12 +573,12 @@ export default function AdminProductsImport() {
               </div>
             </div>
             <textarea value={jsonText} onChange={(e) => setJsonText(e.target.value)} rows={4} className="input mt-2 text-[11px] font-mono" placeholder='[{"name": "AWDis College Hoodie", "source_price": 8.99, "image": "…", "colours": ["Black","Navy"], "sizes": ["S","M","L"]}]' data-testid="apx-json-input" />
-            <p className="text-[10px] text-[#4b5563] mt-1">For large files (a few MB+), use "Upload file" rather than pasting — much smoother.</p>
+            <p className="text-[10px] text-[#4b5563] mt-1">For large files (a few MB+), use "Upload file" rather than pasting - much smoother.</p>
           </div>
           <button type="button" onClick={addManualRow} className="bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-2xl p-5 text-center transition" data-testid="apx-add-manual">
             <Plus size={22} className="mx-auto text-[#7bc67e]" />
             <div className="mt-2 text-sm font-extrabold">Add manually</div>
-            <div className="text-[11px] text-[#4b5563] mt-0.5">One-off row — good for single products or corrections.</div>
+            <div className="text-[11px] text-[#4b5563] mt-0.5">One-off row - good for single products or corrections.</div>
           </button>
         </div>
 
@@ -586,7 +586,7 @@ export default function AdminProductsImport() {
           <Info size={11} className="mt-0.5 text-[#7bc67e]" />
           "Fetch from PenCarrie" needs your PenCarrie API token set first, in{" "}
           <a href="/admin/integrations" className="text-[#166534] font-extrabold hover:underline">Admin → Integrations</a>
-          {" "}(PenCarrie: My Account → Account Settings → API Access Tokens). First fetch — check the preview below looks right;
+          {" "}(PenCarrie: My Account → Account Settings → API Access Tokens). First fetch - check the preview below looks right;
           if columns like image or price come through blank, PenCarrie's exact column names may need a small tweak on our end.
         </p>
 
@@ -690,14 +690,14 @@ export default function AdminProductsImport() {
           </button>
           {bulkOpen && (
             <div className="mt-4 space-y-3">
-              <p className="text-[11px] text-[#4b5563]">Re-price or turn on quantity-discount pricing across many products at once — no need to open each one individually. Re-pricing recalculates from each product's saved trade cost, so it only works on products imported with a source price.</p>
+              <p className="text-[11px] text-[#4b5563]">Re-price or turn on quantity-discount pricing across many products at once - no need to open each one individually. Re-pricing recalculates from each product's saved trade cost, so it only works on products imported with a source price.</p>
 
               <div className="bg-[#f0fdf4] border-2 border-[#7bc67e] rounded-2xl p-3" data-testid="apx-bulk-order-guide">
                 <div className="text-xs font-extrabold text-[#166534] mb-1.5">Recommended order</div>
                 {computeBulkActionPasses().map((pass, i) => (
                   <div key={i} className="text-[11px] text-[#166534] mb-1">
                     <span className="font-extrabold">Pass {i + 1}:</span> {pass.map(a => a.label).join(" + ")}
-                    {i < computeBulkActionPasses().length - 1 && <span className="text-[#4b5563]"> — run this batch, then move to the next pass</span>}
+                    {i < computeBulkActionPasses().length - 1 && <span className="text-[#4b5563]"> - run this batch, then move to the next pass</span>}
                   </div>
                 ))}
                 <div className="text-[10px] text-[#4b5563] mt-1">Anything in the same pass is safe to tick together. This list updates itself if new bulk actions are ever added.</div>
@@ -749,7 +749,7 @@ export default function AdminProductsImport() {
                 <input type="checkbox" checked={bulkForm.recategorize_products} onChange={(e) => setBulkForm({ ...bulkForm, recategorize_products: e.target.checked })} data-testid="apx-bulk-recategorize" />
                 <div>
                   <div className="text-xs font-extrabold">Fix mis-categorized products</div>
-                  <div className="text-[10px] text-[#4b5563]">Re-runs category detection against each product's name — fixes real bugs found tonight (e.g. "Short Sleeve Tunic" was wrongly detected as "Shorts" the garment, tunics/blouses were wrongly mapped to T-Shirts). Runs before the other options below so they use the corrected category.</div>
+                  <div className="text-[10px] text-[#4b5563]">Re-runs category detection against each product's name - fixes real bugs found tonight (e.g. "Short Sleeve Tunic" was wrongly detected as "Shorts" the garment, tunics/blouses were wrongly mapped to T-Shirts). Runs before the other options below so they use the corrected category.</div>
                 </div>
               </label>
 
@@ -757,7 +757,7 @@ export default function AdminProductsImport() {
                 <input type="checkbox" checked={bulkForm.retag_industries} onChange={(e) => setBulkForm({ ...bulkForm, retag_industries: e.target.checked })} data-testid="apx-bulk-retag" />
                 <div>
                   <div className="text-xs font-extrabold">Re-tag industries</div>
-                  <div className="text-[10px] text-[#4b5563]">Re-runs the current industry-tagging rules against each matched product's name/category — use this after the tagging rules themselves change, so already-imported products catch up without re-importing.</div>
+                  <div className="text-[10px] text-[#4b5563]">Re-runs the current industry-tagging rules against each matched product's name/category - use this after the tagging rules themselves change, so already-imported products catch up without re-importing.</div>
                 </div>
               </label>
 
@@ -765,7 +765,7 @@ export default function AdminProductsImport() {
                 <input type="checkbox" checked={bulkForm.randomize_main_image} onChange={(e) => setBulkForm({ ...bulkForm, randomize_main_image: e.target.checked })} data-testid="apx-bulk-randomize" />
                 <div>
                   <div className="text-xs font-extrabold">Randomize main photo</div>
-                  <div className="text-[10px] text-[#4b5563]">Picks a random photo from each product's own colours to be the main image shown on collection pages — so a whole page of products doesn't default to the same colour (usually whichever came first). Only picks from photos the product already has; nothing new is added.</div>
+                  <div className="text-[10px] text-[#4b5563]">Picks a random photo from each product's own colours to be the main image shown on collection pages - so a whole page of products doesn't default to the same colour (usually whichever came first). Only picks from photos the product already has; nothing new is added.</div>
                 </div>
               </label>
 
@@ -773,7 +773,7 @@ export default function AdminProductsImport() {
                 <input type="checkbox" checked={bulkForm.apply_placement_defaults} onChange={(e) => setBulkForm({ ...bulkForm, apply_placement_defaults: e.target.checked })} data-testid="apx-bulk-placements" />
                 <div>
                   <div className="text-xs font-extrabold">Apply sensible print placements</div>
-                  <div className="text-[10px] text-[#4b5563]">Sets which print options show on each product page based on garment type — e.g. sleeveless vests lose "sleeve print", trousers get "below left/right pocket" instead of breast/sleeve options. Overwrites any placements already set on matched products.</div>
+                  <div className="text-[10px] text-[#4b5563]">Sets which print options show on each product page based on garment type - e.g. sleeveless vests lose "sleeve print", trousers get "below left/right pocket" instead of breast/sleeve options. Overwrites any placements already set on matched products.</div>
                 </div>
               </label>
 
@@ -781,7 +781,7 @@ export default function AdminProductsImport() {
                 <input type="checkbox" checked={bulkForm.fix_corrupted_sizes} onChange={(e) => setBulkForm({ ...bulkForm, fix_corrupted_sizes: e.target.checked })} data-testid="apx-bulk-fix-sizes" />
                 <div>
                   <div className="text-xs font-extrabold">Fix corrupted kids sizes</div>
-                  <div className="text-[10px] text-[#4b5563]">PenCarrie's own source file had a data error — Excel silently turned age-range sizes like "3-4" or "12-13" into dates or plain numbers before we ever imported them. This detects and repairs those back to the correct size (e.g. "2026-04-03" → "3-4", "1213" → "12-13").</div>
+                  <div className="text-[10px] text-[#4b5563]">PenCarrie's own source file had a data error - Excel silently turned age-range sizes like "3-4" or "12-13" into dates or plain numbers before we ever imported them. This detects and repairs those back to the correct size (e.g. "2026-04-03" → "3-4", "1213" → "12-13").</div>
                 </div>
               </label>
 
@@ -789,7 +789,7 @@ export default function AdminProductsImport() {
                 <input type="checkbox" checked={bulkForm.rebuild_gallery_from_colours} onChange={(e) => setBulkForm({ ...bulkForm, rebuild_gallery_from_colours: e.target.checked })} data-testid="apx-bulk-rebuild-gallery" />
                 <div>
                   <div className="text-xs font-extrabold">Rebuild photo gallery from colours</div>
-                  <div className="text-[10px] text-[#4b5563]">If a product's main photo or thumbnail gallery looks thin/broken but its colour swatches still show the right photo when clicked, this rebuilds the main image + full gallery directly from that colour data — restores every colour's photo without needing to re-import.</div>
+                  <div className="text-[10px] text-[#4b5563]">If a product's main photo or thumbnail gallery looks thin/broken but its colour swatches still show the right photo when clicked, this rebuilds the main image + full gallery directly from that colour data - restores every colour's photo without needing to re-import.</div>
                 </div>
               </label>
 
@@ -815,7 +815,7 @@ export default function AdminProductsImport() {
                   </>
                 )}
               </div>
-              <p className="text-[10px] text-[#4b5563]">"Apply now" processes one batch of up to 200 at a time. "Run all automatically" keeps going on its own until every matching product is done — safe to stop partway and resume later.</p>
+              <p className="text-[10px] text-[#4b5563]">"Apply now" processes one batch of up to 200 at a time. "Run all automatically" keeps going on its own until every matching product is done - safe to stop partway and resume later.</p>
             </div>
           )}
         </div>

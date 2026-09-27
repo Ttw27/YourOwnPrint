@@ -29,7 +29,7 @@ export default function CheckoutSuccess() {
         }
         attempts += 1;
         if (attempts >= maxAttempts) {
-          setState({ loading: false, paid: false, expired: false, info: data, error: "Still processing — check your email shortly." });
+          setState({ loading: false, paid: false, expired: false, info: data, error: "Still processing - check your email shortly." });
           return;
         }
         setTimeout(poll, 2000);
@@ -48,7 +48,7 @@ export default function CheckoutSuccess() {
           <>
             <Loader2 className="mx-auto animate-spin text-[#7bc67e]" size={48} />
             <h1 className="mt-6 font-nunito font-black text-3xl">Confirming payment…</h1>
-            <p className="text-[#4b5563] mt-2">Hang tight — this only takes a moment.</p>
+            <p className="text-[#4b5563] mt-2">Hang tight - this only takes a moment.</p>
           </>
         ) : state.paid ? (
           <>

@@ -81,7 +81,7 @@ export default function AdminTeamKits() {
             <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-5">
               <div className="font-nunito font-extrabold text-[#1a1a1a]">All brands ({brands.length})</div>
               {brands.length === 0 ? (
-                <div className="text-sm text-[#4b5563] mt-3">No brands yet — add one on the left.</div>
+                <div className="text-sm text-[#4b5563] mt-3">No brands yet - add one on the left.</div>
               ) : (
                 <ul className="mt-3 space-y-2" data-testid="admin-brand-list">
                   {brands.map((b) => {

@@ -154,7 +154,7 @@ def test_fight_night_checkout_addons_math(s):
 
     # Verify math via DB-side log: status endpoint returns amount in £
     sid = body["session_id"]
-    # Compute expected unit (M has size_upcharges from DEFAULT_SIZE_UPCHARGES — check via products endpoint)
+    # Compute expected unit (M has size_upcharges from DEFAULT_SIZE_UPCHARGES - check via products endpoint)
     upcharge_m = float(r.json().get("size_upcharges", {}).get("M", 0)) if False else 0.0
     # Better: fetch via /products list to compute exact
     plist = s.get(f"{API}/products", timeout=20).json()

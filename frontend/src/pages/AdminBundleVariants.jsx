@@ -21,22 +21,22 @@ function fileToDataUrl(file) {
 const ELIGIBLE_BUNDLES = [
   { id: "football-kit-bundle", name: "Football Kit Bundle" },
   { id: "football-premium-bundle", name: "Football Premium Bundle" },
-  { id: "football-kit-front-only", name: "Football Kit — Front Print Only" },
-  { id: "football-premium-front-only", name: "Football Premium — Front Print Only" },
+  { id: "football-kit-front-only", name: "Football Kit - Front Print Only" },
+  { id: "football-premium-front-only", name: "Football Premium - Front Print Only" },
   { id: "rugby-kit-bundle", name: "Rugby Kit Bundle" },
-  { id: "rugby-kit-front-only", name: "Rugby Kit — Front Print Only" },
+  { id: "rugby-kit-front-only", name: "Rugby Kit - Front Print Only" },
   { id: "training-tracksuit", name: "Training Tracksuit" },
   { id: "training-tee", name: "Training Tee" },
   { id: "training-pack-bundle", name: "Training Pack Bundle" },
-  { id: "training-pack-front-only", name: "Training Pack — Front Print Only" },
+  { id: "training-pack-front-only", name: "Training Pack - Front Print Only" },
   { id: "sports-team-bundle", name: "Sports Team Kit Bundle (generic)" },
   // Full Squad Configurator set slots
-  { id: "full-squad-match-day", name: "Full Squad — Match Day Set", group: "Full Squad Configurator" },
-  { id: "full-squad-training", name: "Full Squad — Training Set", group: "Full Squad Configurator" },
-  { id: "full-squad-tracksuit", name: "Full Squad — Tracksuit Set", group: "Full Squad Configurator" },
+  { id: "full-squad-match-day", name: "Full Squad - Match Day Set", group: "Full Squad Configurator" },
+  { id: "full-squad-training", name: "Full Squad - Training Set", group: "Full Squad Configurator" },
+  { id: "full-squad-tracksuit", name: "Full Squad - Tracksuit Set", group: "Full Squad Configurator" },
   // Sports Outfit Configurator set slots
-  { id: "sports-outfit-training", name: "Sports Outfit — Training Kit", group: "Sports Outfit Configurator" },
-  { id: "sports-outfit-tracksuit", name: "Sports Outfit — Tracksuit", group: "Sports Outfit Configurator" },
+  { id: "sports-outfit-training", name: "Sports Outfit - Training Kit", group: "Sports Outfit Configurator" },
+  { id: "sports-outfit-tracksuit", name: "Sports Outfit - Tracksuit", group: "Sports Outfit Configurator" },
 ];
 
 const EMPTY_DRAFT = {
@@ -45,7 +45,7 @@ const EMPTY_DRAFT = {
   image: "", active: true,
   colours: [],           // [{name, hex}]
   sizes: [],             // ["S","M","L",...]
-  sock_sizes: [],        // ["3–5","6–8",...] — falls back to global
+  sock_sizes: [],        // ["3–5","6–8",...] - falls back to global
   size_guide: "",        // free-form text/markdown
   included_items: [],    // ["Shirt","Shorts","Socks"]
 };
@@ -261,7 +261,7 @@ export default function AdminBundleVariants() {
             />
             {/* Sock sizes (override) */}
             <ChipListField
-              label="Sock sizes (override — leave blank to use global)"
+              label="Sock sizes (override - leave blank to use global)"
               placeholder="e.g. 3–5, 6–8, 9–11"
               values={draft.sock_sizes}
               onChange={(v) => setDraft({ ...draft, sock_sizes: v })}
@@ -274,12 +274,12 @@ export default function AdminBundleVariants() {
             </div>
             {/* Size guide */}
             <label className="block md:col-span-2" data-testid="abv-size-guide">
-              <div className="text-xs font-extrabold mb-1">Size guide (free text — appears in the dropdown)</div>
+              <div className="text-xs font-extrabold mb-1">Size guide (free text - appears in the dropdown)</div>
               <textarea
                 value={draft.size_guide}
                 onChange={(e) => setDraft({ ...draft, size_guide: e.target.value })}
                 className="input min-h-[100px] font-mono text-[11px]"
-                placeholder={"e.g.\nS  — Chest 36–38, Length 27\nM  — Chest 39–41, Length 28\nL  — Chest 42–44, Length 29"}
+                placeholder={"e.g.\nS  - Chest 36–38, Length 27\nM  - Chest 39–41, Length 28\nL  - Chest 42–44, Length 29"}
               />
             </label>
           </div>
@@ -300,7 +300,7 @@ export default function AdminBundleVariants() {
           <div className="py-20 grid place-items-center"><Loader2 className="animate-spin text-[#7bc67e]" /></div>
         ) : Object.keys(grouped).length === 0 ? (
           <div className="bg-white border-2 border-[#dcfce7] rounded-2xl p-10 text-center text-sm text-[#4b5563]" data-testid="abv-empty">
-            No variants yet — add one above and it&apos;ll show up on the corresponding bundle page instantly.
+            No variants yet - add one above and it&apos;ll show up on the corresponding bundle page instantly.
           </div>
         ) : (
           <div className="space-y-8">

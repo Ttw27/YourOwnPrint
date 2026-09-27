@@ -106,7 +106,7 @@ body {
 }
 
 /* When a mobile designer tool bar owns the bottom of the screen, the floating
-   WhatsApp / Help buttons would stack on top of it — three fixed elements in the
+   WhatsApp / Help buttons would stack on top of it - three fixed elements in the
    same strip, exactly the crowding in the designer screenshots. Hide them while
    the bar is up; they return the moment the designer closes. Desktop is
    unaffected (the bar is lg:hidden, so this class is only ever set on mobile). */
@@ -118,7 +118,7 @@ body {
 }
 
 /* iOS zooms the page in whenever a focused input has a font smaller than 16px,
-   and never zooms back out — which is why the designer stayed zoomed after you
+   and never zooms back out - which is why the designer stayed zoomed after you
    tapped "Add text". Force at least 16px on designer inputs on small screens.
    Visually near-identical to the 14px it replaces, but below the zoom trigger. */
 @media (max-width: 1023px) {

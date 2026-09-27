@@ -9,7 +9,7 @@ export default function WhatsAppFAB({ preset, label = "Chat on WhatsApp", classN
   }, []);
   // If admin-configured number is present, use it; otherwise hide entirely (no fake placeholder)
   if (number === null) return null;        // still loading
-  if (number === "") return null;          // admin hasn't set a number — don't show fake FAB
+  if (number === "") return null;          // admin hasn't set a number - don't show fake FAB
   const cleaned = number.replace(/[^0-9]/g, "");
   const href = `https://wa.me/${cleaned}?text=${encodeURIComponent(preset || "Hi! I'd like some help with my custom print order.")}`;
   return (

@@ -4,12 +4,12 @@ import { Sparkles, Layers, Palette, ShieldCheck } from "lucide-react";
 import usePageCopy from "../../hooks/usePageCopy";
 
 /**
- * How We Print — a reusable, admin-editable block that presents DTF as our go-to
+ * How We Print - a reusable, admin-editable block that presents DTF as our go-to
  * method (confident, not apologetic) and quietly invites method-preference
  * enquiries (embroidery / screen print for larger runs) without listing them as
  * menu options.
  *
- * IMPORTANT: never place this on the Design Your Own page — that flow is always
+ * IMPORTANT: never place this on the Design Your Own page - that flow is always
  * DTF, with no alternative method implied.
  *
  * All wording is editable in Admin → Page Copy under the "how-we-print" page, so
@@ -24,7 +24,7 @@ export default function HowWePrint({ className = "", variant = "section" }) {
   //   cta_label→ the button label
   const copy = usePageCopy("how-we-print", {
     title: "How we print",
-    body: "Every order is printed with DTF — our go-to method for vibrant, full-colour, long-lasting prints with no minimums and no setup fees. One tee or five hundred, DTF gives you the same crisp finish.",
+    body: "Every order is printed with DTF - our go-to method for vibrant, full-colour, long-lasting prints with no minimums and no setup fees. One tee or five hundred, DTF gives you the same crisp finish.",
     subtitle: "Prefer embroidery or screen print for a larger run? Get in touch and we'll put a quote together for you.",
     cta_label: "Get a quote",
   });

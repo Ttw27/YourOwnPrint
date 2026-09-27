@@ -4,11 +4,11 @@ import { MessageCircle, ArrowRight, UserRound, Mail } from "lucide-react";
 import { buildWhatsAppLink, WHATSAPP_NUMBER_DISPLAY } from "../../lib/data";
 
 /**
- * AccountManagerPromise — "buy from us and you get a named human, not a bot".
+ * AccountManagerPromise - "buy from us and you get a named human, not a bot".
  *
  * This is a direct answer to the thing businesses quietly hate about big
  * faceless suppliers: chase an order and you get an auto-generated "it's been
- * dispatched" template back. We promise the opposite — a real person on
+ * dispatched" template back. We promise the opposite - a real person on
  * WhatsApp and email who can actually check and progress your order.
  *
  * The number comes from the central config in lib/data.js, so when the real
@@ -20,7 +20,7 @@ import { buildWhatsAppLink, WHATSAPP_NUMBER_DISPLAY } from "../../lib/data";
  *  - "hero" → larger standalone block for landing pages
  *
  * `preset` seeds the WhatsApp message so we know which page the enquiry came
- * from — handy when the same number serves the whole site.
+ * from - handy when the same number serves the whole site.
  */
 const DEFAULT_PRESET = "Hi! I'd like to speak to my account manager about an order.";
 
@@ -35,7 +35,7 @@ export default function AccountManagerPromise({ variant = "band", preset = DEFAU
         </div>
         <p className="text-sm text-[#1a1a1a] mt-2 leading-relaxed">
           No bots, no auto-replies. You get a <strong>named person on WhatsApp and email</strong> who can check
-          where your order is, chase it, and answer anything &mdash; the same day.
+          where your order is, chase it, and answer anything - the same day.
         </p>
         <a
           href={waLink}
@@ -57,10 +57,10 @@ export default function AccountManagerPromise({ variant = "band", preset = DEFAU
           <span className="inline-flex items-center gap-2 text-[#7bc67e] font-nunito font-extrabold text-xs uppercase tracking-[0.25em]">
             <UserRound size={16} /> Your dedicated account manager
           </span>
-          <h2 className="font-black text-2xl sm:text-3xl mt-3">A real human on WhatsApp &mdash; not a bot</h2>
+          <h2 className="font-black text-2xl sm:text-3xl mt-3">A real human on WhatsApp - not a bot</h2>
           <p className="text-neutral-300 mt-3 max-w-2xl mx-auto leading-relaxed">
             Ever chased an order and got a copy-paste &ldquo;it&rsquo;s been dispatched&rdquo; back? Not here. Every
-            business account gets a named account manager you can reach on WhatsApp or email &mdash; someone who
+            business account gets a named account manager you can reach on WhatsApp or email - someone who
             actually checks your order, progresses it, and gives you a straight answer.
           </p>
           <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">

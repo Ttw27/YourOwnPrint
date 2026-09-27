@@ -28,7 +28,7 @@ export default function FindMyKitPromo({ variant = "inline", trade = "", classNa
               </h2>
               <p className="mt-3 text-[#14532d] max-w-lg font-bold">
                 Pick your industry or type your job, and we'll build a complete, ready-to-brand kit from what we
-                stock — no wading through pages.
+                stock - no wading through pages.
               </p>
               <Link
                 to={to}
@@ -39,7 +39,7 @@ export default function FindMyKitPromo({ variant = "inline", trade = "", classNa
               </Link>
             </div>
           </div>
-          {/* Square image panel — admin-editable, falls back to a soft tint */}
+          {/* Square image panel - admin-editable, falls back to a soft tint */}
           <div className="hidden md:block relative bg-[#6bb870] min-h-[220px]">
             {image
               ? <img src={image} alt="" className="absolute inset-0 w-full h-full object-cover" />

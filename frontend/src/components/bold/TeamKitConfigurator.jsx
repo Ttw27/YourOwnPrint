@@ -108,12 +108,12 @@ export default function TeamKitConfigurator({ product }) {
         backPrint.on ? `back print (+£${(addons["back-print"]?.price ?? 3.5).toFixed(2)})` : null,
       ].filter(Boolean).join(", ") || "badge only";
       const message = [
-        `Product: ${product.name}${brand ? ` — Brand: ${brand.brand} ${brand.name} (£${brand.price.toFixed(2)})` : ` (£${product.price.toFixed(2)})`}`,
+        `Product: ${product.name}${brand ? ` - Brand: ${brand.brand} ${brand.name} (£${brand.price.toFixed(2)})` : ` (£${product.price.toFixed(2)})`}`,
         `Total kits: ${totalKits}`,
         `Prints: ${placementsHuman}`,
         `Per-kit addon cost: £${addonCostPerKit.toFixed(2)}`,
         `Indicative total: £${lineTotal.toFixed(2)}`,
-        isFrontOnly ? "FRONT-PRINT-ONLY variant — no names/numbers on backs." : "Includes badge, names & numbers.",
+        isFrontOnly ? "FRONT-PRINT-ONLY variant - no names/numbers on backs." : "Includes badge, names & numbers.",
       ].join("\n");
       const cleanRoster = roster.map(r => ({ name: r.name, number: r.number, size: r.size, qty: Number(r.qty) || 1 }));
       await submitQuoteRequest({
@@ -143,7 +143,7 @@ export default function TeamKitConfigurator({ product }) {
     try {
       const size_qtys = {};
       roster.forEach((r) => { const q = Number(r.qty) || 0; if (q > 0) size_qtys[r.size] = (size_qtys[r.size] || 0) + q; });
-      const rosterLines = roster.map(r => `${r.name || "—"}#${r.number || "—"}/${r.size}×${r.qty}`).join("|").slice(0, 380);
+      const rosterLines = roster.map(r => `${r.name || "-"}#${r.number || "-"}/${r.size}×${r.qty}`).join("|").slice(0, 380);
       const { url } = await createCheckout({
         product_id: product.id,
         size_qtys,
@@ -191,7 +191,7 @@ export default function TeamKitConfigurator({ product }) {
                   <span className="font-nunito font-extrabold text-sm">{b.brand} · {b.name}</span>
                   {brand?.id === b.id && <Check size={16} className="text-[#7bc67e]" />}
                 </div>
-                <div className="text-xs text-[#4b5563] mt-1">{b.description || "—"}</div>
+                <div className="text-xs text-[#4b5563] mt-1">{b.description || "-"}</div>
                 <div className="mt-1 text-[#7bc67e] font-nunito font-extrabold">£{b.price.toFixed(2)}/player</div>
               </button>
             ))}
@@ -222,7 +222,7 @@ export default function TeamKitConfigurator({ product }) {
           </select>
         </div>
         {isFrontOnly && (
-          <div className="text-xs text-[#4b5563] mb-2 italic" data-testid="front-only-note">Front-print-only variant — no names or numbers on the back. Just tell us the sizes and how many.</div>
+          <div className="text-xs text-[#4b5563] mb-2 italic" data-testid="front-only-note">Front-print-only variant - no names or numbers on the back. Just tell us the sizes and how many.</div>
         )}
         <div className="space-y-1.5">
           {isFrontOnly ? (
@@ -262,10 +262,10 @@ export default function TeamKitConfigurator({ product }) {
         <button data-testid="add-row" onClick={addRow} className="mt-2 inline-flex items-center gap-1.5 text-sm font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={14} /> Add player</button>
       </div>
 
-      {/* 4. Front sponsor — FREE, one only */}
+      {/* 4. Front sponsor - FREE, one only */}
       <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-5" data-testid="front-sponsor-block">
-        <h3 className="font-nunito font-extrabold text-[#1a1a1a]">{stepBase + 3}. Front sponsor <span className="text-xs font-bold text-[#7bc67e]">— FREE · 1 logo</span></h3>
-        <div className="text-xs text-[#4b5563] mt-1 mb-3">One main sponsor goes on the front big — included free. Skip if you don&apos;t have one.</div>
+        <h3 className="font-nunito font-extrabold text-[#1a1a1a]">{stepBase + 3}. Front sponsor <span className="text-xs font-bold text-[#7bc67e]">- FREE · 1 logo</span></h3>
+        <div className="text-xs text-[#4b5563] mt-1 mb-3">One main sponsor goes on the front big - included free. Skip if you don&apos;t have one.</div>
         <SingleSlot image={frontSponsor} onPick={onPickFrontSponsor} onClear={() => setFrontSponsor(null)} testId="front-sponsor" placeholder="Upload front sponsor" />
       </div>
 
@@ -274,7 +274,7 @@ export default function TeamKitConfigurator({ product }) {
         <h3 className="font-nunito font-extrabold text-[#1a1a1a]">{stepBase + 4}. Extra prints <span className="text-xs font-bold text-[#4b5563]">(optional)</span></h3>
         <div className="text-xs text-[#4b5563] mt-1 mb-3">
           Add sleeve logos or a back print. Each priced per kit. Upload the artwork before checkout.<br />
-          <span className="text-[#1a1a1a]"><Info size={10} className="inline mr-1" /><strong>Back print sits below the player&apos;s name &amp; number</strong> — names &amp; numbers are already included in your kit price.</span>
+          <span className="text-[#1a1a1a]"><Info size={10} className="inline mr-1" /><strong>Back print sits below the player&apos;s name &amp; number</strong> - names &amp; numbers are already included in your kit price.</span>
         </div>
         <div className="grid md:grid-cols-3 gap-3">
           <AddonSlot
@@ -318,12 +318,12 @@ export default function TeamKitConfigurator({ product }) {
               {addonCostPerKit > 0 && <> + £{addonCostPerKit.toFixed(2)} extras</>}
               {isFrontOnly ? " · front print only" : " · badge + names + numbers included"}
             </div>
-            {brand && brandRequiresQuote && <div className="text-xs text-[#7bc67e] mt-1">Premium brand {brand.brand} — confirmed in your quote</div>}
+            {brand && brandRequiresQuote && <div className="text-xs text-[#7bc67e] mt-1">Premium brand {brand.brand} - confirmed in your quote</div>}
           </div>
           <div className="max-w-sm text-sm text-neutral-300">
             {finalQuoteOnly
-              ? <>{quoteOnly ? "15+ kits — " : "Premium kit — "}we&apos;ll send a <strong className="text-[#7bc67e]">free proof</strong> and tailored quote within 1 working day.</>
-              : <>Under 15 kits — pay securely with Stripe. We&apos;ll send a proof for sign-off before printing.</>}
+              ? <>{quoteOnly ? "15+ kits - " : "Premium kit - "}we&apos;ll send a <strong className="text-[#7bc67e]">free proof</strong> and tailored quote within 1 working day.</>
+              : <>Under 15 kits - pay securely with Stripe. We&apos;ll send a proof for sign-off before printing.</>}
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">

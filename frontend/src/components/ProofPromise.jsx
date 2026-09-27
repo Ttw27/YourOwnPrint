@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { Eye, ArrowRight, ShieldCheck } from "lucide-react";
 
 /**
- * ProofPromise — the "you'll see it before you commit" reassurance.
+ * ProofPromise - the "you'll see it before you commit" reassurance.
  *
  * The research on why businesses hesitate to switch supplier is blunt: the
- * number-one first-order fear is that the logo comes out wrong — off-colour on
+ * number-one first-order fear is that the logo comes out wrong - off-colour on
  * fabric, badly placed, cracking after a wash. Suppliers that win are the ones
  * that de-risk the *first* order by proofing before production. We already do
  * this; this component states it plainly wherever a business is deciding.
@@ -16,7 +16,7 @@ import { Eye, ArrowRight, ShieldCheck } from "lucide-react";
  *  - "card" → boxed card for a sidebar or product page
  *  - "hero" → larger standalone block for landing pages
  *
- * No admin photo here by design — this is a promise, not a picture, and it
+ * No admin photo here by design - this is a promise, not a picture, and it
  * should read instantly. Copy is deliberately concrete ("on your chosen
  * garment", "before we print a thing").
  */
@@ -28,7 +28,7 @@ export default function ProofPromise({ variant = "band" }) {
           <Eye className="text-[#7bc67e]" size={18} /> Free proof first
         </div>
         <p className="text-sm text-[#1a1a1a] mt-2 leading-relaxed">
-          We&rsquo;ll mock your logo up on your chosen garment and send it over to approve&nbsp;&mdash;{" "}
+          We&rsquo;ll mock your logo up on your chosen garment and send it over to approve&nbsp;-{" "}
           <strong>before we print a thing.</strong> No surprises on colour, size or placement.
         </p>
         <Link to="/contact" data-testid="proof-promise-card-cta" className="mt-3 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline">

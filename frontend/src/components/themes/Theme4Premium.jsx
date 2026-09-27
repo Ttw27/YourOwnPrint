@@ -73,7 +73,7 @@ export default function Theme4Premium({ inShowcase = true, themeNumber = 4 }) {
       {/* Sectors */}
       <div className="max-w-7xl mx-auto px-6 py-24">
         <div className="text-center mb-14">
-          <div className="text-[#c9a84c] uppercase tracking-[0.4em] text-xs">— Categories —</div>
+          <div className="text-[#c9a84c] uppercase tracking-[0.4em] text-xs">- Categories -</div>
           <h2 className="mt-3 font-cormorant font-semibold text-5xl lg:text-6xl">Shop by Sector</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -94,7 +94,7 @@ export default function Theme4Premium({ inShowcase = true, themeNumber = 4 }) {
       <div className="border-y border-[#3d3d5c] bg-[#2a2a3f]">
         <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-14 items-center">
           <div>
-            <div className="text-[#c9a84c] uppercase tracking-[0.4em] text-xs">— Bespoke Designer —</div>
+            <div className="text-[#c9a84c] uppercase tracking-[0.4em] text-xs">- Bespoke Designer -</div>
             <h2 className="mt-3 font-cormorant font-semibold text-4xl lg:text-5xl leading-tight">Craft your garment, frame by frame.</h2>
             <p className="mt-6 text-neutral-300 font-light max-w-lg">A refined design experience. Upload your artwork, remove backgrounds with one click, and command every detail on a hi-fidelity garment preview.</p>
             <div className="mt-7 grid grid-cols-2 gap-3">
@@ -118,7 +118,7 @@ export default function Theme4Premium({ inShowcase = true, themeNumber = 4 }) {
       {/* Best Sellers */}
       <div className="max-w-7xl mx-auto px-6 py-24">
         <div className="text-center mb-12">
-          <div className="text-[#c9a84c] uppercase tracking-[0.4em] text-xs">— Signature —</div>
+          <div className="text-[#c9a84c] uppercase tracking-[0.4em] text-xs">- Signature -</div>
           <h2 className="mt-3 font-cormorant font-semibold text-5xl">Best Sellers</h2>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
@@ -143,7 +143,7 @@ export default function Theme4Premium({ inShowcase = true, themeNumber = 4 }) {
       <div className="border-t border-[#3d3d5c] bg-[#2a2a3f]">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-12">
-            <div className="text-[#c9a84c] uppercase tracking-[0.4em] text-xs">— Testimonials —</div>
+            <div className="text-[#c9a84c] uppercase tracking-[0.4em] text-xs">- Testimonials -</div>
             <h2 className="mt-3 font-cormorant font-semibold text-5xl">From our clientele</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -152,7 +152,7 @@ export default function Theme4Premium({ inShowcase = true, themeNumber = 4 }) {
                 <div className="flex gap-1 mb-4">{Array.from({ length: r.rating }).map((_, j) => <Star key={j} size={12} className="text-[#c9a84c] fill-[#c9a84c]" />)}</div>
                 <h3 className="font-cormorant text-2xl">{r.title}</h3>
                 <p className="text-neutral-300 text-sm mt-3 font-light leading-relaxed">"{r.body}"</p>
-                <div className="mt-5 text-[10px] uppercase tracking-[0.3em] text-neutral-500">— {r.name}</div>
+                <div className="mt-5 text-[10px] uppercase tracking-[0.3em] text-neutral-500">- {r.name}</div>
               </div>
             ))}
           </div>
@@ -177,7 +177,7 @@ export default function Theme4Premium({ inShowcase = true, themeNumber = 4 }) {
         <div className="border-t border-[#3d3d5c] py-5 text-center text-[10px] uppercase tracking-[0.3em] text-neutral-500">© {new Date().getFullYear()} Your Own Print</div>
       </footer>
 
-      {inShowcase && <SelectThemeBar onSelect={onSelect} testId="theme-4-select-button" label="Select Theme 4 — Premium Dark" color="#c9a84c" textColor="#1e1e2e" />}
+      {inShowcase && <SelectThemeBar onSelect={onSelect} testId="theme-4-select-button" label="Select Theme 4 - Premium Dark" color="#c9a84c" textColor="#1e1e2e" />}
     </section>
   );
 }

@@ -14,8 +14,8 @@ const FULL_SQUAD_FIELDS = [
 const SPORTS_OUTFIT_FIELDS = [
   { key: "unbranded_price", label: "Unbranded", tip: "Should be £0 unless you want a base add-on" },
   { key: "breast_print_price", label: "Breast logo", tip: "Small left-breast logo (per kit)" },
-  { key: "back_print_price", label: "Back print", tip: "Centred back print — tops only, +£ per kit" },
-  { key: "full_front_print_price", label: "Full front print", tip: "Large front — replaces breast option (per kit)" },
+  { key: "back_print_price", label: "Back print", tip: "Centred back print - tops only, +£ per kit" },
+  { key: "full_front_print_price", label: "Full front print", tip: "Large front - replaces breast option (per kit)" },
 ];
 
 export default function AdminConfiguratorSettings() {
@@ -47,7 +47,7 @@ export default function AdminConfiguratorSettings() {
     <div className="min-h-screen bg-[#f8fafc] font-nunito" data-testid="admin-configurator-settings">
       <div className="max-w-3xl mx-auto px-6 py-10">
         <h1 className="font-black text-3xl mb-1">Configurator prices</h1>
-        <p className="text-sm text-[#4b5563] mb-6">All configurator add-on prices in one place. Changes go live the moment you save — no restart needed.</p>
+        <p className="text-sm text-[#4b5563] mb-6">All configurator add-on prices in one place. Changes go live the moment you save - no restart needed.</p>
 
         {loading ? (
           <div className="py-10 grid place-items-center"><Loader2 className="animate-spin text-[#7bc67e]" /></div>

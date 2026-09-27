@@ -16,7 +16,7 @@ export default function AdminProductSettings() {
   const [page, setPage] = useState(0);
   const [filter, setFilter] = useState(() => { try { return new URLSearchParams(window.location.search).get("q") || ""; } catch { return ""; } });
   const [debouncedFilter, setDebouncedFilter] = useState("");
-  const [allProductsLite, setAllProductsLite] = useState([]); // {id, name} across the WHOLE catalogue — for cross-sell pickers only, never rendered as one giant list
+  const [allProductsLite, setAllProductsLite] = useState([]); // {id, name} across the WHOLE catalogue - for cross-sell pickers only, never rendered as one giant list
   const [defaults, setDefaults] = useState({ tiers: [] });
   const [workforce, setWorkforce] = useState({ tiers: [], quote_threshold: 100 });
   const [busy, setBusy] = useState(false);
@@ -54,13 +54,13 @@ export default function AdminProductSettings() {
   };
 
   // Fetch the whole catalogue's id+name once, for the cross-sell search pickers
-  // (id+name only is cheap even for thousands of products — it's rendering
+  // (id+name only is cheap even for thousands of products - it's rendering
   // them all as buttons that was slow, so that no longer happens).
   const loadAllLite = async () => {
     try {
       const d = await fetchAllProductsAdmin(0, 5000, "");
       setAllProductsLite((d.items || []).map(p => ({ id: p.id, name: p.name })));
-    } catch { /* non-critical — pickers just show fewer suggestions */ }
+    } catch { /* non-critical - pickers just show fewer suggestions */ }
   };
 
   useEffect(() => { loadAllLite(); }, []);
@@ -256,7 +256,7 @@ export default function AdminProductSettings() {
         {lockedFilter === "locked" && total > 0 && (
           <div className="mt-3 bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 flex items-center justify-between gap-3 flex-wrap" data-testid="aps-unlock-bar">
             <div className="text-sm text-amber-800">
-              <span className="font-extrabold">{total} manually-edited product{total === 1 ? "" : "s"}.</span> These are protected — Smart Re-classify won't change them. Unlock any you want the AI to manage again.
+              <span className="font-extrabold">{total} manually-edited product{total === 1 ? "" : "s"}.</span> These are protected - Smart Re-classify won't change them. Unlock any you want the AI to manage again.
             </div>
             <button
               onClick={async () => {
@@ -276,7 +276,7 @@ export default function AdminProductSettings() {
 
         {loading ? <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div> : (
           <div className="mt-6 bg-white border-2 border-[#e5e7eb] rounded-2xl overflow-hidden" data-testid="aps-list">
-            {/* Header row — or, when products are ticked, the bulk action bar (Shopify-style) */}
+            {/* Header row - or, when products are ticked, the bulk action bar (Shopify-style) */}
             {selected.size > 0 ? (
               <div className="flex items-center gap-2 flex-wrap px-3 py-2.5 bg-[#f0fdf4] border-b-2 border-[#dcfce7]" data-testid="aps-bulk-bar">
                 <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} className="w-4 h-4 accent-[#7bc67e]" aria-label="Select all on this page" />
@@ -311,7 +311,7 @@ export default function AdminProductSettings() {
                           {/* On phones the status/price columns are hidden, so show them inline here */}
                           <span className="md:hidden text-[10px] text-[#4b5563]">£{p.price.toFixed(2)}</span>
                           {p.hidden && <span className="md:hidden text-[9px] bg-[#e5e7eb] text-[#4b5563] font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" data-testid={`aps-hidden-badge-${p.id}`}><EyeOff size={9} /> HIDDEN</span>}
-                          {p.manual_edit && <span className="text-[9px] bg-amber-100 text-amber-700 font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" title="Manually edited — protected from Smart Re-classify">🔒 EDITED</span>}
+                          {p.manual_edit && <span className="text-[9px] bg-amber-100 text-amber-700 font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" title="Manually edited - protected from Smart Re-classify">🔒 EDITED</span>}
                           {p.bulk_pricing_enabled && <span className="text-[9px] bg-[#dcfce7] text-[#166534] font-nunito font-extrabold px-2 py-0.5 rounded-full" title="Bulk discounts switched on">BULK</span>}
                         </span>
                       </span>
@@ -337,7 +337,7 @@ export default function AdminProductSettings() {
                         {p.hidden ? <><Eye size={12} /> Show on site</> : <><EyeOff size={12} /> Hide from site</>}
                       </button>
                     </div>
-                    {/* Basics — name, price, category, descriptions (in ProductOverridePanel) */}
+                    {/* Basics - name, price, category, descriptions (in ProductOverridePanel) */}
                     <ProductOverridePanel key={`${p.id}-${p.hidden}`} product={p} onSaved={reload} />
 
                     {/* Product details */}
@@ -428,7 +428,7 @@ export default function AdminProductSettings() {
                           <input type="checkbox" checked={!!p.designer_only} onChange={(e) => update(p.id, { designer_only: e.target.checked })} className="w-4 h-4 accent-[#4338ca]" data-testid={`aps-designeronly-${p.id}`} />
                           <span>
                             <span className="block text-sm font-nunito font-extrabold">Design Your Own product only</span>
-                            <span className="block text-[11px] text-[#4b5563]">Hidden from shop categories, industry pages and Find My Kit — appears only in the Design Your Own tool. Use for blank canvases sold for personalisation.</span>
+                            <span className="block text-[11px] text-[#4b5563]">Hidden from shop categories, industry pages and Find My Kit - appears only in the Design Your Own tool. Use for blank canvases sold for personalisation.</span>
                           </span>
                         </span>
                       </label>
@@ -558,7 +558,7 @@ export default function AdminProductSettings() {
 
 const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7bc67e]";
 function Lab({ label, children }) { return <div><div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">{label}</div>{children}</div>; }
-// Shopify-style section card — a titled group of related fields with breathing room.
+// Shopify-style section card - a titled group of related fields with breathing room.
 function Section({ title, hint, children }) {
   return (
     <div className="bg-white border-2 border-[#eef2f7] rounded-2xl p-4 sm:p-5">
@@ -573,7 +573,7 @@ function Section({ title, hint, children }) {
 /**
  * Search-to-add product picker for cross-sell fields (also_bought, match_with).
  * Renders only the CURRENTLY SELECTED items as chips, plus a search box that
- * shows up to 8 matching suggestions at a time — never renders the whole
+ * shows up to 8 matching suggestions at a time - never renders the whole
  * catalogue as buttons, which is what made opening any product row slow once
  * the catalogue grew into the hundreds/thousands (e.g. after a PenCarrie import).
  */
@@ -713,12 +713,12 @@ function ImageGalleryEditor({ productId, urls, onChange }) {
 }
 
 /**
- * Inline "edit the hardcoded catalogue" panel — sits at the top of every
+ * Inline "edit the hardcoded catalogue" panel - sits at the top of every
  * expanded product row. Writes go to PATCH /admin/products/{pid}/override
  * (persisted in Mongo + hot-applied to the in-memory PRODUCTS registry).
  *
  * Revert (DELETE /admin/products/{pid}/override) removes the doc and restores
- * the pristine hardcoded values immediately — no restart needed.
+ * the pristine hardcoded values immediately - no restart needed.
  */
 function ProductOverridePanel({ product, onSaved }) {
   const [draft, setDraft] = React.useState({
@@ -760,7 +760,7 @@ function ProductOverridePanel({ product, onSaved }) {
         category: draft.category || null,
         active: draft.active,
       });
-      toast.success(`${draft.name} — override saved`);
+      toast.success(`${draft.name} - override saved`);
       onSaved && onSaved();
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
     finally { setBusy(false); }

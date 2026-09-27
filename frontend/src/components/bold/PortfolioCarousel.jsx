@@ -12,7 +12,7 @@ export default function PortfolioCarousel({
   category,
   title = "See it in action",
   eyebrow = "Real work",
-  emptyCTA = "Got photos to share? Send them over — we'll feature them here.",
+  emptyCTA = "Got photos to share? Send them over - we'll feature them here.",
   emptyPreset = "Hi! I've got photos to share for your portfolio.",
   className = "",
   testid = "portfolio-carousel",

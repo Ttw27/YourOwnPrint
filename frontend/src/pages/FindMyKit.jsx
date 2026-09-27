@@ -11,7 +11,7 @@ import usePageTitle from "../hooks/usePageTitle";
 const CACHE_KEY = "fmk:last";
 
 /**
- * Find My Kit — the concierge. A customer picks their industry or types their
+ * Find My Kit - the concierge. A customer picks their industry or types their
  * trade, and the AI hands back a balanced, grouped, head-to-toe kit drawn from
  * what the shop actually stocks. Read-only; each item links to its product page.
  */
@@ -64,7 +64,7 @@ export default function FindMyKit() {
     try {
       const res = await findMyKit({ industry: industry || undefined, trade: trade.trim() || undefined });
       if (!res?.ok) {
-        setError(res?.message || "We couldn't build a kit for that just yet — try a broader trade.");
+        setError(res?.message || "We couldn't build a kit for that just yet - try a broader trade.");
       } else {
         setResult(res);
         try {
@@ -94,7 +94,7 @@ export default function FindMyKit() {
           </h1>
           <p className="text-[#4b5563] mt-4 max-w-xl mx-auto">
             No wading through pages. Pick your industry or type your job, and we'll put together a
-            head-to-toe kit from what we stock — ready to brand with your logo.
+            head-to-toe kit from what we stock - ready to brand with your logo.
           </p>
 
           {/* Controls */}
@@ -194,7 +194,7 @@ export default function FindMyKit() {
           {/* CTA footer */}
           <div className="mt-6 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-3xl p-6 text-center">
             <p className="font-extrabold text-lg">Want a hand or a bulk price?</p>
-            <p className="text-[#4b5563] text-sm mt-1">Tap any item to pick colours, sizes and print — or get a quote for the whole kit.</p>
+            <p className="text-[#4b5563] text-sm mt-1">Tap any item to pick colours, sizes and print - or get a quote for the whole kit.</p>
             <div className="mt-4 flex flex-wrap gap-3 justify-center">
               <Link to="/contact" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-5 py-2.5">Get a quote <ArrowRight size={15} /></Link>
               <button onClick={() => { setResult(null); setTrade(""); setIndustry(""); try { sessionStorage.removeItem(CACHE_KEY); } catch { /* ignore */ } window.scrollTo({ top: 0, behavior: "smooth" }); }} className="inline-flex items-center gap-2 border-2 border-[#7bc67e] text-[#166534] hover:bg-white font-extrabold rounded-full px-5 py-2.5">Try another trade</button>

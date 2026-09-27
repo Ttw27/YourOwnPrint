@@ -26,10 +26,10 @@ const FONTS = [
 ];
 
 /**
- * PlacementDesignerModal — a focused popup for designing ONE specific print
+ * PlacementDesignerModal - a focused popup for designing ONE specific print
  * placement. Reuses the same canvas/item model as the full Design Your Own
  * builder (upload, text, AI background removal, layers, drag/resize/rotate)
- * but scoped to a single placement — no product picker, no colour picker,
+ * but scoped to a single placement - no product picker, no colour picker,
  * no checkout. On confirm, flattens everything to a PNG and hands it back.
  *
  * Props: placementLabel, printArea ({x,y,w,h} %), backgroundColor (hex),
@@ -113,7 +113,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
   const updateItem = (id, patch) => setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it));
 
   const removeBgReal = async () => {
-    if (!isLoggedIn) { toast.error("Log in to use AI tools — free, just prevents random abuse of the paid AI service."); return; }
+    if (!isLoggedIn) { toast.error("Log in to use AI tools - free, just prevents random abuse of the paid AI service."); return; }
     if (!selected || selected.type !== "image") { toast.error("Select an image first"); return; }
     updateItem(selected.id, { _busy: true });
     const t = toast.loading("Removing background…");
@@ -130,7 +130,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
   };
 
   const aiEffectReal = async (effectId, label) => {
-    if (!isLoggedIn) { toast.error("Log in to use AI tools — free, just prevents random abuse of the paid AI service."); return; }
+    if (!isLoggedIn) { toast.error("Log in to use AI tools - free, just prevents random abuse of the paid AI service."); return; }
     if (!selected || selected.type !== "image") { toast.error("Select an image first"); return; }
     updateItem(selected.id, { _busy: true });
     const t = toast.loading(`Applying ${label}…`);
@@ -235,7 +235,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
       const dataUrl = await composeArtwork();
       onConfirm(dataUrl);
     } catch {
-      toast.error("Couldn't finish your design — try again");
+      toast.error("Couldn't finish your design - try again");
     } finally {
       setConfirming(false);
     }
@@ -271,7 +271,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
           {!isLoggedIn && <Lock size={10} className="inline mr-1 -mt-0.5" />}Enhance quality
         </button>
         {!isLoggedIn ? (
-          <p className="text-[9px] text-[#712B13] font-bold pt-1"><Link to="/account" className="underline font-extrabold">Log in</Link> to use these — free, just stops random abuse.</p>
+          <p className="text-[9px] text-[#712B13] font-bold pt-1"><Link to="/account" className="underline font-extrabold">Log in</Link> to use these - free, just stops random abuse.</p>
         ) : aiUsage ? (
           <p className="text-[9px] text-[#4b5563] font-bold pt-1">{aiUsage.remaining} of {aiUsage.limit} free AI edits left this month</p>
         ) : null}
@@ -400,7 +400,7 @@ export default function PlacementDesignerModal({ placementLabel, printArea, back
             <p className="text-[11px] text-[#4b5563] text-center mt-2">Drag to move · corner dot to resize · top knob to rotate · double-click text to edit</p>
           </div>
 
-          {/* Toolbar — desktop only; on mobile these move into the bottom sheets */}
+          {/* Toolbar - desktop only; on mobile these move into the bottom sheets */}
           <div className="hidden md:block w-full md:w-56 space-y-3">
             <UploadTextPanel />
             <AiPanel />

@@ -121,10 +121,10 @@ class TestQuoteRequest:
             "artwork": [tiny_png] * 25,  # 25 imgs → should silently truncate to 12
         }
         r = client.post(f"{API}/quote-request", json=payload)
-        assert r.status_code == 200  # endpoint succeeds — truncation is silent
+        assert r.status_code == 200  # endpoint succeeds - truncation is silent
 
     def test_quote_oversize_artwork_dropped(self, client):
-        # >1.5MB string should be silently dropped — endpoint still 200
+        # >1.5MB string should be silently dropped - endpoint still 200
         big = "data:image/png;base64," + ("A" * 1_600_000)
         payload = {
             "kind": "general",

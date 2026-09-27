@@ -94,7 +94,7 @@ export default function SportsTeamDetail() {
   // SEO: dynamic title + meta description + FAQ schema
   useEffect(() => {
     if (!data) return;
-    document.title = `${data.title} | Your Own Print — UK Custom Print`;
+    document.title = `${data.title} | Your Own Print - UK Custom Print`;
     let desc = document.querySelector('meta[name="description"]');
     if (!desc) {
       desc = document.createElement("meta");
@@ -197,7 +197,7 @@ export default function SportsTeamDetail() {
         <p className="text-[#4b5563] leading-relaxed">{data.seo_paragraph}</p>
       </section>
 
-      {/* Fight Night Tee callout — combat sports only */}
+      {/* Fight Night Tee callout - combat sports only */}
       {["boxing-gyms", "thai-boxing", "kick-boxing", "kickboxing", "mma"].includes(slug) && (
         <section className="max-w-5xl mx-auto px-6 pb-12">
           <div className="bg-[#1a1a1a] text-white rounded-3xl px-8 py-10 sm:px-12 grid md:grid-cols-[1.4fr_1fr] gap-6 items-center" data-testid="sports-team-fight-night">
@@ -206,7 +206,7 @@ export default function SportsTeamDetail() {
                 <Zap size={14} /> Fight Night Sponsor Tees
               </div>
               <h2 className="font-black text-2xl sm:text-3xl mt-3 leading-tight">Got a fight night or show coming up?</h2>
-              <p className="text-zinc-300 mt-2">Sponsor tees with your main backer plus supporting logos on the back — pay, get a free proof, and we print. Perfect for walk-outs, corners and the crowd.</p>
+              <p className="text-zinc-300 mt-2">Sponsor tees with your main backer plus supporting logos on the back - pay, get a free proof, and we print. Perfect for walk-outs, corners and the crowd.</p>
             </div>
             <Link to="/fight-night-tee" className="justify-self-start md:justify-self-end inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-white text-[#1a1a1a] font-extrabold rounded-full px-6 py-3.5 transition" data-testid="sports-team-fight-night-cta">
               <Zap size={17} /> Fight Night Tees →
@@ -238,7 +238,7 @@ export default function SportsTeamDetail() {
           </button>
 
           <div className="grid lg:grid-cols-12 gap-6">
-            {/* Collapsed by default on mobile — expanded, the sidebar pushes the
+            {/* Collapsed by default on mobile - expanded, the sidebar pushes the
                 products off the bottom of the screen before anything is seen. */}
             <aside className={`lg:col-span-3 ${mobileFiltersOpen ? "" : "hidden lg:block"}`} data-testid="sports-team-sidebar">
               <div className="sticky top-24 space-y-4">

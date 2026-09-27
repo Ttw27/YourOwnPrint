@@ -3,7 +3,7 @@ import { HelpCircle, X, Info } from "lucide-react";
 import { fetchSiteWhatsApp } from "../../lib/api";
 
 /**
- * Floating help button — bottom-left (so it doesn't collide with the WhatsApp FAB
+ * Floating help button - bottom-left (so it doesn't collide with the WhatsApp FAB
  * on the bottom-right). Opens a compact modal explaining how the Designer works
  * with a direct WhatsApp CTA using the site-configured number.
  */
@@ -17,7 +17,7 @@ export default function DesignerHelpFAB() {
 
   const cleanedWa = whatsapp.replace(/[^0-9]/g, "");
   const waHref = cleanedWa
-    ? `https://wa.me/${cleanedWa}?text=${encodeURIComponent("Hi! I'm using your Design Your Own tool and need a hand — can you help?")}`
+    ? `https://wa.me/${cleanedWa}?text=${encodeURIComponent("Hi! I'm using your Design Your Own tool and need a hand - can you help?")}`
     : null;
 
   return (
@@ -47,28 +47,28 @@ export default function DesignerHelpFAB() {
             <h3 className="font-black text-2xl mt-3">How the Designer works</h3>
             <ol className="mt-4 space-y-3 text-sm">
               <Step n="1">
-                <strong>Pick a product</strong> — colour it appears on your garment. The list up top has every design-eligible item we sell.
+                <strong>Pick a product</strong> - colour it appears on your garment. The list up top has every design-eligible item we sell.
               </Step>
               <Step n="2">
-                <strong>Switch view</strong> — use <em>Front</em> / <em>Back</em> / <em>Neck label</em> above the canvas to place different designs on each area (back &amp; neck cost extra, shown in the tab).
+                <strong>Switch view</strong> - use <em>Front</em> / <em>Back</em> / <em>Neck label</em> above the canvas to place different designs on each area (back &amp; neck cost extra, shown in the tab).
               </Step>
               <Step n="3">
-                <strong>Pick a colour</strong> — the <em>Colour</em> panel switches the canvas to that garment colour. If we&rsquo;ve photographed it you&rsquo;ll see the real garment; otherwise you&rsquo;ll see a flat block in exactly that colour so you always design against the right shade.
+                <strong>Pick a colour</strong> - the <em>Colour</em> panel switches the canvas to that garment colour. If we&rsquo;ve photographed it you&rsquo;ll see the real garment; otherwise you&rsquo;ll see a flat block in exactly that colour so you always design against the right shade.
               </Step>
               <Step n="4">
-                <strong>Add art or text</strong> — upload your logo/PNG (transparent works best), then drag, resize and rotate inside the dashed print area. Add text in any font — the font list previews each style so you can see it before picking. Use the <em>Layers</em> panel to reorder, duplicate or delete anything.
+                <strong>Add art or text</strong> - upload your logo/PNG (transparent works best), then drag, resize and rotate inside the dashed print area. Add text in any font - the font list previews each style so you can see it before picking. Use the <em>Layers</em> panel to reorder, duplicate or delete anything.
               </Step>
               <Step n="5">
-                <strong>AI tools</strong> (optional) — select an uploaded image to unlock <em>Remove background</em> and photo effects. These use paid AI services, so you&rsquo;ll need to be logged in; you get 20 free edits a month.
+                <strong>AI tools</strong> (optional) - select an uploaded image to unlock <em>Remove background</em> and photo effects. These use paid AI services, so you&rsquo;ll need to be logged in; you get 20 free edits a month.
               </Step>
               <Step n="6">
-                <strong>Sizes &amp; checkout</strong> — set qty per size at the bottom and hit "Checkout with Stripe". We'll email you a free proof before we print.
+                <strong>Sizes &amp; checkout</strong> - set qty per size at the bottom and hit "Checkout with Stripe". We'll email you a free proof before we print.
               </Step>
             </ol>
 
             <div className="mt-5 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-3 flex items-start gap-2 text-xs text-[#1a1a1a]">
               <Info size={14} className="text-[#7bc67e] mt-0.5 flex-shrink-0" />
-              <span>Stuck? Our UK team can jump in and mock it up for you — no cost, no pressure.</span>
+              <span>Stuck? Our UK team can jump in and mock it up for you - no cost, no pressure.</span>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2">

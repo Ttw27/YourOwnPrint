@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 /**
- * Full Squad Configurator — team-focused (Football / Rugby / kit sports).
+ * Full Squad Configurator - team-focused (Football / Rugby / kit sports).
  *
  * Three "sets" managed by admin as bundle brand variants (see /admin/bundle-variants):
  *   - Match Day  (Shirt + Shorts + Socks, per-player roster with split Top/Bottom/Sock sizes)
@@ -17,7 +17,7 @@ import {
  *   - Tracksuit  (Hoodie/Jacket + Joggers, bulk grid + optional split-size toggle)
  *
  * For each set the customer picks ONE brand tile, then a colour, then sizes.
- * Submits as a QuoteRequest — the whole build lives in the message + roster fields.
+ * Submits as a QuoteRequest - the whole build lives in the message + roster fields.
  */
 export default function FullSquadConfigurator() {
   const [cfg, setCfg] = useState(null);
@@ -66,11 +66,11 @@ export default function FullSquadConfigurator() {
         const sec = sections.find((s) => s.key === sectionKey);
         const variant = sec?.variants.find((x) => x.id === v.variant_id);
         const brandLabel = `${variant?.brand ? variant.brand + " " : ""}${variant?.name || "Standard"}`.trim();
-        summaryLines.push(`[${sec.title}] ${brandLabel} — colour: ${v.colour || "n/a"} — ${v.__qty} kits @ £${(v.__unit_price || 0).toFixed(2)}`);
+        summaryLines.push(`[${sec.title}] ${brandLabel} - colour: ${v.colour || "n/a"} - ${v.__qty} kits @ £${(v.__unit_price || 0).toFixed(2)}`);
         (v.roster || []).filter((r) => r.name || r.number || r.top || r.bottom || r.sock).forEach((r) => {
           mergedRoster.push({ set: sec.title, ...r });
           const numPart = sec.supports_names_numbers ? ` #${r.number || "-"}` : "";
-          summaryLines.push(`  •${numPart} ${r.name || "-"} — top ${r.top || "-"} / bottom ${r.bottom || "-"}${r.sock ? " / sock " + r.sock : ""}`);
+          summaryLines.push(`  •${numPart} ${r.name || "-"} - top ${r.top || "-"} / bottom ${r.bottom || "-"}${r.sock ? " / sock " + r.sock : ""}`);
         });
         if (v.include_gym_bag) {
           summaryLines.push(`  · +Printed gym bag with badge & player name: ${v.__qty} × £${gymBagPrice.toFixed(2)}`);
@@ -86,17 +86,17 @@ export default function FullSquadConfigurator() {
         kit_type: "full-squad-configurator",
         quantity: totals.totalQty,
         deadline: "",
-        message: `Full Squad Configurator quote — estimated subtotal £${totals.subtotal.toFixed(2)}.\n${summaryLines.join("\n")}`,
+        message: `Full Squad Configurator quote - estimated subtotal £${totals.subtotal.toFixed(2)}.\n${summaryLines.join("\n")}`,
         roster: mergedRoster,
       });
-      toast.success("Quote sent — we'll be in touch within 1 working day with a proof and price.");
+      toast.success("Quote sent - we'll be in touch within 1 working day with a proof and price.");
     } catch (e) {
       const d = e?.response?.data?.detail;
       const msg = typeof d === "string"
         ? d
         : Array.isArray(d)
           ? d.map((x) => x?.msg || String(x)).join(", ")
-          : "Couldn't send the quote — try WhatsApp instead.";
+          : "Couldn't send the quote - try WhatsApp instead.";
       toast.error(msg);
     } finally { setBusy(false); }
   };
@@ -109,8 +109,8 @@ export default function FullSquadConfigurator() {
         <div className="absolute inset-0 opacity-25 bg-gradient-to-br from-[#7bc67e] via-[#fde68a] to-[#f87171]" />
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Full squad configurator</span>
-          <h1 className="font-black text-4xl lg:text-6xl mt-2">Match day, training and tracksuit — one order.</h1>
-          <p className="text-zinc-300 mt-3 max-w-2xl">Pick a kit brand for each set, choose your colour and sizes. <strong className="text-white">Every kit is labelled with the player&apos;s name</strong> — no more mix-ups in the changing room. Match Day comes with names + numbers on the back.</p>
+          <h1 className="font-black text-4xl lg:text-6xl mt-2">Match day, training and tracksuit - one order.</h1>
+          <p className="text-zinc-300 mt-3 max-w-2xl">Pick a kit brand for each set, choose your colour and sizes. <strong className="text-white">Every kit is labelled with the player&apos;s name</strong> - no more mix-ups in the changing room. Match Day comes with names + numbers on the back.</p>
           <div className="mt-5 flex flex-wrap gap-2 text-[11px]">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 font-extrabold">
               <Check size={12} className="text-[#7bc67e]" /> Free per-player name label on every kit
@@ -152,8 +152,8 @@ export default function FullSquadConfigurator() {
 
           <NeedHelpCTA
             title="Big squad? Multiple age groups? We'll design and quote it end-to-end."
-            body="If you've got 20+ kits or multiple squads, send us the details on WhatsApp and we'll handle the design, mock-ups and proofs — one point of contact, one price."
-            presetMessage="Hi! I'd like to kit out our full squad — can I send you the details?"
+            body="If you've got 20+ kits or multiple squads, send us the details on WhatsApp and we'll handle the design, mock-ups and proofs - one point of contact, one price."
+            presetMessage="Hi! I'd like to kit out our full squad - can I send you the details?"
             testid="fsc-need-help"
             variant="banner"
           />
@@ -209,7 +209,7 @@ export default function FullSquadConfigurator() {
 }
 
 // ============================================================================
-// SectionBuilder — one card per set (Match Day / Training / Tracksuit)
+// SectionBuilder - one card per set (Match Day / Training / Tracksuit)
 // ============================================================================
 function SectionBuilder({ index, section, gymBagPrice, value, onChange }) {
   const [detailsOpen, setDetailsOpen] = useState({}); // { [variant_id]: true }
@@ -399,7 +399,7 @@ function GymBagOptIn({ sectionKey, checked, price, qty, onChange }) {
           Add a printed drawstring gym bag per player
           <span className="inline-flex bg-[#fef3c7] text-[#78350f] rounded-full px-2 py-0.5 text-[10px] font-extrabold">+£{price.toFixed(2)} each</span>
         </div>
-        <div className="text-[#4b5563] mt-0.5">Badge + player name printed on the bag — perfect for match day kit, training gear or travel. {qty > 0 && checked ? <span className="font-extrabold text-[#166534]">{qty} bag{qty === 1 ? "" : "s"} · £{(qty * price).toFixed(2)}</span> : null}</div>
+        <div className="text-[#4b5563] mt-0.5">Badge + player name printed on the bag - perfect for match day kit, training gear or travel. {qty > 0 && checked ? <span className="font-extrabold text-[#166534]">{qty} bag{qty === 1 ? "" : "s"} · £{(qty * price).toFixed(2)}</span> : null}</div>
       </div>
     </label>
   );
@@ -426,7 +426,7 @@ function RosterEditor({ sectionKey, roster, sizes, sockSizes, showNumbers = fals
         <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">Squad roster · labelled by name</div>
       </div>
       <div className="text-xs text-[#4b5563] mb-2 flex items-start gap-1.5">
-        <Info size={12} className="mt-0.5" /> Each row = one player. Every kit is labelled with the player&apos;s name — top / bottom{includeSocks ? " / sock" : ""} sizes can differ per player.
+        <Info size={12} className="mt-0.5" /> Each row = one player. Every kit is labelled with the player&apos;s name - top / bottom{includeSocks ? " / sock" : ""} sizes can differ per player.
       </div>
       <div className="hidden md:grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-[#4b5563] font-extrabold mb-1 px-2">
         <div className={cls.name}>Name</div>
@@ -491,4 +491,4 @@ function RosterEditor({ sectionKey, roster, sizes, sockSizes, showNumbers = fals
   );
 }
 
-// ---------- Bulk size grid removed — Full Squad is now roster-only across all sets.
+// ---------- Bulk size grid removed - Full Squad is now roster-only across all sets.

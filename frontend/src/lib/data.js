@@ -1,7 +1,7 @@
 // Static seed data (sectors, reviews) used across themes.
 export const SECTORS = [
   // `href` is where the chip/tile links to. Previously these were rendered as
-  // plain <span>s on the Workwear page — styled to look clickable (cursor,
+  // plain <span>s on the Workwear page - styled to look clickable (cursor,
   // hover colour) but doing nothing at all when clicked.
   { name: "Construction & Trades", href: "/industries/construction-trades", image: "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg?auto=compress&cs=tinysrgb&w=800" },
   { name: "Healthcare", href: "/industries/healthcare", image: "https://images.pexels.com/photos/5430213/pexels-photo-5430213.jpeg?auto=compress&cs=tinysrgb&w=800" },
@@ -61,7 +61,7 @@ export const RATING = { value: 4.5, count: 404 };
 // The real number is configured in Admin → Integrations ("WhatsApp Number")
 // and served by GET /site/whatsapp. initWhatsAppNumber() fetches it once on app
 // load, and every WhatsApp link across the site uses it from then on. Setting
-// the number in admin is what changes the site — no code edit needed.
+// the number in admin is what changes the site - no code edit needed.
 const WHATSAPP_FALLBACK_RAW = "+447000000000";  // placeholder until admin is set
 
 let _whatsappRaw = WHATSAPP_FALLBACK_RAW;  // mutable; updated at runtime
@@ -225,7 +225,7 @@ export const TOOLS_SHOWCASE = [
   { key: "design", title: "Design Your Own", tagline: "Live canvas. Drag, upload, type. Print-ready in minutes.", to: "/design", image: "https://images.pexels.com/photos/3826676/pexels-photo-3826676.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#fde68a", accent: "#1a1a1a" },
   { key: "specials", title: "Your Own Print Specials", tagline: "Starter lineup. No MOQ. Breast logo included.", to: "/specials", image: "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#7bc67e", accent: "#1a1a1a" },
   { key: "workforce", title: "Kit Your Workforce", tagline: "Mixed garments, bulk tiers, one logo across the lot.", to: "/workforce", image: "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#fbbf24", accent: "#1a1a1a" },
-  { key: "team-kits", title: "Team Kits", tagline: "Configurator for clubs and squads — front, back, sleeves.", to: "/team-kits", image: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#a78bfa", accent: "#1a1a1a" },
+  { key: "team-kits", title: "Team Kits", tagline: "Configurator for clubs and squads - front, back, sleeves.", to: "/team-kits", image: "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#a78bfa", accent: "#1a1a1a" },
   { key: "fight-night", title: "Fight Night Tees", tagline: "Branded tees for fight cards, gyms and combat events.", to: "/fight-night-tee", image: "https://images.pexels.com/photos/4761792/pexels-photo-4761792.jpeg?auto=compress&cs=tinysrgb&w=800", colour: "#f87171", accent: "#ffffff" },
 ];
 

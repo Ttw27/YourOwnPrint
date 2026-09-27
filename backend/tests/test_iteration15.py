@@ -1,4 +1,4 @@
-"""Iteration 15 — Kit Your Workforce + Also Bought cross-sells."""
+"""Iteration 15 - Kit Your Workforce + Also Bought cross-sells."""
 import os
 import pytest
 import requests

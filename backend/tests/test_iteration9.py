@@ -1,4 +1,4 @@
-"""Iteration 9 backend tests — designer back-print upcharge + back PNG persistence."""
+"""Iteration 9 backend tests - designer back-print upcharge + back PNG persistence."""
 import os
 import requests
 

@@ -1,4 +1,4 @@
-"""Iteration 24 — Full Squad Configurator + Sports Outfit Configurator + sock sizes + back-print rule."""
+"""Iteration 24 - Full Squad Configurator + Sports Outfit Configurator + sock sizes + back-print rule."""
 import os
 import pytest
 import requests

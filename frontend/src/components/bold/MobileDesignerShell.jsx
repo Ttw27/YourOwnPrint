@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 
 /**
- * Mobile designer shell — a canvas that stays put while the tools live in a
+ * Mobile designer shell - a canvas that stays put while the tools live in a
  * bottom bar and slide up over it in a sheet when tapped.
  *
  * The old mobile layout stacked every panel in a column, so adding text meant
@@ -10,7 +10,7 @@ import React, { useEffect } from "react";
  * screen with that tool, you make your change, you close it. Same interaction
  * the customer already knows from every other app on their phone.
  *
- * Desktop is untouched — these render nothing above the `lg` breakpoint, where
+ * Desktop is untouched - these render nothing above the `lg` breakpoint, where
  * the existing three-column layout is already good.
  */
 
@@ -37,7 +37,7 @@ function Tab({ icon: Icon, label, active, badge, onClick, testid }) {
 }
 
 /**
- * MobileToolBar — the fixed bar of tabs at the bottom of the screen.
+ * MobileToolBar - the fixed bar of tabs at the bottom of the screen.
  * `tabs` is an array of { key, label, icon, badge }.
  */
 export function MobileToolBar({ tabs, activeKey, onSelect, testid = "designer-toolbar" }) {
@@ -72,14 +72,14 @@ export function MobileToolBar({ tabs, activeKey, onSelect, testid = "designer-to
 }
 
 /**
- * MobileSheet — the panel that slides up over the canvas when a tab is active.
+ * MobileSheet - the panel that slides up over the canvas when a tab is active.
  * Capped at 78vh so the garment above stays visible; the point of the whole
  * exercise is that you can see what you're editing while you edit it.
  */
 export function MobileSheet({ open, title, onClose, children, testid = "designer-sheet" }) {
   const bottomInset = useBottomInset();
   // Close on Escape, and lock body scroll so the page behind doesn't move while
-  // a sheet is open — otherwise a drag inside the sheet can scroll the canvas away.
+  // a sheet is open - otherwise a drag inside the sheet can scroll the canvas away.
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
@@ -129,14 +129,14 @@ export function MobileSheet({ open, title, onClose, children, testid = "designer
 }
 
 /**
- * useBottomInset — how far the bottom of what you can actually see sits above
+ * useBottomInset - how far the bottom of what you can actually see sits above
  * the bottom of the page's layout box.
  *
  * On iOS Safari these are not the same thing. With the address bar expanded
  * (which it always is at the top of a page) the layout viewport is taller than
  * the visible area, so a `bottom: 0` fixed element is positioned *below* the
  * screen and simply isn't there. Scroll down, the address bar collapses, the
- * two line up, and the element appears — which is exactly the bar vanishing at
+ * two line up, and the element appears - which is exactly the bar vanishing at
  * the top of the page and coming back further down.
  *
  * Measuring the gap and lifting the bar by it pins it to the bottom of what the
@@ -154,7 +154,7 @@ export function useBottomInset() {
     if (!vv) return undefined;
     const update = () => {
       const gap = window.innerHeight - (vv.height + vv.offsetTop);
-      // Rounded, and only written when it actually changes — visualViewport
+      // Rounded, and only written when it actually changes - visualViewport
       // scroll fires continuously during a drag and would otherwise re-render
       // the bar on every frame.
       const next = Math.max(0, Math.round(gap));
@@ -172,7 +172,7 @@ export function useBottomInset() {
 }
 
 /**
- * useIsMobile — true below Tailwind's lg breakpoint (1024px).
+ * useIsMobile - true below Tailwind's lg breakpoint (1024px).
  *
  * Drives which layout renders. Kept as a hook rather than pure CSS because the
  * two layouts differ structurally (a sheet vs a column), not just in styling,

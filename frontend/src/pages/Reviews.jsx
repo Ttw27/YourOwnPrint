@@ -55,7 +55,7 @@ export default function ReviewsPage() {
         setProducts((prods && prods.items) || []);
         setAggregates(aggs || {});
         // Media-first: reviews with photos lead (they're the strongest social
-        // proof), then the rest — each group kept in its recency order.
+        // proof), then the rest - each group kept in its recency order.
         const list = rec || [];
         const withPhotos = list.filter((r) => r.photos && r.photos.length > 0);
         const withoutPhotos = list.filter((r) => !r.photos || r.photos.length === 0);
@@ -88,7 +88,7 @@ export default function ReviewsPage() {
   const overallTotal = Object.values(aggregates).reduce((a, b) => a + b.count, 0);
   const overallAvg = overallTotal
     ? (Object.values(aggregates).reduce((a, b) => a + b.average * b.count, 0) / overallTotal).toFixed(1)
-    : "—";
+    : "-";
 
   // Page numbers, windowed so 40 pages don't render 40 buttons.
   const pageNumbers = useMemo(() => {
@@ -114,7 +114,7 @@ export default function ReviewsPage() {
             <span className="text-xl font-nunito font-extrabold">{overallAvg}</span>
             <span className="text-sm text-[#4b5563]">· {overallTotal} verified reviews on this site</span>
           </div>
-          <p className="text-[#4b5563] mt-3 max-w-xl">Read what real customers are saying — and leave your own review with photos if you've ordered with us.</p>
+          <p className="text-[#4b5563] mt-3 max-w-xl">Read what real customers are saying - and leave your own review with photos if you've ordered with us.</p>
         </div>
       </div>
 
@@ -135,7 +135,7 @@ export default function ReviewsPage() {
             <div className="flex-1 min-w-[240px]">
               <h2 className="font-nunito font-extrabold text-xl">Rather review us than a product?</h2>
               <p className="text-sm text-[#4b5563] mt-1">
-                Tell us how the whole experience went &mdash; ordering, artwork, delivery, the lot. No need to
+                Tell us how the whole experience went - ordering, artwork, delivery, the lot. No need to
                 hunt down the exact garment you bought.
               </p>
               {store.count > 0 && (
@@ -175,7 +175,7 @@ export default function ReviewsPage() {
         {recent.length === 0 ? (
           <div className="bg-[#f0fdf4] rounded-2xl p-8 text-center border border-[#dcfce7]">
             <Camera className="mx-auto text-[#7bc67e]" size={28} />
-            <div className="font-nunito font-extrabold text-xl mt-2">No reviews yet &mdash; be the first!</div>
+            <div className="font-nunito font-extrabold text-xl mt-2">No reviews yet - be the first!</div>
             <div className="text-sm text-[#4b5563] mt-1">Leave a review with photos below.</div>
           </div>
         ) : (
@@ -205,7 +205,7 @@ export default function ReviewsPage() {
                   {r.title && <h3 className="font-nunito font-extrabold text-lg mt-2">{r.title}</h3>}
                   <p className="text-[#4b5563] text-sm mt-1 flex-1">&ldquo;{r.body}&rdquo;</p>
                   <div className="mt-3 flex items-center gap-2 text-xs font-nunito font-bold flex-wrap">
-                    <span className="text-[#7bc67e]">&mdash; {r.reviewer_name}</span>
+                    <span className="text-[#7bc67e]">- {r.reviewer_name}</span>
                     {r.product_id === STORE_ID && (
                       <span className="inline-flex items-center gap-1 text-[10px] bg-[#f0fdf4] border border-[#dcfce7] text-[#4b5563] px-1.5 py-0.5 rounded-full">
                         <Store size={9} /> About the shop
@@ -230,7 +230,7 @@ export default function ReviewsPage() {
           </div>
         )}
 
-        {/* Leave a review — collapsed by default so the reviews above stay the focus.
+        {/* Leave a review - collapsed by default so the reviews above stay the focus.
             Opens a search-only picker (no wall of products); type to find yours. */}
         <div className="mt-14 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-3xl p-6" data-testid="leave-review-block">
           {!showPicker ? (
@@ -279,11 +279,11 @@ export default function ReviewsPage() {
                 )}
               </div>
 
-              {/* Results only appear once they've typed — no default wall of products */}
+              {/* Results only appear once they've typed - no default wall of products */}
               {query.trim().length === 0 ? (
                 <p className="text-sm text-[#4b5563] mt-4">Start typing to find your product.</p>
               ) : filtered.length === 0 ? (
-                <p className="text-sm text-[#4b5563] mt-4">Nothing matched &ldquo;{query}&rdquo; — try a shorter word, or review the shop as a whole above.</p>
+                <p className="text-sm text-[#4b5563] mt-4">Nothing matched &ldquo;{query}&rdquo; - try a shorter word, or review the shop as a whole above.</p>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-5">
                   {filtered.slice(0, 12).map((p) => {
@@ -305,7 +305,7 @@ export default function ReviewsPage() {
                 </div>
               )}
               {query.trim().length > 0 && filtered.length > 12 && (
-                <p className="text-xs text-[#4b5563] mt-3">Showing the first 12 matches — keep typing to narrow it down.</p>
+                <p className="text-xs text-[#4b5563] mt-3">Showing the first 12 matches - keep typing to narrow it down.</p>
               )}
             </div>
           )}

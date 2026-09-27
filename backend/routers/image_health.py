@@ -1,5 +1,5 @@
 """
-Image Health — find products whose main image is broken or missing.
+Image Health - find products whose main image is broken or missing.
 
 Some products (early manual imports, dead supplier CDN links) ended up with an
 image URL that no longer loads. This tool scans the catalogue, checks each main
@@ -12,7 +12,7 @@ Endpoints (all admin-only):
   POST /admin/image-health/hide    → set active=false on the given product ids
   POST /admin/image-health/unhide  → set active=true on the given product ids
 
-Nothing is changed by a scan — it's read-only. Hiding is an explicit second step.
+Nothing is changed by a scan - it's read-only. Hiding is an explicit second step.
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ async def _url_ok(client: httpx.AsyncClient, url: str) -> bool:
     """Return True unless the image is DEFINITIVELY gone (404/410).
 
     Server-side image checks get blocked by many supplier CDNs (pimber.ly,
-    Ralawise, etc.) — they return 403 or time out for a bot even though the image
+    Ralawise, etc.) - they return 403 or time out for a bot even though the image
     loads perfectly in a customer's browser. Treating those as "broken" produces
     thousands of false alarms, so we only mark an image broken when the server
     gives a definitive "gone" (404/410) or the URL is malformed. Blocks, timeouts
@@ -68,7 +68,7 @@ async def _url_ok(client: httpx.AsyncClient, url: str) -> bool:
         r = await client.head(url, headers=browser_headers, follow_redirects=True)
         if r.status_code in (404, 410):
             return False
-        if r.status_code == 405:  # HEAD not allowed — try a tiny GET
+        if r.status_code == 405:  # HEAD not allowed - try a tiny GET
             r = await client.get(url, headers={**browser_headers, "Range": "bytes=0-0"}, follow_redirects=True)
             if r.status_code in (404, 410):
                 return False

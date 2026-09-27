@@ -1,4 +1,4 @@
-"""Iter30 tests — multi-product cart + refactor regression sanity."""
+"""Iter30 tests - multi-product cart + refactor regression sanity."""
 import os
 import pytest
 import requests
@@ -71,7 +71,7 @@ class TestRefactorRegression:
 
     def test_designer_remove_bg_not_configured(self, s):
         r = s.post(f"{API}/designer/remove-bg", json={"image_base64": "data:image/png;base64,iVBORw0KGgo="})
-        # Should be 503 (not configured) OR 400 if payload rejected first — accept both here but review says 503
+        # Should be 503 (not configured) OR 400 if payload rejected first - accept both here but review says 503
         assert r.status_code in (400, 503), r.text
         assert r.status_code == 503, f"expected 503 not configured, got {r.status_code}: {r.text[:200]}"
 
@@ -82,7 +82,7 @@ class TestRefactorRegression:
     def test_admin_full_squad_addons_patch_and_reject(self, s, admin_token):
         h = {"Authorization": f"Bearer {admin_token}"}
         cur = s.get(f"{API}/full-squad/config").json().get("addons", {})
-        # Endpoint takes {values:{...}} — send valid patch (merge single key)
+        # Endpoint takes {values:{...}} - send valid patch (merge single key)
         r = s.patch(f"{API}/admin/full-squad/addons", json={"values": {"sleeve_print_price": 3.75}}, headers=h)
         assert r.status_code == 200, r.text
         after = s.get(f"{API}/full-squad/config").json().get("addons", {})
@@ -161,7 +161,7 @@ class TestCartPricing:
         assert j["items"] == [] and j["grand_total"] == 0.0 and j["total_qty"] == 0
 
     def test_price_cart_ignores_client_totals(self, s):
-        # Client sends bogus keys — server must not use them (schema strips them)
+        # Client sends bogus keys - server must not use them (schema strips them)
         payload = {
             "origin_url": "http://x",
             "items": [{

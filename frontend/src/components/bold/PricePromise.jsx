@@ -5,13 +5,13 @@ import { useSiteImages } from "../../hooks/usePageCopy";
 import SiteImage from "./SiteImage";
 
 /**
- * PricePromise — confident, warm price-match band.
+ * PricePromise - confident, warm price-match band.
  * Variants:
  *  - "hero" → full-bleed section with image + headline + CTA
  *  - "band" → compact 1-line band (good for headers / between sections)
  *  - "card" → boxed card (sidebar / product page)
  *
- * The photo in the "hero" variant is admin-editable — this band appears on the
+ * The photo in the "hero" variant is admin-editable - this band appears on the
  * homepage, product pages, Specials, Team Kits and Kit Your Workforce, so it
  * lives under /admin/page-copy → "Pictures used across the whole site" rather
  * than on any one page's record.
@@ -19,7 +19,7 @@ import SiteImage from "./SiteImage";
 const DEFAULT_PHOTO = "https://images.pexels.com/photos/8553861/pexels-photo-8553861.jpeg?auto=compress&cs=tinysrgb&w=900";
 
 export default function PricePromise({ variant = "hero" }) {
-  // Called before the early returns below — React requires every hook to run on
+  // Called before the early returns below - React requires every hook to run on
   // every render, in the same order.
   const site = useSiteImages();
   const photo = site.image("pricepromise", DEFAULT_PHOTO);
@@ -49,7 +49,7 @@ export default function PricePromise({ variant = "hero" }) {
           <BadgeCheck className="text-[#7bc67e]" size={18} /> Price Promise
         </div>
         <p className="text-sm text-[#1a1a1a] mt-2 leading-relaxed">
-          Found the same garment cheaper elsewhere? <strong>Send us the quote — we'll match it or beat it.</strong>
+          Found the same garment cheaper elsewhere? <strong>Send us the quote - we'll match it or beat it.</strong>
           Looking professional shouldn't cost a fortune.
         </p>
         <Link to="/contact" data-testid="price-promise-card-cta" className="mt-3 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline">
@@ -75,12 +75,12 @@ export default function PricePromise({ variant = "hero" }) {
           <p className="mt-5 text-lg text-neutral-300 max-w-2xl leading-relaxed">
             We're a small UK team helping businesses, schools and teams kit out their people without blowing the budget.
             Found the same garment cheaper anywhere else? Send us the quote and{" "}
-            <span className="font-extrabold text-white">we'll match it or beat it</span> — that's our promise.
+            <span className="font-extrabold text-white">we'll match it or beat it</span> - that's our promise.
           </p>
           <ul className="mt-6 grid sm:grid-cols-2 gap-3 max-w-xl">
             {[
               "No minimum order quantities",
-              "No setup fees — ever",
+              "No setup fees - ever",
               "Free logo design included",
               "Friendly UK-based account managers",
             ].map((t) => (

@@ -1,5 +1,5 @@
 """
-Iteration 14 — Phase 2: JWT admin auth, Allowed Print Placements, Customer Q&A.
+Iteration 14 - Phase 2: JWT admin auth, Allowed Print Placements, Customer Q&A.
 """
 import os
 import pytest
@@ -145,7 +145,7 @@ class TestAllowedPlacements:
         assert r.status_code == 400
 
     def test_reject_front_print(self, admin_headers):
-        # 'front-print' is NOT in the 7 — should be rejected
+        # 'front-print' is NOT in the 7 - should be rejected
         r = requests.patch(f"{API}/admin/products/{self.PID}/meta",
                            headers=admin_headers,
                            json={"allowed_placements": ["front-print", "back-print"]}, timeout=20)
@@ -194,7 +194,7 @@ class TestQA:
         assert r.status_code == 200
         items = r.json()
         assert any(q["id"] == TestQA.created_ids[0] for q in items)
-        # newest first — first item is most recent
+        # newest first - first item is most recent
         assert items[0]["asked_at"] >= items[-1]["asked_at"]
 
     def test_short_question_rejected(self):
@@ -213,12 +213,12 @@ class TestQA:
         qa_id = TestQA.created_ids[0]
         r = requests.post(f"{API}/admin/qa/{qa_id}/answer",
                           headers=admin_headers,
-                          json={"answer": "TEST_A14 Yes — DTF prints are wash-fast."}, timeout=20)
+                          json={"answer": "TEST_A14 Yes - DTF prints are wash-fast."}, timeout=20)
         assert r.status_code == 200
         # Verify via public GET
         r2 = requests.get(f"{API}/qa/{TestQA.PID}", timeout=20)
         found = next((q for q in r2.json() if q["id"] == qa_id), None)
-        assert found and found["answer"] == "TEST_A14 Yes — DTF prints are wash-fast."
+        assert found and found["answer"] == "TEST_A14 Yes - DTF prints are wash-fast."
         assert found["answered_at"] is not None
 
     def test_admin_qa_listing_unanswered_first(self, admin_headers):

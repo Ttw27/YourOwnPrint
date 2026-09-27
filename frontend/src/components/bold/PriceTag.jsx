@@ -1,10 +1,10 @@
 import React from "react";
 
 /**
- * PriceTag — one place that decides how a price is written on the site.
+ * PriceTag - one place that decides how a price is written on the site.
  *
  * The gross figure leads, because it's the one the customer actually pays and
- * it's the round number the catalogue was priced to — dividing it out gives
+ * it's the round number the catalogue was priced to - dividing it out gives
  * odd headline figures like £6.66. The ex-VAT figure sits underneath for
  * trade buyers, who need it but already know to look for it.
  *
@@ -29,8 +29,8 @@ export default function PriceTag({
   className = "",
   testid,
   tone = "dark",     // "brand" tints the headline figure green
-  prefix,            // e.g. "from" — rendered small, above the figure
-  suffix,            // e.g. " /player" — rendered small, beside the figure
+  prefix,            // e.g. "from" - rendered small, above the figure
+  suffix,            // e.g. " /player" - rendered small, beside the figure
   inline = false,    // one line, for pills and tight spaces
 }) {
   if (!product) return null;
@@ -53,7 +53,7 @@ export default function PriceTag({
     </>
   );
 
-  // No VAT breakdown available — show the one figure we can stand behind.
+  // No VAT breakdown available - show the one figure we can stand behind.
   if (net === null) {
     return (
       <div className={className} data-testid={testid}>
@@ -74,7 +74,7 @@ export default function PriceTag({
     return (
       <div className={className} data-testid={testid}>
         <Headline>{money(gross)}</Headline>
-        <div className={`${subClass} text-[#4b5563] mt-0.5`}>No VAT &mdash; children&rsquo;s clothing</div>
+        <div className={`${subClass} text-[#4b5563] mt-0.5`}>No VAT - children&rsquo;s clothing</div>
       </div>
     );
   }

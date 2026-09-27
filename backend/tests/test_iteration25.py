@@ -73,8 +73,8 @@ class TestQuoteRequestIter25:
             "kit_type": "full-squad-configurator",
             "quantity": 2,
             "message": (
-                "TEST_iter25 Full Squad Configurator quote — estimated subtotal £77.98.\n"
-                "[Match Day set] Standard Match Day Set — colour: Navy — 2 kits @ £34.99\n"
+                "TEST_iter25 Full Squad Configurator quote - estimated subtotal £77.98.\n"
+                "[Match Day set] Standard Match Day Set - colour: Navy - 2 kits @ £34.99\n"
                 "  · +Printed gym bag with badge & player name: 2 × £4.00"
             ),
             "roster": [
@@ -97,8 +97,8 @@ class TestQuoteRequestIter25:
             "kit_type": "sports-outfit-configurator",
             "quantity": 2,
             "message": (
-                "TEST_iter25 Sports Outfit Configurator quote — estimated subtotal £49.98.\n"
-                "[Training] Standard — colour: Black — top S×2 / bottom L×1"
+                "TEST_iter25 Sports Outfit Configurator quote - estimated subtotal £49.98.\n"
+                "[Training] Standard - colour: Black - top S×2 / bottom L×1"
             ),
             "roster": [
                 {"set": "Training", "top_size": "S", "top_qty": 2, "bottom_size": "L", "bottom_qty": 1},

@@ -11,7 +11,7 @@ export default function ThemeShowcase() {
       {/* Sticky pick-a-theme banner at very top */}
       <div className="bg-black text-white border-b border-neutral-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between flex-wrap gap-2">
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Your Own Print — Theme Showcase</div>
+          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Your Own Print - Theme Showcase</div>
           <div className="flex gap-2 text-xs flex-wrap">
             <a href="#theme-1" className="px-3 py-1.5 bg-[#ff6b35] text-black font-bold uppercase tracking-wider hover:opacity-90">1 Industrial</a>
             <a href="#theme-2" className="px-3 py-1.5 bg-[#0066ff] text-white font-bold uppercase tracking-wider hover:opacity-90">2 Clean</a>

@@ -3,7 +3,7 @@
 `server.py` remains the boot file and the single source of truth for product
 catalogue seed data + startup handlers. Router modules under `backend/routers/`
 import `api_router`, `db`, `client`, `require_admin`, and helper functions from
-here — this breaks the circular-import problem that would otherwise force us to
+here - this breaks the circular-import problem that would otherwise force us to
 keep every endpoint in `server.py`.
 
 The core objects (db handle, api_router, PRODUCTS dict) are created here so
@@ -88,7 +88,7 @@ async def get_current_admin(request: Request) -> Dict:
     return {"email": user["email"], "role": user["role"], "name": user.get("name", "Admin")}
 
 
-# Shorthand — most `Depends(...)` calls use this alias.
+# Shorthand - most `Depends(...)` calls use this alias.
 require_admin = get_current_admin
 
 
@@ -100,7 +100,7 @@ api_router = APIRouter(prefix="/api")
 
 
 # ---------------------------------------------------------------------------
-# Integration key lookup — read from settings collection first (admin-editable
+# Integration key lookup - read from settings collection first (admin-editable
 # at /admin/integrations), fall back to environment variables.
 # ---------------------------------------------------------------------------
 INTEGRATION_ENV_MAP: Dict[str, str] = {

@@ -3,7 +3,7 @@ import { ShoppingBag } from "lucide-react";
 import { useCart } from "../context/CartContext";
 
 /**
- * Bag icon with a live count badge — designed for the navbar (any theme).
+ * Bag icon with a live count badge - designed for the navbar (any theme).
  * Clicking opens the CartDrawer.
  */
 export default function CartIcon({ className = "" }) {

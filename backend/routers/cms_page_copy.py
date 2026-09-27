@@ -1,4 +1,4 @@
-"""Page copy CMS — public GET + admin PATCH/DELETE/slugs. Fully self-contained
+"""Page copy CMS - public GET + admin PATCH/DELETE/slugs. Fully self-contained
 (only needs db + auth), so it lives in a router of its own.
 
 Slug allow-list keeps the admin UI focused and prevents typos.
@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from deps import api_router, db, require_admin
 
 
-# Allow-list of page slugs — keeps admin UI focused + prevents typos.
+# Allow-list of page slugs - keeps admin UI focused + prevents typos.
 PAGE_COPY_SLUGS = [
     "home", "contact", "sports", "workwear", "portfolio", "reviews",
     "teams-schools", "specials", "fight-night", "leavers-hoodies",
@@ -23,16 +23,16 @@ PAGE_COPY_SLUGS = [
     "school-trips",
     "sports-outfit-configurator", "team-kits", "team-kit-builder",
     "festival-tees-brands",
-    # Industry landing pages — now read admin copy (IndustryDetail overrides its
+    # Industry landing pages - now read admin copy (IndustryDetail overrides its
     # backend defaults with these where set). Canonical slugs only; the page
     # canonicalises aliases before requesting.
     "healthcare", "construction-trades", "retail", "security", "corporate",
     "sports-fitness", "industrial", "beauty-wellness", "cleaning",
     "hospitality-catering", "education-schools",
-    # Not a page — a holder for imagery that appears across many pages at once
+    # Not a page - a holder for imagery that appears across many pages at once
     # (the Price Promise photo, the tool tiles, industry + sports-team headers).
     "site-images",
-    # Also not a page — footer social links and the credit line.
+    # Also not a page - footer social links and the credit line.
     "site-footer",
 ]
 
@@ -48,7 +48,7 @@ class PageCopyPatch(BaseModel):
     extras: Optional[Dict] = None
     # Admin-editable imagery. Previously every marketing image (homepage hero,
     # the sector tiles, etc.) was hardcoded in the frontend source, so the only
-    # way to change one was to edit a file — which meant a later code change to
+    # way to change one was to edit a file - which meant a later code change to
     # that same file could silently overwrite it. Stored here they live in the
     # database instead and survive every deploy.
     hero_image: Optional[str] = Field(default=None, max_length=1000)
@@ -62,7 +62,7 @@ class PageCopyPatch(BaseModel):
 
 @api_router.get("/page-copy/{slug}")
 async def get_page_copy(slug: str):
-    """Public — returns admin-editable copy for a page, or {} if never edited."""
+    """Public - returns admin-editable copy for a page, or {} if never edited."""
     if slug not in PAGE_COPY_SLUGS:
         raise HTTPException(404, "Unknown page slug")
     doc = await db.settings.find_one({"key": f"page_copy:{slug}"})

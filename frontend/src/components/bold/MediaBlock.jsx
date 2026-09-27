@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 /**
  * Renders an admin-configured image OR short video at a chosen aspect ratio.
  *
- * Video plays instantly, silently and on loop — deliberately, because:
+ * Video plays instantly, silently and on loop - deliberately, because:
  *   - browsers block autoplay unless the video is muted, so muted it is;
  *   - a short silent loop reads as a moving image rather than "a video to
  *     watch", so it needs no controls and no play button.
@@ -73,7 +73,7 @@ export default function MediaBlock({
         <video
           src={url}
           autoPlay
-          muted           /* required — browsers block unmuted autoplay */
+          muted           /* required - browsers block unmuted autoplay */
           loop
           playsInline     /* stops iOS forcing fullscreen */
           preload="metadata"

@@ -6,11 +6,11 @@ gated behind EMERGENT_LLM_KEY), which only works inside the Emergent sandbox.
 R2 is S3-compatible, so this uses `boto3`'s S3 client pointed at R2's endpoint.
 
 Required environment variables:
-    R2_ACCOUNT_ID       — Cloudflare account ID
-    R2_ACCESS_KEY_ID    — R2 API token access key
-    R2_SECRET_ACCESS_KEY — R2 API token secret
-    R2_BUCKET_NAME      — bucket to store objects in
-    R2_PUBLIC_URL       — public base URL for the bucket (custom domain or
+    R2_ACCOUNT_ID       - Cloudflare account ID
+    R2_ACCESS_KEY_ID    - R2 API token access key
+    R2_SECRET_ACCESS_KEY - R2 API token secret
+    R2_BUCKET_NAME      - bucket to store objects in
+    R2_PUBLIC_URL       - public base URL for the bucket (custom domain or
                            the bucket's r2.dev URL), no trailing slash.
                            Only needed if you want get_public_url() to work;
                            get_object() reads directly from R2 regardless.
@@ -55,7 +55,7 @@ def _bucket() -> str:
 
 
 def storage_put(path: str, data: bytes, content_type: str) -> dict:
-    """Synchronous — call via asyncio.to_thread from async endpoints (see storage_put_async)."""
+    """Synchronous - call via asyncio.to_thread from async endpoints (see storage_put_async)."""
     client = _get_client()
     bucket = _bucket()
     if not client or not bucket:
@@ -103,10 +103,10 @@ async def mirror_external_image(url: str, folder: str = "imported-products") -> 
     and re-uploads it into R2, returning the new permanent R2 URL.
 
     Used so imported product photos live on our own storage rather than being
-    hotlinked from a supplier's site — if the supplier reorganises or removes
+    hotlinked from a supplier's site - if the supplier reorganises or removes
     their images later, ours keep working regardless.
 
-    Returns None (never raises) on any failure — callers should fall back to
+    Returns None (never raises) on any failure - callers should fall back to
     the original URL so one bad image never breaks a whole bulk import.
     """
     import hashlib
@@ -114,14 +114,14 @@ async def mirror_external_image(url: str, folder: str = "imported-products") -> 
 
     if not url or not url.startswith(("http://", "https://")):
         return None
-    # Already one of ours — nothing to do.
+    # Already one of ours - nothing to do.
     public_base = os.environ.get("R2_PUBLIC_URL", "").rstrip("/")
     if public_base and url.startswith(public_base):
         return url
 
     try:
         async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            # Use real browser-like headers — supplier CDNs (pimber.ly, Ralawise,
+            # Use real browser-like headers - supplier CDNs (pimber.ly, Ralawise,
             # etc.) block obvious bots, so a bot UA silently fails the download.
             resp = await client.get(
                 url,

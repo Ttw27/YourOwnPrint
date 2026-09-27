@@ -145,11 +145,11 @@ export default function ProductDetail() {
     return excl.some(e => selectedPlacements.includes(e));
   };
 
-  // Artwork upload — auto-resize to <800px
+  // Artwork upload - auto-resize to <800px
   const onPickArtwork = (pid, file, isDataUrl) => {
     if (!file) return;
     if (isDataUrl) {
-      // Already a flattened PNG data URL from the "Design your print" canvas — use as-is.
+      // Already a flattened PNG data URL from the "Design your print" canvas - use as-is.
       setArtwork(prev => ({ ...prev, [pid]: file }));
       return;
     }
@@ -296,7 +296,7 @@ export default function ProductDetail() {
                 <ProductGallery product={product} color={color} />
               </div>
 
-              {/* Right column: title, price, selections — directly under the gallery on mobile */}
+              {/* Right column: title, price, selections - directly under the gallery on mobile */}
               <div className="lg:col-span-6 min-w-0 space-y-5">
                 <div>
                   <span className="inline-block bg-[#fde68a] text-[#1a1a1a] text-xs font-nunito font-extrabold uppercase tracking-wider px-3 py-1 rounded-full">{product.category}</span>
@@ -368,7 +368,7 @@ export default function ProductDetail() {
                   </div>
                 </Section>
 
-                {/* PRINT MODE — prominent segmented choice (hidden for Specials, they include a breast print in the price) */}
+                {/* PRINT MODE - prominent segmented choice (hidden for Specials, they include a breast print in the price) */}
                 {isSpecial ? (
                   <>
                     <Section title="3. Your breast logo">
@@ -376,14 +376,14 @@ export default function ProductDetail() {
                         <div className="w-8 h-8 grid place-items-center bg-[#7bc67e] text-[#1a1a1a] rounded-full flex-shrink-0"><Check size={16} /></div>
                         <div className="text-sm">
                           <div className="font-nunito font-extrabold text-[#1a1a1a]">Left-breast logo print is included in the price</div>
-                          <div className="text-xs text-[#4b5563] mt-1">This is one of our Starter Specials — no MOQ, no setup, no upsell. Just upload your logo below and we'll print it neatly on the left breast of every garment.</div>
+                          <div className="text-xs text-[#4b5563] mt-1">This is one of our Starter Specials - no MOQ, no setup, no upsell. Just upload your logo below and we'll print it neatly on the left breast of every garment.</div>
                         </div>
                       </div>
                     </Section>
                     <NeedHelpCTA
                       title="Not confident with your logo file? Send it to us."
-                      body="Send your logo (even a phone screenshot) and we'll clean it up, vectorise it, and prep it for print — no cost, no upsell."
-                      presetMessage="Hi! I've bought Specials and my logo needs some love — can you sort it?"
+                      body="Send your logo (even a phone screenshot) and we'll clean it up, vectorise it, and prep it for print - no cost, no upsell."
+                      presetMessage="Hi! I've bought Specials and my logo needs some love - can you sort it?"
                       testid="specials-need-help"
                       variant="banner"
                     />
@@ -409,7 +409,7 @@ export default function ProductDetail() {
                       >
                         <div className="flex items-center gap-2">
                           <span className={`w-4 h-4 rounded-full border-2 ${printMode === "blank" ? "border-white bg-white" : "border-[#e5e7eb]"}`} />
-                          <span className="font-nunito font-extrabold">Buy Blank — No Print</span>
+                          <span className="font-nunito font-extrabold">Buy Blank - No Print</span>
                         </div>
                         <div className={`text-xs mt-1.5 ${printMode === "blank" ? "text-neutral-300" : "text-[#4b5563]"}`}>Plain garment, no decoration. Just the base price.</div>
                       </button>
@@ -446,13 +446,13 @@ export default function ProductDetail() {
                     {blank && (
                       <div className="bg-[#1a1a1a]/5 rounded-xl p-4 text-sm text-[#4b5563] flex items-start gap-2">
                         <Info size={14} className="mt-0.5 text-[#1a1a1a]" />
-                        <span>You're buying <strong>blank garments only</strong> — no print, just the base price.</span>
+                        <span>You're buying <strong>blank garments only</strong> - no print, just the base price.</span>
                       </div>
                     )}
                   </Section>
                 )}
 
-                {/* UPLOAD ARTWORK — visible only when custom + at least 1 placement */}
+                {/* UPLOAD ARTWORK - visible only when custom + at least 1 placement */}
                 {!blank && selectedPlacements.length > 0 && (
                   <Section
                     title={isSpecial ? "4. Upload your logo" : "4. Upload your prints"}
@@ -508,7 +508,7 @@ export default function ProductDetail() {
                           basket and the product page can't disagree. */}
                       <div className="text-[11px] text-white/60 mt-0.5" data-testid="price-total-vat">
                         {product.vat_zero_rated
-                          ? "No VAT \u2014 children\u2019s clothing"
+                          ? "No VAT - children\u2019s clothing"
                           : `\u00a3${(lineTotal / 1.2).toFixed(2)} ex. VAT`}
                       </div>
                     </div>
@@ -583,7 +583,7 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Collapsible product info — description + size guide. Closed by default so title/price/selections lead the page. */}
+            {/* Collapsible product info - description + size guide. Closed by default so title/price/selections lead the page. */}
             <div className="grid lg:grid-cols-2 gap-5 mb-12" data-testid="product-info-collapsibles">
               {product.description_full && (
                 <details className="group bg-white border-2 border-[#dcfce7] rounded-3xl overflow-hidden">
@@ -649,7 +649,7 @@ export default function ProductDetail() {
                   const created = await postProductQuestion({ product_id: product.id, question: text, asker_name: qaName.trim() || "Customer" });
                   setQA((prev) => [created, ...prev]);
                   setQaText("");
-                  toast.success("Question posted — we'll answer soon.");
+                  toast.success("Question posted - we'll answer soon.");
                 } catch (e) {
                   const detail = e?.response?.data?.detail;
                   toast.error(typeof detail === "string" ? detail : "Could not post your question");
@@ -741,7 +741,7 @@ function ProductGallery({ product, color }) {
       </div>
       {images.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x min-w-0 w-full" data-testid="product-image-thumbnails">
-          {/* Previously hard-capped at .slice(0, 5) with no arrows or scroll —
+          {/* Previously hard-capped at .slice(0, 5) with no arrows or scroll -
               any product with more than 5 photos silently hid the rest. */}
           {images.map((src, i) => (
             <button
@@ -940,7 +940,7 @@ function ProductQASection({ productId, qa, qaText, qaName, setQaText, setQaName,
       </div>
 
       {list.length === 0 ? (
-        <div className="text-sm text-[#4b5563] text-center py-6" data-testid="pdp-qa-empty">No questions yet — be the first to ask.</div>
+        <div className="text-sm text-[#4b5563] text-center py-6" data-testid="pdp-qa-empty">No questions yet - be the first to ask.</div>
       ) : (
         <div className="space-y-3" data-testid="pdp-qa-list">
           {list.map((q) => (

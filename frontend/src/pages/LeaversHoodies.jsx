@@ -17,15 +17,15 @@ export default function LeaversHoodies() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchLeaversProducts().then(setProducts).catch(() => toast.error("Couldn't load products — please refresh"));
-    fetchLeaversTiers().then(setTiers).catch(() => toast.error("Couldn't load pricing tiers — please refresh"));
+    fetchLeaversProducts().then(setProducts).catch(() => toast.error("Couldn't load products - please refresh"));
+    fetchLeaversTiers().then(setTiers).catch(() => toast.error("Couldn't load pricing tiers - please refresh"));
     fetchLeaversTemplates().then(setTemplates).catch(() => setTemplates([]));
   }, []);
   const tiersAsc = [...(tiers.tiers || [])].sort((a, b) => a.min_qty - b.min_qty);
 
   const copy = usePageCopy("leavers-hoodies", {
     title: "",
-    subtitle: "Pullover hoodies, zip hoodies, varsity jackets — printed in the UK in 7–10 days. Fill in your details, pick your garment and design, choose sizes, and we'll get cracking. Free proof before we print a thing.",
+    subtitle: "Pullover hoodies, zip hoodies, varsity jackets - printed in the UK in 7–10 days. Fill in your details, pick your garment and design, choose sizes, and we'll get cracking. Free proof before we print a thing.",
     // Swap in /admin/page-copy → Leavers Hoodies → Pictures & video.
     hero_image: "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg?auto=compress&cs=tinysrgb&w=1200",
   });
@@ -97,10 +97,10 @@ export default function LeaversHoodies() {
         </div>
       </div>
 
-      {/* Garments — display-only carousel */}
+      {/* Garments - display-only carousel */}
       <div className="max-w-7xl mx-auto px-6 py-10">
         <h2 className="font-nunito font-black text-3xl lg:text-4xl">Pick your garment</h2>
-        <p className="text-[#4b5563] mt-2">Pullover, zip, varsity, or sweatshirt — you&apos;ll choose during the order.</p>
+        <p className="text-[#4b5563] mt-2">Pullover, zip, varsity, or sweatshirt - you&apos;ll choose during the order.</p>
         <ImageCarousel
           testid="leavers-garments-carousel"
           items={products.filter((p) => p.id !== "leavers-drawstring-bag").map((p) => ({
@@ -112,11 +112,11 @@ export default function LeaversHoodies() {
         />
       </div>
 
-      {/* Design templates — display-only carousel */}
+      {/* Design templates - display-only carousel */}
       <div className="bg-[#f0fdf4] py-14 border-y border-[#dcfce7]">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="font-nunito font-black text-3xl lg:text-4xl">Ready-to-go designs</h2>
-          <p className="text-[#4b5563] mt-2">Start with one of these or use Bespoke for something custom — we&apos;ll send a free proof either way.</p>
+          <p className="text-[#4b5563] mt-2">Start with one of these or use Bespoke for something custom - we&apos;ll send a free proof either way.</p>
           <ImageCarousel
             testid="leavers-templates-carousel"
             items={templates.map((t) => ({ id: t.id, image: t.image, title: t.title, sub: t.description }))}
@@ -129,8 +129,8 @@ export default function LeaversHoodies() {
         <h2 className="font-nunito font-black text-3xl lg:text-4xl text-center">How the order works</h2>
         <div className="grid md:grid-cols-4 gap-4 mt-8">
           <Step n={1} icon={<GraduationCap size={18} />} title="Your details" body="School, year group, contact info." />
-          <Step n={2} icon={<Sparkles size={18} />} title="Pick garment + design" body="Choose from our pullover, zip, varsity or sweatshirt — then a ready-to-go design or send your own." />
-          <Step n={3} icon={<Users size={18} />} title="Sizes &amp; quantities" body="Tap in how many of each size — the price drops live as the total grows." />
+          <Step n={2} icon={<Sparkles size={18} />} title="Pick garment + design" body="Choose from our pullover, zip, varsity or sweatshirt - then a ready-to-go design or send your own." />
+          <Step n={3} icon={<Users size={18} />} title="Sizes &amp; quantities" body="Tap in how many of each size - the price drops live as the total grows." />
           <Step n={4} icon={<Mail size={18} />} title="Free proof, then ship" body="We email a free artwork proof. Sign off, pay, we print &amp; ship to one address in 7–10 days." />
         </div>
       </div>
@@ -245,17 +245,17 @@ function BespokeModal({ onClose }) {
       onClose();
     } catch (e) {
       const d = e?.response?.data?.detail;
-      toast.error(typeof d === "string" ? d : "Couldn't send your request — please try WhatsApp instead.");
+      toast.error(typeof d === "string" ? d : "Couldn't send your request - please try WhatsApp instead.");
     } finally { setBusy(false); }
   };
-  const waLink = buildWhatsAppLink(`Hi! Bespoke leavers' hoodie enquiry — ${form.school || "(school)"} ${form.year_group || "(year)"}, around ${form.estimated_qty || "?"} hoodies. ${form.notes || ""}`.trim());
+  const waLink = buildWhatsAppLink(`Hi! Bespoke leavers' hoodie enquiry - ${form.school || "(school)"} ${form.year_group || "(year)"}, around ${form.estimated_qty || "?"} hoodies. ${form.notes || ""}`.trim());
   return (
     <div className="fixed inset-0 bg-black/50 grid place-items-center z-50 p-4" onClick={onClose} data-testid="leavers-bespoke-modal">
       <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-lg w-full p-6 relative">
         <button aria-label="Close" onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#f0fdf4] grid place-items-center" data-testid="leavers-bespoke-close">×</button>
         <div className="text-xs uppercase tracking-[0.3em] text-[#fbbf24] font-extrabold">Bespoke design</div>
         <h2 className="font-nunito font-black text-3xl mt-1">Tell us what you have in mind</h2>
-        <p className="text-sm text-[#4b5563] mt-1">We&apos;ll mock up a custom design just for your year group — no charge for the proof.</p>
+        <p className="text-sm text-[#4b5563] mt-1">We&apos;ll mock up a custom design just for your year group - no charge for the proof.</p>
         <div className="grid sm:grid-cols-2 gap-2 mt-4">
           <Input testid="bespoke-school" label="School / college *" value={form.school} onChange={(v) => setForm({ ...form, school: v })} />
           <Input testid="bespoke-year" label="Year group *" value={form.year_group} onChange={(v) => setForm({ ...form, year_group: v })} placeholder="Year 11" />

@@ -31,7 +31,7 @@ export default function Portfolio() {
   const copy = usePageCopy("portfolio", {
     title: "Real work, printed in the UK",
     subtitle: "Portfolio",
-    body: "A live gallery of jobs we've turned around — workwear, team kits, leavers' hoodies, fight nights and more. Tap any image to see it big.",
+    body: "A live gallery of jobs we've turned around - workwear, team kits, leavers' hoodies, fight nights and more. Tap any image to see it big.",
   });
 
   useEffect(() => {
@@ -96,8 +96,8 @@ export default function Portfolio() {
             <ImageIcon className="mx-auto text-[#f59e0b]" size={28} />
             <p className="mt-3 text-sm text-[#4b5563]">
               {data.items.length === 0
-                ? "Portfolio is being built — check back soon, or "
-                : "Nothing in this category yet — try "}
+                ? "Portfolio is being built - check back soon, or "
+                : "Nothing in this category yet - try "}
               <Link to="/contact" className="underline font-extrabold text-[#7bc67e]">request a sample mock-up</Link>.
             </p>
           </div>
@@ -129,7 +129,7 @@ export default function Portfolio() {
           <div>
             <div className="text-[#7bc67e] text-xs uppercase tracking-[0.3em] font-extrabold">Like what you see?</div>
             <h3 className="text-2xl font-black mt-1">Get yours printed next.</h3>
-            <p className="text-zinc-300 text-sm mt-1 max-w-md">Send your logo, idea or rough sketch — we'll mock it up free, no commitment.</p>
+            <p className="text-zinc-300 text-sm mt-1 max-w-md">Send your logo, idea or rough sketch - we'll mock it up free, no commitment.</p>
           </div>
           <Link to="/contact" className="px-5 py-3 bg-[#7bc67e] text-[#1a1a1a] rounded-full font-extrabold inline-flex items-center gap-2 hover:bg-white transition" data-testid="portfolio-cta-quote">
             Get a free mock-up <ArrowRight size={16} />

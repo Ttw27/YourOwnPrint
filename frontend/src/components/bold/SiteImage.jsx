@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { ImageIcon } from "lucide-react";
 
 /**
- * SiteImage — a plain <img> that fails quietly and fades in.
+ * SiteImage - a plain <img> that fails quietly and fades in.
  *
  * Pages paint a code default immediately, then swap to the admin image once it's
  * fetched from the database a moment later. A hard swap makes that visible as a
  * "flash" of the old picture. So each image starts transparent and fades to full
- * opacity once the browser has actually loaded it — the swap becomes a gentle
+ * opacity once the browser has actually loaded it - the swap becomes a gentle
  * cross-fade instead of a pop. On a load error we show a muted placeholder in
  * the same box so the layout holds and nothing ugly renders.
  */
@@ -26,7 +26,7 @@ export default function SiteImage({
   useEffect(() => {
     setFailed(false);
     setLoaded(false);
-    // Cached images may be complete before onLoad attaches — show straightaway.
+    // Cached images may be complete before onLoad attaches - show straightaway.
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
       setLoaded(true);
     }

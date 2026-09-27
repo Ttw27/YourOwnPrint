@@ -24,7 +24,7 @@ from services.stripe_checkout import (
 )
 import stripe as _stripe_sdk
 
-# Shared runtime lives in deps.py — mongo client, api_router, auth deps,
+# Shared runtime lives in deps.py - mongo client, api_router, auth deps,
 # integration key resolver. All router modules import from there so this
 # file can stay focused on catalogue seed data + startup handlers.
 from deps import (
@@ -148,7 +148,7 @@ PRODUCTS: Dict[str, Dict] = {
         "price": 18.99,
         "category": "sports",
         "image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
-        "description": "Performance match jersey. Club crest, sponsor, names & numbers — match-day ready.",
+        "description": "Performance match jersey. Club crest, sponsor, names & numbers - match-day ready.",
     },
     "football-shorts": {
         "id": "football-shorts",
@@ -180,7 +180,7 @@ PRODUCTS: Dict[str, Dict] = {
         "price": 9.99,
         "category": "sports",
         "image": "https://images.pexels.com/photos/4720234/pexels-photo-4720234.jpeg",
-        "description": "Breathable training tee — squad name, initials, club crest.",
+        "description": "Breathable training tee - squad name, initials, club crest.",
     },
     "boxing-fight-tee": {
         "id": "boxing-fight-tee",
@@ -188,7 +188,7 @@ PRODUCTS: Dict[str, Dict] = {
         "price": 11.99,
         "category": "sports",
         "image": "https://images.pexels.com/photos/9311461/pexels-photo-9311461.jpeg",
-        "description": "Walk-out tee for fight night — main sponsor + multiple supporting logos. Free proof included.",
+        "description": "Walk-out tee for fight night - main sponsor + multiple supporting logos. Free proof included.",
     },
     "muay-thai-shorts": {
         "id": "muay-thai-shorts",
@@ -196,7 +196,7 @@ PRODUCTS: Dict[str, Dict] = {
         "price": 22.99,
         "category": "sports",
         "image": "https://images.pexels.com/photos/4761779/pexels-photo-4761779.jpeg",
-        "description": "Traditional cut Muay Thai shorts. Custom names, club logo, sponsor — vibrant satin print.",
+        "description": "Traditional cut Muay Thai shorts. Custom names, club logo, sponsor - vibrant satin print.",
     },
     "fight-shorts": {
         "id": "fight-shorts",
@@ -204,7 +204,7 @@ PRODUCTS: Dict[str, Dict] = {
         "price": 19.99,
         "category": "sports",
         "image": "https://images.pexels.com/photos/4761787/pexels-photo-4761787.jpeg",
-        "description": "Stretch panel fight shorts. Sublimated print — names, sponsors, gym branding.",
+        "description": "Stretch panel fight shorts. Sublimated print - names, sponsors, gym branding.",
     },
 
     # ----- Team Kit Bundles (price-per-player, includes club badge + names & numbers) -----
@@ -249,41 +249,41 @@ PRODUCTS: Dict[str, Dict] = {
         "description": "Match jersey + shorts + tracksuit per player. The complete squad bundle.",
     },
 
-    # ----- Front-print-only kit variants (cheaper — no names/numbers, just badge + front sponsor) -----
+    # ----- Front-print-only kit variants (cheaper - no names/numbers, just badge + front sponsor) -----
     "football-kit-front-only": {
         "id": "football-kit-front-only",
-        "name": "Football Kit — Front Print Only",
+        "name": "Football Kit - Front Print Only",
         "price": 18.99,
         "category": "team-kits",
         "image": "https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg",
-        "description": "Jersey + shorts per player. Club badge + 1 front sponsor only. No names/numbers — saves you £6/kit.",
+        "description": "Jersey + shorts per player. Club badge + 1 front sponsor only. No names/numbers - saves you £6/kit.",
     },
     "football-premium-front-only": {
         "id": "football-premium-front-only",
-        "name": "Football Premium — Front Print Only",
+        "name": "Football Premium - Front Print Only",
         "price": 22.99,
         "category": "team-kits",
         "image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
-        "description": "Jersey + shorts + socks. Badge + 1 front sponsor. No names/numbers — cheaper match-day setup.",
+        "description": "Jersey + shorts + socks. Badge + 1 front sponsor. No names/numbers - cheaper match-day setup.",
     },
     "rugby-kit-front-only": {
         "id": "rugby-kit-front-only",
-        "name": "Rugby Kit — Front Print Only",
+        "name": "Rugby Kit - Front Print Only",
         "price": 25.99,
         "category": "team-kits",
         "image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
-        "description": "Heavy-grade rugby shirt + shorts. Crest + front sponsor only — names/numbers excluded.",
+        "description": "Heavy-grade rugby shirt + shorts. Crest + front sponsor only - names/numbers excluded.",
     },
     "training-pack-front-only": {
         "id": "training-pack-front-only",
-        "name": "Training Pack — Front Print Only",
+        "name": "Training Pack - Front Print Only",
         "price": 12.99,
         "category": "team-kits",
         "image": "https://images.pexels.com/photos/4720234/pexels-photo-4720234.jpeg",
         "description": "Tee + shorts per player. Club crest + front sponsor only. Cheapest training option.",
     },
 
-    # ----- Sports — additional standalone garments (use Team Kit configurator) -----
+    # ----- Sports - additional standalone garments (use Team Kit configurator) -----
     "basketball-vest": {
         "id": "basketball-vest", "name": "Basketball Vest", "price": 19.99, "category": "team-kits",
         "image": "https://images.pexels.com/photos/1080884/pexels-photo-1080884.jpeg",
@@ -314,7 +314,7 @@ PRODUCTS: Dict[str, Dict] = {
     "leavers-pullover-hoodie": {
         "id": "leavers-pullover-hoodie", "name": "Leavers' Pullover Hoodie", "price": 24.99, "category": "leavers",
         "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg",
-        "description": "Classic 320 GSM pullover. Names list, nicknames, year, school crest — printed UK in 7-10 days.",
+        "description": "Classic 320 GSM pullover. Names list, nicknames, year, school crest - printed UK in 7-10 days.",
     },
     "leavers-zip-hoodie": {
         "id": "leavers-zip-hoodie", "name": "Leavers' Zip Hoodie", "price": 29.99, "category": "leavers",
@@ -329,59 +329,59 @@ PRODUCTS: Dict[str, Dict] = {
     "leavers-sweatshirt": {
         "id": "leavers-sweatshirt", "name": "Leavers' Crew Sweatshirt", "price": 22.99, "category": "leavers",
         "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg",
-        "description": "Crew-neck sweatshirt — lighter than the hoodie, same print options.",
+        "description": "Crew-neck sweatshirt - lighter than the hoodie, same print options.",
     },
     "leavers-drawstring-bag": {
         "id": "leavers-drawstring-bag", "name": "Printed Drawstring Bag", "price": 3.99, "category": "leavers",
         "image": "https://images.pexels.com/photos/6764015/pexels-photo-6764015.jpeg",
-        "description": "Westford Mill-style carry-all. Same design as your hoodie — add as an addon per person.",
+        "description": "Westford Mill-style carry-all. Same design as your hoodie - add as an addon per person.",
     },
 
     # ----- Aprons -----
     "sports-team-bundle": {
         "id": "sports-team-bundle", "name": "Sports Team Kit Bundle", "price": 21.99, "category": "team-kits",
         "image": "https://images.pexels.com/photos/1618200/pexels-photo-1618200.jpeg",
-        "description": "Generic sports team kit bundle — pick a brand from the variant list (Nike / AWD / Umbro) and we'll build your club's set to spec.",
+        "description": "Generic sports team kit bundle - pick a brand from the variant list (Nike / AWD / Umbro) and we'll build your club's set to spec.",
     },
 
     # ----- Full Squad Configurator "set" slots -----
     # These act as bundle IDs for admin-managed brand variants. Each represents a whole set
-    # (shirt + shorts + socks / hoodie + joggers / etc). Not sold as individual SKUs — they're
+    # (shirt + shorts + socks / hoodie + joggers / etc). Not sold as individual SKUs - they're
     # entry points for /full-squad-configurator and /sports-outfit-configurator.
     "full-squad-match-day": {
         "id": "full-squad-match-day", "name": "Match Day Set", "price": 34.99, "category": "team-kits",
         "image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
-        "description": "Complete match-day set — shirt, shorts and socks. Names + numbers on the back included. Pick your brand and colours.",
+        "description": "Complete match-day set - shirt, shorts and socks. Names + numbers on the back included. Pick your brand and colours.",
     },
     "full-squad-training": {
         "id": "full-squad-training", "name": "Training Set", "price": 24.99, "category": "team-kits",
         "image": "https://images.pexels.com/photos/6740803/pexels-photo-6740803.jpeg",
-        "description": "Complete training set — top, shorts and socks. Clean front badge print. Pick your brand and colours.",
+        "description": "Complete training set - top, shorts and socks. Clean front badge print. Pick your brand and colours.",
     },
     "full-squad-tracksuit": {
         "id": "full-squad-tracksuit", "name": "Tracksuit Set", "price": 39.99, "category": "team-kits",
         "image": "https://images.pexels.com/photos/6740053/pexels-photo-6740053.jpeg",
-        "description": "Full tracksuit — hoodie/jacket and joggers. Match-day arrival, warm-up, or squad travel wear.",
+        "description": "Full tracksuit - hoodie/jacket and joggers. Match-day arrival, warm-up, or squad travel wear.",
     },
     "sports-outfit-training": {
         "id": "sports-outfit-training", "name": "Training Kit (top + shorts)", "price": 19.99, "category": "team-kits",
         "image": "https://images.pexels.com/photos/6551070/pexels-photo-6551070.jpeg",
-        "description": "Simple training kit for gyms, PTs and combat sports — top and shorts, no socks. Add breast, back or full-front print.",
+        "description": "Simple training kit for gyms, PTs and combat sports - top and shorts, no socks. Add breast, back or full-front print.",
     },
     "sports-outfit-tracksuit": {
         "id": "sports-outfit-tracksuit", "name": "Tracksuit (hoodie + joggers)", "price": 34.99, "category": "team-kits",
         "image": "https://images.pexels.com/photos/6740053/pexels-photo-6740053.jpeg",
-        "description": "Comfortable tracksuit set for gyms, PTs and combat sports — hoodie and joggers. Add breast, back or full-front print.",
+        "description": "Comfortable tracksuit set for gyms, PTs and combat sports - hoodie and joggers. Add breast, back or full-front print.",
     },
     "bib-apron": {
         "id": "bib-apron", "name": "Bib Apron", "price": 9.99, "category": "workwear",
         "image": "https://images.pexels.com/photos/4252136/pexels-photo-4252136.jpeg",
-        "description": "Classic bib apron with double front pocket. Hospitality, catering, baristas, baking — printed or embroidered.",
+        "description": "Classic bib apron with double front pocket. Hospitality, catering, baristas, baking - printed or embroidered.",
     },
     "waist-apron": {
         "id": "waist-apron", "name": "Waist Apron", "price": 7.49, "category": "workwear",
         "image": "https://images.pexels.com/photos/4252888/pexels-photo-4252888.jpeg",
-        "description": "Short waist apron with pockets — perfect for front-of-house, baristas and servers.",
+        "description": "Short waist apron with pockets - perfect for front-of-house, baristas and servers.",
     },
     "denim-apron": {
         "id": "denim-apron", "name": "Denim Workshop Apron", "price": 18.99, "category": "workwear",
@@ -393,7 +393,7 @@ PRODUCTS: Dict[str, Dict] = {
     "joggers": {
         "id": "joggers", "name": "Branded Joggers", "price": 19.99, "category": "bottoms", "is_bestseller": True,
         "image": "https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg",
-        "description": "Tapered fleece-back joggers — your logo on the thigh or hip. Gyms, leavers, fitness coaches.",
+        "description": "Tapered fleece-back joggers - your logo on the thigh or hip. Gyms, leavers, fitness coaches.",
     },
     "workwear-trousers": {
         "id": "workwear-trousers", "name": "Workwear Cargo Trousers", "price": 27.99, "category": "workwear",
@@ -403,7 +403,7 @@ PRODUCTS: Dict[str, Dict] = {
     "performance-leggings": {
         "id": "performance-leggings", "name": "Performance Leggings", "price": 17.99, "category": "team-kits",
         "image": "https://images.pexels.com/photos/3760275/pexels-photo-3760275.jpeg",
-        "description": "Full-length performance leggings with squat-proof fabric. Gym, PT, dance — branded with your logo.",
+        "description": "Full-length performance leggings with squat-proof fabric. Gym, PT, dance - branded with your logo.",
     },
     "gym-shorts": {
         "id": "gym-shorts", "name": "Gym & Training Shorts", "price": 11.99, "category": "team-kits",
@@ -464,7 +464,7 @@ _VARIANT_MAP = {
     "boxing-fight-tee":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "White", "hex": "#ffffff"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "muay-thai-shorts":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}, {"name": "Gold", "hex": "#d4a017"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "fight-shorts":        {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Red", "hex": "#b91c1c"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
-    # Team kit bundles — full size range incl. kids
+    # Team kit bundles - full size range incl. kids
     "football-kit-bundle":    {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "football-premium-bundle":{"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "rugby-kit-bundle":       {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
@@ -529,7 +529,7 @@ for _pid, _meta in _DESIGNER_DEFAULTS.items():
 # Surfaced in the Designer product picker to help brand-builders pick the right blank.
 _DESIGNER_INFO: Dict[str, Dict] = {
     "personalised-tee":     {"composition": "180 GSM · 100% ring-spun cotton",            "description_long": "Mid-weight everyday tee. Soft hand, durable wash, slight stretch in the collar. Our most versatile blank.",                  "use_cases": ["branded-to-sell", "daily-use"]},
-    "personalised-hoodie":  {"composition": "320 GSM · 80% cotton / 20% polyester brushed-back fleece", "description_long": "Heavyweight pullover hoodie with kangaroo pocket and double-lined hood. Premium feel — sits well on the high street.", "use_cases": ["branded-to-sell", "daily-use"]},
+    "personalised-hoodie":  {"composition": "320 GSM · 80% cotton / 20% polyester brushed-back fleece", "description_long": "Heavyweight pullover hoodie with kangaroo pocket and double-lined hood. Premium feel - sits well on the high street.", "use_cases": ["branded-to-sell", "daily-use"]},
     "kids-tee":             {"composition": "165 GSM · 100% combed cotton",                "description_long": "Lightweight kids' tee, sized 3–14yrs. Soft against young skin and wash-resistant down to 40°C.",                                "use_cases": ["kids", "daily-use"]},
     "polo-shirt":           {"composition": "210 GSM · 65% polyester / 35% cotton piqué",  "description_long": "Easy-iron piqué polo with reinforced taped neckline. Pro look, ideal for client-facing teams.",                                "use_cases": ["workwear", "branded-to-sell"]},
     "workwear-tshirt":      {"composition": "200 GSM · 100% ring-spun cotton heavy",       "description_long": "Workwear-grade tee with reinforced shoulders and tear-away neck label. Industrial-wash safe up to 60°C.",                       "use_cases": ["workwear", "daily-use"]},
@@ -619,7 +619,7 @@ class CheckoutRequest(BaseModel):
     size_qtys: Optional[Dict[str, int]] = None  # {"M": 5, "L": 10, ...}
     color: Optional[str] = None
     placements: Optional[List[str]] = None
-    blank: bool = False  # "buy blank" — no placements
+    blank: bool = False  # "buy blank" - no placements
     origin_url: str
     design_meta: Optional[Dict[str, str]] = None
 
@@ -644,7 +644,7 @@ class CheckoutStatusOut(BaseModel):
 STORE_REVIEW_ID = "store"
 
 # Reviews written before moderation existed have no `approved` field at all, so
-# the test is "not explicitly rejected" rather than "explicitly approved" —
+# the test is "not explicitly rejected" rather than "explicitly approved" -
 # otherwise every historic review would vanish the moment this deployed.
 APPROVED_ONLY = {"approved": {"$ne": False}}
 
@@ -682,7 +682,7 @@ class JudgeMeImportRequest(BaseModel):
 
 
 class QuoteRequest(BaseModel):
-    """Generic quote request — used for team kits 10+, fight-night 'do it for us', bespoke print enquiries."""
+    """Generic quote request - used for team kits 10+, fight-night 'do it for us', bespoke print enquiries."""
     kind: str  # 'team_kit' | 'fight_night' | 'bespoke_print' | 'general'
     name: str
     email: EmailStr
@@ -693,7 +693,7 @@ class QuoteRequest(BaseModel):
     quantity: Optional[int] = 0
     deadline: Optional[str] = ""
     message: str
-    # File metadata only — files referenced by data URL or external URL.
+    # File metadata only - files referenced by data URL or external URL.
     artwork: Optional[List[str]] = None  # base64 data URLs; size-limited each
     attachments: Optional[List[Dict]] = None  # [{id, url, filename, purpose}, ...] from /api/uploads/artwork
     roster: Optional[List[Dict]] = None  # [{name, number, size, qty}, ...]
@@ -717,7 +717,7 @@ def is_live(p: Dict) -> bool:
     """Whether a product should appear on the public site.
 
     Hidden products (active=False) stay in PRODUCTS so the admin list can still
-    show, edit and unhide them — so every public listing must go through
+    show, edit and unhide them - so every public listing must go through
     live_products() / is_live() rather than reading PRODUCTS directly."""
     return p.get("active", True) is not False
 
@@ -728,7 +728,7 @@ def live_products() -> List[Dict]:
 
 @api_router.get("/sitemap.xml")
 async def sitemap_xml():
-    """Dynamically generated sitemap — includes every product, collection,
+    """Dynamically generated sitemap - includes every product, collection,
     and industry page currently live, so it never goes stale as the
     catalogue grows or changes. Served at the real /sitemap.xml via a
     Vercel rewrite (see frontend/vercel.json)."""
@@ -769,7 +769,7 @@ async def robots_txt():
 async def best_sellers(limit: int = 12):
     """Manually-flagged best sellers first, topped up with one representative
     product per garment category so the homepage always shows a genuine
-    spread of the catalogue — rather than being frozen at whatever's been
+    spread of the catalogue - rather than being frozen at whatever's been
     manually flagged, which is especially important on a catalogue this size."""
     flagged = [p for p in PRODUCTS.values() if p.get("is_bestseller") and p.get("active", True)]
     flagged.sort(key=lambda x: x.get("name", ""))
@@ -785,7 +785,7 @@ async def best_sellers(limit: int = 12):
             cat = p["category"]
             if cat in seen_categories:
                 continue
-            # Keep the first one seen per category — good enough for a diverse spread.
+            # Keep the first one seen per category - good enough for a diverse spread.
             if cat not in by_category:
                 by_category[cat] = p
         for cat, p in by_category.items():
@@ -803,13 +803,13 @@ async def best_sellers(limit: int = 12):
 
 @api_router.get("/search")
 async def search_products(q: str = "", limit: int = 25, offset: int = 0):
-    """Site-wide product search by name/brand — powers the header search bar."""
+    """Site-wide product search by name/brand - powers the header search bar."""
     query = (q or "").strip().lower()
     if not query:
         return {"items": [], "total": 0, "offset": offset, "returned": 0, "query": q}
 
     def matches(p: Dict) -> bool:
-        # Design Shop products have their own browse/search — keep them out of the
+        # Design Shop products have their own browse/search - keep them out of the
         # main (workwear) search results.
         if p.get("design_shop"):
             return False
@@ -833,7 +833,7 @@ async def search_products(q: str = "", limit: int = 25, offset: int = 0):
 async def list_products(category: Optional[str] = None, industries: Optional[str] = None, gender_fit: Optional[str] = None, limit: int = 500, offset: int = 0):
     """`industries` is an optional comma-separated list of industry tags (e.g.
     "trades,construction,cleaning"). When both `category` and `industries` are
-    given, a product matches if it satisfies EITHER — this is what lets a page
+    given, a product matches if it satisfies EITHER - this is what lets a page
     like /workwear show both the original hand-built "workwear" category
     products AND any imported product (t-shirts, polos, jackets, etc.) tagged
     as relevant to trade/construction/cleaning work, rather than requiring
@@ -884,24 +884,24 @@ async def get_product(product_id: str):
 async def submit_contact(payload: ContactRequest):
     record = ContactRecord(**payload.model_dump())
     await db.contact_submissions.insert_one(record.model_dump())
-    # Fire Resend notification to the shop — non-blocking. Failures don't affect the response.
+    # Fire Resend notification to the shop - non-blocking. Failures don't affect the response.
     try:
         shop_to = await _shop_notification_recipient()
         if shop_to:
             body = _email_wrap(
-                f"New quote enquiry — {payload.name}",
+                f"New quote enquiry - {payload.name}",
                 f"""
                 <p><strong>{payload.name}</strong> {'(' + payload.company + ')' if payload.company else ''} has submitted the /contact form.</p>
                 <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
                   <tr><td style="color:#4b5563"><strong>Email</strong></td><td>{payload.email}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{payload.phone or '—'}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Sector</strong></td><td>{payload.sector or '—'}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Est. qty</strong></td><td>{payload.quantity or '—'}</td></tr>
-                  <tr><td style="color:#4b5563" valign="top"><strong>Message</strong></td><td>{(payload.message or '—').replace(chr(10),'<br>')}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{payload.phone or '-'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Sector</strong></td><td>{payload.sector or '-'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Est. qty</strong></td><td>{payload.quantity or '-'}</td></tr>
+                  <tr><td style="color:#4b5563" valign="top"><strong>Message</strong></td><td>{(payload.message or '-').replace(chr(10),'<br>')}</td></tr>
                 </table>
                 """,
             )
-            await _send_email(to=[shop_to], subject=f"[Quote] {payload.name} — {payload.company or 'no company'}",
+            await _send_email(to=[shop_to], subject=f"[Quote] {payload.name} - {payload.company or 'no company'}",
                               html=body, reply_to=payload.email)
     except Exception as e:
         logging.warning(f"contact email dispatch skipped: {e}")
@@ -946,11 +946,11 @@ class TeamKitBrand(BaseModel):
     description: Optional[str] = ""
     active: bool = True
     # New optional fields for the Full Squad + Sports Outfit configurators
-    colours: Optional[List[Dict]] = None       # [{name, hex}, ...] — kit colour choices per variant
+    colours: Optional[List[Dict]] = None       # [{name, hex}, ...] - kit colour choices per variant
     sizes: Optional[List[str]] = None          # available body sizes (overrides product default when set)
     sock_sizes: Optional[List[str]] = None     # per-variant sock size options (falls back to global settings)
     size_guide: Optional[str] = ""              # free-form markdown/table shown in dropdown
-    included_items: Optional[List[str]] = None  # e.g. ["Shirt", "Shorts", "Socks"] — displayed on the tile
+    included_items: Optional[List[str]] = None  # e.g. ["Shirt", "Shorts", "Socks"] - displayed on the tile
     display_order: Optional[int] = 0
 
 
@@ -973,7 +973,7 @@ async def create_brand(payload: TeamKitBrand):
         raise HTTPException(400, "Unknown product_id")
     doc = payload.model_dump()
     doc["id"] = str(uuid.uuid4())
-    # Support data-URL images — persist to object storage and swap in a stable URL
+    # Support data-URL images - persist to object storage and swap in a stable URL
     if doc.get("image") and doc["image"].startswith("data:"):
         try:
             raw, content_type, ext = _parse_data_url(doc["image"])
@@ -1162,7 +1162,7 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
     """Fires the shop notification + customer receipt for a completed order.
     Idempotent: only sends once per order, guarded by the `receipt_sent` flag
     (set atomically here so a webhook and a status-poll firing near-simultaneously
-    can't both send). Never raises — a failed email must never break checkout."""
+    can't both send). Never raises - a failed email must never break checkout."""
     if not doc or doc.get("receipt_sent"):
         return
     # Atomic claim: only proceed if we're the one flipping receipt_sent False -> True.
@@ -1188,31 +1188,31 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
         shop_to = await _shop_notification_recipient()
         if shop_to:
             body_shop = _email_wrap(
-                f"New paid order — {order_label}",
+                f"New paid order - {order_label}",
                 f"""
                 <p>A new order has just been paid.</p>
                 <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
                   <tr><td style="color:#4b5563"><strong>Order</strong></td><td>{order_label}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Quantity</strong></td><td>{qty or '—'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Quantity</strong></td><td>{qty or '-'}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Amount</strong></td><td>£{amount:.2f} {currency}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Customer</strong></td><td>{customer_email or '—'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Customer</strong></td><td>{customer_email or '-'}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Session</strong></td><td>{doc.get('session_id','')}</td></tr>
                 </table>
                 """,
             )
-            await _send_email(to=[shop_to], subject=f"[Paid order] {order_label} — £{amount:.2f}", html=body_shop)
+            await _send_email(to=[shop_to], subject=f"[Paid order] {order_label} - £{amount:.2f}", html=body_shop)
 
         if customer_email:
             body_cust = _email_wrap(
-                "Order confirmed — thank you!",
+                "Order confirmed - thank you!",
                 f"""
-                <p>Thanks for your order — we've received payment and it's on its way into production.</p>
+                <p>Thanks for your order - we've received payment and it's on its way into production.</p>
                 <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
                   <tr><td style="color:#4b5563"><strong>Order</strong></td><td>{order_label}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Amount paid</strong></td><td>£{amount:.2f} {currency}</td></tr>
                 </table>
                 <p style="margin-top:16px;color:#4b5563">We'll be in touch if we need anything from you (like artwork approval); otherwise we'll email you again once it's shipped.</p>
-                <p style="margin-top:16px">— The Your Own Print team</p>
+                <p style="margin-top:16px">- The Your Own Print team</p>
                 """,
             )
             await _send_email(to=[customer_email], subject="Your Your Own Print order is confirmed", html=body_cust)
@@ -1249,7 +1249,7 @@ async def checkout_status(session_id: str, http_request: Request):
 
 
 # ---------- Multi-product cart checkout ----------
-# Server-side pricing per line — clients cannot spoof totals.
+# Server-side pricing per line - clients cannot spoof totals.
 class CartLineItem(BaseModel):
     product_id: str
     size_qtys: Dict[str, int]                     # {"M": 2, "L": 1}
@@ -1274,7 +1274,7 @@ async def _resolve_line_pricing(
     color: Optional[str] = None,
     design_meta: Optional[Dict] = None,
 ) -> Dict:
-    """Canonical per-line pricing — called by both single-item /checkout/session
+    """Canonical per-line pricing - called by both single-item /checkout/session
     and multi-line /checkout/cart-session so bulk-tier + upcharge maths is
     guaranteed identical.
 
@@ -1387,7 +1387,7 @@ async def _resolve_line_pricing(
 
 
 async def _price_line_item(item: CartLineItem) -> Dict:
-    """Backwards-compatible wrapper — resolves the pricing for one CartLineItem
+    """Backwards-compatible wrapper - resolves the pricing for one CartLineItem
     by delegating to the shared `_resolve_line_pricing()` helper."""
     return await _resolve_line_pricing(
         product_id=item.product_id,
@@ -1401,7 +1401,7 @@ async def _price_line_item(item: CartLineItem) -> Dict:
 
 
 def _assert_origin_ok(origin_url: str) -> None:
-    """Guard the Stripe success/cancel URL host — reject any origin outside
+    """Guard the Stripe success/cancel URL host - reject any origin outside
     our production domain + preview environments. Prevents an attacker from
     hijacking the checkout success redirect to steal session_ids."""
     from urllib.parse import urlparse
@@ -1425,7 +1425,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
     if not payload.items:
         raise HTTPException(400, "Cart is empty")
     if len(payload.items) > 20:
-        raise HTTPException(400, "Cart limit is 20 lines — please split into two orders")
+        raise HTTPException(400, "Cart limit is 20 lines - please split into two orders")
     _assert_origin_ok(payload.origin_url)
 
     priced = [await _price_line_item(item) for item in payload.items]
@@ -1439,7 +1439,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
     success_url = f"{origin}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin}/cart"
 
-    # Compact metadata — Stripe caps values at 500 chars each. Full breakdown is stored in Mongo below.
+    # Compact metadata - Stripe caps values at 500 chars each. Full breakdown is stored in Mongo below.
     item_summary = " | ".join(
         f"{p['product']['name']} ({sum(p['size_qtys'].values())})" for p in priced
     )[:490]
@@ -1495,7 +1495,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
 
 @api_router.post("/cart/price")
 async def price_cart(payload: CartCheckoutRequest):
-    """Repriced cart preview — used by the drawer to show the correct total incl. bulk tiers,
+    """Repriced cart preview - used by the drawer to show the correct total incl. bulk tiers,
     print upcharges, size upcharges. Does NOT create a Stripe session."""
     if not payload.items:
         return {"items": [], "grand_total": 0.0, "total_qty": 0}
@@ -1621,7 +1621,7 @@ async def import_judgeme(payload: JudgeMeImportRequest):
     skipped = 0
     pmap = payload.product_id_map or {}
     for r in payload.reviews:
-        # Normalise — Judge.me review object fields
+        # Normalise - Judge.me review object fields
         jm_pid = str(r.get("product_id") or r.get("product_external_id") or r.get("product_handle") or "")
         jm_title_key = str(r.get("product_title") or "")
         mapped = pmap.get(jm_pid) or pmap.get(jm_title_key) or payload.default_product_id
@@ -1681,8 +1681,8 @@ class DesignerSettings(BaseModel):
     designer_image: str
     designer_print_area: Dict[str, float]  # {x,y,w,h} percent
     designer_images_by_colour: Optional[Dict[str, str]] = None  # colour name -> image URL override
-    designer_colors: Optional[List[Dict[str, str]]] = None  # custom colour list [{name, hex}] — overrides the garment default
-    # Back-view equivalents — optional. If not set, the designer falls back
+    designer_colors: Optional[List[Dict[str, str]]] = None  # custom colour list [{name, hex}] - overrides the garment default
+    # Back-view equivalents - optional. If not set, the designer falls back
     # to showing the front photo/print area when a customer switches to back
     # view, same as it always has (not ideal, but not a regression either).
     designer_image_back: Optional[str] = None
@@ -1695,7 +1695,7 @@ class DesignerSettings(BaseModel):
 
 ALLOWED_PLACEMENT_OPTIONS = ["left-breast", "right-breast", "full-front", "back-print", "left-sleeve", "right-sleeve", "neck-label", "left-pocket", "right-pocket"]
 
-# Sensible default placement set per garment category — used to mass-populate
+# Sensible default placement set per garment category - used to mass-populate
 # allowed_placements across imported products, rather than every product
 # defaulting to the full generic set (which is how a sleeveless vest ends up
 # offering "left sleeve" print, or trousers end up offering "neck label").
@@ -1722,7 +1722,7 @@ CATEGORY_PLACEMENT_DEFAULTS: Dict[str, List[str]] = {
 
 
 def _repair_size_value(raw: str) -> str:
-    """Repairs kids age-range sizes already corrupted in imported data —
+    """Repairs kids age-range sizes already corrupted in imported data -
     e.g. "2026-04-03 00:00:00" (was "3-4", auto-converted to a date by Excel
     in PenCarrie's own source file before it ever reached us) or "1213"
     (was "12-13", couldn't parse as a date so Excel just dropped the dash)."""
@@ -1740,7 +1740,7 @@ def _auto_allowed_placements(name: str, category: str) -> List[str]:
     normalized_category = str(category or "").strip().lower()
     base = list(CATEGORY_PLACEMENT_DEFAULTS.get(normalized_category, ALLOWED_PLACEMENT_OPTIONS))
     hay = name.lower()
-    # Hi-vis defaults assume a sleeveless vest (the most common case) — but a
+    # Hi-vis defaults assume a sleeveless vest (the most common case) - but a
     # hi-vis jacket/softshell/coat genuinely has sleeves, so add them back.
     if normalized_category == "hi-vis" and any(k in hay for k in ("jacket", "softshell", "coat", "parka", "bomber")):
         for p in ("left-sleeve", "right-sleeve"):
@@ -1779,17 +1779,17 @@ class ProductMeta(BaseModel):
 GENDER_FIT_OPTIONS = ["mens", "womens", "unisex", "kids"]
 INDUSTRY_SLUGS = ["healthcare", "construction-trades", "retail", "security", "corporate", "sports-fitness", "industrial", "beauty-wellness", "cleaning", "hospitality-catering", "education-schools"]
 INDUSTRIES_CATALOGUE = [
-    {"slug": "healthcare", "title": "Healthcare", "subtitle": "Clinics, dental, mobile carers", "hero_image": "https://images.pexels.com/photos/4173324/pexels-photo-4173324.jpeg", "blurb": "Polos, tunics and sweatshirts customers recognise — soft fabrics, clean print, easy on hot washes."},
+    {"slug": "healthcare", "title": "Healthcare", "subtitle": "Clinics, dental, mobile carers", "hero_image": "https://images.pexels.com/photos/4173324/pexels-photo-4173324.jpeg", "blurb": "Polos, tunics and sweatshirts customers recognise - soft fabrics, clean print, easy on hot washes."},
     {"slug": "construction-trades", "title": "Construction & Trades", "subtitle": "Builders, sparks, plumbers, joiners, site crews", "hero_image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg", "blurb": "Hi-vis vests, workwear tees, jackets and trousers that survive site life. EN ISO 20471 options ready to print."},
     {"slug": "retail", "title": "Retail", "subtitle": "Shops, garden centres, market stalls", "hero_image": "https://images.pexels.com/photos/1884581/pexels-photo-1884581.jpeg", "blurb": "On-brand polos and tees that make your team unmistakable on the shop floor. Tidy logo print on the chest."},
-    {"slug": "security", "title": "Security", "subtitle": "Door staff, mobile patrol, events", "hero_image": "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png", "blurb": "Bold 'SECURITY' prints front and back. Polos, softshells and hi-vis kit — printed in the UK and ready quickly."},
+    {"slug": "security", "title": "Security", "subtitle": "Door staff, mobile patrol, events", "hero_image": "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png", "blurb": "Bold 'SECURITY' prints front and back. Polos, softshells and hi-vis kit - printed in the UK and ready quickly."},
     {"slug": "corporate", "title": "Corporate", "subtitle": "Offices, agencies, professional services", "hero_image": "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg", "blurb": "Smart polos, jumpers and softshells for client days, exhibitions and team away-days. Embroidery or print."},
     {"slug": "sports-fitness", "title": "Sports & Fitness", "subtitle": "Gyms, PTs, coaches, clubs", "hero_image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg", "blurb": "Performance tees, hoodies, joggers and leggings cut for the gym floor. Crisp prints, full-range movement."},
     {"slug": "industrial", "title": "Industrial", "subtitle": "Warehousing, manufacturing, fabrication, logistics", "hero_image": "https://images.pexels.com/photos/4391483/pexels-photo-4391483.jpeg", "blurb": "Heavy-cotton workwear, hi-vis and softshells built for the floor. Reorder in any quantity."},
     {"slug": "beauty-wellness", "title": "Beauty & Wellness", "subtitle": "Salons, spas, beauticians, hair & barbering, holistic studios", "hero_image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg", "blurb": "Branded tees, aprons and sweatshirts that look as polished as the treatments. Statement prints land beautifully."},
     {"slug": "cleaning", "title": "Cleaning & Maintenance", "subtitle": "Cleaning crews, facilities, janitorial", "hero_image": "https://images.pexels.com/photos/4099235/pexels-photo-4099235.jpeg", "blurb": "Identifiable, easy-care polos and tees. Branded right, your team is recognisable on every site."},
     {"slug": "hospitality-catering", "title": "Hospitality & Catering", "subtitle": "Cafés, bars, pubs, restaurants, mobile caterers", "hero_image": "https://images.pexels.com/photos/3007355/pexels-photo-3007355.jpeg", "blurb": "Smart polos, tees and aprons that look right behind the bar and front of house. Tidy logo print on the chest."},
-    {"slug": "education-schools", "title": "Education & Schools", "subtitle": "Schools, colleges, nurseries, tutors, staff teams", "hero_image": "https://images.pexels.com/photos/8500353/pexels-photo-8500353.jpeg", "blurb": "Polos, sweatshirts and hoodies for staff, departments and school teams — soft, hard-wearing and easy to reorder every term."},
+    {"slug": "education-schools", "title": "Education & Schools", "subtitle": "Schools, colleges, nurseries, tutors, staff teams", "hero_image": "https://images.pexels.com/photos/8500353/pexels-photo-8500353.jpeg", "blurb": "Polos, sweatshirts and hoodies for staff, departments and school teams - soft, hard-wearing and easy to reorder every term."},
 
     # Back-compat aliases (legacy routes still resolve)
     {"slug": "trades", "title": "Trades", "subtitle": "Builders, sparks, plumbers, joiners", "hero_image": "https://images.pexels.com/photos/8961326/pexels-photo-8961326.jpeg", "blurb": "Hard-wearing tees, hoodies and hi-vis kitted out with your logo. Built for site, washed at 60°.", "alias_of": "construction-trades"},
@@ -1804,7 +1804,7 @@ INDUSTRIES_CATALOGUE = [
 
 # ---------- VAT ----------
 # Stored prices are gross. _price_with_vat_and_charm builds them from an ex-VAT
-# trade cost by applying markup, then VAT, then charm rounding — so `price` is
+# trade cost by applying markup, then VAT, then charm rounding - so `price` is
 # what the customer pays, and the ex-VAT figure is derived back out of it.
 UK_VAT_RATE = 0.20
 
@@ -1825,7 +1825,7 @@ def _vat_fields(p: Dict) -> Dict:
     """Both figures, worked out once on the server.
 
     Doing this per page in the browser would mean every card needed gender_fit
-    and every page needed to remember the zero-rating rule — one page forgetting
+    and every page needed to remember the zero-rating rule - one page forgetting
     it would quietly show VAT on children's clothing.
     """
     try:
@@ -1843,7 +1843,7 @@ def _vat_fields(p: Dict) -> Dict:
 
 # ---------- Industry vocabulary ----------
 # Derived from the catalogue above rather than typed out again, so adding an
-# alias there can never leave this list stale — the exact failure mode that
+# alias there can never leave this list stale - the exact failure mode that
 # fragmented the sidebar counts before.
 INDUSTRY_ALIASES: Dict[str, str] = {
     e["slug"]: e["alias_of"] for e in INDUSTRIES_CATALOGUE if e.get("alias_of")
@@ -1862,7 +1862,7 @@ def canonical_industries(tags) -> List[str]:
     "construction-trades" shows up as two separate sidebar rows with split
     counts, which is what produced the row of stray 1s.
 
-    Unrecognised values are kept rather than dropped — a slug that hasn't made
+    Unrecognised values are kept rather than dropped - a slug that hasn't made
     it into the catalogue yet is more likely a new industry than junk, and
     silently discarding tags would be a far worse failure than showing one.
     """
@@ -1879,74 +1879,74 @@ def canonical_industries(tags) -> List[str]:
 
 # ---------- Sports & Fitness Teams catalogue (SEO landings) ----------
 SPORTS_TEAMS_CATALOGUE = [
-    {"slug": "football", "title": "Football Kits", "h1": "Custom Football Kits, Printed in the UK", "subtitle": "Jerseys, shorts, socks — match-day ready",
+    {"slug": "football", "title": "Football Kits", "h1": "Custom Football Kits, Printed in the UK", "subtitle": "Jerseys, shorts, socks - match-day ready",
      "hero_image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
-     "intro": "From Sunday League to academy squads — we print and ship full football kits with your crest, sponsor, names and numbers. UK printed, fast turnaround, low minimums.",
-     "seo_paragraph": "Our custom football kits use breathable, sublimation-friendly performance fabric cut for movement. Add a club badge, front sponsor, sleeve sponsors, player names and squad numbers — all baked into the price. We handle artwork, mock-ups and proofs in-house in the UK, so your team gets match-ready quicker.",
+     "intro": "From Sunday League to academy squads - we print and ship full football kits with your crest, sponsor, names and numbers. UK printed, fast turnaround, low minimums.",
+     "seo_paragraph": "Our custom football kits use breathable, sublimation-friendly performance fabric cut for movement. Add a club badge, front sponsor, sleeve sponsors, player names and squad numbers - all baked into the price. We handle artwork, mock-ups and proofs in-house in the UK, so your team gets match-ready quicker.",
      "faqs": [
-       {"q": "What's the minimum order for a custom football kit?", "a": "There's no minimum — order one kit or fifty. Bulk discounts kick in from 10+ kits."},
+       {"q": "What's the minimum order for a custom football kit?", "a": "There's no minimum - order one kit or fifty. Bulk discounts kick in from 10+ kits."},
        {"q": "How long until match day?", "a": "Most full football kits ship in 7–10 working days from artwork approval. Rush options available on request."},
-       {"q": "Can I add a sponsor on the back?", "a": "Yes — front sponsor, sleeve sponsors and a small back-of-shorts logo are all supported."},
+       {"q": "Can I add a sponsor on the back?", "a": "Yes - front sponsor, sleeve sponsors and a small back-of-shorts logo are all supported."},
      ],
      "product_ids": ["football-jersey", "football-shorts", "football-kit-bundle", "football-premium-bundle", "football-kit-front-only", "football-premium-front-only", "training-tee", "training-tracksuit"],
     },
-    {"slug": "rugby", "title": "Rugby Kits", "h1": "Custom Rugby Kits — Heavy-Grade Match Shirts",
+    {"slug": "rugby", "title": "Rugby Kits", "h1": "Custom Rugby Kits - Heavy-Grade Match Shirts",
      "subtitle": "Match shirts, training tops, club tracksuits",
      "hero_image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
      "intro": "Reinforced rugby shirts built to take a battering. Club crest, sponsor, player names and squad numbers baked into the price. UK printed, ready in 7–10 days.",
-     "seo_paragraph": "Our rugby shirts use heavy-grade fabric with a reinforced collar and twin-needle seams — designed to survive line-outs and laundry day. Add badges, sponsors and back numbers; we'll deliver match-ready kit for any age group, from U7s to seniors.",
+     "seo_paragraph": "Our rugby shirts use heavy-grade fabric with a reinforced collar and twin-needle seams - designed to survive line-outs and laundry day. Add badges, sponsors and back numbers; we'll deliver match-ready kit for any age group, from U7s to seniors.",
      "faqs": [
-       {"q": "Are kits available in junior sizes?", "a": "Yes — full junior size range from 5–6 years up to 12–13 plus the adult range."},
-       {"q": "Can you replicate our existing crest?", "a": "Absolutely — send us any file (JPG, PNG, PDF, vector) and we'll mock it up for free."},
-       {"q": "Do you do training shirts as well?", "a": "Yes — match shirts, training tees and full tracksuits all under one order."},
+       {"q": "Are kits available in junior sizes?", "a": "Yes - full junior size range from 5–6 years up to 12–13 plus the adult range."},
+       {"q": "Can you replicate our existing crest?", "a": "Absolutely - send us any file (JPG, PNG, PDF, vector) and we'll mock it up for free."},
+       {"q": "Do you do training shirts as well?", "a": "Yes - match shirts, training tees and full tracksuits all under one order."},
      ],
      "product_ids": ["rugby-shirt", "rugby-kit-bundle", "rugby-kit-front-only", "training-tee", "training-tracksuit", "sports-tee"],
     },
-    {"slug": "gyms", "title": "Gym Kit & Branded Apparel", "h1": "Branded Kit for Gyms — Built for the Floor",
-     "subtitle": "Tees, hoodies, joggers, leggings — branded for your gym",
+    {"slug": "gyms", "title": "Gym Kit & Branded Apparel", "h1": "Branded Kit for Gyms - Built for the Floor",
+     "subtitle": "Tees, hoodies, joggers, leggings - branded for your gym",
      "hero_image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg",
-     "intro": "Branded gym kit your members will actually want to wear. Statement prints, soft fabrics, performance fits — and a price that lets you mark them up.",
-     "seo_paragraph": "Whether you run a CrossFit box, a strength gym, a HYROX squad or a high-street commercial gym — branded apparel turns your members into walking billboards. Our gym-ready kit covers tees, hoodies, joggers, leggings and shorts in performance-friendly fabrics. UK printed, low minimums, bulk discounts.",
+     "intro": "Branded gym kit your members will actually want to wear. Statement prints, soft fabrics, performance fits - and a price that lets you mark them up.",
+     "seo_paragraph": "Whether you run a CrossFit box, a strength gym, a HYROX squad or a high-street commercial gym - branded apparel turns your members into walking billboards. Our gym-ready kit covers tees, hoodies, joggers, leggings and shorts in performance-friendly fabrics. UK printed, low minimums, bulk discounts.",
      "faqs": [
-       {"q": "Can I sell these to my members?", "a": "Yes — we set you up with bulk pricing so you can mark them up and sell. Just upload your logo, choose your colours and order."},
-       {"q": "Do you do front and back prints?", "a": "Yes — front breast logo plus a larger back print are both included on most products."},
+       {"q": "Can I sell these to my members?", "a": "Yes - we set you up with bulk pricing so you can mark them up and sell. Just upload your logo, choose your colours and order."},
+       {"q": "Do you do front and back prints?", "a": "Yes - front breast logo plus a larger back print are both included on most products."},
        {"q": "What's the lead time on a bulk gym kit order?", "a": "Typically 7–10 working days from artwork approval, faster on smaller orders."},
      ],
      "product_ids": ["personalised-tee", "personalised-hoodie", "joggers", "performance-leggings", "gym-shorts", "training-tee", "sports-tee"],
     },
-    {"slug": "personal-trainers", "title": "Personal Trainer Kit", "h1": "Personal Trainer Kit — Branded For Your Studio",
-     "subtitle": "Coach polos, performance tees, hoodies — sorted",
+    {"slug": "personal-trainers", "title": "Personal Trainer Kit", "h1": "Personal Trainer Kit - Branded For Your Studio",
+     "subtitle": "Coach polos, performance tees, hoodies - sorted",
      "hero_image": "https://images.pexels.com/photos/4720234/pexels-photo-4720234.jpeg",
-     "intro": "Look the part on session day. Branded coach polos, training tees, hoodies and joggers — printed with your logo and ready to wear.",
-     "seo_paragraph": "Personal trainers, group coaches and online coaches need kit that travels well, washes hot and looks professional in client photos. We print PT-friendly performance fabrics with your logo on the chest, name on the sleeve, and your slogan on the back — your call.",
+     "intro": "Look the part on session day. Branded coach polos, training tees, hoodies and joggers - printed with your logo and ready to wear.",
+     "seo_paragraph": "Personal trainers, group coaches and online coaches need kit that travels well, washes hot and looks professional in client photos. We print PT-friendly performance fabrics with your logo on the chest, name on the sleeve, and your slogan on the back - your call.",
      "faqs": [
-       {"q": "Can I order just one or two pieces?", "a": "Yes — no minimum. Most PTs start with a tee + hoodie + polo set."},
-       {"q": "Will my logo look right on dark colours?", "a": "Yes — we'll mock it up for free on any colour before you commit, so there's no nasty surprises."},
-       {"q": "Can I add my Instagram handle?", "a": "Of course — pop it under the logo or on the sleeve."},
+       {"q": "Can I order just one or two pieces?", "a": "Yes - no minimum. Most PTs start with a tee + hoodie + polo set."},
+       {"q": "Will my logo look right on dark colours?", "a": "Yes - we'll mock it up for free on any colour before you commit, so there's no nasty surprises."},
+       {"q": "Can I add my Instagram handle?", "a": "Of course - pop it under the logo or on the sleeve."},
      ],
      "product_ids": ["personalised-tee", "polo-shirt", "personalised-hoodie", "joggers", "training-tee", "sports-tee", "performance-leggings"],
     },
-    {"slug": "boxing-gyms", "title": "Boxing Gym Kit", "h1": "Boxing Gym Kit — Walk-out Tees, Hoodies & More",
+    {"slug": "boxing-gyms", "title": "Boxing Gym Kit", "h1": "Boxing Gym Kit - Walk-out Tees, Hoodies & More",
      "subtitle": "Fight night tees, gym hoodies, sponsor shirts",
      "hero_image": "https://images.pexels.com/photos/9311461/pexels-photo-9311461.jpeg",
-     "intro": "Branded kit for boxing gyms, white-collar nights and amateur clubs. Fight night sponsor tees, gym hoodies, training kit — printed in the UK and ready quickly.",
+     "intro": "Branded kit for boxing gyms, white-collar nights and amateur clubs. Fight night sponsor tees, gym hoodies, training kit - printed in the UK and ready quickly.",
      "seo_paragraph": "Boxing gyms run on identity. Our Fight Night Sponsor Tees carry your main sponsor plus multiple supporting logos at the back, while branded hoodies, walk-out tees and gym staples cover the day-to-day. Low minimums and quick turnaround.",
      "faqs": [
-       {"q": "Can you handle multiple sponsor logos for fight night?", "a": "Yes — we routinely lay up 4–8 sponsor logos on a single tee, with a free mock-up before approval."},
-       {"q": "How quick can you turn around a fight night order?", "a": "Standard turnaround is 7–10 days; we'll often beat that for fight cards — speak to us if you're tight on time."},
-       {"q": "Do you do walk-out hoodies too?", "a": "Yes — branded gym hoodies, joggers, beanies, drawstring bags — anything you need to outfit your corner."},
+       {"q": "Can you handle multiple sponsor logos for fight night?", "a": "Yes - we routinely lay up 4–8 sponsor logos on a single tee, with a free mock-up before approval."},
+       {"q": "How quick can you turn around a fight night order?", "a": "Standard turnaround is 7–10 days; we'll often beat that for fight cards - speak to us if you're tight on time."},
+       {"q": "Do you do walk-out hoodies too?", "a": "Yes - branded gym hoodies, joggers, beanies, drawstring bags - anything you need to outfit your corner."},
      ],
      "product_ids": ["boxing-fight-tee", "personalised-tee", "personalised-hoodie", "joggers", "sports-tee", "training-tee"],
     },
     {"slug": "thai-boxing", "title": "Thai Boxing Gym Kit", "h1": "Muay Thai Gym Kit & Custom Shorts",
      "subtitle": "Branded Thai shorts, walk-out tees, gym hoodies",
      "hero_image": "https://images.pexels.com/photos/4761779/pexels-photo-4761779.jpeg",
-     "intro": "Traditional-cut Muay Thai shorts printed in vibrant satin, branded gym tees and hoodies — kit out your fighters and your members.",
-     "seo_paragraph": "Muay Thai gyms work hard for their identity — and our traditional-cut shorts, sublimated in vibrant colours, do them justice. Add custom names, club logo, sponsor logos and gym branding on full-print shorts, plus matching walk-out tees and hoodies.",
+     "intro": "Traditional-cut Muay Thai shorts printed in vibrant satin, branded gym tees and hoodies - kit out your fighters and your members.",
+     "seo_paragraph": "Muay Thai gyms work hard for their identity - and our traditional-cut shorts, sublimated in vibrant colours, do them justice. Add custom names, club logo, sponsor logos and gym branding on full-print shorts, plus matching walk-out tees and hoodies.",
      "faqs": [
-       {"q": "Can I have my fighter's name on the shorts?", "a": "Yes — names, gym logo, sponsor logos — all baked into the print."},
-       {"q": "Do you offer kids' Thai shorts?", "a": "Yes — we cover junior sizes from 7–8 up to adult."},
-       {"q": "How vibrant is the print on satin?", "a": "Very — sublimation print on satin makes colours pop. We always send a mock-up before printing."},
+       {"q": "Can I have my fighter's name on the shorts?", "a": "Yes - names, gym logo, sponsor logos - all baked into the print."},
+       {"q": "Do you offer kids' Thai shorts?", "a": "Yes - we cover junior sizes from 7–8 up to adult."},
+       {"q": "How vibrant is the print on satin?", "a": "Very - sublimation print on satin makes colours pop. We always send a mock-up before printing."},
      ],
      "product_ids": ["muay-thai-shorts", "boxing-fight-tee", "personalised-tee", "personalised-hoodie", "training-tee"],
     },
@@ -1956,21 +1956,21 @@ SPORTS_TEAMS_CATALOGUE = [
      "intro": "Branded kickboxing shorts, walk-out tees and club hoodies. Sublimated, durable, ready for the ring or class.",
      "seo_paragraph": "Kickboxing gyms running anything from after-school junior classes to amateur fight cards rely on kit that survives the bag work and looks sharp on social. We print full sublimated kickboxing shorts, branded tees and hoodies with your gym logo, fighter names and sponsor logos.",
      "faqs": [
-       {"q": "Can I get the same design on both shorts and tee?", "a": "Yes — we line up matching prints across the kit so the whole squad looks unified."},
-       {"q": "Will the print survive grappling?", "a": "Yes — sublimation prints sit inside the fibres, not on top, so they don't crack or peel."},
-       {"q": "Minimums?", "a": "No minimum — order one set or fifty."},
+       {"q": "Can I get the same design on both shorts and tee?", "a": "Yes - we line up matching prints across the kit so the whole squad looks unified."},
+       {"q": "Will the print survive grappling?", "a": "Yes - sublimation prints sit inside the fibres, not on top, so they don't crack or peel."},
+       {"q": "Minimums?", "a": "No minimum - order one set or fifty."},
      ],
      "product_ids": ["fight-shorts", "muay-thai-shorts", "boxing-fight-tee", "personalised-tee", "personalised-hoodie", "training-tee"],
     },
     {"slug": "dance-studios", "title": "Dance Studio Apparel", "h1": "Custom Dance Studio Apparel & Crew Kit",
-     "subtitle": "Studio tees, hoodies, leggings, joggers — branded",
+     "subtitle": "Studio tees, hoodies, leggings, joggers - branded",
      "hero_image": "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg",
-     "intro": "Branded dance studio kit your students, parents and crew will love. Soft tees, comfy hoodies, performance leggings and joggers — printed with your studio's logo.",
-     "seo_paragraph": "From baby ballet to street dance crews — every studio needs branded kit. Our soft-drape tees, hoodies, joggers and leggings carry your studio's logo, dancer's name and crew slogans cleanly. Parents and dancers love them, and they make brilliant studio fundraisers too.",
+     "intro": "Branded dance studio kit your students, parents and crew will love. Soft tees, comfy hoodies, performance leggings and joggers - printed with your studio's logo.",
+     "seo_paragraph": "From baby ballet to street dance crews - every studio needs branded kit. Our soft-drape tees, hoodies, joggers and leggings carry your studio's logo, dancer's name and crew slogans cleanly. Parents and dancers love them, and they make brilliant studio fundraisers too.",
      "faqs": [
-       {"q": "Can I sell these to my parents?", "a": "Yes — pre-order forms work brilliantly. We offer bulk pricing for orders of 10+."},
-       {"q": "Do you do small sizes for kids?", "a": "Yes — junior sizes from 3–4 up to 12–13 across most styles."},
-       {"q": "Can dancers have their name on the back?", "a": "Yes — names, year groups, studio colours, crew names — your call."},
+       {"q": "Can I sell these to my parents?", "a": "Yes - pre-order forms work brilliantly. We offer bulk pricing for orders of 10+."},
+       {"q": "Do you do small sizes for kids?", "a": "Yes - junior sizes from 3–4 up to 12–13 across most styles."},
+       {"q": "Can dancers have their name on the back?", "a": "Yes - names, year groups, studio colours, crew names - your call."},
      ],
      "product_ids": ["dance-tee", "personalised-hoodie", "joggers", "performance-leggings", "personalised-tee", "kids-tee"],
     },
@@ -2121,7 +2121,7 @@ async def list_use_cases():
 async def suggest_cross_sell(pid: str, limit: int = 6):
     """Suggests cross-sell candidates for the also-bought / match-with pickers:
     same brand, spread across different categories (so a hi-vis jacket suggests
-    that brand's trousers/polo/etc rather than 6 more hi-vis jackets) — this is
+    that brand's trousers/polo/etc rather than 6 more hi-vis jackets) - this is
     the 'complete the workwear outfit' pattern for a supplier catalogue import."""
     prod = PRODUCTS.get(pid)
     if not prod:
@@ -2157,7 +2157,7 @@ async def admin_upload_image(file: UploadFile = File(...), folder: str = "admin-
         raise HTTPException(400, "Only image files are accepted.")
     data = await file.read()
     if len(data) > 8_000_000:
-        raise HTTPException(400, "Image too large — please keep it under 8MB.")
+        raise HTTPException(400, "Image too large - please keep it under 8MB.")
     ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(content_type, "jpg")
     safe_folder = re.sub(r"[^a-z0-9_-]+", "-", folder.lower())[:40] or "admin-uploads"
     digest = hashlib.sha256(data).hexdigest()[:24]
@@ -2170,8 +2170,8 @@ async def admin_upload_image(file: UploadFile = File(...), folder: str = "admin-
 
 
 MEDIA_UPLOAD_LIMITS = {
-    "image": 8_000_000,    # 8MB — plenty for a photo
-    "video": 20_000_000,   # 20MB — a compressed 10-20s clip lands well under this
+    "image": 8_000_000,    # 8MB - plenty for a photo
+    "video": 20_000_000,   # 20MB - a compressed 10-20s clip lands well under this
 }
 _MEDIA_EXTENSIONS = {
     "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
@@ -2202,7 +2202,7 @@ async def admin_upload_media(file: UploadFile = File(...), folder: str = "page-m
         actual_mb = round(len(data) / 1_000_000, 1)
         raise HTTPException(
             400,
-            f"That {kind} is {actual_mb}MB — please keep it under {mb}MB. "
+            f"That {kind} is {actual_mb}MB - please keep it under {mb}MB. "
             f"For video, exporting at 720p for 10-20 seconds usually lands around 2-5MB.",
         )
 
@@ -2219,7 +2219,7 @@ async def admin_upload_media(file: UploadFile = File(...), folder: str = "page-m
 
 @api_router.get("/admin/designer-products", dependencies=[Depends(require_admin)])
 async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str = ""):
-    """Admin view — ALL products with their current designer settings, paginated."""
+    """Admin view - ALL products with their current designer settings, paginated."""
     out = []
     for p in PRODUCTS.values():
         out.append({
@@ -2317,7 +2317,7 @@ async def save_designer_artwork(payload: DesignerArtwork):
         raise HTTPException(400, "artwork_png missing or too large")
     if payload.back_png and len(payload.back_png) > 6_000_000:
         raise HTTPException(400, "back_png too large")
-    # Neck-label PNGs are smaller — cap each at 2MB to keep the doc reasonable
+    # Neck-label PNGs are smaller - cap each at 2MB to keep the doc reasonable
     for pngs in ((payload.neck_label_pngs or {}), (payload.neck_label_preview_pngs or {})):
         for sz, data in pngs.items():
             if data and len(data) > 2_000_000:
@@ -2345,7 +2345,7 @@ async def save_designer_artwork(payload: DesignerArtwork):
 
 @api_router.get("/designer/artwork/{artwork_id}")
 async def get_designer_artwork(artwork_id: str):
-    """Retrieve a saved artwork — used by fulfilment/admin."""
+    """Retrieve a saved artwork - used by fulfilment/admin."""
     doc = await db.designer_artwork.find_one({"id": artwork_id})
     if not doc:
         raise HTTPException(404, "Artwork not found")
@@ -2406,7 +2406,7 @@ async def update_bulk_defaults(payload: Dict):
 
 @api_router.get("/bulk-tiers/product/{product_id}")
 async def get_product_bulk_tiers(product_id: str):
-    """Resolved bulk-pricing preview for a product — used by the PDP ladder."""
+    """Resolved bulk-pricing preview for a product - used by the PDP ladder."""
     p = PRODUCTS.get(product_id)
     if not p:
         raise HTTPException(404, "Product not found")
@@ -2531,12 +2531,12 @@ async def locked_count():
 
 @api_router.get("/products/{product_id}/allowed-placements")
 async def get_allowed_placements(product_id: str):
-    """Public endpoint — used by PDP and Designer to hide disallowed placements."""
+    """Public endpoint - used by PDP and Designer to hide disallowed placements."""
     p = PRODUCTS.get(product_id)
     if not p:
         raise HTTPException(404, "Product not found")
     stored = p.get("allowed_placements")
-    # `stored` can legitimately be an empty list (e.g. footwear/socks — no
+    # `stored` can legitimately be an empty list (e.g. footwear/socks - no
     # print placement makes sense at all), which is different from it never
     # having been set. When it was never set, fall back to SENSIBLE per-category
     # defaults (e.g. a hat won't offer sleeve/pocket prints) rather than the full
@@ -2645,7 +2645,7 @@ async def get_leavers_tiers():
     }
 
 
-# Full-front print upgrade for Leavers — replaces the standard breast pocket print
+# Full-front print upgrade for Leavers - replaces the standard breast pocket print
 LEAVERS_FULL_FRONT_UPCHARGE = 2.50
 # Products that can NOT accept a full-front print (varsity jackets stay chest-panel only)
 LEAVERS_NO_FULL_FRONT_IDS = {"leavers-varsity", "varsity-jacket"}
@@ -2653,7 +2653,7 @@ LEAVERS_NO_FULL_FRONT_IDS = {"leavers-varsity", "varsity-jacket"}
 
 @api_router.get("/leavers/config")
 async def get_leavers_config():
-    """Public config for the Leavers order flow — pricing & rules used by the UI."""
+    """Public config for the Leavers order flow - pricing & rules used by the UI."""
     return {
         "full_front_upcharge": LEAVERS_FULL_FRONT_UPCHARGE,
         "bag_price": LEAVERS_BAG_PRICE,
@@ -2763,15 +2763,15 @@ class LeaversCheckoutRequest(BaseModel):
     product_id: str
     template_id: Optional[str] = None
     template_title: Optional[str] = None
-    # Custom uploads (optional — user can also pick from the design library)
+    # Custom uploads (optional - user can also pick from the design library)
     custom_design_data_url: Optional[str] = None            # legacy: front design (breast pocket)
     custom_back_design_data_url: Optional[str] = None       # back print artwork
     # Design library picks (portfolio ids from PORTFOLIO_CATEGORIES leavers-front/back/full-front-designs)
     front_design_id: Optional[str] = None
     back_design_id: Optional[str] = None
-    # Print position — "breast" (default, included) OR "full_front" (+£2.50 upcharge, not allowed on varsity)
+    # Print position - "breast" (default, included) OR "full_front" (+£2.50 upcharge, not allowed on varsity)
     print_position: str = "breast"
-    # Names — either the customer uploads a file OR they tick to be contacted after purchase
+    # Names - either the customer uploads a file OR they tick to be contacted after purchase
     names_file_data_url: Optional[str] = None
     names_collection_mode: str = "upload"                   # "upload" | "we-will-contact"
     sizes: List[LeaversSizeQty]
@@ -2803,7 +2803,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     if payload.print_position not in ("breast", "full_front"):
         raise HTTPException(400, "print_position must be 'breast' or 'full_front'")
     if payload.print_position == "full_front" and payload.product_id in LEAVERS_NO_FULL_FRONT_IDS:
-        raise HTTPException(400, f"{p['name']} does not support a full-front print — please choose the breast option.")
+        raise HTTPException(400, f"{p['name']} does not support a full-front print - please choose the breast option.")
     full_front_upcharge = LEAVERS_FULL_FRONT_UPCHARGE if payload.print_position == "full_front" else 0.0
 
     base = float(p["price"])
@@ -2814,7 +2814,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     if total_amount < 0.5:
         raise HTTPException(400, "Total below Stripe minimum (£0.50)")
 
-    # Require SOME kind of design — either a template, a picked design from the library, or a custom upload
+    # Require SOME kind of design - either a template, a picked design from the library, or a custom upload
     has_design = any([
         payload.template_id,
         payload.front_design_id,
@@ -2954,23 +2954,23 @@ async def leavers_bespoke(payload: LeaversBespokeRequest):
         <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
           <tr><td style="color:#4b5563"><strong>Estimated qty</strong></td><td>{payload.estimated_qty}</td></tr>
           <tr><td style="color:#4b5563"><strong>Email</strong></td><td>{payload.contact_email}</td></tr>
-          <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{payload.contact_phone or '—'}</td></tr>
-          <tr><td style="color:#4b5563" valign="top"><strong>Notes</strong></td><td>{(payload.notes or '—').replace(chr(10),'<br>')}</td></tr>
+          <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{payload.contact_phone or '-'}</td></tr>
+          <tr><td style="color:#4b5563" valign="top"><strong>Notes</strong></td><td>{(payload.notes or '-').replace(chr(10),'<br>')}</td></tr>
         </table>
         <p style="margin-top:16px;color:#4b5563;font-size:12px">Reply to this email to reach the customer directly.</p>
         """,
     )
     if shop_to:
-        await _send_email(to=[shop_to], subject=f"[Leavers] {payload.school} — {payload.estimated_qty} hoodies",
+        await _send_email(to=[shop_to], subject=f"[Leavers] {payload.school} - {payload.estimated_qty} hoodies",
                           html=body_shop, reply_to=payload.contact_email)
     # Confirmation to customer
     body_cust = _email_wrap(
-        "Got it — we're on the case!",
+        "Got it - we're on the case!",
         f"""
         <p>Hi {payload.contact_name.split(' ')[0]},</p>
         <p>Thanks for your bespoke leavers' hoodies enquiry for <strong>{payload.school}</strong> ({payload.year_group}). A real human will be in touch within 1 working day with fabric options, a design proof and pricing.</p>
         <p style="color:#4b5563">In the meantime, feel free to reply to this email with any extra details or mock-up ideas.</p>
-        <p style="margin-top:16px">— The Your Own Print team</p>
+        <p style="margin-top:16px">- The Your Own Print team</p>
         """,
     )
     reply_to = shop_to or None
@@ -3026,7 +3026,7 @@ async def list_workforce_products():
 
 @api_router.get("/specials/products")
 async def list_specials_products():
-    """Your Own Print Specials — single breast-pocket logo print, no MOQ, starter-business pricing."""
+    """Your Own Print Specials - single breast-pocket logo print, no MOQ, starter-business pricing."""
     out = []
     for p in live_products():
         if p.get("specials_eligible"):
@@ -3224,7 +3224,7 @@ async def shop_by_garment_type(
     meta = next((t for t in GARMENT_TYPE_CATALOGUE if t["slug"] == slug), None)
     if not meta:
         raise HTTPException(404, "Garment type not found")
-    # All products in this collection (used to derive facets — before applying filters).
+    # All products in this collection (used to derive facets - before applying filters).
     all_prods = [p for p in live_products() if _garment_type_of(p) == slug]
     facets = _facets_from_products(all_prods)
 
@@ -3278,7 +3278,7 @@ async def shop_by_garment_type(
 
 
 # Industries that make up the "Workwear" umbrella collection. Uses the
-# canonical slugs — the frontend previously requested the old aliases
+# canonical slugs - the frontend previously requested the old aliases
 # ("trades,construction,logistics"), which stopped matching anything once
 # tagging was canonicalised, so the page was filtering on dead values.
 WORKWEAR_INDUSTRY_SLUGS = ["construction-trades", "cleaning", "industrial", "security"]
@@ -3295,7 +3295,7 @@ async def workwear_collection(
     limit: int = 25,
     offset: int = 0,
 ):
-    """Workwear umbrella collection — same shape as /shop/type/{slug} so the
+    """Workwear umbrella collection - same shape as /shop/type/{slug} so the
     page can use the identical sidebar/facet UI as every other collection."""
     umbrella = set(WORKWEAR_INDUSTRY_SLUGS)
     # Safety net: also include products whose garment category is inherently
@@ -3416,7 +3416,7 @@ async def get_industry(
 
     all_prods = [p for p in live_products() if set(p.get("industry_tags") or []) & match_slugs]
     facets = _facets_from_products(all_prods)
-    # Category facet too (which garment types show up within this industry) —
+    # Category facet too (which garment types show up within this industry) -
     # not part of the shared _facets_from_products helper, built here directly.
     category_counts: Dict[str, int] = {}
     for p in all_prods:
@@ -3498,14 +3498,14 @@ def _sports_team_keywords(s: Dict) -> List[str]:
 def _sports_team_products(s: Dict) -> List[Dict]:
     """Curated picks first, then the rest of the sports catalogue behind them.
 
-    Returns the full product records, not trimmed ones — the facet sidebar needs
+    Returns the full product records, not trimmed ones - the facet sidebar needs
     colours, sizes and fit, which a cut-down dict wouldn't carry.
 
     The curated `product_ids` are hand-chosen and include bundles and
     configurator entries that no automatic rule would surface, so they stay
     pinned at the top. But on their own they were only ever 5-8 items, which
     left pages like Gyms and Personal Trainers looking like the shop had
-    almost nothing in stock — the hundreds of sports-tagged products in the
+    almost nothing in stock - the hundreds of sports-tagged products in the
     imported catalogue never appeared at all.
     """
     out: List[Dict] = []
@@ -3595,7 +3595,7 @@ async def get_sports_team(
         return True
 
     # Filtering preserves the curated-first order rather than re-sorting by
-    # price — the hand-picked bundles are meant to lead, filtered or not.
+    # price - the hand-picked bundles are meant to lead, filtered or not.
     matched = [p for p in all_prods if matches(p)]
     page = matched[offset:offset + limit]
 
@@ -3717,7 +3717,7 @@ async def workforce_quote(payload: WorkforceCheckoutRequest):
         "name": payload.contact_name, "email": payload.contact_email,
         "phone": payload.contact_phone or "", "company": payload.company or "",
         "quantity": total_qty,
-        "message": f"Workforce kit quote — {len(items)} line items, {total_qty} total garments.",
+        "message": f"Workforce kit quote - {len(items)} line items, {total_qty} total garments.",
         "items": items,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -3764,7 +3764,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     if total_qty > threshold:
         raise HTTPException(
             status_code=422,
-            detail=f"Over {threshold} garments — please request a quote (POST /api/workforce/quote)",
+            detail=f"Over {threshold} garments - please request a quote (POST /api/workforce/quote)",
         )
 
     # Validate artwork
@@ -3773,7 +3773,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     needs_back_print = any(ln["back_print"] for ln in valid_lines)
     if needs_back_print:
         if not payload.back_print_data_url or not payload.back_print_data_url.startswith("data:image/"):
-            raise HTTPException(400, "You've selected back print on some garments — please upload your back-print artwork")
+            raise HTTPException(400, "You've selected back print on some garments - please upload your back-print artwork")
     # Cap size to ~8 MB total each (Stripe metadata won't carry the image; we'll save to artwork doc)
     MAX_DATA_URL = 8 * 1024 * 1024
     if len(payload.breast_logo_data_url) > MAX_DATA_URL:
@@ -3888,8 +3888,8 @@ async def also_bought(product_id: str, limit: int = 4):
 
 @api_router.get("/products/{product_id}/match-with")
 async def match_with(product_id: str, limit: int = 4):
-    """Curator-picked complementary products, with an automatic fallback —
-    same industry tag(s), different category — so "complete the look"
+    """Curator-picked complementary products, with an automatic fallback -
+    same industry tag(s), different category - so "complete the look"
     actually shows something for the vast majority of the catalogue that
     hasn't been manually curated, rather than showing nothing at all."""
     p = PRODUCTS.get(product_id)
@@ -4285,7 +4285,7 @@ async def answer_qa(qa_id: str, payload: QAAnswer):
         raise HTTPException(400, "Answer cannot be empty")
     res = await db.product_qa.update_one(
         {"id": qa_id},
-        # Answering publishes it — a question you've bothered to reply to is one
+        # Answering publishes it - a question you've bothered to reply to is one
         # you've read, so a second click to approve would just be friction.
         {"$set": {"answer": answer[:1000], "approved": True,
                   "answered_at": datetime.now(timezone.utc).isoformat()}},
@@ -4297,7 +4297,7 @@ async def answer_qa(qa_id: str, payload: QAAnswer):
 
 @api_router.post("/admin/qa/{qa_id}/publish", dependencies=[Depends(require_admin)])
 async def publish_qa(qa_id: str, approved: bool = True):
-    """Show or hide a question without answering it — for a good question you
+    """Show or hide a question without answering it - for a good question you
     want visible while you dig out the answer, or a spam one you want gone from
     the site immediately without losing the record."""
     res = await db.product_qa.update_one({"id": qa_id}, {"$set": {"approved": bool(approved)}})
@@ -4316,7 +4316,7 @@ async def delete_qa(qa_id: str):
 
 @api_router.get("/admin/qa", dependencies=[Depends(require_admin)])
 async def admin_list_all_qa():
-    """Admin overview — all questions across products, unanswered first."""
+    """Admin overview - all questions across products, unanswered first."""
     out = []
     async for d in db.product_qa.find({}).sort("asked_at", -1):
         out.append({
@@ -4331,14 +4331,14 @@ async def admin_list_all_qa():
             "approved": bool(d.get("approved")),
         })
     # Unanswered first, then most-recent answered. There were two sort calls
-    # here doing the opposite of each other — the second won, so the output was
+    # here doing the opposite of each other - the second won, so the output was
     # right, but the first was dead code waiting to mislead whoever edited next.
     out.sort(key=lambda x: (x["answer"] is None, x["asked_at"] or ""), reverse=True)
     return out
 
 
 # ============================================================================
-# Object Storage (Emergent R2-style) — for Portfolio + future asset uploads
+# Object Storage (Emergent R2-style) - for Portfolio + future asset uploads
 # ============================================================================
 import base64 as _base64
 from services.r2_storage import storage_put as _storage_put, storage_get as _storage_get, mirror_external_image as _mirror_external_image, storage_put_async as _storage_put_async, get_public_url as _get_public_url
@@ -4361,7 +4361,7 @@ async def _startup_init_storage():
 PORTFOLIO_CATEGORIES = [
     "workwear", "team-kits", "leavers", "sports", "fitness", "hospitality",
     "schools", "events", "beauty", "barbering", "other",
-    # Carousels / design libraries — same admin CRUD, but consumed by specific pages
+    # Carousels / design libraries - same admin CRUD, but consumed by specific pages
     "fight-night-action",
     "festival-tees-and-brands",
     "leavers-front-designs",
@@ -4416,7 +4416,7 @@ async def list_portfolio(category: Optional[str] = None, featured_only: bool = F
     if category and category != "all":
         q["category"] = category
     # `featured` is accepted as well as `featured_only` because a caller passing
-    # the shorter name got no error and no filtering — the request just quietly
+    # the shorter name got no error and no filtering - the request just quietly
     # returned everything. Better to honour both than to fail silently again.
     if featured_only or featured:
         q["featured"] = True
@@ -4427,7 +4427,7 @@ async def list_portfolio(category: Optional[str] = None, featured_only: bool = F
     # Sorted in the query, not just after the fact. Previously the limit was
     # applied to Mongo's natural order and only the returned slice was sorted,
     # so past the cap you got an arbitrary batch of photos rather than the first
-    # N by display order — reordering in the admin had no effect on which ones
+    # N by display order - reordering in the admin had no effect on which ones
     # made the cut, only on how that arbitrary batch was arranged.
     cursor = db.portfolio.find(q).sort([("display_order", 1), ("created_at", 1)]).skip(offset).limit(limit)
     async for d in cursor:
@@ -4473,7 +4473,7 @@ async def admin_create_portfolio(payload: PortfolioCreate):
         storage_meta = _storage_put(storage_path, raw, content_type)
         image_url = f"/api/portfolio/file/{item_id}.{ext}"
     except HTTPException:
-        # No storage configured — fall back to inline base64
+        # No storage configured - fall back to inline base64
         image_url = payload.image_data_url
         storage_path = ""
     doc = {
@@ -4582,7 +4582,7 @@ async def upload_artwork(payload: ArtworkUploadPayload):
     try:
         _storage_put(storage_path, raw, content_type)
     except HTTPException:
-        raise HTTPException(500, "Artwork upload failed — storage not configured")
+        raise HTTPException(500, "Artwork upload failed - storage not configured")
     doc = {
         "id": item_id,
         "storage_path": storage_path,
@@ -4704,7 +4704,7 @@ async def get_navigation():
     doc = await db.settings.find_one({"key": "navigation_config"})
     stored = doc.get("config") if doc else None
     # If a newer default nav has shipped (higher version), it supersedes an older
-    # stored one — this lets a deploy roll out nav changes without a manual reset,
+    # stored one - this lets a deploy roll out nav changes without a manual reset,
     # while still respecting admin edits made on the current version.
     default_v = DEFAULT_NAV_CONFIG.get("version", 0)
     stored_v = (stored or {}).get("version", 0) if stored else 0
@@ -4725,7 +4725,7 @@ async def get_navigation():
 
 
 # ============================================================================
-# Bundle variants — admin-defined brand/tier options for kit bundle products
+# Bundle variants - admin-defined brand/tier options for kit bundle products
 # (e.g. AWD / Nike / Umbro / Pro / Standard). Each variant carries its own
 # price, image, description, size guide + display order.
 # ============================================================================
@@ -4783,7 +4783,7 @@ def _serialise_variant(d: Dict) -> Dict:
 
 @api_router.get("/bundles/{bundle_id}/variants")
 async def list_bundle_variants(bundle_id: str):
-    """Public — variants shown to customers on the configurator."""
+    """Public - variants shown to customers on the configurator."""
     out: List[Dict] = []
     async for d in db.bundle_variants.find({"bundle_product_id": bundle_id, "is_active": True}):
         out.append(_serialise_variant(d))
@@ -4824,7 +4824,7 @@ async def admin_create_bundle_variant(payload: BundleVariantIn):
         try:
             _storage_put(storage_path, raw, content_type)
             image_url = f"/api/portfolio/file/{variant_id}.{ext}"
-            # We reuse the portfolio.file endpoint — store a portfolio doc so it can serve
+            # We reuse the portfolio.file endpoint - store a portfolio doc so it can serve
             await db.portfolio.insert_one({
                 "id": variant_id,
                 "title": f"{payload.brand} {payload.name}".strip() or "Bundle variant",
@@ -4835,7 +4835,7 @@ async def admin_create_bundle_variant(payload: BundleVariantIn):
                 "created_at": datetime.now(timezone.utc).isoformat(),
             })
         except HTTPException:
-            # Object storage not configured — keep the data-URL inline (works fine, just bigger payload)
+            # Object storage not configured - keep the data-URL inline (works fine, just bigger payload)
             pass
 
     doc = {
@@ -4901,7 +4901,7 @@ async def admin_delete_bundle_variant(variant_id: str):
 
 
 # ============================================================================
-# Full Squad Configurator — generic multi-set builder (match-day + training + tracksuit)
+# Full Squad Configurator - generic multi-set builder (match-day + training + tracksuit)
 # ============================================================================
 
 # Which garments show up under each section. Admin can override via the products catalogue.
@@ -4909,7 +4909,7 @@ FULL_SQUAD_SECTIONS: List[Dict] = [
     {
         "key": "match_day",
         "title": "Match Day set",
-        "subtitle": "Shirt + shorts + socks — names & numbers on the back, included in the price.",
+        "subtitle": "Shirt + shorts + socks - names & numbers on the back, included in the price.",
         "set_product_id": "full-squad-match-day",     # bundle_product_id used for brand variants
         "included_items": ["Shirt", "Shorts", "Socks"],
         "supports_names_numbers": True,
@@ -4918,7 +4918,7 @@ FULL_SQUAD_SECTIONS: List[Dict] = [
     {
         "key": "training",
         "title": "Training set",
-        "subtitle": "Top + shorts + socks — clean front badge, each kit labelled with the player's name.",
+        "subtitle": "Top + shorts + socks - clean front badge, each kit labelled with the player's name.",
         "set_product_id": "full-squad-training",
         "included_items": ["Top", "Shorts", "Socks"],
         "supports_names_numbers": False,
@@ -4927,7 +4927,7 @@ FULL_SQUAD_SECTIONS: List[Dict] = [
     {
         "key": "tracksuit",
         "title": "Tracksuit set",
-        "subtitle": "Hoodie/jacket + joggers — arrival, warm-up and travel wear, labelled per player.",
+        "subtitle": "Hoodie/jacket + joggers - arrival, warm-up and travel wear, labelled per player.",
         "set_product_id": "full-squad-tracksuit",
         "included_items": ["Hoodie/Jacket", "Joggers"],
         "supports_names_numbers": False,
@@ -4935,25 +4935,25 @@ FULL_SQUAD_SECTIONS: List[Dict] = [
     },
 ]
 
-# Sports Outfit Configurator (Gyms/PTs/Boxing/Thai/Kick) — a simpler, socks-less two-set builder.
+# Sports Outfit Configurator (Gyms/PTs/Boxing/Thai/Kick) - a simpler, socks-less two-set builder.
 SPORTS_OUTFIT_SECTIONS: List[Dict] = [
     {
         "key": "training",
         "title": "Training kit",
-        "subtitle": "Top + shorts — perfect for gyms, PTs and combat sports.",
+        "subtitle": "Top + shorts - perfect for gyms, PTs and combat sports.",
         "set_product_id": "sports-outfit-training",
         "included_items": ["Top", "Shorts"],
     },
     {
         "key": "tracksuit",
         "title": "Tracksuit",
-        "subtitle": "Hoodie + joggers — arrivals, warm-up, seminars.",
+        "subtitle": "Hoodie + joggers - arrivals, warm-up, seminars.",
         "set_product_id": "sports-outfit-tracksuit",
         "included_items": ["Hoodie", "Joggers"],
     },
 ]
 
-# Optional add-on print upcharges (£) — admin can override at settings.full_squad_addons.
+# Optional add-on print upcharges (£) - admin can override at settings.full_squad_addons.
 FULL_SQUAD_ADDON_DEFAULTS = {
     "sleeve_print_price": 2.00,
     "back_upload_print_price": 4.00,
@@ -4961,12 +4961,12 @@ FULL_SQUAD_ADDON_DEFAULTS = {
     "gym_bag_addon_price": 4.00,          # printed drawstring gym bag with badge + player name
 }
 
-# Sports Outfit print add-ons — mutually exclusive on the customer side.
+# Sports Outfit print add-ons - mutually exclusive on the customer side.
 SPORTS_OUTFIT_ADDON_DEFAULTS = {
     "unbranded_price": 0.00,          # no print
     "breast_print_price": 3.00,        # small left-breast logo
     "back_print_price": 4.00,          # centred back print (tops only)
-    "full_front_print_price": 6.00,    # large front print — replaces breast option
+    "full_front_print_price": 6.00,    # large front print - replaces breast option
     # Global rule: shorts / joggers / bottoms NEVER get back-print orders.
 }
 
@@ -5000,7 +5000,7 @@ async def _get_sock_sizes() -> List[str]:
 
 @api_router.get("/full-squad/config")
 async def get_full_squad_config():
-    """Return the config for the Full Squad Configurator — sections + brand variants + prices."""
+    """Return the config for the Full Squad Configurator - sections + brand variants + prices."""
     doc = await db.settings.find_one({"key": "full_squad_addons"}) or {}
     addons = {**FULL_SQUAD_ADDON_DEFAULTS, **(doc.get("values") or {})}
     sock_sizes = await _get_sock_sizes()
@@ -5111,7 +5111,7 @@ async def admin_update_sock_sizes(payload: Dict):
     return {"ok": True, "values": cleaned}
 
 
-# Configurator addons — extracted to /app/backend/routers/configurator_addons.py.
+# Configurator addons - extracted to /app/backend/routers/configurator_addons.py.
 # The following endpoints now live there: PATCH /admin/sports-outfit/addons,
 # PATCH /admin/full-squad/addons, GET /admin/configurator-settings.
 
@@ -5157,7 +5157,7 @@ def _nav_all_targets(config: Dict) -> set:
 
 def _nav_missing_defaults(saved: Dict) -> List[Dict]:
     """Links that exist in the shipped default menu but not in the admin's
-    saved menu — i.e. new sections added by a site update that the admin
+    saved menu - i.e. new sections added by a site update that the admin
     hasn't got yet. Returned with enough context to insert them in the
     right place, without touching anything the admin has customised."""
     have = _nav_all_targets(saved)
@@ -5182,7 +5182,7 @@ async def navigation_missing_defaults():
     """Non-destructive check: what has the site added since this menu was saved?"""
     doc = await db.settings.find_one({"key": "navigation_config"})
     if not doc or not doc.get("config"):
-        # No saved override — the default is live already, nothing is missing.
+        # No saved override - the default is live already, nothing is missing.
         return {"using_default": True, "missing": []}
     return {"using_default": False, "missing": _nav_missing_defaults(doc["config"])}
 
@@ -5205,7 +5205,7 @@ async def navigation_add_missing_defaults():
     for entry in missing:
         target_menu = by_key.get(entry["menu_key"])
         if target_menu is None:
-            # Whole menu section is absent — recreate it from the default.
+            # Whole menu section is absent - recreate it from the default.
             src = next((m for m in DEFAULT_NAV_CONFIG["menu"] if m["key"] == entry["menu_key"]), None)
             if not src:
                 continue
@@ -5250,17 +5250,17 @@ async def reset_navigation():
 
 INTEGRATION_KEYS = {
     "stripe_api_key": {"label": "Stripe Secret Key", "kind": "secret", "env": "STRIPE_API_KEY",
-                       "help": "From https://dashboard.stripe.com/apikeys — Secret key (sk_live_... or sk_test_...)"},
+                       "help": "From https://dashboard.stripe.com/apikeys - Secret key (sk_live_... or sk_test_...)"},
     "resend_api_key": {"label": "Resend API Key", "kind": "secret", "env": "RESEND_API_KEY",
-                       "help": "From https://resend.com/api-keys — used for transactional emails (quotes, reviews)."},
+                       "help": "From https://resend.com/api-keys - used for transactional emails (quotes, reviews)."},
     "removebg_api_key": {"label": "remove.bg API Key", "kind": "secret", "env": "REMOVEBG_API_KEY",
-                         "help": "From https://www.remove.bg/api — background removal in Design Your Own."},
+                         "help": "From https://www.remove.bg/api - background removal in Design Your Own."},
     "cutoutpro_api_key": {"label": "Cutout.pro API Key", "kind": "secret", "env": "CUTOUTPRO_API_KEY",
-                         "help": "From https://www.cutout.pro/api — AI image effects (sketch, poster)."},
+                         "help": "From https://www.cutout.pro/api - AI image effects (sketch, poster)."},
     "judgeme_shop_token": {"label": "Judge.me Shop Token", "kind": "secret", "env": "JUDGEME_SHOP_TOKEN",
-                            "help": "From your Judge.me dashboard — used to import reviews."},
+                            "help": "From your Judge.me dashboard - used to import reviews."},
     "whatsapp_number": {"label": "WhatsApp Number (E.164)", "kind": "text", "env": "WHATSAPP_NUMBER",
-                         "help": "e.g. +447xxxxxxxxx — appears site-wide and on Get-a-Quote."},
+                         "help": "e.g. +447xxxxxxxxx - appears site-wide and on Get-a-Quote."},
     "contact_email": {"label": "Contact / Reply-to Email", "kind": "text", "env": "CONTACT_EMAIL",
                        "help": "Where quote requests and bespoke leavers' enquiries are emailed."},
     "pencarrie_api_token": {"label": "PenCarrie API Token", "kind": "secret", "env": "PENCARRIE_API_TOKEN",
@@ -5332,7 +5332,7 @@ from deps import _get_integration_value  # replaces the local duplicate
 
 @api_router.get("/site/whatsapp")
 async def get_site_whatsapp():
-    """Public — returns the configured WhatsApp number so frontend can use it."""
+    """Public - returns the configured WhatsApp number so frontend can use it."""
     number = await _get_integration_value("whatsapp_number")
     return {"number": number or ""}
 
@@ -5356,7 +5356,7 @@ async def _seed_admin_user():
             )
         await db.users.create_index("email", unique=True)
     except Exception as e:
-        # logger is configured further down — print as fallback
+        # logger is configured further down - print as fallback
         print(f"admin seed failed: {e}")
 
 
@@ -5387,7 +5387,7 @@ def _classify_garment(product: Dict) -> str:
     return "tee"
 
 
-# UK adult sizing in cm (chest, length, sleeve, waist, inseam) — DTF garment averages.
+# UK adult sizing in cm (chest, length, sleeve, waist, inseam) - DTF garment averages.
 _SIZE_TABLE_TEMPLATES = {
     "tee":        [{"chest": 91},  {"chest": 96},  {"chest": 101}, {"chest": 106}, {"chest": 111}, {"chest": 121}, {"chest": 131}, {"chest": 141}],
     "polo":       [{"chest": 91},  {"chest": 96},  {"chest": 101}, {"chest": 106}, {"chest": 111}, {"chest": 121}, {"chest": 131}, {"chest": 141}],
@@ -5448,14 +5448,14 @@ def _default_description(product: Dict) -> str:
         "jacket": f"All-weather {name.lower()} engineered for British conditions. Wind-resistant outer, fleece-backed liner, YKK zip.",
         "shorts": f"Performance {name.lower()} cut for full range of motion. Elasticated waistband with drawcord, anti-bunch panelling.",
         "tracksuit": f"Two-piece {name.lower()} for warm-ups, travel days and post-match recovery.",
-        "bag": f"Lightweight {name.lower()} — printed front, perfect leavers' takeaway or team gym bag.",
-        "bundle": f"Pre-built {name.lower()} — everything your squad needs to take to the pitch in one box.",
-    }.get(garment_type, f"A {name.lower()} printed in the UK using DTF — durable transfers that survive hot washes and tumble-dries.")
+        "bag": f"Lightweight {name.lower()} - printed front, perfect leavers' takeaway or team gym bag.",
+        "bundle": f"Pre-built {name.lower()} - everything your squad needs to take to the pitch in one box.",
+    }.get(garment_type, f"A {name.lower()} printed in the UK using DTF - durable transfers that survive hot washes and tumble-dries.")
 
     parts = [type_blurb]
     if composition:
         parts.append(f"\n\nFabric: {composition}.")
-    parts.append("\n\nPrinted in-house in the UK using our DTF (Direct to Film) process — flexible, full-colour and hard-wearing. Wash inside-out at 30°C, do not iron directly over print.")
+    parts.append("\n\nPrinted in-house in the UK using our DTF (Direct to Film) process - flexible, full-colour and hard-wearing. Wash inside-out at 30°C, do not iron directly over print.")
     if brand and brand != "Your Own Print":
         parts.append(f"\n\nGarment by: {brand}.")
     return "".join(parts)
@@ -5496,7 +5496,7 @@ async def _approve_existing_qa():
     Questions used to go live the moment they were submitted, so everything in
     the collection is currently public. Filtering the product page on
     `approved: True` without this would pull every existing question off the
-    site at once — including answered ones you'd written replies for.
+    site at once - including answered ones you'd written replies for.
 
     Only new submissions go through moderation. Marker-guarded, no-op after
     the first boot.
@@ -5531,7 +5531,7 @@ async def _canonicalise_stored_industry_tags():
     in the database means anything reading the collection directly still sees
     them, so clean the stored rows too.
 
-    Marker-guarded, and only writes rows that actually change — a no-op on
+    Marker-guarded, and only writes rows that actually change - a no-op on
     every boot after the first.
     """
     try:
@@ -5651,7 +5651,7 @@ async def _seed_leavers_templates():
 
 
 # ============================================================================
-# Product overrides — admin can edit ANY hardcoded product's name/price/etc.
+# Product overrides - admin can edit ANY hardcoded product's name/price/etc.
 # Overrides live in Mongo `product_overrides` and are applied on startup +
 # on write.
 # ============================================================================
@@ -5784,20 +5784,20 @@ async def get_product_override(pid: str):
 
 
 # ============================================================================
-# Page copy CMS — extracted to /app/backend/routers/cms_page_copy.py
+# Page copy CMS - extracted to /app/backend/routers/cms_page_copy.py
 # The `PAGE_COPY_SLUGS` allow-list, `PageCopyPatch` model, and CRUD endpoints
 # all live there now.
 # ============================================================================
-from routers.cms_page_copy import PAGE_COPY_SLUGS, PageCopyPatch  # noqa: F401 — re-exported for legacy imports
+from routers.cms_page_copy import PAGE_COPY_SLUGS, PageCopyPatch  # noqa: F401 - re-exported for legacy imports
 
 
 # ============================================================================
-# Configurator addons — extracted to /app/backend/routers/configurator_addons.py
+# Configurator addons - extracted to /app/backend/routers/configurator_addons.py
 # ============================================================================
 
 
 # ============================================================================
-# Imported products (one-off bulk import — PenCarrie / manual)
+# Imported products (one-off bulk import - PenCarrie / manual)
 # ============================================================================
 class ImportedProduct(BaseModel):
     id: Optional[str] = None
@@ -5840,7 +5840,7 @@ _AUTO_CATEGORY_RULES: List[Tuple[str, str]] = [
     ("jean", "bottoms"),
     ("skort", "bottoms"),
     ("pant", "bottoms"),  # catches remaining "...pants" not matched above
-    ("shorts", "shorts"),  # gym shorts, jog shorts, training shorts, campus shorts, etc. — plural specifically, so this never matches "short sleeve"
+    ("shorts", "shorts"),  # gym shorts, jog shorts, training shorts, campus shorts, etc. - plural specifically, so this never matches "short sleeve"
     ("jacket", "jackets"),
     ("softshell", "jackets"),
     ("gilet", "jackets"),
@@ -5900,7 +5900,7 @@ _AUTO_CATEGORY_RULES: List[Tuple[str, str]] = [
     ("jersey", "t-shirts"),
     ("singlet", "t-shirts"),
     ("sports bra", "t-shirts"),
-    # Gift / promotional novelty items — teddy bears, keyrings, comforters etc.
+    # Gift / promotional novelty items - teddy bears, keyrings, comforters etc.
     # (not garments, but a real product line worth its own collection).
     ("mumbles", "promotional"),
     ("teddy", "promotional"),
@@ -5909,7 +5909,7 @@ _AUTO_CATEGORY_RULES: List[Tuple[str, str]] = [
     ("key ring", "promotional"),
     ("keyring", "promotional"),
     ("rattle", "promotional"),
-    # Baby/toddler wear — a distinct customer (parents), not workwear/teamwear.
+    # Baby/toddler wear - a distinct customer (parents), not workwear/teamwear.
     ("larkwood", "kids-baby"),
     ("sleepsuit", "kids-baby"),
     ("dungaree", "kids-baby"),
@@ -5942,7 +5942,7 @@ def _auto_gender_fit(name: str) -> str:
     return "unisex"
 
 
-# Best-guess only — garment type/name doesn't reliably imply a sector, so this
+# Best-guess only - garment type/name doesn't reliably imply a sector, so this
 # is deliberately conservative (max 2 tags) and meant to be spot-checked, not
 # treated as gospel. Only fires into REAL industry slugs (INDUSTRY_SLUGS).
 _AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
@@ -5960,7 +5960,7 @@ _AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
     ("tracksuit", ["sports-fitness"]),
     ("hoodie", ["sports-fitness"]),
     # sports-fitness previously had only 3 keywords, so gym/fitness pages were
-    # very thinly populated — most activewear names never matched anything.
+    # very thinly populated - most activewear names never matched anything.
     ("performance", ["sports-fitness"]),
     ("running", ["sports-fitness"]),
     ("jogger", ["sports-fitness"]),
@@ -6000,14 +6000,14 @@ _AUTO_INDUSTRY_TAG_RULES: List[Tuple[str, List[str]]] = [
 ]
 
 # Generic blanks (plain tees, sweatshirts, hoodies, jackets, trousers) are
-# very commonly bought and branded as everyday workwear across trades — tag
+# very commonly bought and branded as everyday workwear across trades - tag
 # them for that too, on top of anything more specific, so browsing by
 # industry/sector actually surfaces the realistic full range rather than
 # only specialist items like hi-vis or chef wear.
 _BROAD_WORKWEAR_CATEGORIES = {"t-shirts", "sweatshirts", "hoodies", "jackets", "bottoms"}
 
 # Polos and shirts are genuinely worn as branded uniform across trades,
-# security, AND corporate/office settings — unlike the categories above,
+# security, AND corporate/office settings - unlike the categories above,
 # a single fallback tag would under-represent how these actually get used,
 # so give them a richer, plausible spread instead of trades-only.
 _VERSATILE_CATEGORY_FALLBACKS = {
@@ -6057,7 +6057,7 @@ def _apply_imported_product(doc: Dict) -> None:
         "sizes": doc.get("sizes") or [],
         "size_upcharges": doc.get("size_upcharges") or {},
         # These were previously dropped entirely every time this function ran
-        # (including on every server restart and every bulk-update call) —
+        # (including on every server restart and every bulk-update call) -
         # meaning allowed_placements got silently wiped back to unset moments
         # after being correctly computed and saved, and brand was stored
         # under the wrong key name (_brand) that nothing else ever read.
@@ -6087,7 +6087,7 @@ def _apply_imported_product(doc: Dict) -> None:
 async def _load_imported_products():
     """Hydrate PRODUCTS with any admin-imported products at boot."""
     try:
-        # Hidden (active=False) products are loaded too — public listings filter
+        # Hidden (active=False) products are loaded too - public listings filter
         # them out via live_products(), but admin needs them to show/unhide.
         count = hidden = 0
         async for d in db.imported_products.find():
@@ -6109,23 +6109,23 @@ def _slugify_source_sku(name: str, sku: str = "") -> str:
 
 
 class BulkUpdateImportedPayload(BaseModel):
-    # Filter — leave all blank to apply to every imported product.
+    # Filter - leave all blank to apply to every imported product.
     q: Optional[str] = ""
     brand: Optional[str] = ""
     category: Optional[str] = ""
     ids: Optional[List[str]] = None  # if provided, restricts to exactly these product IDs (hand-picked)
-    # Re-pricing — recalculated from each product's saved trade cost (source_price).
+    # Re-pricing - recalculated from each product's saved trade cost (source_price).
     # Only applies to products that actually have a source_price saved (i.e.
-    # were imported with one) — products without one are left untouched.
+    # were imported with one) - products without one are left untouched.
     reprice: Optional[bool] = False
     markup_pct: Optional[float] = 0.0
     apply_vat: Optional[bool] = True
     vat_rate_pct: Optional[float] = 20.0
     charm_price_99: Optional[bool] = True
-    # Bulk quantity-discount pricing toggle — None = don't touch, True/False = set for all matched.
+    # Bulk quantity-discount pricing toggle - None = don't touch, True/False = set for all matched.
     set_bulk_pricing_enabled: Optional[bool] = None
     # Re-runs the current industry-tag auto-detection against each matched
-    # product's existing name/category — useful after the tagging rules
+    # product's existing name/category - useful after the tagging rules
     # themselves change, so already-imported products can catch up without
     # needing to be re-imported from scratch.
     retag_industries: Optional[bool] = False
@@ -6136,7 +6136,7 @@ class BulkUpdateImportedPayload(BaseModel):
     randomize_main_image: Optional[bool] = False
     # Re-computes allowed_placements per product from category + name (e.g.
     # sleeveless vests lose sleeve options, trousers get pocket placements
-    # instead of breast/sleeve) — the sensible default set, overwritten.
+    # instead of breast/sleeve) - the sensible default set, overwritten.
     apply_placement_defaults: Optional[bool] = False
     # Repairs kids age-range sizes (e.g. "3-4", "12-13") that Excel silently
     # corrupted into real dates or bare numbers in PenCarrie's source data
@@ -6144,17 +6144,17 @@ class BulkUpdateImportedPayload(BaseModel):
     # became a stored date, "12-13" became the plain number 1213).
     fix_corrupted_sizes: Optional[bool] = False
     # Rebuilds the main image + photo gallery from each product's own
-    # colors[].image list — for products where the top-level image/gallery
+    # colors[].image list - for products where the top-level image/gallery
     # fields ended up thinned out or corrupted somewhere along the way, but
     # the per-colour images (used by the colour swatch switcher) are still intact.
     rebuild_gallery_from_colours: Optional[bool] = False
-    # Re-runs garment-category auto-detection against each product's name —
+    # Re-runs garment-category auto-detection against each product's name -
     # use this after a category-detection rule changes (e.g. tunics used to
     # wrongly map to "t-shirts"), so already-imported products catch up.
     # Runs FIRST in the per-product pass, before retag/placements, so those
     # steps see the corrected category rather than the stale one.
     recategorize_products: Optional[bool] = False
-    # Which page of matching products to process — required for repeated
+    # Which page of matching products to process - required for repeated
     # calls to actually advance through different products instead of
     # reprocessing the same first batch every time.
     offset: Optional[int] = 0
@@ -6166,9 +6166,9 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     query: Dict = {}
     if payload.ids is not None:
         # An empty "selected products" list must never fall through to an
-        # unfiltered query — that would apply the update to EVERY product.
+        # unfiltered query - that would apply the update to EVERY product.
         if not payload.ids:
-            raise HTTPException(400, "No products selected — tick at least one product first.")
+            raise HTTPException(400, "No products selected - tick at least one product first.")
         query["id"] = {"$in": payload.ids}
     if payload.brand:
         query["brand"] = {"$regex": f"^{re.escape(payload.brand)}$", "$options": "i"}
@@ -6177,11 +6177,11 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     if payload.q:
         query["name"] = {"$regex": re.escape(payload.q), "$options": "i"}
 
-    # Hard cap per request — this endpoint previously had none at all, meaning
+    # Hard cap per request - this endpoint previously had none at all, meaning
     # "apply to all imported products" on a catalogue of thousands could hold
     # a single request open for minutes, which is exactly the kind of thing
     # that looks like the whole site going down. Process in batches instead.
-    # Lowered alongside making writes concurrent below — a smaller, fast batch
+    # Lowered alongside making writes concurrent below - a smaller, fast batch
     # beats a larger, slow one for keeping the site responsive meanwhile.
     HARD_CAP = 200
     total_matching = await db.imported_products.count_documents(query)
@@ -6256,7 +6256,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
             try:
                 current_main = doc.get("image") or ""
                 gallery = [u for u in (doc.get("additional_images") or []) if u]
-                # Only real, distinct image URLs are candidates — never promote a
+                # Only real, distinct image URLs are candidates - never promote a
                 # blank/relative/junk gallery entry to the main photo, and don't let
                 # duplicates skew the pick or get dropped from the gallery.
                 pool = []
@@ -6326,7 +6326,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
             pid = doc.get("id")
             if not payload.dry_run and pid:
                 merged = {**doc, **update}
-                _apply_imported_product(merged)  # always sync memory to the freshly-computed state, even if no DB write was needed this time — otherwise a stale in-memory copy from before a fix existed could persist indefinitely
+                _apply_imported_product(merged)  # always sync memory to the freshly-computed state, even if no DB write was needed this time - otherwise a stale in-memory copy from before a fix existed could persist indefinitely
                 if update:
                     pending.append((pid, update))
         except Exception as e:
@@ -6335,7 +6335,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                 error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "error": str(e)[:200]})
 
     # ---- Pass 2: write everything to Mongo concurrently (capped), instead of
-    # one-at-a-time — this is what let even a 200-500 item batch take long
+    # one-at-a-time - this is what let even a 200-500 item batch take long
     # enough to look like the site had gone down. ----
     if pending:
         semaphore = asyncio.Semaphore(20)
@@ -6402,7 +6402,7 @@ class BulkImportPayload(BaseModel):
     dry_run: Optional[bool] = False
     # Pricing: source_price from a supplier CSV (e.g. Pencarrie) is treated as
     # ex-VAT trade cost, standard practice for UK wholesale suppliers. We apply
-    # your markup, then add VAT, then round up to a charm price — only when
+    # your markup, then add VAT, then round up to a charm price - only when
     # `price` isn't explicitly given in the row (an explicit price is always
     # used as-is, untouched).
     apply_vat: Optional[bool] = True
@@ -6413,7 +6413,7 @@ class BulkImportPayload(BaseModel):
 def _price_with_vat_and_charm(source_price: float, markup_pct: float, apply_vat: bool, vat_rate_pct: float, charm: bool) -> float:
     """source_price is treated as ex-VAT trade cost (standard for UK wholesale
     suppliers). Applies markup, then VAT, then (optionally) rounds UP to the
-    nearest £X.99 — never down, so the charm-priced figure never undercuts
+    nearest £X.99 - never down, so the charm-priced figure never undercuts
     the margin you actually asked for."""
     price = source_price * (1 + markup_pct / 100.0)
     if apply_vat:
@@ -6431,22 +6431,22 @@ def _price_with_vat_and_charm(source_price: float, markup_pct: float, apply_vat:
 @api_router.get("/admin/pencarrie/fetch-catalogue", dependencies=[Depends(require_admin)])
 async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: str = "", q: str = ""):
     """Pulls PenCarrie's product export directly via their public API (no manual
-    CSV download needed) — see https://www.pencarrie.com/data/enhanced-data.
+    CSV download needed) - see https://www.pencarrie.com/data/enhanced-data.
     Requires a PenCarrie API token set in /admin/integrations (My Account >
     Account Settings > API Access Tokens on PenCarrie's site).
 
     `brand` filters to an exact brand match (see `available_brands` in the
     response for valid values). `q` is a free-text search across every column
-    (name, style code, description, etc.) — the natural way to filter by
+    (name, style code, description, etc.) - the natural way to filter by
     style/garment type since PenCarrie doesn't expose a single "style" field.
 
     Returns raw CSV rows (as-is, whatever column names PenCarrie uses) for the
-    frontend's existing flexible column-matching to normalise — same path as
+    frontend's existing flexible column-matching to normalise - same path as
     a manually pasted CSV."""
     token = await _get_integration_value("pencarrie_api_token")
     if not token:
-        raise HTTPException(400, "PenCarrie API token not set — add it in /admin/integrations first.")
-    # Defensive: strip an accidentally-pasted "Bearer " prefix — some dashboards
+        raise HTTPException(400, "PenCarrie API token not set - add it in /admin/integrations first.")
+    # Defensive: strip an accidentally-pasted "Bearer " prefix - some dashboards
     # display the token that way, and people copy it verbatim including the word.
     # Defensive: strip all whitespace/newlines (a trailing newline from copy-paste
     # is a very common invisible cause of auth failures) and any "Bearer " prefix
@@ -6479,11 +6479,11 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
         detail = (e.response.text or "").strip()[:300]
         msg = f"PenCarrie API returned {e.response.status_code}"
         if detail.lower().startswith(("<!doctype html", "<html")):
-            msg += " — this looks like a generic web-server/firewall block page, not an API error from PenCarrie's app (their real API errors would come back as JSON). Likely their anti-bot protection blocking the request rather than the token itself being wrong."
+            msg += " - this looks like a generic web-server/firewall block page, not an API error from PenCarrie's app (their real API errors would come back as JSON). Likely their anti-bot protection blocking the request rather than the token itself being wrong."
         elif detail:
-            msg += f" — their response: {detail}"
+            msg += f" - their response: {detail}"
         else:
-            msg += " (no further detail from PenCarrie) — double-check the API token in /admin/integrations, and that API access is actually enabled on your PenCarrie account, not just that a token exists."
+            msg += " (no further detail from PenCarrie) - double-check the API token in /admin/integrations, and that API access is actually enabled on your PenCarrie account, not just that a token exists."
         raise HTTPException(502, msg)
     except Exception as e:
         raise HTTPException(502, f"Couldn't reach PenCarrie's API: {e}")
@@ -6492,15 +6492,15 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
         zf = zipfile.ZipFile(io.BytesIO(resp.content))
         csv_filename = next((n for n in zf.namelist() if n.lower().endswith(".csv")), None)
         if not csv_filename:
-            raise HTTPException(502, "PenCarrie's response didn't contain a CSV file — their export format may have changed.")
+            raise HTTPException(502, "PenCarrie's response didn't contain a CSV file - their export format may have changed.")
         raw_bytes = zf.read(csv_filename)
     except zipfile.BadZipFile:
-        raise HTTPException(502, "PenCarrie's response wasn't a valid ZIP file — their API format may have changed.")
+        raise HTTPException(502, "PenCarrie's response wasn't a valid ZIP file - their API format may have changed.")
 
     text = raw_bytes.decode("utf-8-sig", errors="replace")
     all_rows = list(csv_module.DictReader(io.StringIO(text)))
 
-    # Auto-detect which column holds the brand — varies until we've seen a real export.
+    # Auto-detect which column holds the brand - varies until we've seen a real export.
     brand_col = None
     if all_rows:
         headers_lower = {h.lower(): h for h in all_rows[0].keys()}
@@ -6538,7 +6538,7 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
 @api_router.post("/admin/products/bulk-import", dependencies=[Depends(require_admin)])
 async def bulk_import_products(payload: BulkImportPayload):
     if len(payload.items) > 1500:
-        raise HTTPException(413, "Too many items in one request (max 1500) — please import in smaller batches (use the brand/search filters, or split a big CSV up).")
+        raise HTTPException(413, "Too many items in one request (max 1500) - please import in smaller batches (use the brand/search filters, or split a big CSV up).")
     now = datetime.now(timezone.utc).isoformat()
     created: List[Dict] = []
     skipped: List[Dict] = []
@@ -6616,7 +6616,7 @@ async def bulk_import_products(payload: BulkImportPayload):
             skipped.append({"reason": str(e)[:200], "row": raw})
 
     # ---- Pass 2: mirror every unique image URL concurrently (capped at 15 at
-    # once — fast, but polite to both R2 and whatever site we're fetching from). ----
+    # once - fast, but polite to both R2 and whatever site we're fetching from). ----
     url_map: Dict[str, str] = {}
     if urls_to_mirror:
         semaphore = asyncio.Semaphore(15)
@@ -6703,12 +6703,12 @@ async def _seed_default_product_meta():
     """Non-destructive: only fills empty/None fields. Admin overrides remain untouched.
     Includes a one-time blanket 'bulk pricing on' pass guarded by settings.product_meta_seed_v1.
 
-    Runs as a background task, not awaited directly in the startup event —
+    Runs as a background task, not awaited directly in the startup event -
     this loops over every product in the catalogue (thousands, once PenCarrie
     imports are in), and awaiting it inline here previously meant the whole
     app sat unable to accept ANY request for 9+ minutes on every single
     restart while it worked through them one at a time. The site itself
-    doesn't depend on this having finished — it only fills in defaults —
+    doesn't depend on this having finished - it only fills in defaults -
     so there's no reason it needs to block startup.
     """
     asyncio.create_task(_seed_default_product_meta_impl())
@@ -6720,7 +6720,7 @@ async def _seed_default_product_meta_impl():
         first_run = marker is None
 
         # One bulk read instead of one find_one() per product (was the actual
-        # cause of the multi-minute startup delay — thousands of individual
+        # cause of the multi-minute startup delay - thousands of individual
         # round-trips to Mongo Atlas, one per product, every restart).
         existing_by_id: Dict[str, Dict] = {}
         async for doc in db.product_meta.find({}):
@@ -6781,7 +6781,7 @@ async def _seed_customer_indexes():
         print(f"customer index setup failed: {e}")
 
 
-# Kit bundle categorisation — used by the PDP to swap UI (e.g. hide back-print options on
+# Kit bundle categorisation - used by the PDP to swap UI (e.g. hide back-print options on
 # front-only bundles) and by admin listings. Keeps things declarative.
 FRONT_ONLY_BUNDLE_IDS = {
     "football-kit-front-only", "football-premium-front-only",
@@ -6791,7 +6791,7 @@ FRONT_ONLY_BUNDLE_IDS = {
 
 @app.on_event("startup")
 async def _seed_front_only_bundle_placements():
-    """One-time seed: locks all *-front-only kit bundles to front placements only —
+    """One-time seed: locks all *-front-only kit bundles to front placements only -
     no back-print, no back-name/number. Admin overrides win afterwards."""
     try:
         marker = await db.settings.find_one({"key": "front_only_placements_seed_v1"})
@@ -6803,7 +6803,7 @@ async def _seed_front_only_bundle_placements():
                 continue
             existing = await db.product_meta.find_one({"product_id": pid}) or {}
             if existing.get("allowed_placements"):
-                # Admin already set explicit placements — respect that.
+                # Admin already set explicit placements - respect that.
                 continue
             await db.product_meta.update_one(
                 {"product_id": pid},
@@ -6825,21 +6825,21 @@ async def _seed_front_only_bundle_placements():
 
 
 # ============================================================================
-# Router modules (split out from this monolith — see /app/backend/routers/)
+# Router modules (split out from this monolith - see /app/backend/routers/)
 # ============================================================================
-import routers.designer_ai  # noqa: F401 — registers /designer/remove-bg, /designer/ai-effect, /admin/test-email
-import routers.cms_page_copy  # noqa: F401 — registers /page-copy/*, /admin/page-copy/*
-import routers.configurator_addons  # noqa: F401 — registers /admin/full-squad/addons, /admin/sports-outfit/addons, /admin/configurator-settings
-import routers.customer_auth  # noqa: F401 — registers /customer/register, /customer/login, /customer/cart, /customer/orders, addresses, designs
-import routers.admin_reviews  # noqa: F401 — registers /admin/reviews list/edit/delete
-import routers.ai_classify  # noqa: F401 — registers /admin/ai-classify/* (Smart Re-classify)
-import routers.find_my_kit  # noqa: F401 — registers /find-my-kit (AI kit concierge)
-import routers.image_health  # noqa: F401 — registers /admin/image-health/* (broken image scan/hide)
-import routers.design_shop  # noqa: F401 — registers /design-shop/* (ready-made designs)
-import routers.design_shop_admin  # noqa: F401 — registers /admin/design-shop/* (design upload tool)
-import routers.ralawise_import  # noqa: F401 — registers /admin/ralawise/* (Ralawise xlsm importer)
+import routers.designer_ai  # noqa: F401 - registers /designer/remove-bg, /designer/ai-effect, /admin/test-email
+import routers.cms_page_copy  # noqa: F401 - registers /page-copy/*, /admin/page-copy/*
+import routers.configurator_addons  # noqa: F401 - registers /admin/full-squad/addons, /admin/sports-outfit/addons, /admin/configurator-settings
+import routers.customer_auth  # noqa: F401 - registers /customer/register, /customer/login, /customer/cart, /customer/orders, addresses, designs
+import routers.admin_reviews  # noqa: F401 - registers /admin/reviews list/edit/delete
+import routers.ai_classify  # noqa: F401 - registers /admin/ai-classify/* (Smart Re-classify)
+import routers.find_my_kit  # noqa: F401 - registers /find-my-kit (AI kit concierge)
+import routers.image_health  # noqa: F401 - registers /admin/image-health/* (broken image scan/hide)
+import routers.design_shop  # noqa: F401 - registers /design-shop/* (ready-made designs)
+import routers.design_shop_admin  # noqa: F401 - registers /admin/design-shop/* (design upload tool)
+import routers.ralawise_import  # noqa: F401 - registers /admin/ralawise/* (Ralawise xlsm importer)
 
-# Legacy helpers still used by leavers/bespoke and /contact — thin wrappers that
+# Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
 # into their own router in a follow-up.
 from services.email import send_email as _send_email

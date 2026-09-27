@@ -20,7 +20,7 @@ export default function KitYourWorkforce() {
 
   const copy = usePageCopy("kit-your-workforce", {
     title: "",
-    subtitle: "One breast-logo print across every garment, optional back print on whichever items you choose, and bulk pricing that drops the more you buy — mix and match T-shirts, sweats, jackets and hi-vis.",
+    subtitle: "One breast-logo print across every garment, optional back print on whichever items you choose, and bulk pricing that drops the more you buy - mix and match T-shirts, sweats, jackets and hi-vis.",
   });
 
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function KitYourWorkforce() {
         contact_phone: contact.phone,
         lines: rows.map(r => ({ product_id: r.product_id, size: r.size, qty: Number(r.qty), back_print: !!r.back_print })),
       });
-      toast.success("Quote request sent — we'll be in touch within 24 hours.");
+      toast.success("Quote request sent - we'll be in touch within 24 hours.");
       setRows([]);
     } catch (e) {
       const d = e?.response?.data?.detail;
@@ -291,8 +291,8 @@ export default function KitYourWorkforce() {
               <ArtworkUploader
                 label="Back print"
                 helper={anyBackPrint
-                  ? `Required — ${rows.filter(r => r.back_print).length} item(s) have back print selected.`
-                  : "Optional — only used on items where 'Back print' is ticked."}
+                  ? `Required - ${rows.filter(r => r.back_print).length} item(s) have back print selected.`
+                  : "Optional - only used on items where 'Back print' is ticked."}
                 required={anyBackPrint}
                 dataUrl={backPrint}
                 onChange={setBackPrint}
@@ -360,7 +360,7 @@ export default function KitYourWorkforce() {
             )}
           </section>
 
-          {/* Contact form — required for quote */}
+          {/* Contact form - required for quote */}
           <section data-testid="workforce-contact-section">
             <h2 className="font-black text-2xl mb-3">4. Your details</h2>
             <div className="grid sm:grid-cols-2 gap-2">
@@ -387,7 +387,7 @@ export default function KitYourWorkforce() {
             )}
             {overThreshold && (
               <div className="mt-3 bg-amber-900/40 border border-amber-700 rounded-xl p-3 text-xs" data-testid="workforce-quote-banner">
-                <strong>Over {tiers.quote_threshold} garments</strong> — please request a quote and we&apos;ll come back within 24 hours with our best price.
+                <strong>Over {tiers.quote_threshold} garments</strong> - please request a quote and we&apos;ll come back within 24 hours with our best price.
               </div>
             )}
 
@@ -404,7 +404,7 @@ export default function KitYourWorkforce() {
                 <div className="text-[11px] text-amber-300 bg-amber-900/40 border border-amber-700 rounded-lg p-2" data-testid="workforce-artwork-warning">
                   {!breastLogo
                     ? "Upload your breast-logo artwork above to enable checkout."
-                    : "Upload your back-print artwork — some garments are set to receive a back print."}
+                    : "Upload your back-print artwork - some garments are set to receive a back print."}
                 </div>
               )}
               <button

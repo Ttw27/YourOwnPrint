@@ -69,7 +69,7 @@ export default function AdminQA() {
 
         <Section title={`Awaiting answer (${unanswered.length})`} testid="qa-section-unanswered" highlight>
           {loading && <div className="text-zinc-500">Loading…</div>}
-          {!loading && unanswered.length === 0 && <div className="text-zinc-500">Nothing pending — nice work.</div>}
+          {!loading && unanswered.length === 0 && <div className="text-zinc-500">Nothing pending - nice work.</div>}
           {unanswered.map((q) => (
             <QACard
               key={q.id}

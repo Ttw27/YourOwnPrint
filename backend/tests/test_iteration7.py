@@ -1,4 +1,4 @@
-"""Iteration 7 backend tests — team-kit addons, front-only variants, fight-night regression."""
+"""Iteration 7 backend tests - team-kit addons, front-only variants, fight-night regression."""
 import os
 import pytest
 import requests

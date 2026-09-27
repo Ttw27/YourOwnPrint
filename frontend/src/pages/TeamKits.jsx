@@ -9,7 +9,7 @@ import SiteImage from "../components/bold/SiteImage";
 import { ArrowRight, Trophy, Users, MessageCircle, Sparkles, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
 
-const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
 const FEATURES = [
   { icon: BadgeCheck, label: "Club badge included" },
@@ -35,7 +35,7 @@ export default function TeamKits() {
   };
   useEffect(load, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Declared before the JSX below uses it — a const referenced above its own
+  // Declared before the JSX below uses it - a const referenced above its own
   // declaration line still compiles, then throws at runtime and blanks the page.
   const copy = usePageCopy("team-kits", {
     // Swap in /admin/page-copy → Team Kits → Pictures & video.
@@ -58,7 +58,7 @@ export default function TeamKits() {
               Team Kits.<br /><span className="relative inline-block"><span className="relative z-10">Sorted.</span><span className="absolute left-0 right-0 bottom-1 h-3 bg-[#7bc67e] -z-0 rounded-full" /></span>
             </h1>
             <p className="text-[#4b5563] mt-4 text-lg max-w-xl">
-              Pick a kit bundle, upload your badge, drop in your squad — done. <strong>Badge & names included in the price.</strong>
+              Pick a kit bundle, upload your badge, drop in your squad - done. <strong>Badge & names included in the price.</strong>
               Bigger order or multiple teams? Tell us and we'll send a free proof and tailored quote.
             </p>
             <ul className="mt-5 grid grid-cols-2 gap-2 max-w-md">
@@ -78,7 +78,7 @@ export default function TeamKits() {
               <Link to="/team-kit-builder" data-testid="team-kits-builder-cta" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full transition-colors">
                 Price up a custom kit <ArrowRight size={16} />
               </Link>
-              <WhatsAppInline preset="Hi! I need team kits for my club — can you advise?" label="WhatsApp the team" />
+              <WhatsAppInline preset="Hi! I need team kits for my club - can you advise?" label="WhatsApp the team" />
             </div>
           </div>
           <div className="relative">
@@ -161,7 +161,7 @@ export default function TeamKits() {
             </div>
             <h2 className="font-nunito font-black text-3xl lg:text-4xl mt-3">Whole club? Academy? Multi-team setup?</h2>
             <p className="text-neutral-300 mt-3 text-lg">15+ kits or more than one squad and we'll take you out of the auto-checkout flow.
-              Send us your rosters, badges and sponsors — we'll build a <strong className="text-[#7bc67e]">free artwork proof</strong> and email a tailored quote within 1 working day.</p>
+              Send us your rosters, badges and sponsors - we'll build a <strong className="text-[#7bc67e]">free artwork proof</strong> and email a tailored quote within 1 working day.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link to="/contact" data-testid="big-order-contact" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-6 py-3 rounded-full transition-colors">
                 Send a quote request <ArrowRight size={16} />
@@ -173,7 +173,7 @@ export default function TeamKits() {
             <div className="font-nunito font-extrabold text-lg">How it works</div>
             <ol className="mt-3 space-y-3 text-sm text-neutral-300 list-decimal pl-5">
               <li>Pick a kit bundle from the gallery above</li>
-              <li>Upload your club badge — optionally sponsor logos</li>
+              <li>Upload your club badge - optionally sponsor logos</li>
               <li>Drop in your roster (Name · Number · Size · Qty)</li>
               <li>Under 15 kits, single team → Stripe checkout straight away</li>
               <li>15+ or multi-team → free proof & tailored quote within 1 working day</li>

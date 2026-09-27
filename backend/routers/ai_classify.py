@@ -1,12 +1,12 @@
 """
-Smart Re-classify — AI-driven product categorisation.
+Smart Re-classify - AI-driven product categorisation.
 
 Keyword rules can't reliably sort thousands of imported products (soon from
 multiple suppliers) into the right collection and industry pages: a "Cargo
 Bucket Hat" trips the "cargo" rule, a kids' tartan lounge set looks like
 "bottoms", and healthcare is starved because only a handful of narrow words ever
 match. This module reads each product NAME and asks Claude to make a per-item
-decision across every collection and industry the site actually has — the "go
+decision across every collection and industry the site actually has - the "go
 through each item and decide properly" approach, automated so it's feasible
 across the whole catalogue.
 
@@ -59,19 +59,19 @@ CATEGORY_HELP = (
     "accessories (socks/gloves/knee pads/lanyards/scarves/beanies-if-not-hats/anything else that is not a garment or a bag)"
 )
 INDUSTRY_HELP = (
-    "healthcare (clinics, dental, care, vets — tunics, scrubs, soft polos), "
-    "construction-trades (builders, sparks, plumbers — hi-vis, workwear tees/hoodies/trousers, NOT kids or leisure wear), "
-    "retail (shop floor polos/tees), security (door/patrol — often bold black), "
-    "corporate (office — shirts, blouses, smart polos, softshells), "
+    "healthcare (clinics, dental, care, vets - tunics, scrubs, soft polos), "
+    "construction-trades (builders, sparks, plumbers - hi-vis, workwear tees/hoodies/trousers, NOT kids or leisure wear), "
+    "retail (shop floor polos/tees), security (door/patrol - often bold black), "
+    "corporate (office - shirts, blouses, smart polos, softshells), "
     "sports-fitness (gym/running/team/dance/martial arts activewear), "
     "industrial (factory/warehouse/logistics durable workwear), "
-    "beauty-wellness (salons, spa, barber, hair — tunics, aprons), "
-    "cleaning (cleaners/janitorial — tabards, polos, hi-vis), "
-    "hospitality-catering (chefs, waiting, bar, hotel — aprons, chef wear, tunics), "
-    "education-schools (school/college/nursery staff and teams — polos, sweatshirts, hoodies, fleeces)"
+    "beauty-wellness (salons, spa, barber, hair - tunics, aprons), "
+    "cleaning (cleaners/janitorial - tabards, polos, hi-vis), "
+    "hospitality-catering (chefs, waiting, bar, hotel - aprons, chef wear, tunics), "
+    "education-schools (school/college/nursery staff and teams - polos, sweatshirts, hoodies, fleeces)"
 )
 
-BATCH_SIZE = 25   # products per AI call — keeps each prompt small and reliable
+BATCH_SIZE = 25   # products per AI call - keeps each prompt small and reliable
 MODEL = "claude-haiku-4-5-20251001"
 
 
@@ -104,25 +104,25 @@ def _system_prompt() -> str:
     return (
         "You are a product classifier for a UK custom-print & workwear shop. "
         "For each product you are given (an id and a name), decide:\n"
-        f"1. category — EXACTLY ONE of: {', '.join(CATEGORIES)}.\n   Meanings: {CATEGORY_HELP}.\n"
-        f"2. industries — choose EVERY industry this product genuinely suits, from: {', '.join(INDUSTRIES)}.\n"
+        f"1. category - EXACTLY ONE of: {', '.join(CATEGORIES)}.\n   Meanings: {CATEGORY_HELP}.\n"
+        f"2. industries - choose EVERY industry this product genuinely suits, from: {', '.join(INDUSTRIES)}.\n"
         f"   Meanings: {INDUSTRY_HELP}.\n"
-        f"3. fit — EXACTLY ONE of: {', '.join(FITS)}.\n"
+        f"3. fit - EXACTLY ONE of: {', '.join(FITS)}.\n"
         "Rules: Judge by the product NAME. Children's/baby/toddler items go to category kids-baby, "
         "fit kids, and NO trade industries (never construction-trades, industrial, healthcare, security, "
         "cleaning, corporate, retail, hospitality-catering, beauty-wellness). The ONLY industry a kids item "
-        "may carry is education-schools, and only when it's the kind of thing a school actually buys — "
+        "may carry is education-schools, and only when it's the kind of thing a school actually buys - "
         "e.g. a kids' PE/sports top, school polo, school sweatshirt/hoodie, or team kit. Everyday kids' "
         "leisure wear, pyjamas, lounge sets, nightwear, dressing gowns and rain suits get industries [] "
         "(not even education). Boots/shoes go to footwear. "
         "Bags of any kind (backpacks, duffles, holdalls, drawstring, tote, shoe/gym/kit bags) go to bags. "
         "Socks, gloves, knee pads, lanyards, scarves go to accessories. Only tag an industry when the garment is "
-        "genuinely a natural, common choice for that trade's uniform — not merely possible. "
+        "genuinely a natural, common choice for that trade's uniform - not merely possible. "
         "There is NO limit: tag EVERY industry the product genuinely suits. A plain, versatile garment "
-        "(a classic polo, basic tee, crew sweatshirt, softshell) honestly suits many trades — corporate, retail, "
-        "hospitality-catering, industrial, cleaning, security, education-schools, healthcare — so list ALL of them. "
+        "(a classic polo, basic tee, crew sweatshirt, softshell) honestly suits many trades - corporate, retail, "
+        "hospitality-catering, industrial, cleaning, security, education-schools, healthcare - so list ALL of them. "
         "A niche or specialised item should get few or none: [] is a valid, common answer. Judge each product on its "
-        "own merits — never force an industry that isn't a real fit, and never invent fit to reach a number. "
+        "own merits - never force an industry that isn't a real fit, and never invent fit to reach a number. "
         "For kids items: never a trade industry; education-schools only if it's school-bought kit (PE/sports top, school polo/sweatshirt/hoodie, team kit). Pyjamas/lounge/nightwear/leisure get none. "
         "Respond with ONLY a JSON array, one object per product, no prose:\n"
         '[{"id":"<id>","category":"<one>","industries":["<..>"],"fit":"<one>"}]'
@@ -146,7 +146,7 @@ async def _classify_batch(api_key: str, items: List[Dict]) -> List[Dict]:
         "content-type": "application/json",
     }
     # Transient API conditions (overload 529, rate limit 429, 5xx, timeouts) are
-    # common across a long run — retry a few times with backoff before failing.
+    # common across a long run - retry a few times with backoff before failing.
     resp = None
     last_exc = None
     for attempt in range(1, 4):
@@ -162,7 +162,7 @@ async def _classify_batch(api_key: str, items: List[Dict]) -> List[Dict]:
                 last_exc = HTTPException(502, f"AI transient {resp.status_code}")
                 await asyncio.sleep(attempt * 2)
                 continue
-            # Non-transient (e.g. 400/401) — fail immediately with detail
+            # Non-transient (e.g. 400/401) - fail immediately with detail
             raise HTTPException(502, f"AI request failed ({resp.status_code}): {resp.text[:300]}")
         except (httpx.TimeoutException, httpx.TransportError) as e:
             last_exc = e

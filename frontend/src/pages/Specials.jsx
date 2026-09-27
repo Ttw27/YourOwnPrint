@@ -9,7 +9,7 @@ import { Sparkles, CheckCircle2, ShieldCheck, ArrowRight, Briefcase, Zap, Tag, C
 import usePageTitle from "../hooks/usePageTitle";
 import PriceTag from "../components/bold/PriceTag";
 
-// Divides evenly by 2 and 3 — the grid is 2-up on mobile, 3-up from lg — so no
+// Divides evenly by 2 and 3 - the grid is 2-up on mobile, 3-up from lg - so no
 // page ends with an orphan card on a row of its own.
 const PAGE_SIZE = 24;
 
@@ -26,7 +26,7 @@ export default function Specials() {
 
   const copy = usePageCopy("specials", {
     title: "",
-    subtitle: "A curated lineup for new businesses. One sharp logo on the breast pocket, printed in the UK, no minimum order and no big up-front costs. Order one, order ten — whatever you need to get going.",
+    subtitle: "A curated lineup for new businesses. One sharp logo on the breast pocket, printed in the UK, no minimum order and no big up-front costs. Order one, order ten - whatever you need to get going.",
   });
 
   const filtered = useMemo(() => {
@@ -70,7 +70,7 @@ export default function Specials() {
             </h1>
             <p className="text-zinc-300 mt-4 text-lg max-w-xl" data-testid="specials-hero-subtitle">{copy.subtitle}</p>
             <div className="mt-6 flex flex-wrap gap-3 text-xs">
-              <Badge>No MOQ — order 1+</Badge>
+              <Badge>No MOQ - order 1+</Badge>
               <Badge>Breast logo included</Badge>
               <Badge>UK printed · 7–10 days</Badge>
               <Badge>Stripe checkout</Badge>
@@ -93,9 +93,9 @@ export default function Specials() {
 
       {/* Value props */}
       <section className="max-w-6xl mx-auto px-6 py-14 grid sm:grid-cols-3 gap-4" data-testid="specials-value-props">
-        <Prop icon={<Tag size={18} />} title="No MOQ" body="Order a single piece, or a hundred — same per-unit price. Test the look before committing." />
+        <Prop icon={<Tag size={18} />} title="No MOQ" body="Order a single piece, or a hundred - same per-unit price. Test the look before committing." />
         <Prop icon={<Briefcase size={18} />} title="Trade-ready in days" body="A clean breast-logo print is all most new clients need to take you seriously. We turn it around in 7–10 working days." />
-        <Prop icon={<Zap size={18} />} title="No setup fees" body="No screen charges, no setup costs. Just the price you see — and Stripe to check out." />
+        <Prop icon={<Zap size={18} />} title="No setup fees" body="No screen charges, no setup costs. Just the price you see - and Stripe to check out." />
       </section>
 
       {/* Product grid */}
@@ -127,7 +127,7 @@ export default function Specials() {
           <div className="text-sm text-[#4b5563]">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-5 text-sm" data-testid="specials-empty">
-            Nothing in the lineup matches that fit just yet &mdash; try another one, or{" "}
+            Nothing in the lineup matches that fit just yet - try another one, or{" "}
             <Link to="/shop" className="font-extrabold underline">browse the full range</Link>.
           </div>
         ) : (
@@ -208,7 +208,7 @@ export default function Specials() {
         <div className="max-w-5xl mx-auto px-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
           <Trust icon={<ShieldCheck size={16} />} text="Free artwork proof before we print" />
           <Trust icon={<CheckCircle2 size={16} />} text="No setup fees or hidden costs" />
-          <Trust icon={<Briefcase size={16} />} text="Reorder anytime — same price, same finish" />
+          <Trust icon={<Briefcase size={16} />} text="Reorder anytime - same price, same finish" />
           <Trust icon={<Sparkles size={16} />} text="Upgrade to bulk pricing as you grow" />
         </div>
       </section>

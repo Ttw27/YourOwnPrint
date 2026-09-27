@@ -70,7 +70,7 @@ export default function AdminLeaversTemplates() {
 
         <section className="mt-6 space-y-3" data-testid="alt-list">
           {loading ? <div className="text-sm text-[#4b5563]">Loading…</div> :
-            items.length === 0 ? <div className="text-sm text-[#4b5563]">No templates yet — add one above.</div> :
+            items.length === 0 ? <div className="text-sm text-[#4b5563]">No templates yet - add one above.</div> :
             items.map((t) => (
               <div key={t.id} className="bg-white border-2 border-[#dcfce7] rounded-2xl p-4 flex flex-col sm:flex-row gap-4" data-testid={`alt-row-${t.id}`}>
                 <img src={t.image} alt="" className="w-32 h-32 object-cover rounded-xl bg-[#f0fdf4] flex-shrink-0" />

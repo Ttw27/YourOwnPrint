@@ -8,14 +8,14 @@ import SiteImage from "./SiteImage";
 /**
  * Showcase strip for the 5 hero tools.
  * `variant`:
- *   - "full"    (default) — large 5-card mosaic for the homepage / dedicated section
- *   - "compact" — single-row scroll for collection / industry pages
+ *   - "full"    (default) - large 5-card mosaic for the homepage / dedicated section
+ *   - "compact" - single-row scroll for collection / industry pages
  *
  * The five tile photos are admin-editable. This strip appears on the homepage,
  * shop, industry, sports-team and portfolio pages, so the photos live under
  * /admin/page-copy → "Pictures used across the whole site".
  */
-export default function ToolsShowcase({ variant = "full", title = "Tools to make it yours", subtitle = "Five ways to get your kit looking the part — pick the one that fits how you order." }) {
+export default function ToolsShowcase({ variant = "full", title = "Tools to make it yours", subtitle = "Five ways to get your kit looking the part - pick the one that fits how you order." }) {
   const site = useSiteImages();
   const tileImage = (t) => site.image(`tool:${t.key}`, t.image);
 

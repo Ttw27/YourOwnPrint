@@ -23,7 +23,7 @@ export default function AdminEnquiries() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100" data-testid="admin-enquiries-page">
       <div className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-extrabold mb-2">Enquiries</h1>
-        <p className="text-zinc-400 mb-8">Every contact form submission and quote request from across the site — newest first.</p>
+        <p className="text-zinc-400 mb-8">Every contact form submission and quote request from across the site - newest first.</p>
 
         {loading && <div className="text-zinc-500">Loading…</div>}
         {!loading && items.length === 0 && <div className="text-zinc-500">No enquiries yet.</div>}

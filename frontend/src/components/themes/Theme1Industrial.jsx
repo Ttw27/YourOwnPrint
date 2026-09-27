@@ -10,7 +10,7 @@ export default function Theme1Industrial({ inShowcase = true, themeNumber = 1 })
     try {
       await selectTheme("industrial_dark", "Selected from showcase");
       localStorage.setItem("yop_theme", "industrial_dark");
-      toast.success("Industrial Dark theme selected — inner pages now use this style.");
+      toast.success("Industrial Dark theme selected - inner pages now use this style.");
     } catch (e) {
       toast.error("Could not save selection, but theme is applied locally.");
       localStorage.setItem("yop_theme", "industrial_dark");
@@ -74,7 +74,7 @@ export default function Theme1Industrial({ inShowcase = true, themeNumber = 1 })
               </div>
               <div>
                 <div className="font-oswald uppercase text-4xl font-bold">£6.99</div>
-                <div className="text-sm text-neutral-400 uppercase tracking-wider">From — Personalised Tee</div>
+                <div className="text-sm text-neutral-400 uppercase tracking-wider">From - Personalised Tee</div>
               </div>
               <div>
                 <div className="font-oswald uppercase text-4xl font-bold">0</div>
@@ -127,12 +127,12 @@ export default function Theme1Industrial({ inShowcase = true, themeNumber = 1 })
           <div>
             <div className="text-[#ff6b35] font-oswald uppercase text-sm tracking-[0.3em]">Built-in designer</div>
             <h2 className="font-oswald uppercase text-4xl lg:text-5xl font-bold mt-2 leading-tight">Design Your Own.<br />Live Preview.<br />Order Instantly.</h2>
-            <p className="mt-5 text-neutral-300 max-w-lg">Upload your image, remove the background, add text, drag & resize on a real t-shirt mockup. Check out with Stripe — no minimums.</p>
+            <p className="mt-5 text-neutral-300 max-w-lg">Upload your image, remove the background, add text, drag & resize on a real t-shirt mockup. Check out with Stripe - no minimums.</p>
             <ul className="mt-6 space-y-2 text-neutral-200">
               {[
                 { icon: Upload, label: "Upload your image or logo" },
                 { icon: ImageIcon, label: "Remove the background in one click" },
-                { icon: Type, label: "Add text — fonts & colours" },
+                { icon: Type, label: "Add text - fonts & colours" },
                 { icon: ShoppingBag, label: "Checkout securely with Stripe" },
               ].map(({ icon: Icon, label }) => (
                 <li key={label} className="flex items-center gap-3">
@@ -224,11 +224,11 @@ export default function Theme1Industrial({ inShowcase = true, themeNumber = 1 })
             </div>
           </div>
         </div>
-        <div className="border-t border-[#222] py-5 text-center text-xs text-neutral-500 font-oswald uppercase tracking-widest">© {new Date().getFullYear()} Your Own Print — All rights reserved</div>
+        <div className="border-t border-[#222] py-5 text-center text-xs text-neutral-500 font-oswald uppercase tracking-widest">© {new Date().getFullYear()} Your Own Print - All rights reserved</div>
       </footer>
 
       {inShowcase && (
-        <SelectThemeBar onSelect={onSelect} testId="theme-1-select-button" label="Select Theme 1 — Industrial Dark" color="#ff6b35" textColor="#fff" />
+        <SelectThemeBar onSelect={onSelect} testId="theme-1-select-button" label="Select Theme 1 - Industrial Dark" color="#ff6b35" textColor="#fff" />
       )}
     </section>
   );
@@ -252,7 +252,7 @@ export function ThemeLabel({ number, name, tagline, accentColor }) {
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 grid place-items-center text-white font-bold text-lg" style={{ background: accentColor }}>0{number}</div>
           <div>
-            <div className="font-oswald uppercase text-2xl text-white tracking-wider">Theme {number} — {name}</div>
+            <div className="font-oswald uppercase text-2xl text-white tracking-wider">Theme {number} - {name}</div>
             <div className="text-xs uppercase tracking-[0.3em] text-neutral-500 mt-1">{tagline}</div>
           </div>
         </div>

@@ -30,7 +30,7 @@ const FONTS = [
   { label: "Righteous", value: "Righteous, sans-serif" },
 ];
 
-// Neck label canvas aspect (width:height) — landscape, mimics a ~60×30mm sewn-in label
+// Neck label canvas aspect (width:height) - landscape, mimics a ~60×30mm sewn-in label
 const NECK_LABEL_ASPECT = 2;  // 2:1 wide:high
 // Default print area within the neck label canvas
 const NECK_LABEL_PRINT_AREA = { x: 5, y: 10, w: 90, h: 80 };
@@ -96,7 +96,7 @@ export default function DesignYourOwn() {
       setProducts(list);
       if (!productId && list[0]) setProductId(list[0].id);
     }).catch(() => {
-      toast.error("Couldn't load the designer — please refresh the page");
+      toast.error("Couldn't load the designer - please refresh the page");
       setLoadError(true);
     });
   }, []);
@@ -108,7 +108,7 @@ export default function DesignYourOwn() {
   const garmentPrintAreaBack = product?.print_area_back || garmentPrintArea;
   // Print areas are a % of the canvas. The traced tee silhouette is centred and
   // fills the frame, so the admin-set print_area (dragged in Admin → Designer
-  // Products) maps directly onto it — set it there and it applies here, the same
+  // Products) maps directly onto it - set it there and it applies here, the same
   // across every colour. If a product has no admin print area saved, use a
   // generous chest-centred default.
   // Flat-colour fallback fills the whole canvas, so give a roomy default print
@@ -123,7 +123,7 @@ export default function DesignYourOwn() {
   const selectedColourHex = selectedColour && product?.colors?.find(c => c.name === selectedColour)?.hex;
   // A specific colour photo is used when it exists. Otherwise: if a colour is
   // selected but has no photo for this view, fall back to a flat tint of the
-  // ACTUAL selected colour (never the default photo — that could silently
+  // ACTUAL selected colour (never the default photo - that could silently
   // show the wrong colour, e.g. black while designing a yellow order).
   const garmentBackground = (() => {
     if (view === "back") {
@@ -265,7 +265,7 @@ export default function DesignYourOwn() {
   const updateItem = (id, patch) => setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it));
 
   const removeBgReal = async () => {
-    if (!isLoggedIn) { toast.error("Log in to use AI tools — it's free, just stops random abuse of the paid AI service."); return; }
+    if (!isLoggedIn) { toast.error("Log in to use AI tools - it's free, just stops random abuse of the paid AI service."); return; }
     if (!selectedId) { toast.error("Select an image first"); return; }
     const sel = items.find(i => i.id === selectedId);
     if (!sel || sel.type !== "image") { toast.error("Select an image first"); return; }
@@ -285,7 +285,7 @@ export default function DesignYourOwn() {
     }
   };
   const aiEffectReal = async (effectId, label) => {
-    if (!isLoggedIn) { toast.error("Log in to use AI tools — it's free, just stops random abuse of the paid AI service."); return; }
+    if (!isLoggedIn) { toast.error("Log in to use AI tools - it's free, just stops random abuse of the paid AI service."); return; }
     if (!selectedId) { toast.error("Select an image first"); return; }
     const sel = items.find(i => i.id === selectedId);
     if (!sel || sel.type !== "image") { toast.error("Select an image first"); return; }
@@ -329,7 +329,7 @@ export default function DesignYourOwn() {
 
   const onPointerMove = (e) => {
     if (!drag || !printAreaRef.current) return;
-    // The gesture is a drag, not a scroll — keep the page still under the finger.
+    // The gesture is a drag, not a scroll - keep the page still under the finger.
     if (e.cancelable) e.preventDefault();
     const rect = printAreaRef.current.getBoundingClientRect();
     if (drag.mode === "move") {
@@ -359,7 +359,7 @@ export default function DesignYourOwn() {
   useEffect(() => {
     // Pointer events unify mouse, touch and pen, so a finger drag on a phone
     // fires the same move logic a mouse does. The old code listened only for
-    // mouse events, which never fire from touch — so on a phone a drag on an
+    // mouse events, which never fire from touch - so on a phone a drag on an
     // item fell through to the browser and scrolled the page instead. passive:
     // false lets us preventDefault the scroll during an active drag.
     window.addEventListener("pointermove", onPointerMove, { passive: false });
@@ -373,7 +373,7 @@ export default function DesignYourOwn() {
   });
 
   // ---- Render to transparent PNG ----
-  // sizePx — canvas dimensions; itemsList — items to render; substituteSize — when set, swap {SIZE} tokens.
+  // sizePx - canvas dimensions; itemsList - items to render; substituteSize - when set, swap {SIZE} tokens.
   const composeArtwork = async (sizePx, itemsList, substituteSize = null, aspect = 1) => {
     const c = document.createElement("canvas");
     c.width = sizePx; c.height = Math.round(sizePx / aspect);
@@ -430,7 +430,7 @@ export default function DesignYourOwn() {
           composeArtwork(2000, backItems),
         ]);
       }
-      // Neck label — one PNG per unique size if enabled
+      // Neck label - one PNG per unique size if enabled
       let neckPngs = null, neckPreviewPngs = null;
       if (neckEnabled) {
         neckPngs = {}; neckPreviewPngs = {};
@@ -505,7 +505,7 @@ export default function DesignYourOwn() {
     <>
             <Panel title="Product">
               <select data-testid="designer-product" value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm">
-                {products.map(p => <option key={p.id} value={p.id}>{p.name} — £{p.price.toFixed(2)}{p.review_count ? `  ★ ${p.rating} (${p.review_count})` : ""}</option>)}
+                {products.map(p => <option key={p.id} value={p.id}>{p.name} - £{p.price.toFixed(2)}{p.review_count ? `  ★ ${p.rating} (${p.review_count})` : ""}</option>)}
               </select>
               {product && product.review_count > 0 && (
                 <Link to={`/product/${product.id}#reviews`} className="mt-2 inline-flex items-center gap-2 text-xs hover:underline group" data-testid="designer-rating" title={`Read all ${product.review_count} reviews for ${product.name}`}>
@@ -546,7 +546,7 @@ export default function DesignYourOwn() {
             {product?.colors?.length > 0 && (
               <Panel title="Colour">
                 <div className="flex flex-wrap gap-2" data-testid="designer-colour-swatches">
-                  {/* This isn't a colour — it's "show the product photo we have",
+                  {/* This isn't a colour - it's "show the product photo we have",
                       which is whatever colour that photo happens to be. Labelled
                       plainly so it doesn't read as a duplicate of White. */}
                   <button
@@ -622,7 +622,7 @@ export default function DesignYourOwn() {
                 <div className="mt-2 bg-[#fff7ed] border border-[#fed7aa] rounded-xl p-2.5 text-center" data-testid="designer-ai-login-prompt">
                   <p className="text-[10px] font-bold text-[#712B13]">
                     <Lock size={10} className="inline mr-1 -mt-0.5" />
-                    <Link to="/account" className="underline font-extrabold">Log in</Link> to use AI tools — free, just keeps this from being spammed on random images.
+                    <Link to="/account" className="underline font-extrabold">Log in</Link> to use AI tools - free, just keeps this from being spammed on random images.
                   </p>
                 </div>
               ) : (
@@ -649,7 +649,7 @@ export default function DesignYourOwn() {
               )}
               {view === "neck" && (
                 <div className="text-[10px] text-[#4b5563] mt-2 font-bold leading-snug">
-                  The &#123;SIZE&#125; token is swapped for the actual garment size (M, L, XL…) when we print — one label per size in your order.
+                  The &#123;SIZE&#125; token is swapped for the actual garment size (M, L, XL…) when we print - one label per size in your order.
                 </div>
               )}
             </Panel>
@@ -736,7 +736,7 @@ export default function DesignYourOwn() {
                 <div className="mt-2 bg-[#fff7ed] border border-[#fed7aa] rounded-xl p-2.5 text-center" data-testid="designer-ai-login-prompt">
                   <p className="text-[10px] font-bold text-[#712B13]">
                     <Lock size={10} className="inline mr-1 -mt-0.5" />
-                    <Link to="/account" className="underline font-extrabold">Log in</Link> to use AI tools — free, just keeps this from being spammed on random images.
+                    <Link to="/account" className="underline font-extrabold">Log in</Link> to use AI tools - free, just keeps this from being spammed on random images.
                   </p>
                 </div>
               ) : (
@@ -763,7 +763,7 @@ export default function DesignYourOwn() {
               )}
               {view === "neck" && (
                 <div className="text-[10px] text-[#4b5563] mt-2 font-bold leading-snug">
-                  The &#123;SIZE&#125; token is swapped for the actual garment size (M, L, XL…) when we print — one label per size in your order.
+                  The &#123;SIZE&#125; token is swapped for the actual garment size (M, L, XL…) when we print - one label per size in your order.
                 </div>
               )}
             </Panel>
@@ -871,7 +871,7 @@ export default function DesignYourOwn() {
         </div>
 
         <div className="grid lg:grid-cols-12 gap-5">
-          {/* Right aside — split into TOP (Product picker) and BOTTOM (Sizes + Total + Checkout) so mobile order is:
+          {/* Right aside - split into TOP (Product picker) and BOTTOM (Sizes + Total + Checkout) so mobile order is:
               1. Product   2. Canvas + view toggle   3. Layers/Upload/Text   4. Sizes & Checkout */}
           <aside className="hidden lg:block lg:col-span-3 space-y-4 order-1 lg:order-3 lg:col-start-10 lg:row-start-1" data-testid="designer-product-aside">
             {productColourPanel}
@@ -931,7 +931,7 @@ export default function DesignYourOwn() {
             </div>
 
             <div className="bg-[#f0fdf4] rounded-3xl p-4 border-2 border-[#dcfce7]">
-              {/* max-h keeps the whole canvas within the viewport — at full column
+              {/* max-h keeps the whole canvas within the viewport - at full column
                   width a 4:5 box became taller than the screen, so the bottom of
                   it fell below the fold. */}
               <div
@@ -945,7 +945,7 @@ export default function DesignYourOwn() {
                     customer gets a big working canvas; Preview zooms back out to
                     show the whole garment as it'll look. The design coordinates
                     are all relative to the print box, so scaling the view keeps
-                    them valid — we're only changing zoom, not the data. */}
+                    them valid - we're only changing zoom, not the data. */}
                 <div
                   className="absolute inset-0"
                   style={(() => {
@@ -980,13 +980,13 @@ export default function DesignYourOwn() {
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-nunito font-extrabold uppercase tracking-[0.2em] text-[#1a1a1a] border border-[#dcfce7]" data-testid="designer-side-badge">
                   {view === "front" ? "Front view" : view === "back" ? "Back view" : "Neck label"}
                 </div>
-                {/* Print area rectangle — the design overlay lives strictly inside this box */}
+                {/* Print area rectangle - the design overlay lives strictly inside this box */}
                 <div
                   ref={printAreaRef}
                   className={`absolute ${previewMode ? "" : "border-2 border-dashed border-[#7bc67e]"}`}
                   style={{
                     left: `${printArea.x}%`, top: `${printArea.y}%`, width: `${printArea.w}%`, height: `${printArea.h}%`,
-                    // White halo keeps the boundary readable on dark garments —
+                    // White halo keeps the boundary readable on dark garments -
                     // hidden in preview so the customer sees a clean mockup.
                     boxShadow: previewMode ? "none" : "0 0 0 1px rgba(255,255,255,0.85)",
                   }}
@@ -1148,8 +1148,8 @@ export default function DesignYourOwn() {
         <div className="mt-8">
           <NeedHelpCTA
             title="Don't want to fiddle with the designer? Let us set it up for you."
-            body="Send us your logo or idea over WhatsApp — we'll clean up the artwork, mock it on your chosen garment, and reply with a proof to approve. Same price, zero faff."
-            presetMessage="Hi! I want to order custom prints but would prefer you set the design up for me — can I send you my logo?"
+            body="Send us your logo or idea over WhatsApp - we'll clean up the artwork, mock it on your chosen garment, and reply with a proof to approve. Same price, zero faff."
+            presetMessage="Hi! I want to order custom prints but would prefer you set the design up for me - can I send you my logo?"
             testid="designer-need-help"
             variant="banner"
           />

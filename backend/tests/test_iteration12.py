@@ -1,4 +1,4 @@
-"""Iteration 12 backend tests — bulk tiers, sports/leavers products, group orders."""
+"""Iteration 12 backend tests - bulk tiers, sports/leavers products, group orders."""
 import os
 import pytest
 import requests
@@ -95,7 +95,7 @@ def test_fight_night_bulk_tiers(s, qty, expected):
 # ---------------- Leavers bulk pricing ----------------
 
 @pytest.mark.parametrize("qty,expected", [
-    (19, round(19 * 24.99, 2)),    # 474.81 — no tier
+    (19, round(19 * 24.99, 2)),    # 474.81 - no tier
     (20, round(20 * 19.99, 2)),    # 399.80
     (30, round(30 * 17.99, 2)),    # 539.70
     (60, round(60 * 16.99, 2)),    # 1019.40

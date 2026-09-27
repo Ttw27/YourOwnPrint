@@ -7,10 +7,10 @@ import {
 } from "../lib/api";
 
 /**
- * Customer auth — email + password, JWT stored in localStorage.
+ * Customer auth - email + password, JWT stored in localStorage.
  *
  * Coexists with the admin auth (which uses its own httpOnly cookie under a
- * different name). The customer token is `yop_customer_token` — the CartContext
+ * different name). The customer token is `yop_customer_token` - the CartContext
  * subscribes to it to sync guest carts up to the server on login.
  */
 const AuthCtx = createContext(null);

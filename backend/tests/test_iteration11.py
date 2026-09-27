@@ -1,4 +1,4 @@
-"""Iteration 11 backend tests — neck-label upcharge, composition/description/use_cases, neck-label PNGs."""
+"""Iteration 11 backend tests - neck-label upcharge, composition/description/use_cases, neck-label PNGs."""
 import os
 import requests
 

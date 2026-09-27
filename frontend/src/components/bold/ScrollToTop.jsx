@@ -8,7 +8,7 @@ import { useLocation } from "react-router-dom";
 export default function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    // Instant, not smooth — a smooth scroll on a route change feels laggy.
+    // Instant, not smooth - a smooth scroll on a route change feels laggy.
     try { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); }
     catch { window.scrollTo(0, 0); }
     // Reset any inner scrollers that might have their own scroll state

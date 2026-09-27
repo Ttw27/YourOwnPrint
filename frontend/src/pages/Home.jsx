@@ -15,7 +15,7 @@ import PriceTag from "../components/bold/PriceTag";
 import usePageTitle from "../hooks/usePageTitle";
 
 export default function Home() {
-  usePageTitle("Custom Print & Workwear", { description: "Personalised clothing, workwear and team kit — printed and embroidered in the UK." });
+  usePageTitle("Custom Print & Workwear", { description: "Personalised clothing, workwear and team kit - printed and embroidered in the UK." });
   const [bestSellers, setBestSellers] = useState([]);
   const [aggregates, setAggregates] = useState({});
   const [recentReviews, setRecentReviews] = useState([]);
@@ -28,7 +28,7 @@ export default function Home() {
 
   const copy = usePageCopy("home", {
     title: "",
-    subtitle: "Look every bit as professional as you feel — without the price tag to match. Proudly based in Leicester, printing and delivering workwear, teamwear and custom clothing to businesses and teams across the whole of the UK.",
+    subtitle: "Look every bit as professional as you feel - without the price tag to match. Proudly based in Leicester, printing and delivering workwear, teamwear and custom clothing to businesses and teams across the whole of the UK.",
     // Images now come from the CMS when set, falling back to these code
     // defaults when they haven't been changed in admin. Anything set in
     // /admin/page-copy lives in the database and survives every deploy.
@@ -42,7 +42,7 @@ export default function Home() {
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
       <BoldNavbar />
 
-      {/* Hero — playful blobs */}
+      {/* Hero - playful blobs */}
       <div className="relative overflow-hidden">
         <div className="absolute -top-24 -left-20 w-[420px] h-[420px] rounded-full bg-[#7bc67e]/25 blur-2xl" />
         <div className="absolute top-20 -right-10 w-[360px] h-[360px] rounded-full bg-[#fde68a]/40 blur-3xl" />
@@ -104,7 +104,7 @@ export default function Home() {
           </div>
 
           <div className="hidden lg:flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm font-nunito font-bold text-[#1a1a1a]">
-            {["Leicester, UK — Nationwide Delivery", "No Minimum Orders", "No Setup Fees", "Free Logo Design"].map(t => (
+            {["Leicester, UK - Nationwide Delivery", "No Minimum Orders", "No Setup Fees", "Free Logo Design"].map(t => (
               <div key={t} className="flex items-center gap-2"><Check size={16} className="text-[#7bc67e]" />{t}</div>
             ))}
             <div className="flex items-center gap-2"><Star size={16} className="text-amber-500 fill-amber-500" />{RATING.value}★ from {RATING.count} reviews</div>
@@ -112,7 +112,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Price Promise band — compact */}
+      {/* Price Promise band - compact */}
       <PricePromise variant="band" />
 
       {/* Sectors */}
@@ -207,7 +207,7 @@ export default function Home() {
                 </div>
               )}
               <div className="mt-3 flex items-center gap-2 text-xs font-nunito font-bold">
-                <span className="text-[#7bc67e]">— {r.reviewer_name}</span>
+                <span className="text-[#7bc67e]">- {r.reviewer_name}</span>
                 {r.verified && <span className="inline-flex items-center gap-0.5 text-[10px] bg-[#7bc67e] text-[#1a1a1a] px-1.5 py-0.5 rounded-full"><ShieldCheck size={8} /> Verified</span>}
               </div>
             </div>
@@ -227,10 +227,10 @@ export default function Home() {
       {/* Built-in tools showcase */}
       <ToolsShowcase />
 
-      {/* Find My Kit — AI concierge */}
+      {/* Find My Kit - AI concierge */}
       <FindMyKitPromo variant="hero" className="my-16" image={(copy.images && copy.images["promo:find-my-kit"]) || ""} />
 
-      {/* The Design Shop — ready-made designs */}
+      {/* The Design Shop - ready-made designs */}
       <section className="px-6 my-16">
         <div className="max-w-6xl mx-auto bg-gradient-to-br from-[#a855f7] to-[#7c3aed] rounded-[2rem] overflow-hidden text-white grid md:grid-cols-[1.4fr_1fr]">
           <div className="px-8 py-12 sm:px-14 relative">
@@ -238,7 +238,7 @@ export default function Home() {
             <div className="relative">
               <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.25em] bg-white/20 rounded-full px-3 py-1.5">New</div>
               <h2 className="font-black text-3xl sm:text-4xl mt-4 max-w-xl leading-tight">The Design Shop</h2>
-              <p className="mt-3 text-white/90 max-w-lg font-bold">Ready-made original designs on tees, hoodies and more — no designing needed. Funny, gym, festival, animals and loads more.</p>
+              <p className="mt-3 text-white/90 max-w-lg font-bold">Ready-made original designs on tees, hoodies and more - no designing needed. Funny, gym, festival, animals and loads more.</p>
               <a href="/design-shop" className="mt-6 inline-flex items-center gap-2 bg-white text-[#7c3aed] hover:bg-[#f5f3ff] font-extrabold rounded-full px-6 py-3.5">Browse designs</a>
             </div>
           </div>
@@ -250,7 +250,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Portfolio strip — only renders when admin has marked items as featured */}
+      {/* Portfolio strip - only renders when admin has marked items as featured */}
       <HowWePrint className="my-16" />
 
       <PortfolioStrip />

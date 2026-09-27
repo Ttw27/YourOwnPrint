@@ -31,7 +31,7 @@ export default function Theme2Clean({ inShowcase = true, themeNumber = 2 }) {
         </div>
       </nav>
 
-      {/* Hero — split layout */}
+      {/* Hero - split layout */}
       <div className="bg-white">
         <div className="max-w-7xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-12 items-center">
           <div className="fade-up">
@@ -117,9 +117,9 @@ export default function Theme2Clean({ inShowcase = true, themeNumber = 2 }) {
           <div>
             <div className="text-[#0066ff] font-jakarta font-semibold text-sm tracking-wide">BUILT-IN DESIGNER</div>
             <h2 className="font-jakarta font-bold text-3xl lg:text-4xl text-[#1a1a2e] mt-2">Design in your browser. Order instantly.</h2>
-            <p className="mt-4 text-[#4a5568]">Upload your logo, remove backgrounds, add text and preview live on a real t-shirt — then check out securely with Stripe.</p>
+            <p className="mt-4 text-[#4a5568]">Upload your logo, remove backgrounds, add text and preview live on a real t-shirt - then check out securely with Stripe.</p>
             <ul className="mt-6 space-y-3">
-              {["Upload image · Remove background", "Add text — fonts & colours", "Live mockup preview", "Stripe secure checkout"].map((f) => (
+              {["Upload image · Remove background", "Add text - fonts & colours", "Live mockup preview", "Stripe secure checkout"].map((f) => (
                 <li key={f} className="flex items-center gap-3 text-[#1a1a2e]"><Check size={18} className="text-[#0066ff]" />{f}</li>
               ))}
             </ul>
@@ -167,7 +167,7 @@ export default function Theme2Clean({ inShowcase = true, themeNumber = 2 }) {
                 <div className="flex gap-1 mb-3">{Array.from({ length: r.rating }).map((_, j) => <Star key={j} size={14} className="text-amber-500 fill-amber-500" />)}</div>
                 <h3 className="font-jakarta font-bold text-lg text-[#1a1a2e]">{r.title}</h3>
                 <p className="text-[#4a5568] text-sm mt-2 leading-relaxed">"{r.body}"</p>
-                <div className="mt-4 text-xs text-[#4a5568] border-t border-[#e2e8f0] pt-3">— {r.name}</div>
+                <div className="mt-4 text-xs text-[#4a5568] border-t border-[#e2e8f0] pt-3">- {r.name}</div>
               </div>
             ))}
           </div>
@@ -192,7 +192,7 @@ export default function Theme2Clean({ inShowcase = true, themeNumber = 2 }) {
         <div className="border-t border-white/10 py-5 text-center text-xs text-neutral-400">© {new Date().getFullYear()} Your Own Print</div>
       </footer>
 
-      {inShowcase && <SelectThemeBar onSelect={onSelect} testId="theme-2-select-button" label="Select Theme 2 — Clean Professional" color="#0066ff" />}
+      {inShowcase && <SelectThemeBar onSelect={onSelect} testId="theme-2-select-button" label="Select Theme 2 - Clean Professional" color="#0066ff" />}
     </section>
   );
 }

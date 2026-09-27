@@ -5,7 +5,7 @@ import { useCustomerAuth } from "../context/CustomerAuthContext";
 import AuthModal from "./AuthModal";
 
 /**
- * Navbar avatar button — opens AuthModal when logged out, opens a small
+ * Navbar avatar button - opens AuthModal when logged out, opens a small
  * dropdown when logged in. Persists login across page reloads via
  * CustomerAuthContext (localStorage-backed).
  */

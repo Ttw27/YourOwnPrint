@@ -59,7 +59,7 @@ export default function CartDrawer() {
             <div>
               <ShoppingBag size={44} className="text-[#7bc67e] mx-auto opacity-50" />
               <p className="mt-4 font-black text-xl">Your basket's empty</p>
-              <p className="text-sm text-[#4b5563] mt-1">Add anything from the shop — we'll bulk-discount you as you add more.</p>
+              <p className="text-sm text-[#4b5563] mt-1">Add anything from the shop - we'll bulk-discount you as you add more.</p>
               <button onClick={() => { closeDrawer(); navigate("/"); }}
                 className="mt-5 inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full text-sm"
                 data-testid="cart-drawer-shop"

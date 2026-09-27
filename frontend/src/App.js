@@ -145,11 +145,11 @@ function App() {
           <Route path="/admin" element={<RequireAdmin><AdminLayout><AdminDashboard /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/qa" element={<RequireAdmin><AdminLayout><AdminQA /></AdminLayout></RequireAdmin>} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
-          {/* Catch-all — must stay last. Without it, unknown URLs rendered a blank page. */}
+          {/* Catch-all - must stay last. Without it, unknown URLs rendered a blank page. */}
           <Route path="*" element={<NotFound />} />
         </Routes>
         {/* Site-wide WhatsApp FAB. Pages that already render their own FAB will overlap harmlessly,
-            but to avoid duplicates each page-level FAB is identical position/size — only rendered once
+            but to avoid duplicates each page-level FAB is identical position/size - only rendered once
             visually because pages don't include their own anymore. */}
         <SiteFAB />
         <CartDrawer />

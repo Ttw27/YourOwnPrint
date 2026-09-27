@@ -1,11 +1,11 @@
-"""Designer AI endpoints — remove.bg background removal, Cutout.pro effects,
+"""Designer AI endpoints - remove.bg background removal, Cutout.pro effects,
 and an admin `test-email` endpoint that pings Resend using the currently-saved key.
 
 Handlers previously lived at the bottom of server.py; extracted here so the
 DYO canvas has a clean home for future AI wizardry (auto-vectorise, smart
 colour picker, safe-print bounds, etc.).
 
-Both AI endpoints require a logged-in customer and are capped per month —
+Both AI endpoints require a logged-in customer and are capped per month -
 these call real, billed third-party APIs (remove.bg, Cutout.pro) with no
 purchase required to use them, so leaving them open to anyone would be an
 unbounded cost with no revenue attached. Same pattern Printify and Printful
@@ -39,7 +39,7 @@ async def _check_and_record_ai_usage(customer_id: str) -> int:
     doc = await db.designer_ai_usage.find_one({"customer_id": customer_id, "month": month_key})
     used = (doc or {}).get("count", 0)
     if used >= AI_MONTHLY_LIMIT:
-        raise HTTPException(429, f"You've used all {AI_MONTHLY_LIMIT} free AI edits for this month — they reset at the start of next month.")
+        raise HTTPException(429, f"You've used all {AI_MONTHLY_LIMIT} free AI edits for this month - they reset at the start of next month.")
     await db.designer_ai_usage.update_one(
         {"customer_id": customer_id, "month": month_key},
         {"$inc": {"count": 1}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}},
@@ -62,13 +62,13 @@ async def designer_ai_usage(customer: Dict = Depends(require_customer)):
 # ---------------------------------------------------------------------------
 @api_router.post("/admin/test-email", dependencies=[Depends(require_admin)])
 async def admin_test_email(payload: Dict):
-    """Admin helper — POST {to} to send a Resend test email using the saved key."""
+    """Admin helper - POST {to} to send a Resend test email using the saved key."""
     to = (payload.get("to") or "").strip()
     if not to:
         raise HTTPException(400, "`to` required")
     return await send_email(
         to=[to],
-        subject="Your Own Print — Resend test email",
+        subject="Your Own Print - Resend test email",
         html=email_wrap(
             "Resend is wired up ✅",
             "<p>This is a test email from your Your Own Print admin dashboard. "
@@ -78,7 +78,7 @@ async def admin_test_email(payload: Dict):
 
 
 # ---------------------------------------------------------------------------
-# remove.bg — strip background from the currently-selected image
+# remove.bg - strip background from the currently-selected image
 # ---------------------------------------------------------------------------
 @api_router.post("/designer/remove-bg")
 async def designer_remove_bg(payload: Dict, customer: Dict = Depends(require_customer)):
@@ -97,7 +97,7 @@ async def designer_remove_bg(payload: Dict, customer: Dict = Depends(require_cus
         raise HTTPException(413, "Image exceeds 22MB (remove.bg limit)")
     api_key = await _get_integration_value("removebg_api_key")
     if not api_key:
-        raise HTTPException(503, "remove.bg API key not configured — paste it in /admin/integrations")
+        raise HTTPException(503, "remove.bg API key not configured - paste it in /admin/integrations")
     remaining = await _check_and_record_ai_usage(customer["id"])
     try:
         async with httpx.AsyncClient(timeout=45.0) as http:
@@ -108,7 +108,7 @@ async def designer_remove_bg(payload: Dict, customer: Dict = Depends(require_cus
                 headers={"X-Api-Key": api_key},
             )
     except httpx.TimeoutException:
-        raise HTTPException(504, "remove.bg timed out — try a smaller image")
+        raise HTTPException(504, "remove.bg timed out - try a smaller image")
     except Exception as e:
         raise HTTPException(502, f"remove.bg error: {e}")
     if resp.status_code != 200:
@@ -122,7 +122,7 @@ async def designer_remove_bg(payload: Dict, customer: Dict = Depends(require_cus
 
 
 # ---------------------------------------------------------------------------
-# Cutout.pro — AI image effects (sketch / cartoon / poster / enhance)
+# Cutout.pro - AI image effects (sketch / cartoon / poster / enhance)
 # ---------------------------------------------------------------------------
 _CUTOUT_EFFECT_MAP = {
     "sketch": "https://www.cutout.pro/api/v1/photoEnhance/sketchImage",
@@ -149,7 +149,7 @@ async def designer_ai_effect(payload: Dict, customer: Dict = Depends(require_cus
         raise HTTPException(400, "image_base64 is not valid base64")
     api_key = await _get_integration_value("cutoutpro_api_key")
     if not api_key:
-        raise HTTPException(503, "Cutout.pro API key not configured — paste it in /admin/integrations")
+        raise HTTPException(503, "Cutout.pro API key not configured - paste it in /admin/integrations")
     remaining = await _check_and_record_ai_usage(customer["id"])
     try:
         async with httpx.AsyncClient(timeout=60.0) as http:
@@ -159,7 +159,7 @@ async def designer_ai_effect(payload: Dict, customer: Dict = Depends(require_cus
                 headers={"APIKEY": api_key},
             )
     except httpx.TimeoutException:
-        raise HTTPException(504, "Cutout.pro timed out — try a smaller image")
+        raise HTTPException(504, "Cutout.pro timed out - try a smaller image")
     except Exception as e:
         raise HTTPException(502, f"Cutout.pro error: {e}")
     if resp.status_code != 200:

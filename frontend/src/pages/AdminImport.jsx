@@ -18,13 +18,13 @@ const SAMPLE = `[
 ]`;
 
 /**
- * Judge.me's own export is a CSV, not JSON — the export button in their admin
+ * Judge.me's own export is a CSV, not JSON - the export button in their admin
  * produces a .csv file, so pasting "the JSON" meant finding the API instead.
  * This parses that CSV into the same shape the import endpoint already accepts.
  *
  * Written by hand rather than pulled from a library because review bodies are
  * full of commas, quotes and line breaks inside quoted fields, which a naive
- * split(",") mangles silently — you'd get a successful import full of truncated
+ * split(",") mangles silently - you'd get a successful import full of truncated
  * reviews rather than an error.
  */
 function parseCsv(text) {
@@ -113,7 +113,7 @@ export default function AdminImport() {
     if (isCsv) {
       const reviews = csvToReviews(text);
       if (reviews.length === 0) {
-        toast.error("Couldn't find any reviews in that CSV — check it's the Judge.me reviews export.");
+        toast.error("Couldn't find any reviews in that CSV - check it's the Judge.me reviews export.");
         return;
       }
       setJson(JSON.stringify(reviews, null, 2));
@@ -167,7 +167,7 @@ export default function AdminImport() {
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
         <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Import Judge.me Reviews</h1>
-        <p className="text-[#4b5563] mt-3 max-w-2xl">Bring your reviews across from Judge.me, photos included. Choose the file you exported from Judge.me &mdash; a CSV or a JSON file both work &mdash; then say which of our products each Judge.me product should attach to.</p>
+        <p className="text-[#4b5563] mt-3 max-w-2xl">Bring your reviews across from Judge.me, photos included. Choose the file you exported from Judge.me - a CSV or a JSON file both work - then say which of our products each Judge.me product should attach to.</p>
 
         <div className="mt-8 grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
@@ -215,7 +215,7 @@ export default function AdminImport() {
             <div>
               <label className="block text-sm font-nunito font-bold text-[#1a1a1a] mb-2">3. Default product (for unmapped reviews)</label>
               <select data-testid="import-default-product" value={defaultProduct} onChange={(e) => setDefaultProduct(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5">
-                {products.map(p => <option key={p.id} value={p.id}>{p.name} — {p.id}</option>)}
+                {products.map(p => <option key={p.id} value={p.id}>{p.name} - {p.id}</option>)}
               </select>
             </div>
 
@@ -248,7 +248,7 @@ export default function AdminImport() {
             </div>
             <div className="mt-4 pt-4 border-t border-[#dcfce7] text-xs text-[#4b5563]">
               <strong>Photos</strong> come across automatically wherever Judge.me included a picture link.
-              We copy each photo to our own storage during import, so they&rsquo;re permanent &mdash; you can
+              We copy each photo to our own storage during import, so they&rsquo;re permanent - you can
               close your Judge.me account and the photos will keep working.
             </div>
             <div className="mt-4 pt-4 border-t border-[#dcfce7] text-xs text-[#4b5563]">

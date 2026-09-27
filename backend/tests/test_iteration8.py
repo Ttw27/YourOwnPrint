@@ -1,4 +1,4 @@
-"""Iteration 8 backend tests — Designer endpoints + regressions."""
+"""Iteration 8 backend tests - Designer endpoints + regressions."""
 import os
 import base64
 import requests

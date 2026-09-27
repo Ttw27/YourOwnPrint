@@ -5,7 +5,7 @@ import { Loader2, Save, Plus, Trash2, RotateCcw, Upload, Image as ImageIcon, X, 
 import { MEDIA_RATIOS } from "../components/bold/MediaBlock";
 
 /**
- * /admin/page-copy — Editable hero copy / bullets / body / FAQ / CTA for every
+ * /admin/page-copy - Editable hero copy / bullets / body / FAQ / CTA for every
  * public page. Consumed by pages via the `usePageCopy(slug, defaults)` hook.
  * Any field left blank falls back to the code default so this is safe to adopt.
  */
@@ -32,17 +32,17 @@ const PAGE_COPY_SLUGS = [
   { slug: "sports-outfit-configurator", label: "Sports Outfit Configurator" },
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
   { slug: "site-images", label: "Pictures used across the whole site" },
-  { slug: "site-footer", label: "Footer \u2014 social media links" },
+  { slug: "site-footer", label: "Footer - social media links" },
 ];
 
 const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_label: "", cta_link: "", hero_image: "", images: {}, media: {} };
 
-// Must match the `name` values in SECTORS (frontend/src/lib/data.js) — that's
+// Must match the `name` values in SECTORS (frontend/src/lib/data.js) - that's
 // the key each override is stored under ("sector:<name>").
 /**
  * What imagery each page ACTUALLY has, described by where it appears.
  *
- * Previously a generic "Hero image" box was shown on every page — but only the
+ * Previously a generic "Hero image" box was shown on every page - but only the
  * homepage reads it, so on every other page it saved happily and changed
  * nothing. Slots are now declared per page, so you only ever see fields that
  * really do something.
@@ -56,10 +56,10 @@ const PAGE_MEDIA_SLOTS = {
       label: "Main photo at the top of the homepage",
       hint: "The large photo beside 'Your Brand. Your Clothing. Your Own Print.'" },
     { key: "designer:1", kind: "image",
-      label: "'Design your tee in 60 seconds' — left photo",
+      label: "'Design your tee in 60 seconds' - left photo",
       hint: "First of the two photos beside 'Launch Designer'. Clicking it opens the designer. Leave empty to show a best-selling product instead." },
     { key: "designer:2", kind: "image",
-      label: "'Design your tee in 60 seconds' — right photo",
+      label: "'Design your tee in 60 seconds' - right photo",
       hint: "Second of the two photos beside 'Launch Designer'. Leave empty to show a best-selling product instead." },
     { key: "promo:find-my-kit", kind: "image",
       label: "Find My Kit banner photo",
@@ -99,13 +99,13 @@ const PAGE_MEDIA_SLOTS = {
   "site-images": [
     { key: "pricepromise", kind: "image",
       label: "Price Promise photo",
-      hint: "The square photo in the dark 'Looking professional shouldn't cost a fortune' band \u2014 shows on the homepage, product pages, Specials, Team Kits and Kit Your Workforce." },
-    { key: "tool:design", kind: "image", label: "Tool tile \u2014 Design Your Own",
+      hint: "The square photo in the dark 'Looking professional shouldn't cost a fortune' band - shows on the homepage, product pages, Specials, Team Kits and Kit Your Workforce." },
+    { key: "tool:design", kind: "image", label: "Tool tile - Design Your Own",
       hint: "One of the five tool tiles. They appear on the homepage, shop pages, industry pages, sports pages and the portfolio." },
-    { key: "tool:specials", kind: "image", label: "Tool tile \u2014 Your Own Print Specials" },
-    { key: "tool:workforce", kind: "image", label: "Tool tile \u2014 Kit Your Workforce" },
-    { key: "tool:team-kits", kind: "image", label: "Tool tile \u2014 Team Kits" },
-    { key: "tool:fight-night", kind: "image", label: "Tool tile \u2014 Fight Night Tees" },
+    { key: "tool:specials", kind: "image", label: "Tool tile - Your Own Print Specials" },
+    { key: "tool:workforce", kind: "image", label: "Tool tile - Kit Your Workforce" },
+    { key: "tool:team-kits", kind: "image", label: "Tool tile - Team Kits" },
+    { key: "tool:fight-night", kind: "image", label: "Tool tile - Fight Night Tees" },
   ],
 };
 
@@ -152,7 +152,7 @@ const HOME_SECTOR_NAMES = [
   "Dance & Theatre", "Schools & Leavers", "Hi-Vis", "Security", "Beauty & Wellness",
 ];
 
-/** One media slot — image or short video, with a display ratio. */
+/** One media slot - image or short video, with a display ratio. */
 function MediaField({ label, hint, value, onChange }) {
   const [busy, setBusy] = useState(false);
   const media = value || {};
@@ -166,7 +166,7 @@ function MediaField({ label, hint, value, onChange }) {
       const mb = (res.bytes / 1_000_000).toFixed(1);
       toast.success(`${label} uploaded (${mb}MB)`);
       if (res.kind === "video" && res.bytes > 6_000_000) {
-        toast("Tip: that clip is on the large side — compressing it will make the page load faster.", { duration: 6000 });
+        toast("Tip: that clip is on the large side - compressing it will make the page load faster.", { duration: 6000 });
       }
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Upload failed");
@@ -221,13 +221,13 @@ function MediaField({ label, hint, value, onChange }) {
         )}
       </div>
       <p className="text-[10px] text-[#4b5563] mt-1.5">
-        Video autoplays silently and loops. Keep clips 10&ndash;20s at 720p (roughly 2&ndash;5MB) so the page stays fast &mdash; 20MB max.
+        Video autoplays silently and loops. Keep clips 10&ndash;20s at 720p (roughly 2&ndash;5MB) so the page stays fast - 20MB max.
       </p>
     </div>
   );
 }
 
-/** One image slot — paste a URL or upload a file. Blank = use code default. */
+/** One image slot - paste a URL or upload a file. Blank = use code default. */
 function ImageField({ label, hint, value, onChange, testid, compact }) {
   const [busy, setBusy] = useState(false);
   const onFile = async (file) => {
@@ -287,7 +287,7 @@ export default function AdminPageCopy() {
   const save = async () => {
     setSaving(true);
     try {
-      // Only send fields the admin actually filled in — empty strings are treated as "clear".
+      // Only send fields the admin actually filled in - empty strings are treated as "clear".
       const payload = {
         title: copy.title, subtitle: copy.subtitle, body: copy.body,
         bullets: copy.bullets.filter((b) => b?.trim()),
@@ -320,7 +320,7 @@ export default function AdminPageCopy() {
   const addFaq = () => setCopy((c) => ({ ...c, faq: [...c.faq, { q: "", a: "" }] }));
   const removeFaq = (i) => setCopy((c) => ({ ...c, faq: c.faq.filter((_, idx) => idx !== i) }));
 
-  // "Pictures used across the whole site" isn't a page — it has no heading,
+  // "Pictures used across the whole site" isn't a page - it has no heading,
   // wording or FAQ of its own, so those fields are hidden for it.
   // Declared before the JSX below reads it.
   const isSiteImages = slug === "site-images";
@@ -420,7 +420,7 @@ export default function AdminPageCopy() {
 
                 {(PAGE_MEDIA_SLOTS[slug] || []).length === 0 && slug !== "home" && !isSiteImages && !isSiteFooter ? (
                   <div className="bg-white border border-[#e5e7eb] rounded-xl p-3 text-[11px] text-[#4b5563]">
-                    This page doesn&rsquo;t have any pictures you can swap out yet &mdash; only its wording.
+                    This page doesn&rsquo;t have any pictures you can swap out yet - only its wording.
                     If there&rsquo;s a photo on it you&rsquo;d like to be able to change, say which one and it can be added here.
                   </div>
                 ) : (
@@ -454,7 +454,7 @@ export default function AdminPageCopy() {
                   <div className="space-y-3" data-testid="apc-socials">
                     <p className="text-[11px] text-[#4b5563]">
                       Paste the full web address of each profile. Leave one blank and that icon
-                      simply isn&rsquo;t shown in the footer &mdash; no empty button, no dead link.
+                      simply isn&rsquo;t shown in the footer - no empty button, no dead link.
                     </p>
                     <div className="grid sm:grid-cols-2 gap-3">
                       {SITE_SOCIALS.map((sn) => (
@@ -539,7 +539,7 @@ export default function AdminPageCopy() {
 
               {!isSiteImages && !isSiteFooter && (
               <label className="block" data-testid="apc-body">
-                <div className="text-xs font-extrabold mb-1">Longer description <span className="text-[#4b5563] font-normal">— leave an empty line between paragraphs</span></div>
+                <div className="text-xs font-extrabold mb-1">Longer description <span className="text-[#4b5563] font-normal">- leave an empty line between paragraphs</span></div>
                 <textarea value={copy.body} onChange={(e) => setCopy({ ...copy, body: e.target.value })} className="input min-h-[140px] font-mono text-[12px]" placeholder="Optional. Extra paragraphs that appear under the heading." />
               </label>
               )}
@@ -557,7 +557,7 @@ export default function AdminPageCopy() {
                       <button onClick={() => removeBullet(i)} type="button" className="text-rose-500 hover:bg-rose-50 rounded-full p-1"><Trash2 size={12} /></button>
                     </div>
                   ))}
-                  {copy.bullets.length === 0 && <div className="text-xs text-[#4b5563] italic">None added — the page is using the bullet points it came with.</div>}
+                  {copy.bullets.length === 0 && <div className="text-xs text-[#4b5563] italic">None added - the page is using the bullet points it came with.</div>}
                 </div>
               </div>
               )}

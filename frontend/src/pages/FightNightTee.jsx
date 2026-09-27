@@ -18,7 +18,7 @@ export default function FightNightTee() {
   const fnCopy = usePageCopy("fight-night", {
     title: "",
     subtitle: "Upload your sponsors, pay securely, and we'll send a free artwork proof before we print a thing. Nothing goes to print until you're happy.",
-    // Admin-managed hero media — an image or a short looping video beside the headline.
+    // Admin-managed hero media - an image or a short looping video beside the headline.
     media: {},
   });
   const [addons, setAddons] = useState([]);
@@ -43,7 +43,7 @@ export default function FightNightTee() {
   useEffect(() => {
     Promise.all([api.get("/products/boxing-fight-tee").then(r => r.data), fetchFightNightAddons(), fetchFightNightTiers()])
       .then(([p, a, t]) => { setTee(p); setAddons(a); setTiers(t.tiers || []); setColor(p.colors[0]?.name || "Black"); })
-      .catch(() => { toast.error("Couldn't load this page — please refresh"); setLoadError(true); });
+      .catch(() => { toast.error("Couldn't load this page - please refresh"); setLoadError(true); });
   }, []);
 
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
@@ -154,7 +154,7 @@ export default function FightNightTee() {
         proof_before_print: "true",
       };
       // Pass sponsor data URLs via design_meta (split if necessary). For Stripe metadata size limits we store only count + send full artwork to a quote_requests doc shadow record so the team has the actual files.
-      // Actually we'll persist sponsors in a quote_requests doc keyed by session_id reference (best-effort) for the team to access — backend will tie it via metadata.session_id after checkout.
+      // Actually we'll persist sponsors in a quote_requests doc keyed by session_id reference (best-effort) for the team to access - backend will tie it via metadata.session_id after checkout.
       const { url, session_id } = await createCheckout({
         product_id: "boxing-fight-tee",
         size_qtys: sizeQtys,
@@ -221,7 +221,7 @@ export default function FightNightTee() {
             </h1>
             <p className="text-[#4b5563] mt-3 text-lg max-w-2xl" data-testid="fn-hero-subtitle">{fnCopy.subtitle}</p>
           </div>
-          {/* Admin-managed hero media — image or short looping video */}
+          {/* Admin-managed hero media - image or short looping video */}
           <MediaBlock media={fnCopy.media?.hero} ratio="4:5" testid="fn-hero-media" className="w-full">
             <div className="w-full h-full grid place-items-center text-[#7bc67e] bg-[#f0fdf4]">
               <Zap size={54} />
@@ -233,19 +233,19 @@ export default function FightNightTee() {
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-5">
         <ProofBanner />
 
-        {/* Mockup gallery — admin-managed via /admin/portfolio (category: fight-night-action) */}
+        {/* Mockup gallery - admin-managed via /admin/portfolio (category: fight-night-action) */}
         <PortfolioCarousel
           category="fight-night-action"
           title="See the tee in action"
           eyebrow="Fight night gallery"
-          emptyCTA="Send fight-night photos over WhatsApp — we'll add them here (and credit you)."
+          emptyCTA="Send fight-night photos over WhatsApp - we'll add them here (and credit you)."
           emptyPreset="Hi! I have fight-night tee photos to share."
           testid="fn-portfolio-carousel"
         />
 
         <NeedHelpCTA
           title="Not confident laying out sponsors? Send it to us."
-          body="Ping over your fight card, sponsor logos and any rough placement notes. We'll lay them out, tidy up any dodgy files, and send you a mock-up before printing — no charge."
+          body="Ping over your fight card, sponsor logos and any rough placement notes. We'll lay them out, tidy up any dodgy files, and send you a mock-up before printing - no charge."
           presetMessage="Hi! I need help laying out sponsors on my Fight Night Tees."
           testid="fn-need-help"
         />
@@ -262,7 +262,7 @@ export default function FightNightTee() {
 
         <Block n={2} title="Upload sponsor logos">
           <div className="text-xs text-[#4b5563] mb-3">
-            The <strong>main sponsor goes on the front big</strong>. Upload all sponsors — we&apos;ll lay them out cleanly and send a free proof.
+            The <strong>main sponsor goes on the front big</strong>. Upload all sponsors - we&apos;ll lay them out cleanly and send a free proof.
           </div>
           <div className="flex flex-wrap items-center gap-2" data-testid="fn-logos">
             {sponsors.map((src, i) => (
@@ -290,7 +290,7 @@ export default function FightNightTee() {
           {backPrint && (
             <>
               <div className="mt-3 text-xs text-[#4b5563] bg-[#f0fdf4] border border-[#dcfce7] rounded-xl px-3 py-2">
-                Full back print — large logo or sponsor strip, your choice at proof stage. Upload the artwork below.
+                Full back print - large logo or sponsor strip, your choice at proof stage. Upload the artwork below.
               </div>
               <div className="mt-3 flex items-center gap-3" data-testid="fn-back-upload-row">
                 <div className="w-16 h-16 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
@@ -421,7 +421,7 @@ export default function FightNightTee() {
           <div className="text-xs text-neutral-400 mt-1">Pay now → we send a <strong className="text-[#7bc67e]">free artwork proof</strong> → only then do we print.</div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button data-testid="fn-checkout" onClick={checkout} disabled={submitting} className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold px-6 py-3.5 rounded-full transition-transform hover:-translate-y-0.5">
-              {submitting ? <><Loader2 className="animate-spin" size={16} /> Redirecting…</> : <><ShieldCheck size={16} /> Pay £{total.toFixed(2)} — proof before print</>}
+              {submitting ? <><Loader2 className="animate-spin" size={16} /> Redirecting…</> : <><ShieldCheck size={16} /> Pay £{total.toFixed(2)} - proof before print</>}
             </button>
             <WhatsAppInline preset="Hi! Quick question about fight night tees…" label="WhatsApp" />
           </div>

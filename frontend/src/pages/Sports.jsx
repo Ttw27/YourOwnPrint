@@ -9,7 +9,7 @@ import { Trophy, Users, Zap, ArrowRight, Sparkles, ChevronLeft, ChevronRight } f
 import PriceTag from "../components/bold/PriceTag";
 import usePageTitle from "../hooks/usePageTitle";
 
-const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
 const SPORT_GROUPS = [
   { key: "football", label: "Football", icon: Trophy, accent: "bg-[#7bc67e]", desc: "Match jerseys, shorts, training kits", products: ["football-jersey", "football-shorts", "training-tracksuit", "training-tee"] },
@@ -35,7 +35,7 @@ export default function Sports() {
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    // Both are enhancements (featured picks per sport, star ratings) — if they
+    // Both are enhancements (featured picks per sport, star ratings) - if they
     // fail the page still works without them, so fail quietly.
     fetchProducts("sports", 500).then((d) => {
       setProductsById(Object.fromEntries((d.items || []).map(p => [p.id, p])));
@@ -54,7 +54,7 @@ export default function Sports() {
 
   const copy = usePageCopy("sports", {
     title: "Kit out your crew.",
-    subtitle: "Match-day jerseys, fight-night sponsor tees, training tracksuits — names, numbers, sponsors, badges. Big team or solo athlete, we've got you.",
+    subtitle: "Match-day jerseys, fight-night sponsor tees, training tracksuits - names, numbers, sponsors, badges. Big team or solo athlete, we've got you.",
     // Swap in /admin/page-copy → Sports & Fitness index → Pictures & video.
     hero_image: "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg?auto=compress&cs=tinysrgb&w=1200",
   });

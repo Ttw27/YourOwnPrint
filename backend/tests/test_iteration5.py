@@ -1,4 +1,4 @@
-"""Iteration 5 backend tests — team-kit bundles, checkout, and quote-request from new configurator."""
+"""Iteration 5 backend tests - team-kit bundles, checkout, and quote-request from new configurator."""
 import os
 import pytest
 import requests

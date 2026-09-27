@@ -188,5 +188,5 @@ class TestQuoteRequestAttachments:
         assert r.status_code == 200, r.text
         assert r.json().get("ok") is True
         # We cannot verify Mongo directly here; leave that to a separate DB check.
-        # Persistence is verified indirectly if backend echoes doc — otherwise this is
+        # Persistence is verified indirectly if backend echoes doc - otherwise this is
         # flagged as a known issue in the report.

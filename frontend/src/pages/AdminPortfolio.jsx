@@ -79,7 +79,7 @@ export default function AdminPortfolio() {
     <div className="min-h-screen bg-[#f8fafc] font-nunito" data-testid="admin-portfolio">
       <div className="max-w-6xl mx-auto px-6 py-10">
         <h1 className="font-black text-3xl mb-1">Photo gallery</h1>
-        <p className="text-sm text-[#4b5563] mb-8">Photos of real work &mdash; customer prints, finished kits, studio shots. <strong>Category</strong> decides which page each photo appears on, so it matters: pick &ldquo;Festival Tees And Brands&rdquo; and it shows in the gallery on the Festival &amp; DJ page, &ldquo;Workwear&rdquo; on the workwear pages, and so on. Tick <strong>Featured</strong> to push a photo to the front.</p>
+        <p className="text-sm text-[#4b5563] mb-8">Photos of real work - customer prints, finished kits, studio shots. <strong>Category</strong> decides which page each photo appears on, so it matters: pick &ldquo;Festival Tees And Brands&rdquo; and it shows in the gallery on the Festival &amp; DJ page, &ldquo;Workwear&rdquo; on the workwear pages, and so on. Tick <strong>Featured</strong> to push a photo to the front.</p>
 
         {/* Add new */}
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-6 mb-10" data-testid="admin-portfolio-create">
@@ -101,7 +101,7 @@ export default function AdminPortfolio() {
             </label>
             <div className="space-y-3">
               <Field label="Title" testid="admin-portfolio-title">
-                <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="input" placeholder="e.g. Tigers FC — full home kit" />
+                <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="input" placeholder="e.g. Tigers FC - full home kit" />
               </Field>
               <Field label="Which page it shows on" testid="admin-portfolio-cat">
                 <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className="input">
@@ -147,7 +147,7 @@ export default function AdminPortfolio() {
         ) : items.length === 0 ? (
           <div className="bg-white border-2 border-[#dcfce7] rounded-2xl p-10 text-center">
             <ImageIcon className="mx-auto text-[#7bc67e]" />
-            <p className="text-sm text-[#4b5563] mt-3">No items yet — upload your first piece above.</p>
+            <p className="text-sm text-[#4b5563] mt-3">No items yet - upload your first piece above.</p>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="admin-portfolio-list">

@@ -86,7 +86,7 @@ export default function AdminReviews() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { fetchProducts(undefined, 500).then((d) => setProducts(d.items || [])).catch(() => {}); }, []);
 
-  // Any filter change puts us back on page 1 — otherwise you can land on an
+  // Any filter change puts us back on page 1 - otherwise you can land on an
   // empty page 4 of a result set that now only has 2 pages.
   const applyFilter = (fn) => { setPage(0); setSelected([]); fn(); };
 
@@ -181,7 +181,7 @@ export default function AdminReviews() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         <h1 className="font-black text-3xl mb-1">Reviews</h1>
         <p className="text-sm text-[#4b5563] mb-5">
-          Every review on the site — the ones customers left themselves and the ones brought over from
+          Every review on the site - the ones customers left themselves and the ones brought over from
           Judge.me. Fix a typo, correct which product a review is attached to, or delete one entirely.
           New reviews left on the site stay hidden until you publish them here.
           To bring more over, use{" "}
@@ -354,7 +354,7 @@ export default function AdminReviews() {
                               <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} className="input text-xs w-full min-h-[90px]" />
                             </div>
                             <div>
-                              <div className="text-[10px] font-extrabold mb-1">Photo links &mdash; one per line</div>
+                              <div className="text-[10px] font-extrabold mb-1">Photo links - one per line</div>
                               <textarea value={draft.photos} onChange={(e) => setDraft({ ...draft, photos: e.target.value })} className="input text-[11px] font-mono w-full min-h-[60px]" placeholder="https://…" />
                             </div>
                             <div className="flex gap-2 pt-1">

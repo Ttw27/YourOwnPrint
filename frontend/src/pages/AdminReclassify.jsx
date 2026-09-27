@@ -7,7 +7,7 @@ import {
 } from "../lib/api";
 
 /**
- * Smart Re-classify — admin tool that sends every product name to the AI, gets a
+ * Smart Re-classify - admin tool that sends every product name to the AI, gets a
  * per-item decision (collection + industries + fit), previews the proposed
  * changes, and only writes them back once the admin approves. Nothing changes on
  * the site until "Apply" is pressed.
@@ -69,7 +69,7 @@ export default function AdminReclassify() {
           // eslint-disable-next-line no-await-in-loop
           res = await runBatchWithRetry(offset);
         } catch (e) {
-          // This batch failed all retries — skip it and keep going rather than
+          // This batch failed all retries - skip it and keep going rather than
           // aborting the whole catalogue. We advance by one batch worth.
           failedBatches += 1;
           offset += 25;
@@ -90,9 +90,9 @@ export default function AdminReclassify() {
       }
       await loadProposals();
       if (failedBatches > 0) {
-        toast.success(`Classification finished — ${failedBatches} batch${failedBatches === 1 ? "" : "es"} had trouble and were skipped. You can re-run to pick those up.`);
+        toast.success(`Classification finished - ${failedBatches} batch${failedBatches === 1 ? "" : "es"} had trouble and were skipped. You can re-run to pick those up.`);
       } else {
-        toast.success("Classification finished — review the proposed changes below.");
+        toast.success("Classification finished - review the proposed changes below.");
       }
     } catch (e) {
       // Even on a hard failure, show whatever proposals we did gather.
@@ -136,7 +136,7 @@ export default function AdminReclassify() {
         <Sparkles className="text-[#7bc67e]" size={34} /> Smart Re-classify
       </h1>
       <p className="text-[#4b5563] mt-3 max-w-2xl">
-        Reads every product name and sorts it into the right collection, industries and fit — the accurate,
+        Reads every product name and sorts it into the right collection, industries and fit - the accurate,
         per-item alternative to keyword rules. <strong>Nothing changes until you approve.</strong>
       </p>
 
@@ -156,7 +156,7 @@ export default function AdminReclassify() {
       {/* Status + run controls */}
       <div className="mt-6 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-3xl p-6">
         <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
-          <div><span className="text-[#4b5563]">Products:</span> <strong>{status?.total_products ?? "—"}</strong></div>
+          <div><span className="text-[#4b5563]">Products:</span> <strong>{status?.total_products ?? "-"}</strong></div>
           <div><span className="text-[#4b5563]">Proposals ready:</span> <strong>{status?.proposals_stored ?? 0}</strong></div>
           <div><span className="text-[#4b5563]">Batch size:</span> <strong>{status?.batch_size ?? 25}</strong></div>
         </div>
@@ -170,7 +170,7 @@ export default function AdminReclassify() {
               <div className="h-full bg-[#7bc67e] transition-all duration-300" style={{ width: `${pct}%` }} />
             </div>
             <p className="text-[11px] text-[#4b5563] mt-2">
-              This runs through the whole catalogue in batches — keep this tab open. ~{status?.total_products || 2800} products
+              This runs through the whole catalogue in batches - keep this tab open. ~{status?.total_products || 2800} products
               takes a few minutes.
             </p>
           </div>
@@ -247,8 +247,8 @@ function ChangeCell({ label, from, to }) {
     <div>
       <div className="text-[10px] uppercase tracking-widest text-[#4b5563] font-extrabold">{label}</div>
       <div className="flex items-center gap-1.5 mt-0.5">
-        <span className={`${changed ? "text-rose-400 line-through" : "text-[#1a1a1a]"}`}>{from || "—"}</span>
-        {changed && <><ArrowRight size={11} className="text-[#7bc67e]" /><span className="text-[#166534] font-extrabold">{to || "—"}</span></>}
+        <span className={`${changed ? "text-rose-400 line-through" : "text-[#1a1a1a]"}`}>{from || "-"}</span>
+        {changed && <><ArrowRight size={11} className="text-[#7bc67e]" /><span className="text-[#166534] font-extrabold">{to || "-"}</span></>}
       </div>
     </div>
   );

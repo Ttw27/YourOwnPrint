@@ -7,7 +7,7 @@ export default function Returns() {
       <LegalSection title="Delivery">
         <p>
           We're based in Leicester and deliver across the whole of the UK. Dispatch times depend on
-          the product and order size — bespoke and bulk orders (team kits, workwear, leavers hoodies)
+          the product and order size - bespoke and bulk orders (team kits, workwear, leavers hoodies)
           usually need a design proof approved first, which we'll always confirm with you before
           production starts.
         </p>
@@ -15,14 +15,14 @@ export default function Returns() {
 
       <LegalSection title="Personalised & custom items">
         <p>
-          Almost everything we make is personalised to your order — your logo, your design, your
+          Almost everything we make is personalised to your order - your logo, your design, your
           names and numbers, your sizing. Because of this, once production has started, personalised
-          orders generally can't be cancelled or returned just because you've changed your mind — this
+          orders generally can't be cancelled or returned just because you've changed your mind - this
           is standard across the UK for made-to-order goods, under the Consumer Contracts Regulations
           2013.
         </p>
         <p>
-          If you need to change or cancel something, get in touch as soon as possible — if production
+          If you need to change or cancel something, get in touch as soon as possible - if production
           hasn't started yet, we'll always try to help.
         </p>
       </LegalSection>
@@ -35,7 +35,7 @@ export default function Returns() {
           <li>it hasn't arrived within a reasonable time and we haven't been in touch about a delay</li>
         </ul>
         <p>
-          — contact us with your order details and, where possible, a photo. We'll sort it out with a
+          - contact us with your order details and, where possible, a photo. We'll sort it out with a
           reprint, replacement, or refund, whichever's right for the situation.
         </p>
       </LegalSection>
@@ -51,7 +51,7 @@ export default function Returns() {
       <LegalSection title="Get in touch">
         <p>
           Whatever the situation, the fastest way to sort it out is our{" "}
-          <a href="/contact" className="text-[#7bc67e] font-bold">contact page</a> — tell us your
+          <a href="/contact" className="text-[#7bc67e] font-bold">contact page</a> - tell us your
           order details and what's happened, and we'll take it from there.
         </p>
       </LegalSection>

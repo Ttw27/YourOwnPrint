@@ -10,13 +10,13 @@ import FacetBlock from "../components/bold/FacetBlock";
 import PriceTag from "../components/bold/PriceTag";
 
 /**
- * /shop/:slug — Collection page.
+ * /shop/:slug - Collection page.
  * Left sidebar auto-derives facets from the products in the collection (only shows a
  * facet if there's variance). SEO copy block at the bottom (admin-editable).
  */
 
 const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids: "Kids" };
-const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
 export default function ShopByType() {
   const { slug } = useParams();
@@ -122,7 +122,7 @@ export default function ShopByType() {
           <SlidersHorizontal size={14} /> {mobileFiltersOpen ? "Hide filters" : "Show filters"}
         </button>
 
-        {/* Sidebar is collapsed by default on mobile — expanded it pushed the
+        {/* Sidebar is collapsed by default on mobile - expanded it pushed the
             products far down the page before anything could be seen. */}
         <aside className={`lg:col-span-3 ${mobileFiltersOpen ? "" : "hidden lg:block"}`} data-testid="shop-type-sidebar">
           <div className="sticky top-24 space-y-4">

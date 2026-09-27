@@ -1,5 +1,5 @@
 """
-Design Shop admin — the easy upload tool.
+Design Shop admin - the easy upload tool.
 
 Flow (thread-drops style): admin uploads ONE print artwork, gives it a name, and
 picks which garments + which themed collections it belongs to. This creates ONE
@@ -11,7 +11,7 @@ name using a keyword map (e.g. "gym", "beer", "dog") so tagging is one less chor
 The admin can always override.
 
 Keeping it to ONE product per design (rather than one per garment) keeps the shop
-tidy and maintainable — the garment choice lives on the product page, like a
+tidy and maintainable - the garment choice lives on the product page, like a
 variant, not as separate catalogue entries.
 """
 from __future__ import annotations
@@ -93,7 +93,7 @@ async def create_design(payload: CreateDesignIn):
         "category": "t-shirts",           # nominal; design_shop flag governs visibility
         "image": payload.design_image,
         "design_image": payload.design_image,
-        "description": (payload.description or f"{name} — printed to order on your choice of garment.")[:600],
+        "description": (payload.description or f"{name} - printed to order on your choice of garment.")[:600],
         "design_shop": True,
         "design_categories": cats,
         "design_garments": garments,

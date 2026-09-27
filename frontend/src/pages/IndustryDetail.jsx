@@ -12,13 +12,13 @@ import usePageCopy, { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 
 /**
- * /industries/:slug — Industry landing page (Construction & Trades, Hospitality, etc.)
- * Same faceted-filter sidebar as /shop/:slug (colour, size, price — plus a
+ * /industries/:slug - Industry landing page (Construction & Trades, Hospitality, etc.)
+ * Same faceted-filter sidebar as /shop/:slug (colour, size, price - plus a
  * category facet here, since an industry spans many garment types at once).
  */
 
 const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids: "Kids" };
-const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
 export default function IndustryDetail() {
   const { slug } = useParams();
@@ -140,7 +140,7 @@ export default function IndustryDetail() {
           <SlidersHorizontal size={14} /> {mobileFiltersOpen ? "Hide filters" : "Show filters"}
         </button>
 
-        {/* Sidebar is collapsed by default on mobile — expanded it pushed the
+        {/* Sidebar is collapsed by default on mobile - expanded it pushed the
             products far down the page before anything could be seen. */}
         <aside className={`lg:col-span-3 ${mobileFiltersOpen ? "" : "hidden lg:block"}`} data-testid="industry-sidebar">
           <div className="sticky top-24 space-y-4">

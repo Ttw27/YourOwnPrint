@@ -24,7 +24,7 @@ export default function IndustriesIndex() {
         <div className="max-w-7xl mx-auto px-6 py-14">
           <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">By industry</span>
           <h1 className="font-black text-4xl lg:text-6xl mt-2">Workwear by the trade you're in</h1>
-          <p className="text-zinc-300 mt-3 max-w-xl">Curated lineups for nine industries — every garment ready to print with your logo. UK printed, low minimums, smart pricing.</p>
+          <p className="text-zinc-300 mt-3 max-w-xl">Curated lineups for nine industries - every garment ready to print with your logo. UK printed, low minimums, smart pricing.</p>
         </div>
       </header>
       <section className="max-w-7xl mx-auto px-6 py-12">

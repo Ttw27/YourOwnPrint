@@ -98,7 +98,7 @@ export default function AuthModal({ open, onClose, initialMode = "login" }) {
               {mode === "login" && (
                 <>
                   <button onClick={() => { setMode("register"); setErr(""); }} className="hover:text-[#7bc67e] font-extrabold" data-testid="auth-switch-register">
-                    No account yet? Create one — takes 30 seconds
+                    No account yet? Create one - takes 30 seconds
                   </button>
                   <button onClick={() => { setMode("forgot"); setErr(""); }} className="hover:text-[#7bc67e]" data-testid="auth-switch-forgot">
                     Forgot your password?

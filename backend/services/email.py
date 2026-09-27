@@ -1,7 +1,7 @@
 """Resend transactional email helpers.
 
 Non-blocking send: all callers `await _send_email(...)` and use the returned
-`{ok, id?, error?}` dict. We never raise from here — a failed notification
+`{ok, id?, error?}` dict. We never raise from here - a failed notification
 must never block a form submission.
 """
 from __future__ import annotations
@@ -36,12 +36,12 @@ async def send_email(*, to: List[str], subject: str, html: str,
 
 
 async def shop_notification_recipient() -> Optional[str]:
-    """The `contact_email` set in /admin/integrations — where quote enquiries land."""
+    """The `contact_email` set in /admin/integrations - where quote enquiries land."""
     return (await _get_integration_value("contact_email")) or None
 
 
 def email_wrap(title: str, body_html: str) -> str:
-    """Inline-CSS email wrapper — works across Gmail/Outlook."""
+    """Inline-CSS email wrapper - works across Gmail/Outlook."""
     return f"""
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px;font-family:Arial,sans-serif;color:#1a1a1a">
       <tr><td align="center">
@@ -51,7 +51,7 @@ def email_wrap(title: str, body_html: str) -> str:
             <h2 style="margin:0 0 12px 0;font-size:22px;font-weight:900">{title}</h2>
             {body_html}
           </td></tr>
-          <tr><td style="background:#f0fdf4;padding:12px 24px;font-size:11px;color:#4b5563">yourownprint.co.uk — no minimums, free artwork proofs, UK printed</td></tr>
+          <tr><td style="background:#f0fdf4;padding:12px 24px;font-size:11px;color:#4b5563">yourownprint.co.uk - no minimums, free artwork proofs, UK printed</td></tr>
         </table>
       </td></tr>
     </table>

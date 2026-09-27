@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Upload, X, RotateCw, Loader2 } from "lucide-react";
 
-// Sensible default print-area boxes per placement (% of a square canvas) —
+// Sensible default print-area boxes per placement (% of a square canvas) -
 // used when there's no product photo to calibrate against, just a flat
 // colour swatch. Roughly matches where each placement actually sits on a
 // real garment, so the box shape alone gives the customer the right idea.
@@ -18,26 +18,26 @@ export const DEFAULT_PLACEMENT_AREAS = {
 };
 
 /**
- * SimplePrintCanvas — the one shared "position an image within a print area"
+ * SimplePrintCanvas - the one shared "position an image within a print area"
  * interaction, used both for the quick per-placement flow (background = a
  * flat colour) and reusable inside the full Design Your Own builder
  * (background = a real garment photo). Deliberately does NOT support
- * multiple items, text, rotation of the print area, or layering — that
+ * multiple items, text, rotation of the print area, or layering - that
  * complexity lives only in the full builder, not here.
  *
  * Props:
- *   background   — {type: "color", value: "#hex"} or {type: "image", value: url}
- *   printArea    — {x,y,w,h} as % — the boundary the artwork must stay within
- *   artworkUrl   — the customer's uploaded image (or null if none yet)
- *   onUpload(file) — called with the raw File when the customer picks one
- *   onClear()    — called to remove the current artwork
- *   busy         — shows a loading state (e.g. while uploading)
+ *   background   - {type: "color", value: "#hex"} or {type: "image", value: url}
+ *   printArea    - {x,y,w,h} as % - the boundary the artwork must stay within
+ *   artworkUrl   - the customer's uploaded image (or null if none yet)
+ *   onUpload(file) - called with the raw File when the customer picks one
+ *   onClear()    - called to remove the current artwork
+ *   busy         - shows a loading state (e.g. while uploading)
  */
 export default function SimplePrintCanvas({ background, printArea, artworkUrl, onUpload, onClear, busy, size = 320 }) {
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
   // Position/scale of the artwork *within* the print area, as a fraction
-  // (0-1) of the print area's own size — starts centred, fills the area.
+  // (0-1) of the print area's own size - starts centred, fills the area.
   const [art, setArt] = useState({ x: 0.5, y: 0.5, scale: 0.9 });
   const dragRef = useRef(null);
   const lastPointRef = useRef(null);
@@ -47,7 +47,7 @@ export default function SimplePrintCanvas({ background, printArea, artworkUrl, o
   useEffect(() => {
     function onMove(e) {
       if (!dragRef.current || !containerRef.current) return;
-      // A drag, not a scroll — hold the page still under the finger.
+      // A drag, not a scroll - hold the page still under the finger.
       if (e.cancelable) e.preventDefault();
       const rect = containerRef.current.getBoundingClientRect();
       const areaWpx = (printArea.w / 100) * rect.width;

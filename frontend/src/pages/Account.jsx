@@ -87,13 +87,13 @@ function OrdersTab({ token }) {
     customerOrders(token).then((res) => setOrders(res.orders || [])).catch(() => setOrders([]));
   }, [token]);
 
-  // One-click reorder — the whole point of the account for a returning business.
+  // One-click reorder - the whole point of the account for a returning business.
   // Order lines were stored in the same shape the cart expects, so each line
   // drops straight back in; the drawer opens and the customer confirms sizes.
   const reorder = (o) => {
     const lines = (o.items || []).filter((it) => it && it.product_id && it.size_qtys);
     if (lines.length === 0) {
-      toast.error("This order can't be reordered automatically — please add the items again.");
+      toast.error("This order can't be reordered automatically - please add the items again.");
       return;
     }
     lines.forEach((it) => addLine({
@@ -248,7 +248,7 @@ function BusinessTab({ token }) {
   const onPickLogo = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 6_000_000) { toast.error("That logo is over 6MB — please use a smaller file."); return; }
+    if (file.size > 6_000_000) { toast.error("That logo is over 6MB - please use a smaller file."); return; }
     const reader = new FileReader();
     reader.onload = () => { setLogoDataUrl(reader.result); setLogoPreview(reader.result); };
     reader.readAsDataURL(file);
@@ -269,7 +269,7 @@ function BusinessTab({ token }) {
       setLogoDataUrl(null);
       toast.success("Business details saved");
     } catch {
-      toast.error("Couldn't save — please try again.");
+      toast.error("Couldn't save - please try again.");
     } finally {
       setBusy(false);
     }
@@ -280,7 +280,7 @@ function BusinessTab({ token }) {
       <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4">
         <p className="text-sm text-[#166534] font-nunito">
           Save your logo and company details once. We&rsquo;ll keep your artwork on file, so your next order is a
-          reorder &mdash; not a redesign &mdash; and every job comes back with your branding exactly as before.
+          reorder - not a redesign - and every job comes back with your branding exactly as before.
         </p>
       </div>
 
@@ -325,7 +325,7 @@ function BusinessTab({ token }) {
 
       <AccountManagerPromise variant="card" preset="Hi! I'm a business account customer and I'd like to speak to my account manager." />
 
-      <ConciergeService variant="card" preset="Hi! I'm an existing customer — please reuse the logo from my last order and sort a new order over WhatsApp." />
+      <ConciergeService variant="card" preset="Hi! I'm an existing customer - please reuse the logo from my last order and sort a new order over WhatsApp." />
     </div>
   );
 }

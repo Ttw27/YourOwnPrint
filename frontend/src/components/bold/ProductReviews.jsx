@@ -67,7 +67,7 @@ export default function ProductReviews({ productId, productName }) {
           ) : data.reviews.length === 0 ? (
             <div className="text-[#4b5563] py-12 text-center bg-[#f0fdf4] rounded-2xl border border-[#dcfce7]">
               <Star className="mx-auto mb-2 text-[#7bc67e]" size={24} />
-              No reviews yet — be the first!
+              No reviews yet - be the first!
             </div>
           ) : (
             <>
@@ -136,7 +136,7 @@ function ReviewCard({ r }) {
           ))}
         </div>
       )}
-      <div className="mt-3 text-xs font-nunito font-bold text-[#1a1a1a]">— {r.reviewer_name}</div>
+      <div className="mt-3 text-xs font-nunito font-bold text-[#1a1a1a]">- {r.reviewer_name}</div>
     </li>
   );
 }
@@ -222,7 +222,7 @@ export function ReviewForm({ productId, productName, onDone }) {
         <input data-testid="review-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (not shown)" className="bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm" />
       </div>
       <input data-testid="review-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title *" className="mt-3 w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm" />
-      <textarea data-testid="review-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Tell us how it went — quality, print, delivery… *" rows={4} className="mt-3 w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm" />
+      <textarea data-testid="review-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Tell us how it went - quality, print, delivery… *" rows={4} className="mt-3 w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm" />
 
       <div className="mt-3">
         <div className="flex items-center gap-2 flex-wrap">

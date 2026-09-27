@@ -24,7 +24,7 @@ const KIT_TYPES = [
 ];
 const SIZES = ["3-4", "5-6", "7-8", "9-11", "12-13", "S", "M", "L", "XL", "XXL", "3XL"];
 
-const KIT_PRICE_PER_PLAYER = 28.00;        // base — jersey + shorts
+const KIT_PRICE_PER_PLAYER = 28.00;        // base - jersey + shorts
 const NAME_NUMBER_ADDON = 3.00;            // per player
 const SPONSOR_ADDON_PER_PLAYER = 2.50;     // per player when ≥1 sponsor
 const QUOTE_THRESHOLD = 10;                // ≥10 → quote request, <10 → direct checkout
@@ -125,7 +125,7 @@ export default function TeamKitBuilder() {
     if (err) { toast.error(err); return; }
     setSubmitting(true);
     try {
-      // Aggregate sizes for pricing — direct checkout uses the football-jersey base product as a placeholder line.
+      // Aggregate sizes for pricing - direct checkout uses the football-jersey base product as a placeholder line.
       const size_qtys = {};
       roster.forEach(r => { if (Number(r.qty) > 0) size_qtys[r.size] = (size_qtys[r.size] || 0) + Number(r.qty); });
       const placements = ["full-front"]; // badge front
@@ -243,7 +243,7 @@ export default function TeamKitBuilder() {
                 <Plus size={20} />
               </button>
               <input type="file" accept="image/*" multiple hidden ref={sponsorRef} onChange={onSponsorFile} />
-              <div className="text-xs text-[#4b5563] flex-1 min-w-[200px]">Add as many sponsors as you'd like. Front, back or sleeves — we'll arrange them on a free proof.</div>
+              <div className="text-xs text-[#4b5563] flex-1 min-w-[200px]">Add as many sponsors as you'd like. Front, back or sleeves - we'll arrange them on a free proof.</div>
             </div>
           </Section>
 
@@ -296,8 +296,8 @@ export default function TeamKitBuilder() {
               </div>
               <div className="max-w-sm text-sm text-neutral-300">
                 {requiresQuote
-                  ? <>10+ kits — we'll review your roster, send a <strong className="text-[#7bc67e]">free proof</strong> and email a tailored quote within 1 working day.</>
-                  : <>Under 10 kits — pay securely with Stripe and we'll start production after sending you a proof for sign-off.</>}
+                  ? <>10+ kits - we'll review your roster, send a <strong className="text-[#7bc67e]">free proof</strong> and email a tailored quote within 1 working day.</>
+                  : <>Under 10 kits - pay securely with Stripe and we'll start production after sending you a proof for sign-off.</>}
               </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">

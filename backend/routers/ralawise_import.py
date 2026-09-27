@@ -1,5 +1,5 @@
 """
-Ralawise importer — reads the Ralawise product spreadsheet (.xlsm/.xlsx) and
+Ralawise importer - reads the Ralawise product spreadsheet (.xlsm/.xlsx) and
 imports/updates products with their images, colours (with real RGB swatches) and
 sizes, mirroring every image to our own R2 so nothing hotlinks to the supplier.
 
@@ -28,7 +28,7 @@ from pydantic import BaseModel
 from deps import api_router, db, require_admin
 
 # In-memory job registry for import progress (survives for the process lifetime,
-# which is fine — a job completes in a few minutes).
+# which is fine - a job completes in a few minutes).
 _JOBS: Dict[str, Dict] = {}
 
 # Column headers in the Ralawise export (0-indexed positions are resolved by
@@ -106,7 +106,7 @@ def _parse_workbook(data: bytes) -> List[Dict]:
     try:
         import openpyxl
     except Exception:
-        raise HTTPException(500, "openpyxl isn't installed on the server — add 'openpyxl' to requirements.txt.")
+        raise HTTPException(500, "openpyxl isn't installed on the server - add 'openpyxl' to requirements.txt.")
 
     wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     ws = wb[wb.sheetnames[0]]
@@ -153,7 +153,7 @@ def _parse_workbook(data: bytes) -> List[Dict]:
             if img:
                 p["image"] = str(img).strip()
 
-        # price — take the lowest single price seen (the "from" price)
+        # price - take the lowest single price seen (the "from" price)
         price = cell(row, "single_price") or cell(row, "pack_price")
         try:
             price = float(price) if price is not None else None
@@ -212,7 +212,7 @@ class RalawiseImportResult(BaseModel):
 
 @api_router.post("/admin/ralawise/preview", dependencies=[Depends(require_admin)])
 async def ralawise_preview(file: UploadFile = File(...)):
-    """Parse the file and return a summary — no database writes."""
+    """Parse the file and return a summary - no database writes."""
     data = await file.read()
     docs = _parse_workbook(data)
     with_images = sum(1 for d in docs if d["image"])
@@ -270,7 +270,7 @@ async def ralawise_import(background_tasks: BackgroundTasks, file: UploadFile = 
 async def ralawise_status(job_id: str):
     job = _JOBS.get(job_id)
     if not job:
-        raise HTTPException(404, "Unknown job id (it may have expired — start the import again).")
+        raise HTTPException(404, "Unknown job id (it may have expired - start the import again).")
     return job
 
 

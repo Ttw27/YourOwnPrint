@@ -11,11 +11,11 @@ import usePageTitle from "../hooks/usePageTitle";
 import FacetBlock from "../components/bold/FacetBlock";
 import PriceTag from "../components/bold/PriceTag";
 
-const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 — no orphan row on any screen size
+const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], price_min: "", price_max: "" };
 
 /**
- * /workwear — the Workwear umbrella collection.
+ * /workwear - the Workwear umbrella collection.
  *
  * Previously this page had no filter sidebar at all (unlike every other
  * collection page) and fetched using stale industry slugs
@@ -85,7 +85,7 @@ export default function Workwear() {
         </div>
       </div>
 
-      {/* Sector chips — real links (these used to be inert <span>s) */}
+      {/* Sector chips - real links (these used to be inert <span>s) */}
       <div className="border-b border-[#dcfce7]">
         <div className="max-w-7xl mx-auto px-6 py-5 flex gap-2 overflow-x-auto no-scrollbar">
           {SECTORS.map((s, i) => (
@@ -110,7 +110,7 @@ export default function Workwear() {
           <SlidersHorizontal size={14} /> {mobileFiltersOpen ? "Hide filters" : "Show filters"}
         </button>
 
-        {/* Sidebar — same facets as every other collection page */}
+        {/* Sidebar - same facets as every other collection page */}
         <aside className={`lg:col-span-3 ${mobileFiltersOpen ? "" : "hidden lg:block"}`} data-testid="workwear-sidebar">
           <div className="space-y-3 lg:sticky lg:top-24">
             <div className="flex items-center justify-between">

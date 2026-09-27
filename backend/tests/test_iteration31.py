@@ -1,13 +1,13 @@
 """Iteration 31 backend regression + new customer accounts tests.
 
 Covers:
-- REFACTOR REGRESSION — key endpoints still 200 after router extraction.
-- SHARED PRICING HELPER — /checkout/session amount == /cart/price line_total.
-- CUSTOMER AUTH — register, login, me, forgot-password, reset-password.
+- REFACTOR REGRESSION - key endpoints still 200 after router extraction.
+- SHARED PRICING HELPER - /checkout/session amount == /cart/price line_total.
+- CUSTOMER AUTH - register, login, me, forgot-password, reset-password.
 - CUSTOMER CART persistence + merge semantics.
 - CUSTOMER ADDRESSES + DESIGNS CRUD + is_default swap.
-- CUSTOMER ORDERS — reads payment_transactions via customer_email.
-- SECURITY — cross-role token isolation.
+- CUSTOMER ORDERS - reads payment_transactions via customer_email.
+- SECURITY - cross-role token isolation.
 """
 from __future__ import annotations
 
@@ -126,7 +126,7 @@ class TestRefactorRegression:
         r = s.patch(f"{API}/admin/page-copy/home",
                     headers=_auth(admin_token), json={"hero_title": "TEST_hello"})
         assert r.status_code == 200
-        # Re-fetch admin view (which returns the raw doc) — public /page-copy/home
+        # Re-fetch admin view (which returns the raw doc) - public /page-copy/home
         # may filter empty defaults. Just verify PATCH+DELETE cycle works.
         r_del = s.delete(f"{API}/admin/page-copy/home", headers=_auth(admin_token))
         assert r_del.status_code == 200
@@ -258,7 +258,7 @@ class TestCustomerLogin:
             "email": lock_email, "password": _CUST_PASSWORD, "name": "L"
         })
         assert r.status_code == 200
-        # 5 wrong attempts — the 5th should still be 401 but sets lockout
+        # 5 wrong attempts - the 5th should still be 401 but sets lockout
         codes = []
         for _ in range(5):
             r = s.post(f"{API}/customer/login", json={
@@ -396,7 +396,7 @@ class TestDesigns:
 
 
 # ---------------------------------------------------------------------------
-# 7) Orders — first empty, then non-empty after cart-session with customer_email
+# 7) Orders - first empty, then non-empty after cart-session with customer_email
 # ---------------------------------------------------------------------------
 class TestOrders:
     def test_orders_empty_initially(self, customer_context):
@@ -422,7 +422,7 @@ class TestOrders:
 
 
 # ---------------------------------------------------------------------------
-# 8) Security — role isolation
+# 8) Security - role isolation
 # ---------------------------------------------------------------------------
 class TestSecurityIsolation:
     def test_admin_token_rejected_by_customer_me(self, admin_token):
@@ -449,7 +449,7 @@ class TestSecurityIsolation:
         s2 = _fresh(tok2)
         s2.put(f"{API}/customer/cart",
                json={"items": [{"product_id": "personalised-hoodie", "size_qtys": {"L": 4}}]})
-        # Customer1 reads their own cart — must NOT see customer 2's hoodie
+        # Customer1 reads their own cart - must NOT see customer 2's hoodie
         s1 = _fresh(customer_context["token"])
         r2 = s1.get(f"{API}/customer/cart")
         items = r2.json()["items"]

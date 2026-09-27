@@ -148,7 +148,7 @@ class TestProductOverridePristineRestore:
         r4 = admin.get(f"{BASE_URL}/api/products/{self.PID}")
         assert r4.status_code == 200
         price = float(r4.json().get("price"))
-        assert price == 14.99, f"pristine restore failed — still {price}"
+        assert price == 14.99, f"pristine restore failed - still {price}"
 
 
 # ---- Resend integration on leavers/bespoke --------------------------------
@@ -163,7 +163,7 @@ class TestLeaversBespokeResend:
             "contact_email": "test-iter29@example.com",
             "contact_phone": "01234 567890",
             "estimated_qty": 20,
-            "notes": "iter29 automated test — please ignore",
+            "notes": "iter29 automated test - please ignore",
         }
         r = api.post(f"{BASE_URL}/api/leavers/bespoke", json=payload)
         assert r.status_code == 200, f"leavers/bespoke failed: {r.status_code} {r.text[:300]}"
@@ -216,7 +216,7 @@ class TestAiEffect:
 
 class TestAdminTestEmail:
     def test_requires_admin_token(self, api):
-        # unauth call — expect 401 or 403
+        # unauth call - expect 401 or 403
         s = requests.Session()
         s.headers.update({"Content-Type": "application/json"})
         r = s.post(f"{BASE_URL}/api/admin/test-email", json={"to": "test-iter29@example.com"})

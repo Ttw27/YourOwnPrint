@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 /**
- * For Business — the page that speaks to a company already using another
+ * For Business - the page that speaks to a company already using another
  * supplier. The workwear switching guides are consistent about what actually
  * holds a business back from moving: fear the logo comes out different, dread
  * of a clunky first order, and the assumption that reordering for one new
@@ -23,7 +23,7 @@ import {
  * these defaults so the page is never blank before anything is entered.
  */
 export default function ForBusiness() {
-  usePageTitle("For business — branded workwear made easy");
+  usePageTitle("For business - branded workwear made easy");
   const copy = usePageCopy("for-business", {});
 
   const hero = {
@@ -31,29 +31,29 @@ export default function ForBusiness() {
     title: copy.title || "Switching your workwear to us is genuinely easy",
     subtitle:
       copy.subtitle ||
-      "Send us your logo once. We proof it on your chosen garment before anything prints, keep your artwork on file, and make every reorder a two-click job — even if it's one shirt for one new starter.",
+      "Send us your logo once. We proof it on your chosen garment before anything prints, keep your artwork on file, and make every reorder a two-click job - even if it's one shirt for one new starter.",
   };
 
   // The switcher's worries, each paired with how we remove it. This is the spine
-  // of the page — drawn straight from what the guides say keeps businesses stuck.
+  // of the page - drawn straight from what the guides say keeps businesses stuck.
   const worries = [
     {
       icon: Palette,
       worry: "\u201cWill our logo come out the same?\u201d",
       answer:
-        "We send you a digital proof on your actual garment before printing — so you sign off on the colour, size and placement first. Nothing goes to print until it looks right to you.",
+        "We send you a digital proof on your actual garment before printing - so you sign off on the colour, size and placement first. Nothing goes to print until it looks right to you.",
     },
     {
       icon: RotateCcw,
       worry: "\u201cReordering is always a hassle.\u201d",
       answer:
-        "Your logo and past orders live in your account. Reordering for a new starter is two clicks — no re-sending artwork, no re-explaining what you had last time.",
+        "Your logo and past orders live in your account. Reordering for a new starter is two clicks - no re-sending artwork, no re-explaining what you had last time.",
     },
     {
       icon: Package,
       worry: "\u201cWe only need a few, not a hundred.\u201d",
       answer:
-        "No minimum order. One polo or fifty — same easy process, sensible price per item either way. Order for the whole team, or top up for one new face.",
+        "No minimum order. One polo or fifty - same easy process, sensible price per item either way. Order for the whole team, or top up for one new face.",
     },
     {
       icon: ShieldCheck,
@@ -64,9 +64,9 @@ export default function ForBusiness() {
   ];
 
   const steps = [
-    { icon: Upload, title: "Send your logo", body: "Upload it in the designer or send it over WhatsApp — whichever's easier." },
+    { icon: Upload, title: "Send your logo", body: "Upload it in the designer or send it over WhatsApp - whichever's easier." },
     { icon: BadgeCheck, title: "Approve a free proof", body: "We mock it up on your chosen garment and send it back for you to check." },
-    { icon: Truck, title: "We print & deliver", body: "Approved, printed in the UK, and sent out — with your artwork saved for next time." },
+    { icon: Truck, title: "We print & deliver", body: "Approved, printed in the UK, and sent out - with your artwork saved for next time." },
   ];
 
   return (
@@ -96,13 +96,13 @@ export default function ForBusiness() {
         </div>
       </section>
 
-      <ConciergeService variant="band" preset="Hi! I run a business and haven't got time to design online — can you sort my order over WhatsApp?" />
+      <ConciergeService variant="band" preset="Hi! I run a business and haven't got time to design online - can you sort my order over WhatsApp?" />
 
       {/* Worries → answers */}
       <section className="max-w-6xl mx-auto px-6 py-14 sm:py-20">
         <h2 className="font-black text-3xl sm:text-4xl text-center">Already have a supplier? Here's why teams move to us</h2>
         <p className="text-[#4b5563] text-center mt-3 max-w-2xl mx-auto">
-          Moving supplier feels risky. It shouldn't. Here are the things businesses tell us hold them back — and how we take each one off the table.
+          Moving supplier feels risky. It shouldn't. Here are the things businesses tell us hold them back - and how we take each one off the table.
         </p>
         <div className="grid sm:grid-cols-2 gap-5 mt-10">
           {worries.map((w) => (
@@ -157,7 +157,7 @@ export default function ForBusiness() {
         </div>
       </section>
 
-      {/* Dedicated account manager — the "real human, not a bot" promise. */}
+      {/* Dedicated account manager - the "real human, not a bot" promise. */}
       <section className="max-w-6xl mx-auto px-6 pb-10">
         <AccountManagerPromise variant="hero" preset="Hi! I run a business and I'd like to know more about having a dedicated account manager." />
       </section>

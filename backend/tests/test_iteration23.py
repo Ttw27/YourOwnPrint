@@ -36,7 +36,7 @@ class TestQuoteRequestNewShape:
             "kit_type": "full-squad-configurator",
             "quantity": 3,
             "deadline": "",
-            "message": "Full Squad quote — Roster: 0 players. Items: [Match day] Football Jersey — S×3. Estimated subtotal £56.97.",
+            "message": "Full Squad quote - Roster: 0 players. Items: [Match day] Football Jersey - S×3. Estimated subtotal £56.97.",
             "roster": [],
         }
         r = requests.post(f"{BASE_URL}/api/quote-request", json=payload)
@@ -56,7 +56,7 @@ class TestQuoteRequestNewShape:
             "kit_type": "full-squad-configurator",
             "quantity": 5,
             "deadline": "",
-            "message": "Full Squad quote — Roster: 2 players. Items: [Match day] Football Jersey — S×3 +sleeve. Estimated subtotal £62.97.",
+            "message": "Full Squad quote - Roster: 2 players. Items: [Match day] Football Jersey - S×3 +sleeve. Estimated subtotal £62.97.",
             "roster": [{"name": "Alice", "number": "7"}, {"name": "Bob", "number": "10"}],
         }
         r = requests.post(f"{BASE_URL}/api/quote-request", json=payload)

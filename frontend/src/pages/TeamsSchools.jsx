@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 /**
- * /teams-schools — Audience-first hub. Big tiles per customer type each linking to the
+ * /teams-schools - Audience-first hub. Big tiles per customer type each linking to the
  * right flow (Leavers, Full Squad, Sports Outfit, Kit Your Workforce, Contact). Below the
  * tiles: trust bar, recent group orders carousel (Portfolio backend), FAQ, contact CTA.
  */
@@ -25,7 +25,7 @@ const TILES = [
     accent: "bg-[#fde68a]",
     accentText: "text-[#78350f]",
     title: "Leavers hoodies",
-    tagline: "Class of 2026 — primary, secondary or uni",
+    tagline: "Class of 2026 - primary, secondary or uni",
     bullets: ["Full back-print of names included", "Group order per pupil, no fuss for staff", "Proof in 2 working days"],
     cta: "Start a leavers order",
   },
@@ -36,9 +36,9 @@ const TILES = [
     Icon: Trophy,
     accent: "bg-[#7bc67e]",
     accentText: "text-[#052e16]",
-    title: "Sports club — full squad",
+    title: "Sports club - full squad",
     tagline: "Football, rugby & kit sports",
-    bullets: ["Match day + training + tracksuit — one order", "Names on the back, kits labelled per player", "Optional printed gym bag per player"],
+    bullets: ["Match day + training + tracksuit - one order", "Names on the back, kits labelled per player", "Optional printed gym bag per player"],
     cta: "Build your squad kit",
   },
   {
@@ -50,7 +50,7 @@ const TILES = [
     accentText: "text-[#831843]",
     title: "Gym, PT, boxing & class",
     tagline: "Gyms, PTs, thai / kick / boxing gyms, dance studios",
-    bullets: ["Top + shorts, hoodie + joggers — or both", "Breast logo, back print or full front", "Simple pricing — quote in a day"],
+    bullets: ["Top + shorts, hoodie + joggers - or both", "Breast logo, back print or full front", "Simple pricing - quote in a day"],
     cta: "Kit up your class",
   },
   {
@@ -62,7 +62,7 @@ const TILES = [
     accentText: "text-[#1e3a8a]",
     title: "Group hoodies & tees",
     tagline: "Churches, cadets, youth clubs, uni societies, staff",
-    bullets: ["Mix garments, colours & sizes in one order", "Breast logo included, add a back print", "Per-size steppers — no spreadsheet needed"],
+    bullets: ["Mix garments, colours & sizes in one order", "Breast logo included, add a back print", "Per-size steppers - no spreadsheet needed"],
     cta: "Build a group order",
   },
   {
@@ -101,7 +101,7 @@ const TRUST = [
 const FAQ = [
   {
     q: "Can we order a mix of sizes across kids and adults?",
-    a: "Yes — the configurators and Kit Your Workforce all let you mix children's and adult sizes in the same order at no extra cost.",
+    a: "Yes - the configurators and Kit Your Workforce all let you mix children's and adult sizes in the same order at no extra cost.",
   },
   {
     q: "Do you match colours to our club / school branding?",
@@ -109,11 +109,11 @@ const FAQ = [
   },
   {
     q: "How long does a typical order take?",
-    a: "Proof within 2 working days, printed & dispatched within 7–10 working days from proof approval. Rush service available on request — ask for it in the notes.",
+    a: "Proof within 2 working days, printed & dispatched within 7–10 working days from proof approval. Rush service available on request - ask for it in the notes.",
   },
   {
     q: "Can we pay per pupil / per player instead of one lump sum?",
-    a: "Yes — for Leavers Hoodies we run per-pupil checkouts so parents pay individually. For sports clubs we can invoice the club and let you collect from your players.",
+    a: "Yes - for Leavers Hoodies we run per-pupil checkouts so parents pay individually. For sports clubs we can invoice the club and let you collect from your players.",
   },
   {
     q: "Do you supply a proof / mockup before printing?",
@@ -130,7 +130,7 @@ export default function TeamsSchools() {
   useEffect(() => {
     Promise.all([
       // `featured_only` is the parameter the endpoint actually reads. This said
-      // `featured`, which FastAPI quietly ignored — so the strip was showing the
+      // `featured`, which FastAPI quietly ignored - so the strip was showing the
       // first 8 photos in the gallery rather than the featured ones.
       fetchPortfolio({ featured_only: true, limit: 8 }).catch(() => ({ items: [] })),
       fetchReviewsAggregate().catch(() => ({})),
@@ -147,7 +147,7 @@ export default function TeamsSchools() {
   // CMS-editable hero copy (falls back to code defaults when admin hasn't overridden).
   const copy = usePageCopy("teams-schools", {
     title: "Whatever you're kitting out, we've got a flow for it.",
-    subtitle: "Leavers hoodies, sports squads, gym crews, dance troupes, church youth groups — each with a tailored builder so you don't have to fight a spreadsheet. Pick your world below.",
+    subtitle: "Leavers hoodies, sports squads, gym crews, dance troupes, church youth groups - each with a tailored builder so you don't have to fight a spreadsheet. Pick your world below.",
   });
 
   return (
@@ -216,7 +216,7 @@ export default function TeamsSchools() {
         </div>
       </section>
 
-      {/* Recent group orders — portfolio carousel */}
+      {/* Recent group orders - portfolio carousel */}
       <section className="max-w-7xl mx-auto px-6 pb-12" data-testid="ts-portfolio">
         {portfolio.length > 0 ? (
           <>
@@ -250,7 +250,7 @@ export default function TeamsSchools() {
         )}
       </section>
 
-      {/* Popular garments — quick jump */}
+      {/* Popular garments - quick jump */}
       <section className="max-w-7xl mx-auto px-6 pb-12" data-testid="ts-popular-garments">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold mb-2">Popular for groups</div>
         <h2 className="font-black text-2xl lg:text-3xl mb-4">Or browse by garment</h2>
@@ -284,7 +284,7 @@ export default function TeamsSchools() {
       <div className="border-t border-[#dcfce7] bg-[#f0fdf4]">
         <div className="max-w-4xl mx-auto px-6 py-10 text-center" data-testid="ts-bottom-cta">
           <h2 className="font-black text-2xl">Not sure which flow is right for you?</h2>
-          <p className="text-sm text-[#4b5563] mt-2 max-w-xl mx-auto">Message us with your rough numbers and what you&apos;re after &mdash; we&apos;ll point you at the right builder or spec it up for you.</p>
+          <p className="text-sm text-[#4b5563] mt-2 max-w-xl mx-auto">Message us with your rough numbers and what you&apos;re after - we&apos;ll point you at the right builder or spec it up for you.</p>
           <Link to="/contact" className="mt-4 inline-flex items-center gap-2 bg-[#1a1a1a] text-white hover:bg-black rounded-full font-extrabold px-6 py-3 text-sm">
             Contact the team <ArrowRight size={14} />
           </Link>

@@ -7,7 +7,7 @@ import { fetchDesignCategories, fetchDesignProducts } from "../lib/api";
 import usePageTitle from "../hooks/usePageTitle";
 
 /**
- * The Design Shop — a separate store for ready-made printed designs. It has its
+ * The Design Shop - a separate store for ready-made printed designs. It has its
  * OWN sidebar (themed collections) and OWN filters (garment, sort), deliberately
  * distinct from the workwear catalogue. Each design shows its print artwork as
  * the tile image.
@@ -15,7 +15,7 @@ import usePageTitle from "../hooks/usePageTitle";
 export default function DesignShop() {
   const { slug } = useParams();          // active category slug, if any
   const navigate = useNavigate();
-  usePageTitle("The Design Shop — Ready-Made Printed Designs");
+  usePageTitle("The Design Shop - Ready-Made Printed Designs");
 
   const [cats, setCats] = useState([]);
   const [garments, setGarments] = useState([]);
@@ -78,9 +78,9 @@ export default function DesignShop() {
             <Sparkles size={14} /> The Design Shop
           </div>
           <h1 className="font-black text-3xl sm:text-5xl mt-3 leading-tight">Ready-made designs,<br className="hidden sm:block" /> printed to order</h1>
-          <p className="text-[#4b5563] mt-3 max-w-2xl">Original artwork on your choice of tee, hoodie, sweater and more. Pick a design, pick your garment, done — no designing required.</p>
+          <p className="text-[#4b5563] mt-3 max-w-2xl">Original artwork on your choice of tee, hoodie, sweater and more. Pick a design, pick your garment, done - no designing required.</p>
 
-          {/* Visual category cards — quick colourful entry points */}
+          {/* Visual category cards - quick colourful entry points */}
           {!activeCat && cats.length > 0 && (
             <div className="mt-7 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" data-testid="design-cat-cards">
               {cats.slice(0, 10).map((c, i) => {
@@ -136,7 +136,7 @@ export default function DesignShop() {
             <div className="bg-[#faf5ff] border-2 border-[#f0e6ff] rounded-3xl p-10 text-center">
               <Sparkles className="mx-auto text-[#a855f7]" size={28} />
               <p className="font-extrabold text-lg mt-3">No designs here yet</p>
-              <p className="text-sm text-[#4b5563] mt-1">New designs are added all the time — check back soon.</p>
+              <p className="text-sm text-[#4b5563] mt-1">New designs are added all the time - check back soon.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="design-grid">

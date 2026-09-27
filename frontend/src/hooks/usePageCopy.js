@@ -6,7 +6,7 @@ import { fetchPageCopy } from "../lib/api";
  *
  * Reads admin-editable CMS overrides for a page from GET /api/page-copy/{slug}
  * and merges them onto the caller's `defaults` object. Any field the admin
- * hasn't touched falls back to the code default — safe, drop-in adoption.
+ * hasn't touched falls back to the code default - safe, drop-in adoption.
  *
  * Usage:
  *   const copy = usePageCopy("home", { title: "Hardcoded default", subtitle: "..." });
@@ -31,7 +31,7 @@ function loadPageCopy(slug) {
       return val;
     })
     .catch(() => {
-      // A failed fetch must not blank the page — fall through to code defaults.
+      // A failed fetch must not blank the page - fall through to code defaults.
       COPY_CACHE.set(slug, {});
       COPY_INFLIGHT.delete(slug);
       return {};
@@ -48,7 +48,7 @@ export default function usePageCopy(slug, defaults = {}) {
     return () => { live = false; };
   }, [slug]);
   if (!override) return { ...defaults };
-  // Only overwrite when admin has set a truthy value (empty strings mean "unset — use default").
+  // Only overwrite when admin has set a truthy value (empty strings mean "unset - use default").
   const merged = { ...defaults };
   Object.entries(override).forEach(([k, v]) => {
     if (v === undefined || v === null || v === "") return;
@@ -59,7 +59,7 @@ export default function usePageCopy(slug, defaults = {}) {
 }
 
 /**
- * Slug holding imagery that isn't owned by any single page — the Price Promise
+ * Slug holding imagery that isn't owned by any single page - the Price Promise
  * photo, the five tool tiles, and the industry / sports-team header photos.
  * These appear on many pages at once, so they can't live in a page's own record.
  */

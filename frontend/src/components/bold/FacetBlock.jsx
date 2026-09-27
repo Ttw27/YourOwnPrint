@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 /**
- * One block in a filter sidebar — a heading, its options, and a "Show all"
+ * One block in a filter sidebar - a heading, its options, and a "Show all"
  * toggle once the list gets long.
  *
  * Extracted because an identical copy of this had been pasted into

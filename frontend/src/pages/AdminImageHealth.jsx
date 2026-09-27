@@ -5,7 +5,7 @@ import { ImageOff, Loader2, AlertTriangle, EyeOff, Eye, ExternalLink, ScanLine }
 import { imageHealthScan, imageHealthHide, imageHealthUnhide } from "../lib/api";
 
 /**
- * Image Health — scans the catalogue for products whose main image is broken or
+ * Image Health - scans the catalogue for products whose main image is broken or
  * missing, counts how many are still live (visible to customers), and lets you
  * jump to each to fix it or bulk-hide the broken ones so nothing broken shows on
  * the site. Read-only scan; hiding is an explicit action.
@@ -23,9 +23,9 @@ export default function AdminImageHealth() {
     try {
       const res = await imageHealthScan({ check_urls: true });
       setResult(res);
-      if ((res?.broken_count || 0) === 0) toast.success("No broken images found — your catalogue is clean.");
+      if ((res?.broken_count || 0) === 0) toast.success("No broken images found - your catalogue is clean.");
     } catch (e) {
-      toast.error("Scan failed — please try again in a moment.");
+      toast.error("Scan failed - please try again in a moment.");
     } finally {
       setScanning(false);
     }
@@ -87,7 +87,7 @@ export default function AdminImageHealth() {
         >
           {scanning ? <><Loader2 size={16} className="animate-spin" /> Scanning…</> : <><ScanLine size={16} /> Scan catalogue</>}
         </button>
-        {scanning && <p className="text-xs text-[#4b5563] mt-2">Checking every product image loads — this can take a minute across a big catalogue.</p>}
+        {scanning && <p className="text-xs text-[#4b5563] mt-2">Checking every product image loads - this can take a minute across a big catalogue.</p>}
       </div>
 
       {result && (
@@ -126,7 +126,7 @@ export default function AdminImageHealth() {
 
           {result.broken_count === 0 && (
             <div className="mt-6 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-6 text-center font-bold">
-              🎉 No broken images — every product has a working main photo.
+              🎉 No broken images - every product has a working main photo.
             </div>
           )}
 
@@ -144,7 +144,7 @@ export default function AdminImageHealth() {
                   <div className="flex-1 min-w-0">
                     <div className="font-extrabold text-sm truncate">{it.name}</div>
                     <div className="text-[11px] text-[#4b5563]">
-                      {it.category || "—"} · {it.source} · <span className={it.reason === "missing" ? "text-rose-500" : "text-amber-600"}>{it.reason === "missing" ? "no image set" : "image won't load"}</span>
+                      {it.category || "-"} · {it.source} · <span className={it.reason === "missing" ? "text-rose-500" : "text-amber-600"}>{it.reason === "missing" ? "no image set" : "image won't load"}</span>
                       {!it.active && <span className="ml-1 text-[#9ca3af]">· hidden</span>}
                     </div>
                   </div>

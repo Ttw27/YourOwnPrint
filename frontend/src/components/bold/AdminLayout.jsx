@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 /**
- * AdminLayout — a persistent Shopify-style sidebar wrapped around every admin
+ * AdminLayout - a persistent Shopify-style sidebar wrapped around every admin
  * page. Previously the ~18 admin pages didn't link to each other at all; this
  * gives one consistent shell so you can always jump anywhere and always get
  * home. Existing pages render unchanged inside the main column.
@@ -151,7 +151,7 @@ export default function AdminLayout({ children }) {
       <div className="flex">
         {/* Desktop sidebar */}
         <aside className="hidden lg:block w-64 flex-shrink-0 h-screen sticky top-0">{SidebarInner}</aside>
-        {/* Main column — existing admin pages render here unchanged */}
+        {/* Main column - existing admin pages render here unchanged */}
         <main className="flex-1 min-w-0">{children}</main>
       </div>
     </div>

@@ -33,7 +33,7 @@ export default function Theme3Bold({ inShowcase = true, themeNumber = 3 }) {
         </div>
       </nav>
 
-      {/* Hero — playful blobs */}
+      {/* Hero - playful blobs */}
       <div className="relative overflow-hidden">
         <div className="absolute -top-24 -left-20 w-[420px] h-[420px] rounded-full bg-[#7bc67e]/25 blur-2xl" />
         <div className="absolute top-20 -right-10 w-[360px] h-[360px] rounded-full bg-[#fde68a]/40 blur-3xl" />
@@ -81,7 +81,7 @@ export default function Theme3Bold({ inShowcase = true, themeNumber = 3 }) {
         </div>
       </div>
 
-      {/* Sectors — colourful tiles */}
+      {/* Sectors - colourful tiles */}
       <div className="max-w-7xl mx-auto px-6 py-20">
         <h2 className="text-center font-nunito font-black text-4xl lg:text-5xl text-[#1a1a1a]">Shop by Sector</h2>
         <p className="text-center text-[#4b5563] mt-3">Find your crew’s look in seconds.</p>
@@ -133,7 +133,7 @@ export default function Theme3Bold({ inShowcase = true, themeNumber = 3 }) {
               <div className="flex gap-1 mb-3">{Array.from({ length: r.rating }).map((_, j) => <Star key={j} size={14} className="text-amber-500 fill-amber-500" />)}</div>
               <h3 className="font-nunito font-extrabold text-lg">{r.title}</h3>
               <p className="text-[#4b5563] text-sm mt-2">"{r.body}"</p>
-              <div className="mt-4 text-xs font-nunito font-bold text-[#7bc67e]">— {r.name}</div>
+              <div className="mt-4 text-xs font-nunito font-bold text-[#7bc67e]">- {r.name}</div>
             </div>
           ))}
         </div>
@@ -154,7 +154,7 @@ export default function Theme3Bold({ inShowcase = true, themeNumber = 3 }) {
         <div className="border-t border-white/10 py-5 text-center text-xs text-neutral-400">© {new Date().getFullYear()} Your Own Print</div>
       </footer>
 
-      {inShowcase && <SelectThemeBar onSelect={onSelect} testId="theme-3-select-button" label="Select Theme 3 — Bold & Bright" color="#7bc67e" textColor="#1a1a1a" />}
+      {inShowcase && <SelectThemeBar onSelect={onSelect} testId="theme-3-select-button" label="Select Theme 3 - Bold & Bright" color="#7bc67e" textColor="#1a1a1a" />}
     </section>
   );
 }

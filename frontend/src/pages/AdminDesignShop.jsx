@@ -39,7 +39,7 @@ export default function AdminDesignShop() {
       const res = await uploadDesignImage(file);
       setImageUrl(res.url);
       toast.success("Artwork uploaded.");
-    } catch { toast.error("Upload failed — try a PNG under 8MB."); }
+    } catch { toast.error("Upload failed - try a PNG under 8MB."); }
     finally { setUploading(false); }
   };
 
@@ -117,7 +117,7 @@ export default function AdminDesignShop() {
           </div>
 
           <div>
-            <label className="text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">Collections <span className="text-[#a855f7] normal-case">(optional — auto-guessed if blank)</span></label>
+            <label className="text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">Collections <span className="text-[#a855f7] normal-case">(optional - auto-guessed if blank)</span></label>
             <div className="flex flex-wrap gap-2 mt-1">
               {allCats.map((c) => (
                 <button key={c.slug} type="button" onClick={() => toggle(cats, setCats, c.slug)} className={`border-2 rounded-full px-3 py-1.5 text-xs font-bold transition ${cats.includes(c.slug) ? "border-[#a855f7] bg-[#a855f7] text-white" : "border-[#e9d5ff] text-[#4b5563]"}`} data-testid={`design-cat-${c.slug}`}>
@@ -137,7 +137,7 @@ export default function AdminDesignShop() {
       <div className="mt-12">
         <h2 className="font-black text-xl mb-4">Designs in the shop ({designs.length})</h2>
         {designs.length === 0 ? (
-          <p className="text-sm text-[#4b5563]">No designs yet — upload your first above.</p>
+          <p className="text-sm text-[#4b5563]">No designs yet - upload your first above.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-testid="design-list">
             {designs.map((d) => (

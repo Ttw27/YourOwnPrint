@@ -528,7 +528,7 @@ export async function fetchSportsTeams() {
 }
 export async function fetchSportsTeam(slug, opts = {}) {
   // Forwards the whole options object. An earlier version listed limit and
-  // offset explicitly, which silently dropped every filter the sidebar sent —
+  // offset explicitly, which silently dropped every filter the sidebar sent -
   // the request succeeded and returned the unfiltered lineup, so it looked like
   // the filters simply didn't work rather than like an error.
   const { data } = await api.get(`/sports-teams/${slug}`, {
@@ -546,7 +546,7 @@ export async function fetchPortfolio(params = {}) {
 /**
  * Every visible portfolio photo, following pagination to the end.
  *
- * The gallery filters by category in the browser, so it needs the whole set —
+ * The gallery filters by category in the browser, so it needs the whole set -
  * a server-side page would leave the category chips showing counts for
  * whatever happened to load. The endpoint caps a single response at 500, so
  * this walks the pages, bounded so a runaway total can't spin forever.
@@ -561,7 +561,7 @@ export async function fetchAllPortfolio(params = {}) {
   while (items.length < total && requests < MAX_REQUESTS) {
     const next = await fetchPortfolio({ ...params, limit: PAGE, offset: items.length });
     const batch = next.items || [];
-    if (batch.length === 0) break;  // nothing more coming — don't loop on an empty page
+    if (batch.length === 0) break;  // nothing more coming - don't loop on an empty page
     items.push(...batch);
     requests += 1;
   }
@@ -766,7 +766,7 @@ export async function adminListPageCopySlugs() {
   return data;
 }
 
-// ----- Designer AI helpers (require a logged-in customer — see CUSTOMER_TOKEN_KEY) -----
+// ----- Designer AI helpers (require a logged-in customer - see CUSTOMER_TOKEN_KEY) -----
 export const CUSTOMER_TOKEN_KEY = "yop_customer_token";
 export function getCustomerToken() {
   try { return localStorage.getItem(CUSTOMER_TOKEN_KEY) || ""; } catch { return ""; }

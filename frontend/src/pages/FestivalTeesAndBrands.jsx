@@ -12,24 +12,24 @@ import {
 } from "lucide-react";
 
 const DEFAULT_BENEFITS = [
-  "No minimum order — print a single tour tee or a full festival run",
-  "Your name, logo and artwork — nothing generic, nothing off-the-shelf",
+  "No minimum order - print a single tour tee or a full festival run",
+  "Your name, logo and artwork - nothing generic, nothing off-the-shelf",
   "Free artwork proof before anything goes to print",
   "Fast UK turnaround, ready in time for your next date",
 ];
 
 const DEFAULT_BRAND_BENEFITS = [
-  "No upfront cost — we only print when an order comes in",
-  "No stock to buy, store or ship — we handle production and fulfilment",
+  "No upfront cost - we only print when an order comes in",
+  "No stock to buy, store or ship - we handle production and fulfilment",
   "Your own branded clothing line, live and ready to sell",
-  "You set your price and keep the margin — we just handle the printing",
+  "You set your price and keep the margin - we just handle the printing",
   "Perfect alongside gigs, socials, or your own website",
 ];
 
 const DEFAULT_FAQ = [
   {
-    q: "I've never done merch before — can you help me design it?",
-    a: "Yes — send over a logo, a rough idea, or even just your name and a vibe, and our design team will mock something up for free before you commit to anything.",
+    q: "I've never done merch before - can you help me design it?",
+    a: "Yes - send over a logo, a rough idea, or even just your name and a vibe, and our design team will mock something up for free before you commit to anything.",
   },
   {
     q: "What's the catch with \"no upfront cost\"?",
@@ -45,13 +45,13 @@ export default function FestivalTeesAndBrands() {
   const copy = usePageCopy("festival-tees-brands", {
     title: "Festival Tees, Gig Merch & Your Own Clothing Line",
     subtitle:
-      "Printed tops for tour dates, local gigs and festival sets — or launch your own branded clothing line with zero upfront cost. We print, you promote.",
+      "Printed tops for tour dates, local gigs and festival sets - or launch your own branded clothing line with zero upfront cost. We print, you promote.",
     body: "",
     bullets: DEFAULT_BENEFITS,
     faq: DEFAULT_FAQ,
     cta_label: "Get in touch to discuss",
     cta_link: "#enquiry",
-    // Admin-managed media — image or short looping clip, one per block:
+    // Admin-managed media - image or short looping clip, one per block:
     //   media.promo → beside "Promo tops for your next date"
     //   media.brand → beside "Start your own clothing line"
     // Both are set in /admin/page-copy under "Festival Tees & Start Your Brand".
@@ -76,7 +76,7 @@ export default function FestivalTeesAndBrands() {
       toast.success("Thanks! We'll be in touch within 1 working day. 🎧");
       setForm({ name: "", email: "", phone: "", company: "", message: "" });
     } catch {
-      toast.error("Something went wrong — please try again or WhatsApp us.");
+      toast.error("Something went wrong - please try again or WhatsApp us.");
     } finally {
       setSubmitting(false);
     }
@@ -108,7 +108,7 @@ export default function FestivalTeesAndBrands() {
         </div>
       </div>
 
-      {/* Section 1 — Festival / gig / DJ promo tees */}
+      {/* Section 1 - Festival / gig / DJ promo tees */}
       <div className="max-w-6xl mx-auto px-6 py-14">
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           <div>
@@ -118,7 +118,7 @@ export default function FestivalTeesAndBrands() {
             <h2 className="font-black text-3xl lg:text-4xl mt-3">Promo tops for your next date</h2>
             <p className="text-[#4b5563] mt-4">
               Whether it's a one-off gig or a full festival season, we print promotional tees and
-              tops with your name, logo or set artwork — ready for you to sell or give away on the night.
+              tops with your name, logo or set artwork - ready for you to sell or give away on the night.
             </p>
             <ul className="mt-6 space-y-3">
               {copy.bullets.map((b, i) => (
@@ -138,7 +138,7 @@ export default function FestivalTeesAndBrands() {
         </div>
       </div>
 
-      {/* Gallery — admin-managed via /admin/portfolio, category "festival-tees-brands" */}
+      {/* Gallery - admin-managed via /admin/portfolio, category "festival-tees-brands" */}
       <PortfolioCarousel
         category="festival-tees-and-brands"
         eyebrow="Out on the road"
@@ -147,7 +147,7 @@ export default function FestivalTeesAndBrands() {
         emptyPreset="Hi! I've got some tour photos wearing your prints to share."
       />
 
-      {/* Section 2 — Start your own clothing brand, dropship */}
+      {/* Section 2 - Start your own clothing brand, dropship */}
       <div className="bg-[#1a1a1a] text-white">
         <div className="max-w-6xl mx-auto px-6 py-16">
           <div className="grid lg:grid-cols-2 gap-10 items-center">
@@ -163,10 +163,10 @@ export default function FestivalTeesAndBrands() {
               <div className="inline-flex items-center gap-2 text-xs font-extrabold text-[#7bc67e] uppercase tracking-widest">
                 <Sparkles size={14} /> Your name, your brand
               </div>
-              <h2 className="font-black text-3xl lg:text-4xl mt-3">Start your own clothing line — no upfront cost</h2>
+              <h2 className="font-black text-3xl lg:text-4xl mt-3">Start your own clothing line - no upfront cost</h2>
               <p className="text-neutral-300 mt-4">
                 Thinking about launching your own merch line under your own name or logo? We'll print
-                and ship it for you as a dropship service — no stock, no minimums, no money down. You
+                and ship it for you as a dropship service - no stock, no minimums, no money down. You
                 focus on the brand and the promotion, we handle the rest.
               </p>
               <ul className="mt-6 space-y-3">
@@ -183,9 +183,9 @@ export default function FestivalTeesAndBrands() {
           {/* How it works */}
           <div className="grid sm:grid-cols-3 gap-6 mt-14">
             {[
-              { icon: Megaphone, title: "1. Tell us your idea", body: "Your name, logo, or just a rough concept — we'll help shape it into a product." },
+              { icon: Megaphone, title: "1. Tell us your idea", body: "Your name, logo, or just a rough concept - we'll help shape it into a product." },
               { icon: PackageCheck, title: "2. We set it up", body: "Free artwork proof, pricing agreed together, ready to print on demand." },
-              { icon: Wallet, title: "3. You promote, we fulfil", body: "Share it with your following — we print and ship each order, you keep your margin." },
+              { icon: Wallet, title: "3. You promote, we fulfil", body: "Share it with your following - we print and ship each order, you keep your margin." },
             ].map(({ icon: Icon, title, body }) => (
               <div key={title} className="bg-white/5 rounded-2xl p-6">
                 <Icon size={22} className="text-[#7bc67e]" />
@@ -218,7 +218,7 @@ export default function FestivalTeesAndBrands() {
           <div className="text-center">
             <h2 className="font-black text-3xl">Let's talk it through</h2>
             <p className="text-[#4b5563] mt-3">
-              Whether it's merch for your next date or launching your own brand — tell us a bit about
+              Whether it's merch for your next date or launching your own brand - tell us a bit about
               it and we'll come back with ideas, no pressure.
             </p>
             {/* Two clearly-labelled routes. The WhatsApp button existed before
@@ -238,7 +238,7 @@ export default function FestivalTeesAndBrands() {
               />
             </div>
             <p className="text-[11px] text-[#4b5563] mt-3">
-              WhatsApp is usually quickest during the day &mdash; the form is better if you want to send artwork or dates.
+              WhatsApp is usually quickest during the day - the form is better if you want to send artwork or dates.
             </p>
           </div>
 

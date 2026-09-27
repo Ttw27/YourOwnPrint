@@ -1,10 +1,10 @@
-"""Configurator addon prices — Full Squad + Sports Outfit + combined GET.
+"""Configurator addon prices - Full Squad + Sports Outfit + combined GET.
 
 Admin can edit per-addon prices at `/admin/configurator-settings`. Prices are
 merged over the code defaults so a partial save never clobbers other fields.
 
 We import `FULL_SQUAD_ADDON_DEFAULTS` and `SPORTS_OUTFIT_ADDON_DEFAULTS` from
-server.py at import time — this router module is imported at the END of server.py
+server.py at import time - this router module is imported at the END of server.py
 so the defaults are already defined.
 """
 from __future__ import annotations

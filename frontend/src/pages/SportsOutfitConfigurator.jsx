@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 /**
- * Sports Outfit Configurator — simpler builder for gyms, PTs, boxing/thai/kick gyms.
+ * Sports Outfit Configurator - simpler builder for gyms, PTs, boxing/thai/kick gyms.
  *
  * Two "sets": Training (top + shorts) and Tracksuit (hoodie + joggers). User can select
  * either or both.
@@ -94,7 +94,7 @@ export default function SportsOutfitConfigurator() {
         const unit = Number(variant?.price || 0) + printCostOf(v);
         const printParts = [frontLabel];
         if (v.back_on) printParts.push("Back print");
-        summaryLines.push(`[${sec.title}] ${brandLabel} — colour: ${v.colour || "n/a"} — print: ${printParts.join(" + ")} — ${qty} kits @ £${unit.toFixed(2)}`);
+        summaryLines.push(`[${sec.title}] ${brandLabel} - colour: ${v.colour || "n/a"} - print: ${printParts.join(" + ")} - ${qty} kits @ £${unit.toFixed(2)}`);
         const sizeParts = [];
         const sz = v.sizes || {};
         const splitOn = !!sz._split;
@@ -120,18 +120,18 @@ export default function SportsOutfitConfigurator() {
         kit_type: "sports-outfit-configurator",
         quantity: totals.totalQty,
         deadline: "",
-        message: `Sports Outfit Configurator quote — estimated subtotal £${totals.subtotal.toFixed(2)}.\n${summaryLines.join("\n")}`,
+        message: `Sports Outfit Configurator quote - estimated subtotal £${totals.subtotal.toFixed(2)}.\n${summaryLines.join("\n")}`,
         roster: [],
         attachments,
       });
-      toast.success("Quote sent — we'll be in touch within 1 working day with a proof and price.");
+      toast.success("Quote sent - we'll be in touch within 1 working day with a proof and price.");
     } catch (e) {
       const d = e?.response?.data?.detail;
       const msg = typeof d === "string"
         ? d
         : Array.isArray(d)
           ? d.map((x) => x?.msg || String(x)).join(", ")
-          : "Couldn't send the quote — try WhatsApp instead.";
+          : "Couldn't send the quote - try WhatsApp instead.";
       toast.error(msg);
     } finally { setBusy(false); }
   };
@@ -145,7 +145,7 @@ export default function SportsOutfitConfigurator() {
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Sports outfit configurator</span>
           <h1 className="font-black text-4xl lg:text-6xl mt-2">Kit your gym, box or class.</h1>
-          <p className="text-zinc-300 mt-3 max-w-2xl">Pick a training kit, a tracksuit — or both. Unbranded or add a logo where you want it. Perfect for gyms, PTs, boxing / thai / kick gyms and dance studios.</p>
+          <p className="text-zinc-300 mt-3 max-w-2xl">Pick a training kit, a tracksuit - or both. Unbranded or add a logo where you want it. Perfect for gyms, PTs, boxing / thai / kick gyms and dance studios.</p>
         </div>
       </header>
 
@@ -175,8 +175,8 @@ export default function SportsOutfitConfigurator() {
 
           <NeedHelpCTA
             title="Not sure on quantities? Want mockups before you commit?"
-            body="Message us with your logo and rough numbers — we'll send back proofs, a tailored quote and colour options."
-            presetMessage="Hi! I'd like to kit out my gym / studio — can we chat?"
+            body="Message us with your logo and rough numbers - we'll send back proofs, a tailored quote and colour options."
+            presetMessage="Hi! I'd like to kit out my gym / studio - can we chat?"
             testid="soc-need-help"
             variant="banner"
           />
@@ -351,12 +351,12 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
           )}
 
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Print — front &amp; back</div>
+            <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Print - front &amp; back</div>
             <div className="text-xs text-[#4b5563] mb-2 flex items-start gap-1.5">
-              <Info size={12} className="mt-0.5" /> Pick a front option — breast and full-front are mutually exclusive with each other. Back print can be added on top of any front option (tops only — shorts &amp; joggers never receive back prints).
+              <Info size={12} className="mt-0.5" /> Pick a front option - breast and full-front are mutually exclusive with each other. Back print can be added on top of any front option (tops only - shorts &amp; joggers never receive back prints).
             </div>
 
-            {/* FRONT — radio */}
+            {/* FRONT - radio */}
             <div className="text-[11px] font-extrabold text-[#4b5563] mb-1">Front</div>
             <div className="grid sm:grid-cols-3 gap-2">
               {FRONT_MODES.map((m) => {
@@ -376,7 +376,7 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
               })}
             </div>
 
-            {/* Front artwork uploader — appears when front is not 'unbranded' */}
+            {/* Front artwork uploader - appears when front is not 'unbranded' */}
             {currentFrontMode !== "unbranded" && (
               <div className="mt-3">
                 <ArtworkUploader
@@ -390,13 +390,13 @@ function SportsSectionBuilder({ index, section, addons, value, onChange }) {
               </div>
             )}
 
-            {/* BACK — checkbox */}
+            {/* BACK - checkbox */}
             <div className="text-[11px] font-extrabold text-[#4b5563] mt-4 mb-1">Back (tops only)</div>
             <label className="flex items-start gap-2 rounded-xl border-2 border-dashed border-[#7bc67e] bg-[#f0fdf4] p-3 cursor-pointer" data-testid={`soc-back-${section.key}`}>
               <input type="checkbox" checked={!!value.back_on} onChange={toggleBack} className="mt-0.5 accent-[#7bc67e]" data-testid={`soc-back-toggle-${section.key}`} />
               <div className="flex-1 text-xs">
                 <div className="font-extrabold">Add a centred back print</div>
-                <div className="text-[#4b5563] mt-0.5">+£{Number(addons?.back_print_price || 0).toFixed(2)} per kit. Applied to the top — never the shorts or joggers.</div>
+                <div className="text-[#4b5563] mt-0.5">+£{Number(addons?.back_print_price || 0).toFixed(2)} per kit. Applied to the top - never the shorts or joggers.</div>
               </div>
             </label>
 
@@ -484,7 +484,7 @@ function ArtworkUploader({ label, helper, value, onChange, purpose, testid }) {
       onChange({ ...uploaded, preview: dataUrl.startsWith("data:image/") ? dataUrl : null });
       toast.success(`Uploaded ${file.name}`);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Upload failed — try a smaller file.");
+      toast.error(err?.response?.data?.detail || "Upload failed - try a smaller file.");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

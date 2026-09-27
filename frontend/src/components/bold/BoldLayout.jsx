@@ -87,7 +87,7 @@ export function BoldNavbar() {
   return (
     <nav ref={rootRef} className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb]" data-testid="bold-navbar">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" data-testid="nav-logo" className="flex-shrink-0 inline-flex items-center" aria-label="Your Own Print — home">
+        <Link to="/" data-testid="nav-logo" className="flex-shrink-0 inline-flex items-center" aria-label="Your Own Print - home">
           <img src="/logo.png" alt="Your Own Print" className="h-10 w-auto md:h-11 select-none" draggable="false" />
         </Link>
 
@@ -204,7 +204,7 @@ export function BoldNavbar() {
         </div>
       )}
 
-      {/* Mobile slide-over — rendered into document.body via portal to escape backdrop-blur containing block */}
+      {/* Mobile slide-over - rendered into document.body via portal to escape backdrop-blur containing block */}
       {mobileOpen && typeof document !== "undefined" && createPortal(
         <div className="md:hidden fixed inset-0 z-[100] bg-black/60" onClick={() => setMobileOpen(false)} data-testid="nav-mobile-overlay">
           <div className="bg-white text-[#0a0a0a] w-[88%] max-w-sm h-full p-6 overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ color: "#0a0a0a" }}>
@@ -255,7 +255,7 @@ export function BoldNavbar() {
 
 // The logo is dark artwork on a light background, so on the black footer it had
 // to sit in a white patch that read as a sticker stuck on the page. A wordmark
-// set in the brand colours belongs there instead — same identity, no box.
+// set in the brand colours belongs there instead - same identity, no box.
 const WORDMARK = [
   ["YOUR", "#D85A30"], ["OWN", "#378ADD"], ["PRINT", "#7bc67e"],
 ];
@@ -280,13 +280,13 @@ export function BoldFooter() {
     <footer className="bg-[#1a1a1a] text-white">
       <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-5 gap-8">
         <div>
-          <Link to="/" className="inline-flex items-baseline font-nunito font-black text-2xl tracking-tight" aria-label="Your Own Print — home">
+          <Link to="/" className="inline-flex items-baseline font-nunito font-black text-2xl tracking-tight" aria-label="Your Own Print - home">
             {WORDMARK.map(([text, colour]) => (
               <span key={text} style={{ color: colour }}>{text}</span>
             ))}
             <span className="text-neutral-500 text-sm ml-1">.co.uk</span>
           </Link>
-          <p className="mt-3 text-sm text-neutral-300">Custom print & workwear, based in Leicester — delivering across the whole of the UK.</p>
+          <p className="mt-3 text-sm text-neutral-300">Custom print & workwear, based in Leicester - delivering across the whole of the UK.</p>
           {links.length > 0 && (
             <div className="flex gap-3 mt-4" data-testid="footer-socials">
               {links.map(({ key, label, Icon }) => (

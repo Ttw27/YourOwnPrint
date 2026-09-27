@@ -6,7 +6,7 @@ import { useCustomerAuth } from "./CustomerAuthContext";
 /**
  * Multi-product cart with localStorage persistence.
  *
- * Cart items are stored per-line — each line captures product + size_qtys +
+ * Cart items are stored per-line - each line captures product + size_qtys +
  * placements + colour + optional design_meta (DYO artwork ref). The server is
  * the source of truth for pricing: every render we send the raw cart to
  * `/api/cart/price` and use its numbers. This means bulk-tier discounts and
@@ -68,7 +68,7 @@ export function CartProvider({ children }) {
           if ((res.items || []).length > 0) setItems(res.items);
         }
       } catch (e) {
-        // Non-blocking — user still has their local cart
+        // Non-blocking - user still has their local cart
         console.warn("cart merge failed:", e);
       } finally {
         mergingRef.current = false;
@@ -83,7 +83,7 @@ export function CartProvider({ children }) {
     const t = setTimeout(() => {
       const payload = items.map(({ product_id, size_qtys, color, placements, blank, design_meta, line_id }) =>
         ({ product_id, size_qtys, color, placements, blank, design_meta, line_id }));
-      customerPutCart(token, payload).catch(() => { /* silent — retry next change */ });
+      customerPutCart(token, payload).catch(() => { /* silent - retry next change */ });
     }, 800);
     return () => clearTimeout(t);
   }, [items, isAuthenticated, token]);
@@ -125,7 +125,7 @@ export function CartProvider({ children }) {
       return [...prev, { ...line, line_id }];
     });
     setDrawerOpen(true);
-    toast.success(`Added to cart — ${line.name || line.product_id}`);
+    toast.success(`Added to cart - ${line.name || line.product_id}`);
   }, []);
 
   const removeLine = useCallback((line_id) => {

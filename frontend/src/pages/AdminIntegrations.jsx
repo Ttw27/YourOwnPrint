@@ -27,7 +27,7 @@ export default function AdminIntegrations() {
     // Only send keys with a typed value (empty means "leave as is")
     const values = {};
     Object.entries(draft).forEach(([k, v]) => { if (v && v.trim()) values[k] = v.trim(); });
-    if (Object.keys(values).length === 0) { toast.info("Nothing to save — type a value into at least one field"); return; }
+    if (Object.keys(values).length === 0) { toast.info("Nothing to save - type a value into at least one field"); return; }
     setSaving(true);
     try {
       await adminUpdateIntegrations(values);
@@ -115,12 +115,12 @@ export default function AdminIntegrations() {
             <div className="mt-8 bg-[#1a1a1a] text-white rounded-3xl p-6">
               <div className="text-[#7bc67e] text-xs uppercase tracking-[0.3em] font-extrabold">Deployment-ready checklist</div>
               <ul className="mt-3 space-y-2 text-sm">
-                <ChecklistRow ok={items.find((i) => i.key === "stripe_api_key")?.is_set}>Stripe — payments will fail without this</ChecklistRow>
-                <ChecklistRow ok={items.find((i) => i.key === "contact_email")?.is_set}>Contact email — where quote requests are sent</ChecklistRow>
-                <ChecklistRow ok={items.find((i) => i.key === "whatsapp_number")?.is_set}>WhatsApp number — used in the WhatsApp FAB and bespoke flow</ChecklistRow>
-                <ChecklistRow ok={items.find((i) => i.key === "resend_api_key")?.is_set}>Resend — transactional emails (optional)</ChecklistRow>
-                <ChecklistRow ok={items.find((i) => i.key === "removebg_api_key")?.is_set}>remove.bg — background removal in Designer (optional)</ChecklistRow>
-                <ChecklistRow ok={items.find((i) => i.key === "cutoutpro_api_key")?.is_set}>Cutout.pro — AI image effects in Designer (optional)</ChecklistRow>
+                <ChecklistRow ok={items.find((i) => i.key === "stripe_api_key")?.is_set}>Stripe - payments will fail without this</ChecklistRow>
+                <ChecklistRow ok={items.find((i) => i.key === "contact_email")?.is_set}>Contact email - where quote requests are sent</ChecklistRow>
+                <ChecklistRow ok={items.find((i) => i.key === "whatsapp_number")?.is_set}>WhatsApp number - used in the WhatsApp FAB and bespoke flow</ChecklistRow>
+                <ChecklistRow ok={items.find((i) => i.key === "resend_api_key")?.is_set}>Resend - transactional emails (optional)</ChecklistRow>
+                <ChecklistRow ok={items.find((i) => i.key === "removebg_api_key")?.is_set}>remove.bg - background removal in Designer (optional)</ChecklistRow>
+                <ChecklistRow ok={items.find((i) => i.key === "cutoutpro_api_key")?.is_set}>Cutout.pro - AI image effects in Designer (optional)</ChecklistRow>
               </ul>
               <a href="https://app.emergent.sh/?utm_source=integrations" target="_blank" rel="noreferrer" className="text-xs mt-4 inline-flex items-center gap-1 text-[#7bc67e]">
                 Deploy via Emergent <ExternalLink size={12} />
@@ -150,8 +150,8 @@ function ResendTester() {
     setBusy(true);
     try {
       const res = await adminSendTestEmail(to.trim());
-      if (res?.ok) toast.success(`Test email sent to ${to} (id ${res.id?.slice(0, 8) || '—'})`);
-      else toast.error(res?.error || "Resend failed — check the key");
+      if (res?.ok) toast.success(`Test email sent to ${to} (id ${res.id?.slice(0, 8) || '-'})`);
+      else toast.error(res?.error || "Resend failed - check the key");
     } catch (e) { toast.error(e?.response?.data?.detail || "Resend failed"); }
     finally { setBusy(false); }
   };

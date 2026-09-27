@@ -47,7 +47,7 @@ export default function AdminCollectionSeo() {
     <div className="min-h-screen bg-[#f8fafc] font-nunito" data-testid="admin-collection-seo">
       <div className="max-w-4xl mx-auto px-6 py-10">
         <h1 className="font-black text-3xl mb-1">Collection SEO</h1>
-        <p className="text-sm text-[#4b5563] mb-6">Write in-depth SEO copy for each collection page (<code>/shop/&lt;slug&gt;</code>). The <strong>intro</strong> shows under the H1 in the hero; the <strong>body</strong> appears at the bottom of the page with FAQ items — great for Google visibility.</p>
+        <p className="text-sm text-[#4b5563] mb-6">Write in-depth SEO copy for each collection page (<code>/shop/&lt;slug&gt;</code>). The <strong>intro</strong> shows under the H1 in the hero; the <strong>body</strong> appears at the bottom of the page with FAQ items - great for Google visibility.</p>
 
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5 space-y-4">
           <label className="block">
@@ -67,8 +67,8 @@ export default function AdminCollectionSeo() {
               </label>
 
               <label className="block" data-testid="acs-body">
-                <div className="text-xs font-extrabold mb-1">Body <span className="text-[#4b5563] font-normal">(long-form — use blank lines to split paragraphs)</span></div>
-                <textarea value={seo.body} onChange={(e) => setSeo({ ...seo, body: e.target.value })} className="input min-h-[220px] font-mono text-[12px]" placeholder={"Long-form SEO copy about the collection.\n\nParagraph 2 — talk about garment quality, print options, ideal uses (schools, gyms, teams, businesses).\n\nParagraph 3 — quality &amp; delivery reassurance, colours, sizes, care."} />
+                <div className="text-xs font-extrabold mb-1">Body <span className="text-[#4b5563] font-normal">(long-form - use blank lines to split paragraphs)</span></div>
+                <textarea value={seo.body} onChange={(e) => setSeo({ ...seo, body: e.target.value })} className="input min-h-[220px] font-mono text-[12px]" placeholder={"Long-form SEO copy about the collection.\n\nParagraph 2 - talk about garment quality, print options, ideal uses (schools, gyms, teams, businesses).\n\nParagraph 3 - quality &amp; delivery reassurance, colours, sizes, care."} />
               </label>
 
               <div data-testid="acs-faq">

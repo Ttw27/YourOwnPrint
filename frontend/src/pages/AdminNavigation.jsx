@@ -21,14 +21,14 @@ export default function AdminNavigation() {
     try {
       const res = await adminNavigationMissingDefaults();
       setMissingDefaults(res?.missing || []);
-    } catch { /* non-critical — just don't show the banner */ }
+    } catch { /* non-critical - just don't show the banner */ }
   }
 
   async function addMissing() {
     setAddingMissing(true);
     try {
       const res = await adminNavigationAddMissingDefaults();
-      toast.success(`Added ${res.added} new link${res.added === 1 ? "" : "s"} — your existing menu is untouched`);
+      toast.success(`Added ${res.added} new link${res.added === 1 ? "" : "s"} - your existing menu is untouched`);
       setMissingDefaults([]);
       load();
     } catch { toast.error("Couldn't add the new links"); }
@@ -80,7 +80,7 @@ export default function AdminNavigation() {
         return m;
       });
       await adminUpdateNavigation({ menu: cleaned, version: 1 });
-      toast.success("Navigation saved — visible site-wide instantly");
+      toast.success("Navigation saved - visible site-wide instantly");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Save failed");
     } finally { setSaving(false); }
@@ -120,7 +120,7 @@ export default function AdminNavigation() {
                 </div>
                 <p className="text-[11px] text-[#4b5563] mt-0.5">
                   These pages exist on the site but aren&rsquo;t in your saved menu yet. Adding them leaves everything
-                  you&rsquo;ve customised exactly as it is &mdash; unlike Reset, which discards your changes.
+                  you&rsquo;ve customised exactly as it is - unlike Reset, which discards your changes.
                 </p>
                 <ul className="mt-2 space-y-0.5">
                   {missingDefaults.map((m) => (

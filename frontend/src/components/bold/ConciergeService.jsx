@@ -4,7 +4,7 @@ import { MessageCircle, ArrowRight, Sparkles, PackageCheck } from "lucide-react"
 import { buildWhatsAppLink, WHATSAPP_NUMBER_DISPLAY } from "../../lib/data";
 
 /**
- * ConciergeService — "you don't even have to use the website".
+ * ConciergeService - "you don't even have to use the website".
  *
  * The pitch: a busy trade buyer hasn't got time to design online, upload a logo
  * or pick garments. So they don't have to. Message us on WhatsApp, we reuse the
@@ -12,15 +12,15 @@ import { buildWhatsAppLink, WHATSAPP_NUMBER_DISPLAY } from "../../lib/data";
  * mock it up, and send a payment link. You get on with running your business;
  * we get you looking professional and post it out.
  *
- * This is a stronger, more specific promise than "a human checks your order" —
- * it's "hand us the whole job" — so it's its own component rather than a
+ * This is a stronger, more specific promise than "a human checks your order" -
+ * it's "hand us the whole job" - so it's its own component rather than a
  * variant of AccountManagerPromise. The two are complementary.
  *
  * Variants mirror the other promise blocks (band / card / hero). The number and
  * message route through the central WhatsApp config so it stays in one place.
  */
 const DEFAULT_PRESET =
-  "Hi! I'd rather not order through the website — can you sort my order over WhatsApp? Here's what I need:";
+  "Hi! I'd rather not order through the website - can you sort my order over WhatsApp? Here's what I need:";
 
 export default function ConciergeService({ variant = "band", preset = DEFAULT_PRESET }) {
   const waLink = buildWhatsAppLink(preset);
@@ -33,7 +33,7 @@ export default function ConciergeService({ variant = "band", preset = DEFAULT_PR
         </div>
         <p className="text-sm text-neutral-300 mt-2 leading-relaxed">
           Too busy to design online? Message us on WhatsApp. We&rsquo;ll reuse your logo from last time (or take a new
-          one), help you pick the clothing, and send a payment link. You carry on &mdash; we post it out.
+          one), help you pick the clothing, and send a payment link. You carry on - we post it out.
         </p>
         <a
           href={waLink}
@@ -57,7 +57,7 @@ export default function ConciergeService({ variant = "band", preset = DEFAULT_PR
           </span>
           <h2 className="font-black text-2xl sm:text-3xl mt-3">Haven&rsquo;t got time? Let us do the whole thing</h2>
           <p className="text-neutral-300 mt-3 max-w-2xl mx-auto leading-relaxed">
-            Not everyone has time to sit and design online &mdash; and you shouldn&rsquo;t have to. Send us a message on
+            Not everyone has time to sit and design online - and you shouldn&rsquo;t have to. Send us a message on
             WhatsApp with what you need. We&rsquo;ll use the logo from your last order (or take a fresh one), help you
             choose the right garments, mock it up for you to approve, then send a payment link. You get on with the
             important stuff; we get you looking professional and post it straight out.
@@ -96,7 +96,7 @@ export default function ConciergeService({ variant = "band", preset = DEFAULT_PR
           <Sparkles size={16} /> No time to design?
         </span>
         <span className="font-nunito text-sm sm:text-base">
-          Order over WhatsApp &mdash; <span className="font-extrabold">we&rsquo;ll reuse your logo, pick the kit, and send a payment link.</span>
+          Order over WhatsApp - <span className="font-extrabold">we&rsquo;ll reuse your logo, pick the kit, and send a payment link.</span>
         </span>
         <a
           href={waLink}

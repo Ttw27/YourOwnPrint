@@ -1,11 +1,11 @@
-"""Iteration 27 — Bulk product import API tests."""
+"""Iteration 27 - Bulk product import API tests."""
 import os
 import requests
 import pytest
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 if not BASE_URL:
-    # Fallback for backend tests when frontend env var not set — read from frontend/.env
+    # Fallback for backend tests when frontend env var not set - read from frontend/.env
     with open("/app/frontend/.env") as f:
         for ln in f:
             if ln.startswith("REACT_APP_BACKEND_URL="):
@@ -106,7 +106,7 @@ def test_bulk_import_auto_category_and_markup(admin_headers):
 
 
 # ---------------------------------------------------------------------------
-# IN-MEMORY MERGE — imported product shows on /api/shop/type/{slug}
+# IN-MEMORY MERGE - imported product shows on /api/shop/type/{slug}
 # ---------------------------------------------------------------------------
 def test_imported_product_visible_in_shop_hoodies():
     r = requests.get(f"{BASE_URL}/api/shop/type/hoodies", timeout=15)
@@ -163,7 +163,7 @@ def test_facet_colour_coral_present_after_import():
 
 
 def test_get_product_detail_by_slug():
-    """GET /api/products/{id} (plural) — route in server.py at /products/{product_id}."""
+    """GET /api/products/{id} (plural) - route in server.py at /products/{product_id}."""
     assert CREATED_IDS, "no product ids captured"
     pid = CREATED_IDS[0]
     r = requests.get(f"{BASE_URL}/api/products/{pid}", timeout=10)

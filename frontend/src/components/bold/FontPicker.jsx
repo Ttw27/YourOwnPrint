@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
 
 /**
- * FontPicker — a dropdown where every option is rendered IN its own font,
+ * FontPicker - a dropdown where every option is rendered IN its own font,
  * so you can see what each one actually looks like before picking it.
  *
  * A plain <select> can't do this reliably (browsers largely ignore
@@ -50,7 +50,7 @@ export default function FontPicker({ value, onChange, fonts, className = "" }) {
               className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 hover:bg-[#f0fdf4] transition-colors ${f.value === value ? "bg-[#f0fdf4]" : ""}`}
               data-testid={`font-picker-option-${f.label}`}
             >
-              {/* Each option rendered in its own font — the whole point */}
+              {/* Each option rendered in its own font - the whole point */}
               <span className="text-base truncate" style={{ fontFamily: f.value }}>{f.label}</span>
               {f.value === value && <Check size={13} className="text-[#7bc67e] flex-shrink-0" />}
             </button>

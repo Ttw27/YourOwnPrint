@@ -1,24 +1,24 @@
 """
-Find My Kit — AI concierge that turns a job/trade into a ready-to-wear kit.
+Find My Kit - AI concierge that turns a job/trade into a ready-to-wear kit.
 
 Instead of making a customer wade through collection after collection, they tell
 us their trade ("mobile dog groomer", or pick "Construction & Trades") and we
-hand back a curated, head-to-toe kit — tops, mid-layers, outerwear, legwear,
-headwear and the right extras — grouped like a uniform advisor would lay it out.
+hand back a curated, head-to-toe kit - tops, mid-layers, outerwear, legwear,
+headwear and the right extras - grouped like a uniform advisor would lay it out.
 
 How it works (hybrid, so it's fast and cheap for known trades but still copes
 with an odd job title):
   1. Map the trade to one or more of our industry tags (direct match, alias, or
      a light keyword map). This is instant and free.
   2. Gather candidate products the shop actually stocks for those industries,
-     grouped by collection so the AI has a real menu to choose from — never
+     grouped by collection so the AI has a real menu to choose from - never
      inventing products.
   3. Ask Claude to act as the concierge: pick a balanced ~15-item kit ACROSS
      categories and group it into sensible sections with a one-line reason each.
      The AI only chooses from the candidate IDs we supply, so every pick is a
      real, in-stock product.
 
-Nothing here writes to the catalogue — it's read-only and per-request.
+Nothing here writes to the catalogue - it's read-only and per-request.
 """
 from __future__ import annotations
 
@@ -194,17 +194,17 @@ def _system_prompt() -> str:
         "assemble ONE practical, head-to-toe kit for them.\n"
         "Rules:\n"
         "- Choose ONLY from the provided product ids. Never invent products.\n"
-        "- Build a BALANCED kit ACROSS categories — not many of one type. Think like kitting out a "
+        "- Build a BALANCED kit ACROSS categories - not many of one type. Think like kitting out a "
         "team: everyday tops, a mid-layer/warm option, outerwear if relevant, appropriate legwear, "
         "headwear, and the genuinely useful extras (e.g. gloves, aprons, bags, towels) for THAT trade.\n"
         "- Organise the kit into these FIXED sections, in this order: "
         "Headwear, Tops, Mid layers, Outerwear, Hi-vis & Safety, Legwear, Footwear, Gloves & Extras.\n"
-        "- Fill EVERY section you genuinely can from the available products — e.g. a plumber or builder "
+        "- Fill EVERY section you genuinely can from the available products - e.g. a plumber or builder "
         "should get Footwear (safety boots) and Hi-vis & Safety; don't skip those when suitable items exist. "
         "SKIP a section only when nothing in stock genuinely fits that trade (e.g. no Hi-vis for a hairdresser).\n"
         "- Put 1-3 items in each section you fill. Aim for a complete uniform, not a huge list.\n"
         "- For each item give a SHORT reason (max ~10 words) why it suits this trade.\n"
-        "- STRONGLY prefer items marked BESTSELLER — lead each section with them; these are the shop's proven "
+        "- STRONGLY prefer items marked BESTSELLER - lead each section with them; these are the shop's proven "
         "popular choices and should appear first whenever they fit the trade.\n"
         "- Favour sensible, good-value everyday all-rounders over niche or premium items. Don't fill the kit "
         "with the most expensive options; pick the practical choice a typical customer in that trade would want.\n"
@@ -224,11 +224,11 @@ async def find_my_kit(payload: KitRequest):
     # Nothing at all to work with.
     if not candidates:
         return {"ok": False, "reason": "no_products", "industries": industries,
-                "message": "We couldn't find matching products just yet — try a broader trade or browse the collections."}
+                "message": "We couldn't find matching products just yet - try a broader trade or browse the collections."}
 
     api_key = await _get_integration_value("anthropic_api_key")
     if not api_key:
-        # Graceful fallback: no AI available — return a simple balanced spread by
+        # Graceful fallback: no AI available - return a simple balanced spread by
         # category so the feature still does something useful.
         return _fallback_kit(candidates, industries)
 
