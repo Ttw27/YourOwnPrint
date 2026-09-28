@@ -132,9 +132,19 @@ export default function AdminProductSettings() {
   };
   const delOverride = (id, i) => update(id, { bulk_pricing_overrides: (products.find(p => p.id === id).bulk_pricing_overrides || []).filter((_, j) => j !== i) });
 
+  // Each open product's "Name, price & main photo" box registers itself here, so
+  // the main Save button saves it too. (It used to have its own separate button,
+  // and clicking only the main Save silently dropped name/price changes.)
+  const basicsSavers = React.useRef({});
+  const registerBasicsSaver = React.useCallback((id, saver) => {
+    if (saver) basicsSavers.current[id] = saver; else delete basicsSavers.current[id];
+  }, []);
+
   const save = async (p) => {
     setBusy(true);
     try {
+      const basics = basicsSavers.current[p.id];
+      const savedName = basics && basics.isDirty() ? await basics.save({ quiet: true }) : null;
       await updateProductMeta(p.id, {
         brand: p.brand || "",
         sku: p.sku || "",
@@ -153,7 +163,8 @@ export default function AdminProductSettings() {
         gender_fit: p.gender_fit || "unisex",
         industry_tags: Array.isArray(p.industry_tags) ? p.industry_tags : [],
       });
-      toast.success(`${p.name} saved`);
+      toast.success(`${savedName || p.name} saved`);
+      if (savedName) reload();
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
     finally { setBusy(false); }
   };
@@ -339,7 +350,7 @@ export default function AdminProductSettings() {
                       </button>
                     </div>
                     {/* Basics - name, price, category, descriptions (in ProductOverridePanel) */}
-                    <ProductOverridePanel key={`${p.id}-${p.hidden}`} product={p} onSaved={reload} />
+                    <ProductOverridePanel key={`${p.id}-${p.hidden}`} product={p} onSaved={reload} registerSaver={registerBasicsSaver} />
 
                     {/* Product details */}
                     <Section title="Product details" hint="Brand, code and the full description shown on the product page.">
@@ -736,7 +747,7 @@ function ImageGalleryEditor({ productId, urls, onChange }) {
  * Revert (DELETE /admin/products/{pid}/override) removes the doc and restores
  * the pristine hardcoded values immediately - no restart needed.
  */
-function ProductOverridePanel({ product, onSaved }) {
+function ProductOverridePanel({ product, onSaved, registerSaver }) {
   const [draft, setDraft] = React.useState({
     name: product.name || "",
     price: product.price ?? 0,
@@ -765,7 +776,9 @@ function ProductOverridePanel({ product, onSaved }) {
     draft.active !== !product.hidden
   );
 
-  const save = async () => {
+  // quiet: called from the main Save button, which shows its own message and
+  // reloads; errors are re-thrown so it can report them. Returns the saved name.
+  const save = async ({ quiet = false } = {}) => {
     setBusy(true);
     try {
       await patchProductOverride(product.id, {
@@ -776,18 +789,33 @@ function ProductOverridePanel({ product, onSaved }) {
         category: draft.category || null,
         active: draft.active,
       });
-      toast.success(`${draft.name} - override saved`);
-      onSaved && onSaved();
-    } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+      if (!quiet) {
+        toast.success(`${draft.name} saved`);
+        onSaved && onSaved();
+      }
+      return draft.name?.trim() || product.name;
+    } catch (e) {
+      if (quiet) throw e;
+      toast.error(e?.response?.data?.detail || "Save failed");
+    }
     finally { setBusy(false); }
   };
 
+  // Let the main Save button see and save this box (latest values via a ref).
+  const latest = React.useRef({ dirty, save });
+  latest.current = { dirty, save };
+  React.useEffect(() => {
+    if (!registerSaver) return undefined;
+    registerSaver(product.id, { isDirty: () => latest.current.dirty, save: (o) => latest.current.save(o) });
+    return () => registerSaver(product.id, null);
+  }, [product.id, registerSaver]);
+
   const revert = async () => {
-    if (!window.confirm(`Revert "${product.name}" to code defaults? This clears all custom name / price / description / image overrides.`)) return;
+    if (!window.confirm(`Revert "${product.name}" back to its original name, price, description and photo? Your changes in this box will be removed.`)) return;
     setBusy(true);
     try {
       await clearProductOverride(product.id);
-      toast.success("Reverted to code defaults");
+      toast.success("Back to the original");
       onSaved && onSaved();
     } catch (e) { toast.error(e?.response?.data?.detail || "Revert failed"); }
     finally { setBusy(false); }
@@ -797,17 +825,17 @@ function ProductOverridePanel({ product, onSaved }) {
     <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4 space-y-3" data-testid={`aps-override-${product.id}`}>
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wider font-extrabold text-[#166534]">
-          <Pencil size={12} /> Basic catalogue override
-          {loaded && override && <span className="ml-2 px-2 py-0.5 rounded-full bg-[#7bc67e] text-[#1a1a1a] text-[10px]" data-testid={`aps-override-badge-${product.id}`}>Custom pricing set</span>}
+          <Pencil size={12} /> Name, price &amp; main photo
+          {loaded && override && <span className="ml-2 px-2 py-0.5 rounded-full bg-[#7bc67e] text-[#1a1a1a] text-[10px]" data-testid={`aps-override-badge-${product.id}`}>Changed from the original</span>}
         </div>
         {loaded && override && (
           <button type="button" onClick={revert} disabled={busy} className="text-[11px] font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1 disabled:opacity-50" data-testid={`aps-override-revert-${product.id}`}>
-            <RotateCcw size={11} /> Revert to code defaults
+            <RotateCcw size={11} /> Undo changes - go back to the original
           </button>
         )}
       </div>
       <div className="grid sm:grid-cols-2 gap-2">
-        <Lab label="Product name (H1)">
+        <Lab label="Product name">
           <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={ic} data-testid={`aps-override-name-${product.id}`} />
         </Lab>
         <Lab label="Price (£)">
@@ -832,7 +860,7 @@ function ProductOverridePanel({ product, onSaved }) {
           <span className="text-xs font-extrabold">Visible on the site (untick to hide it from customers)</span>
         </label>
         <button onClick={save} disabled={busy || !dirty} className="inline-flex items-center gap-1.5 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 text-[#1a1a1a] font-extrabold text-xs px-4 py-2 rounded-full" data-testid={`aps-override-save-${product.id}`}>
-          {busy ? <Loader2 className="animate-spin" size={11} /> : <Save size={11} />} Save override
+          {busy ? <Loader2 className="animate-spin" size={11} /> : <Save size={11} />} Save
         </button>
       </div>
     </div>
