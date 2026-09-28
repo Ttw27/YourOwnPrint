@@ -222,6 +222,17 @@ export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", cate
   return data;
 }
 
+// Proof maker: product + colours, and the garment photo as a Blob (fetched via
+// the backend so the proof canvas can be exported - see routers/proof_maker.py).
+export async function fetchProofProduct(pid) {
+  const { data } = await api.get(`/admin/proof/product/${encodeURIComponent(pid)}`);
+  return data;
+}
+export async function fetchProofPhoto(pid, colour = "") {
+  const { data } = await api.get(`/admin/proof/photo/${encodeURIComponent(pid)}`, { params: { colour }, responseType: "blob" });
+  return data;
+}
+
 // Hide or unhide products on the live site. Products are never deleted.
 export async function setProductsVisibility(productIds, hidden) {
   const { data } = await api.post("/admin/products/visibility", { product_ids: productIds, hidden });

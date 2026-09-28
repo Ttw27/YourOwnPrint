@@ -98,6 +98,8 @@ backend/
     configurator_addons.py  # sports-outfit / full-squad configurator add-ons
     customer_auth.py        # customer accounts, cart, orders, saved designs
     admin_reviews.py        # review moderation
+    proof_maker.py          # admin proof maker (/admin/proof/*) - serves garment photos so the
+                            # browser can export a watermarked proof PNG (page: AdminProofMaker.jsx)
   services/
     r2_storage.py           # Cloudflare R2 put/get + mirror_external_image
     stripe_checkout.py       # Stripe hosted Checkout session creation

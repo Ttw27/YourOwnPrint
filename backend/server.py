@@ -6838,6 +6838,7 @@ import routers.image_health  # noqa: F401 - registers /admin/image-health/* (bro
 import routers.design_shop  # noqa: F401 - registers /design-shop/* (ready-made designs)
 import routers.design_shop_admin  # noqa: F401 - registers /admin/design-shop/* (design upload tool)
 import routers.ralawise_import  # noqa: F401 - registers /admin/ralawise/* (Ralawise xlsm importer)
+import routers.proof_maker  # noqa: F401 - registers /admin/proof/* (admin proof maker)
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move

@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingBag, MessageSquare, HelpCircle, Star,
   Package, Upload, Sparkles, ImageOff, Wand2, Tags, Layers,
   FileText, Menu as MenuIcon, Image, Shirt, GraduationCap,
-  Plug, SlidersHorizontal, LogOut, X, Store,
+  Plug, SlidersHorizontal, LogOut, X, Store, Stamp,
 } from "lucide-react";
 
 /**
@@ -33,6 +33,7 @@ const GROUPS = [
       { label: "The Design Shop", to: "/admin/design-shop", icon: Sparkles },
       { label: "Ralawise Import", to: "/admin/ralawise", icon: Upload },
       { label: "Designer products", to: "/admin/designer-products", icon: Wand2 },
+      { label: "Proof maker", to: "/admin/proof-maker", icon: Stamp },
       { label: "Collections & SEO", to: "/admin/collection-seo", icon: Tags },
       { label: "Bundle variants", to: "/admin/bundle-variants", icon: Layers },
     ],
