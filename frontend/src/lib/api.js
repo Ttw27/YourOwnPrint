@@ -233,6 +233,12 @@ export async function fetchProofPhoto(pid, colour = "") {
   return data;
 }
 
+// Switch a product in/out of the Design Your Own tool.
+export async function setDesignerEnabled(pid, enabled) {
+  const { data } = await api.post(`/admin/products/${encodeURIComponent(pid)}/designer`, { enabled });
+  return data;
+}
+
 // Make an independent copy of a product (starts hidden). Returns {id, name}.
 export async function duplicateProduct(pid, name) {
   const { data } = await api.post(`/admin/products/${encodeURIComponent(pid)}/duplicate`, { name });

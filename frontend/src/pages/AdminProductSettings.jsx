@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct, setDesignerEnabled } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X, Eye, EyeOff, Copy } from "lucide-react";
 
@@ -77,6 +77,16 @@ export default function AdminProductSettings() {
       update(p.id, { hidden: hide });
       toast.success(hide ? `${p.name} is now hidden from the site` : `${p.name} is back on the site`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't change visibility"); }
+    finally { setBusy(false); }
+  };
+
+  const toggleDesigner = async (p, enabled) => {
+    setBusy(true);
+    try {
+      await setDesignerEnabled(p.id, enabled);
+      update(p.id, { designer_enabled: enabled });
+      toast.success(enabled ? `${p.name} is now in Design Your Own - set its photos and print area on Designer products` : `${p.name} removed from Design Your Own`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't change that"); }
     finally { setBusy(false); }
   };
 
@@ -459,19 +469,22 @@ export default function AdminProductSettings() {
                         </span>
                       </label>
                       <div className="flex items-center justify-between gap-3 flex-wrap bg-[#eef2ff] border-2 border-[#c7d2fe] rounded-xl p-3" data-testid={`aps-designer-status-${p.id}`}>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-nunito font-extrabold">
-                            {p.designer_enabled ? "In the Design Your Own tool" : "Not in the Design Your Own tool"}
+                        <label className="inline-flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+                          <input type="checkbox" checked={!!p.designer_enabled} disabled={busy} onChange={(e) => toggleDesigner(p, e.target.checked)} className="w-4 h-4 accent-[#4338ca]" data-testid={`aps-designer-toggle-${p.id}`} />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-nunito font-extrabold">Available in the Design Your Own tool</span>
+                            <span className="block text-[11px] text-[#4b5563]">
+                              {p.designer_enabled
+                                ? "Customers can pick this product in the designer. Saves straight away."
+                                : "Tick to let customers personalise this product in the designer. Saves straight away."}
+                            </span>
                           </span>
-                          <span className="block text-[11px] text-[#4b5563]">
-                            {p.designer_enabled
-                              ? "Customers can pick this product in the designer. Its designer photos, colours and print area are set on the Designer products screen."
-                              : "Customers can't pick this product in the designer. Add it on the Designer products screen."}
-                          </span>
-                        </span>
-                        <a href={`/admin/designer-products?q=${encodeURIComponent(p.name)}`} className="text-xs font-extrabold text-[#4338ca] hover:underline flex-shrink-0" data-testid={`aps-designer-link-${p.id}`}>
-                          {p.designer_enabled ? "Manage in Designer products →" : "Add in Designer products →"}
-                        </a>
+                        </label>
+                        {p.designer_enabled && (
+                          <a href={`/admin/designer-products?q=${encodeURIComponent(p.name)}`} className="text-xs font-extrabold text-[#4338ca] hover:underline flex-shrink-0" data-testid={`aps-designer-link-${p.id}`}>
+                            Set up designer photos, colours &amp; print area →
+                          </a>
+                        )}
                       </div>
                       <label className="flex items-center justify-between gap-3 bg-[#eef2ff] border-2 border-[#c7d2fe] rounded-xl p-3 cursor-pointer" data-testid={`aps-designeronly-row-${p.id}`}>
                         <span className="inline-flex items-center gap-2 flex-1">

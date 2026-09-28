@@ -2238,16 +2238,21 @@ async def admin_upload_media(file: UploadFile = File(...), folder: str = "page-m
 
 
 @api_router.get("/admin/designer-products", dependencies=[Depends(require_admin)])
-async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str = ""):
-    """Admin view - ALL products with their current designer settings, paginated."""
+async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str = "", include_disabled: bool = False):
+    """Admin view - products switched on for the designer (switched on/off from
+    Product settings) with their designer settings, paginated. include_disabled
+    lists every product instead."""
     out = []
     for p in PRODUCTS.values():
+        if not include_disabled and not p.get("designer_enabled"):
+            continue
         out.append({
             "id": p["id"],
             "name": p["name"],
             "category": p["category"],
             "main_image": p["image"],
             "designer_enabled": bool(p.get("designer_enabled")),
+            "hidden": not is_live(p),
             "designer_image": p.get("designer_image") or p["image"],
             "designer_print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
             "designer_images_by_colour": p.get("designer_images_by_colour") or {},
@@ -2266,6 +2271,34 @@ async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str 
     limit = min(limit, 200)
     page = out[offset:offset + limit]
     return {"items": page, "total": total, "offset": offset, "returned": len(page)}
+
+
+class DesignerToggleIn(BaseModel):
+    enabled: bool
+
+
+@api_router.post("/admin/products/{pid}/designer", dependencies=[Depends(require_admin)])
+async def set_designer_enabled(pid: str, payload: DesignerToggleIn):
+    """Switch a product in/out of Design Your Own (from Product settings).
+    The first time it's switched on it gets a starting designer photo (its main
+    photo) and the standard print area; both are refined on Designer products."""
+    p = PRODUCTS.get(pid)
+    if not p:
+        raise HTTPException(404, "Product not found")
+    start_image = p.get("designer_image") or p.get("image") or ""
+    start_area = p.get("designer_print_area") or DEFAULT_PRINT_AREA
+    await db.designer_settings.update_one(
+        {"product_id": pid},
+        {"$set": {"product_id": pid, "designer_enabled": payload.enabled,
+                  "updated_at": datetime.now(timezone.utc).isoformat()},
+         "$setOnInsert": {"designer_image": start_image, "designer_print_area": start_area}},
+        upsert=True,
+    )
+    p["designer_enabled"] = payload.enabled
+    if payload.enabled:
+        p["designer_image"] = p.get("designer_image") or start_image
+        p["designer_print_area"] = p.get("designer_print_area") or start_area
+    return {"ok": True, "enabled": payload.enabled}
 
 
 @api_router.patch("/admin/designer-products/{product_id}", dependencies=[Depends(require_admin)])

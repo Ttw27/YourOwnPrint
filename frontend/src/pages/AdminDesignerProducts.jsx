@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { fetchAdminDesignerProducts, updateDesignerSettings, uploadAdminImage } from "../lib/api";
+import { fetchAdminDesignerProducts, updateDesignerSettings, uploadAdminImage, setDesignerEnabled } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Sparkles, Check, X, Image as ImageIcon, ChevronLeft, ChevronRight, Upload, Plus, Trash2 } from "lucide-react";
 
@@ -41,6 +41,16 @@ export default function AdminDesignerProducts() {
   useEffect(() => { reload(page); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+
+  const removeFromDesigner = async (p) => {
+    if (!window.confirm(`Take "${p.name}" out of Design Your Own? Its designer photos and print area are kept, so you can switch it back on in Product settings any time.`)) return;
+    try {
+      await setDesignerEnabled(p.id, false);
+      setProducts((prev) => prev.filter((x) => x.id !== p.id));
+      setTotal((t) => Math.max(0, t - 1));
+      toast.success(`${p.name} removed from Design Your Own`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't remove it"); }
+  };
   const updatePA = (id, key, value) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, designer_print_area: { ...(p.designer_print_area || DEFAULT_PA), [key]: Number(value) } } : p));
   const updatePABack = (id, key, value) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, designer_print_area_back: { ...(p.designer_print_area_back || p.designer_print_area || DEFAULT_PA), [key]: Number(value) } } : p));
 
@@ -165,7 +175,7 @@ export default function AdminDesignerProducts() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Admin</div>
         <h1 className="font-nunito font-black text-4xl lg:text-5xl mt-2">Designer Products</h1>
-        <p className="text-[#4b5563] mt-3 max-w-2xl">Choose which products customers can customise in <strong>Design Your Own</strong>. For each one, set the photo they design on top of, and drag out the area their artwork is allowed to sit in. Upload a photo per colour and the designer shows the real garment in that colour - without one, it falls back to a plain block of that colour so the customer never sees the wrong shade.</p>
+        <p className="text-[#4b5563] mt-3 max-w-2xl">The products customers can personalise in <strong>Design Your Own</strong>. To add a product, open it in <a href="/admin/product-settings" className="font-bold text-[#166534] underline">Product settings</a> and tick &ldquo;Available in the Design Your Own tool&rdquo;. For each one here, set the photo they design on top of, and drag out the area their artwork is allowed to sit in. Upload a photo per colour and the designer shows the real garment in that colour - without one, it falls back to a plain block of that colour so the customer never sees the wrong shade.</p>
 
         <div className="flex flex-wrap items-center gap-3 mt-6">
           <input data-testid="dp-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search products…" className="bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-80" />
@@ -176,6 +186,13 @@ export default function AdminDesignerProducts() {
           <div className="mt-10 text-center text-sm text-[#4b5563]"><Loader2 className="inline animate-spin mr-2" size={14} /> Loading…</div>
         ) : (
           <>
+            {products.length === 0 && (
+              <div className="mt-8 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-6 text-sm text-[#4b5563]" data-testid="dp-empty">
+                {debouncedFilter
+                  ? <>No designer products match &ldquo;{debouncedFilter}&rdquo;. To add a product to the designer, open it in <a href="/admin/product-settings" className="font-bold text-[#166534] underline">Product settings</a> and tick &ldquo;Available in the Design Your Own tool&rdquo;.</>
+                  : <>No products are in the designer yet. Open a product in <a href="/admin/product-settings" className="font-bold text-[#166534] underline">Product settings</a> and tick &ldquo;Available in the Design Your Own tool&rdquo;.</>}
+              </div>
+            )}
             <div className="grid md:grid-cols-2 gap-4 mt-6" data-testid="dp-list">
               {products.map((p) => {
               const pa = p.designer_print_area || DEFAULT_PA;
@@ -189,10 +206,11 @@ export default function AdminDesignerProducts() {
                     <div className="flex-1 min-w-0">
                       <div className="font-nunito font-extrabold truncate">{p.name}</div>
                       <div className="text-[10px] text-[#4b5563] uppercase tracking-wider">{p.category} · {p.id}</div>
-                      <label className="mt-2 inline-flex items-center gap-2 cursor-pointer">
-                        <input data-testid={`dp-enabled-${p.id}`} type="checkbox" checked={!!p.designer_enabled} onChange={(e) => update(p.id, { designer_enabled: e.target.checked })} className="w-4 h-4 accent-[#7bc67e]" />
-                        <span className="text-xs font-nunito font-extrabold">{p.designer_enabled ? <><Check size={11} className="inline text-[#7bc67e]" /> Enabled in designer</> : <><X size={11} className="inline text-rose-500" /> Disabled</>}</span>
-                      </label>
+                      <div className="mt-2 flex items-center gap-3 flex-wrap">
+                        <span className="text-xs font-nunito font-extrabold"><Check size={11} className="inline text-[#7bc67e]" /> In the designer</span>
+                        {p.hidden && <span className="text-[10px] font-extrabold bg-[#e5e7eb] text-[#4b5563] rounded-full px-2 py-0.5" title="Hidden products don't show in the designer until you show them in Product settings">Hidden from site</span>}
+                        <button type="button" onClick={() => removeFromDesigner(p)} className="text-[11px] font-bold text-rose-500 hover:underline" data-testid={`dp-remove-${p.id}`}>Remove from designer</button>
+                      </div>
                     </div>
                   </div>
 
