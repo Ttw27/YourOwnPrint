@@ -495,6 +495,12 @@ export default function AdminProductSettings() {
                           </span>
                         </span>
                       </label>
+                      {p.designer_only && !p.designer_enabled && (
+                        <div className="flex items-center justify-between gap-3 flex-wrap bg-amber-50 border-2 border-amber-200 rounded-xl p-3 text-sm text-amber-800" data-testid={`aps-designer-warning-${p.id}`}>
+                          <span><strong>This product won't appear anywhere.</strong> It's set to only sell through Design Your Own, but it isn't in the Design Your Own tool.</span>
+                          <button type="button" onClick={() => toggleDesigner(p, true)} disabled={busy} className="text-xs font-extrabold bg-amber-500 hover:bg-amber-600 text-white rounded-full px-3 py-1.5 disabled:opacity-50 flex-shrink-0">Add it to the designer</button>
+                        </div>
+                      )}
                     </Section>
 
                     {/* Printing */}
