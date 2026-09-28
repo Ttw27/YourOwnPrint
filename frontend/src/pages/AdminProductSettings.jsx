@@ -312,6 +312,7 @@ export default function AdminProductSettings() {
                           <span className="md:hidden text-[10px] text-[#4b5563]">£{p.price.toFixed(2)}</span>
                           {p.hidden && <span className="md:hidden text-[9px] bg-[#e5e7eb] text-[#4b5563] font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" data-testid={`aps-hidden-badge-${p.id}`}><EyeOff size={9} /> HIDDEN</span>}
                           {p.manual_edit && <span className="text-[9px] bg-amber-100 text-amber-700 font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" title="Manually edited - protected from Smart Re-classify">🔒 EDITED</span>}
+                          {p.designer_enabled && <span className="text-[9px] bg-[#eef2ff] text-[#4338ca] font-nunito font-extrabold px-2 py-0.5 rounded-full" title="Available in the Design Your Own tool">DESIGNER</span>}
                           {p.bulk_pricing_enabled && <span className="text-[9px] bg-[#dcfce7] text-[#166534] font-nunito font-extrabold px-2 py-0.5 rounded-full" title="Bulk discounts switched on">BULK</span>}
                         </span>
                       </span>
@@ -423,11 +424,26 @@ export default function AdminProductSettings() {
                           </span>
                         </span>
                       </label>
+                      <div className="flex items-center justify-between gap-3 flex-wrap bg-[#eef2ff] border-2 border-[#c7d2fe] rounded-xl p-3" data-testid={`aps-designer-status-${p.id}`}>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-nunito font-extrabold">
+                            {p.designer_enabled ? "In the Design Your Own tool" : "Not in the Design Your Own tool"}
+                          </span>
+                          <span className="block text-[11px] text-[#4b5563]">
+                            {p.designer_enabled
+                              ? "Customers can pick this product in the designer. Its designer photos, colours and print area are set on the Designer products screen."
+                              : "Customers can't pick this product in the designer. Add it on the Designer products screen."}
+                          </span>
+                        </span>
+                        <a href={`/admin/designer-products?q=${encodeURIComponent(p.name)}`} className="text-xs font-extrabold text-[#4338ca] hover:underline flex-shrink-0" data-testid={`aps-designer-link-${p.id}`}>
+                          {p.designer_enabled ? "Manage in Designer products →" : "Add in Designer products →"}
+                        </a>
+                      </div>
                       <label className="flex items-center justify-between gap-3 bg-[#eef2ff] border-2 border-[#c7d2fe] rounded-xl p-3 cursor-pointer" data-testid={`aps-designeronly-row-${p.id}`}>
                         <span className="inline-flex items-center gap-2 flex-1">
                           <input type="checkbox" checked={!!p.designer_only} onChange={(e) => update(p.id, { designer_only: e.target.checked })} className="w-4 h-4 accent-[#4338ca]" data-testid={`aps-designeronly-${p.id}`} />
                           <span>
-                            <span className="block text-sm font-nunito font-extrabold">Design Your Own product only</span>
+                            <span className="block text-sm font-nunito font-extrabold">Only sell it through Design Your Own</span>
                             <span className="block text-[11px] text-[#4b5563]">Hidden from shop categories, industry pages and Find My Kit - appears only in the Design Your Own tool. Use for blank canvases sold for personalisation.</span>
                           </span>
                         </span>

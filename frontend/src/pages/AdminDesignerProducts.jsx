@@ -18,7 +18,8 @@ export default function AdminDesignerProducts() {
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
-  const [filter, setFilter] = useState("");
+  // ?q= lets other admin screens (e.g. Product settings) open this page on one product.
+  const [filter, setFilter] = useState(() => { try { return new URLSearchParams(window.location.search).get("q") || ""; } catch { return ""; } });
   const [debouncedFilter, setDebouncedFilter] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
