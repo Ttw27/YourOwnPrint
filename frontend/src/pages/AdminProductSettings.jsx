@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X, Eye, EyeOff } from "lucide-react";
+import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X, Eye, EyeOff, Copy } from "lucide-react";
 
 const PAGE_SIZE = 25;
 const CATEGORY_OPTIONS = [
@@ -77,6 +77,24 @@ export default function AdminProductSettings() {
       update(p.id, { hidden: hide });
       toast.success(hide ? `${p.name} is now hidden from the site` : `${p.name} is back on the site`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't change visibility"); }
+    finally { setBusy(false); }
+  };
+
+  const duplicate = async (p) => {
+    const name = window.prompt(
+      `Make a copy of "${p.name}"?\n\nThe copy is a separate product - you can change its name, price, colours and photos without affecting the original. It starts hidden from the site.\n\nName for the copy:`,
+      `${p.name} (copy)`,
+    );
+    if (!name || !name.trim()) return;
+    setBusy(true);
+    try {
+      const r = await duplicateProduct(p.id, name.trim());
+      toast.success(`Copy created: ${r.name} (hidden until you show it)`);
+      // Jump to the new copy, opened ready to edit.
+      setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter("");
+      setFilter(r.name);
+      setOpenId(r.id);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't copy the product"); }
     finally { setBusy(false); }
   };
 
@@ -345,9 +363,14 @@ export default function AdminProductSettings() {
                         <span className="font-extrabold">{p.hidden ? "Hidden from the site" : "Visible on the site"}</span>
                         <span className="block text-[11px] text-[#4b5563]">{p.hidden ? "Customers can't find, view or buy it. It stays here so you can bring it back any time." : "Hide it to take it off the shop, search and product pages without deleting it."}</span>
                       </div>
+                      <div className="flex items-center gap-2 flex-wrap">
                       <button onClick={() => toggleHidden(p)} disabled={busy} className={`text-xs font-extrabold rounded-full px-4 py-2 inline-flex items-center gap-1.5 disabled:opacity-50 ${p.hidden ? "bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a]" : "bg-[#1a1a1a] hover:bg-black text-white"}`} data-testid={`aps-toggle-hidden-${p.id}`}>
                         {p.hidden ? <><Eye size={12} /> Show on site</> : <><EyeOff size={12} /> Hide from site</>}
                       </button>
+                      <button onClick={() => duplicate(p)} disabled={busy} className="text-xs font-extrabold rounded-full px-4 py-2 inline-flex items-center gap-1.5 disabled:opacity-50 bg-white border-2 border-[#e5e7eb] hover:border-[#7bc67e] text-[#1a1a1a]" title="Make a separate copy of this product" data-testid={`aps-duplicate-${p.id}`}>
+                        <Copy size={12} /> Duplicate
+                      </button>
+                      </div>
                     </div>
                     {/* Basics - name, price, category, descriptions (in ProductOverridePanel) */}
                     <ProductOverridePanel key={`${p.id}-${p.hidden}`} product={p} onSaved={reload} registerSaver={registerBasicsSaver} />

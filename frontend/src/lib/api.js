@@ -233,6 +233,12 @@ export async function fetchProofPhoto(pid, colour = "") {
   return data;
 }
 
+// Make an independent copy of a product (starts hidden). Returns {id, name}.
+export async function duplicateProduct(pid, name) {
+  const { data } = await api.post(`/admin/products/${encodeURIComponent(pid)}/duplicate`, { name });
+  return data;
+}
+
 // Hide or unhide products on the live site. Products are never deleted.
 export async function setProductsVisibility(productIds, hidden) {
   const { data } = await api.post("/admin/products/visibility", { product_ids: productIds, hidden });

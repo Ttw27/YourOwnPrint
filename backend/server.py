@@ -5744,6 +5744,83 @@ async def _set_product_active(pid: str, active: bool) -> bool:
     return True
 
 
+class DuplicateIn(BaseModel):
+    name: str
+
+
+# Product-settings fields worth carrying onto a copy (best seller + the Smart
+# Re-classify lock are deliberately NOT copied - the copy starts fresh).
+_DUPLICATE_META_FIELDS = (
+    "brand", "sku", "description_full", "size_guide_image", "size_guide_table",
+    "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
+    "workforce_eligible", "specials_eligible", "designer_only", "also_bought",
+    "match_with", "gender_fit", "industry_tags",
+)
+
+
+@api_router.post("/admin/products/{pid}/duplicate", dependencies=[Depends(require_admin)])
+async def duplicate_product(pid: str, payload: DuplicateIn):
+    """Copy a product (as it currently is, admin edits included) into a new,
+    separate product that can then be changed independently - e.g. a designer
+    version with fewer colours and its own price. The copy starts HIDDEN."""
+    src = PRODUCTS.get(pid)
+    if not src:
+        raise HTTPException(404, "Product not found")
+    name = (payload.name or "").strip()
+    if not name:
+        raise HTTPException(400, "Give the copy a name")
+
+    base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:60] or "product-copy"
+    new_id, n = base, 2
+    while new_id in PRODUCTS or await db.imported_products.find_one({"id": new_id}, {"_id": 1}):
+        new_id, n = f"{base}-{n}", n + 1
+
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": new_id,
+        "name": name,
+        "price": float(src.get("price") or 0),
+        "category": src.get("category") or "t-shirts",
+        "image": src.get("image") or "",
+        "additional_images": list(src.get("additional_images") or src.get("image_gallery") or []),
+        "description": src.get("description") or "",
+        "gender_fit": src.get("gender_fit") or "unisex",
+        "industry_tags": list(src.get("industry_tags") or []),
+        "colors": _copy.deepcopy(src.get("colors") or []),
+        "sizes": list(src.get("sizes") or []),
+        "size_upcharges": dict(src.get("size_upcharges") or {}),
+        "allowed_placements": src.get("allowed_placements"),
+        "brand": src.get("brand") or src.get("_brand") or "",
+        "source_sku": src.get("source_sku") or "",
+        "source_price": src.get("source_price"),
+        "bulk_pricing_enabled": bool(src.get("bulk_pricing_enabled")),
+        "designer_enabled": bool(src.get("designer_enabled")),
+        "designer_image": src.get("designer_image") or "",
+        "designer_print_area": src.get("designer_print_area"),
+        "designer_images_by_colour": dict(src.get("designer_images_by_colour") or {}),
+        "source": src.get("source") or src.get("_source") or "native",
+        "duplicated_from": pid,
+        "active": False,
+        "created_at": now,
+        "imported_at": now,
+    }
+    await db.imported_products.insert_one(dict(doc))
+
+    meta = {k: _copy.deepcopy(src[k]) for k in _DUPLICATE_META_FIELDS if src.get(k) is not None}
+    if meta:
+        await db.product_meta.update_one({"product_id": new_id}, {"$set": {**meta, "product_id": new_id}}, upsert=True)
+
+    ds = await db.designer_settings.find_one({"product_id": pid})
+    if ds:
+        ds.pop("_id", None)
+        ds["product_id"] = new_id
+        await db.designer_settings.update_one({"product_id": new_id}, {"$set": ds}, upsert=True)
+
+    _apply_imported_product(doc)
+    await reapply_saved_settings([new_id])
+    return {"ok": True, "id": new_id, "name": name}
+
+
 class VisibilityIn(BaseModel):
     product_ids: List[str]
     hidden: bool
