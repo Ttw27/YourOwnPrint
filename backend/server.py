@@ -2035,9 +2035,10 @@ def tier_unit_price(tiers: List[Tuple[int, float]], default_price: float, total_
     return default_price
 
 
-async def _merge_designer_overrides():
+async def _merge_designer_overrides(query: Optional[Dict] = None):
     """Read /designer_settings collection and overlay onto in-memory PRODUCTS."""
-    async for doc in db.designer_settings.find({}):
+    query = query or {}
+    async for doc in db.designer_settings.find(query):
         pid = doc.get("product_id")
         if pid in PRODUCTS:
             for k in ("designer_enabled", "designer_image", "designer_print_area", "designer_images_by_colour",
@@ -2049,7 +2050,7 @@ async def _merge_designer_overrides():
             if doc.get("designer_colors"):
                 PRODUCTS[pid]["colors"] = doc["designer_colors"]
     # Product meta overlay (brand/SKU/size guide/bulk pricing)
-    async for doc in db.product_meta.find({}):
+    async for doc in db.product_meta.find(query):
         pid = doc.get("product_id")
         if pid in PRODUCTS:
             for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
@@ -2059,6 +2060,25 @@ async def _merge_designer_overrides():
                      "_manual_edit", "gender_fit", "industry_tags"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
+
+
+async def reapply_saved_settings(pids: Optional[List[str]] = None) -> None:
+    """Re-apply admin edits that are stored OUTSIDE the product's own record -
+    designer settings, product settings (product_meta) and name/price/photo
+    overrides - on top of the in-memory PRODUCTS entries.
+
+    Supplier (imported) products are rebuilt from their imported_products doc
+    by _apply_imported_product(), which throws those edits away. So this must
+    run after every such rebuild: at startup (imported products load AFTER the
+    startup overlays) and after any bulk update / import. pids=None = all."""
+    if pids is not None:
+        pids = [p for p in pids if p]
+        if not pids:
+            return
+    query = {"product_id": {"$in": pids}} if pids is not None else {}
+    await _merge_designer_overrides(query)
+    async for d in db.product_overrides.find(query):
+        _apply_product_override(d.get("product_id"), d)
 
 
 @app.on_event("startup")
@@ -6091,11 +6111,16 @@ async def _load_imported_products():
         # Hidden (active=False) products are loaded too - public listings filter
         # them out via live_products(), but admin needs them to show/unhide.
         count = hidden = 0
+        loaded_ids: List[str] = []
         async for d in db.imported_products.find():
             _apply_imported_product(d)
+            loaded_ids.append(d.get("id"))
             count += 1
             if d.get("active") is False:
                 hidden += 1
+        # The designer/product-settings/override overlays ran earlier in startup,
+        # before these products existed - apply admin edits on top now.
+        await reapply_saved_settings(loaded_ids)
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:
@@ -6194,6 +6219,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     bulk_flag_set = 0
     retagged = 0
     randomized = 0
+    rebuilt_ids: List[str] = []
     placements_updated = 0
     sizes_repaired = 0
     gallery_rebuilt = 0
@@ -6327,7 +6353,8 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
             pid = doc.get("id")
             if not payload.dry_run and pid:
                 merged = {**doc, **update}
-                _apply_imported_product(merged)  # always sync memory to the freshly-computed state, even if no DB write was needed this time - otherwise a stale in-memory copy from before a fix existed could persist indefinitely
+                _apply_imported_product(merged)
+                rebuilt_ids.append(pid)  # always sync memory to the freshly-computed state, even if no DB write was needed this time - otherwise a stale in-memory copy from before a fix existed could persist indefinitely
                 if update:
                     pending.append((pid, update))
         except Exception as e:
@@ -6338,6 +6365,8 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     # ---- Pass 2: write everything to Mongo concurrently (capped), instead of
     # one-at-a-time - this is what let even a 200-500 item batch take long
     # enough to look like the site had gone down. ----
+    await reapply_saved_settings(rebuilt_ids)  # keep admin edits on top of the rebuilt products
+
     if pending:
         semaphore = asyncio.Semaphore(20)
 
@@ -6647,6 +6676,7 @@ async def bulk_import_products(payload: BulkImportPayload):
             if not payload.dry_run:
                 await db.imported_products.update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
                 _apply_imported_product(doc)
+                await reapply_saved_settings([doc["id"]])
             created.append({"id": doc["id"], "name": doc["name"], "category": doc["category"], "price": doc["price"]})
         except Exception as e:
             skipped.append({"reason": str(e)[:200], "row": doc})
@@ -6689,6 +6719,7 @@ async def patch_imported_product(pid: str, patch: ImportedProductPatch):
         await db.imported_products.update_one({"id": pid}, {"$set": up})
         doc = await db.imported_products.find_one({"id": pid})
         _apply_imported_product(doc)
+        await reapply_saved_settings([pid])
     return {"ok": True}
 
 

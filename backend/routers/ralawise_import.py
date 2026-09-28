@@ -276,7 +276,8 @@ async def ralawise_status(job_id: str):
 
 async def _run_ralawise_job(job_id: str, docs: List[Dict], mirror_images: bool) -> None:
     """The whole import, run in the background with live progress in _JOBS."""
-    from server import PRODUCTS, _apply_imported_product, _mirror_external_image
+    from server import PRODUCTS, _apply_imported_product, _mirror_external_image, reapply_saved_settings
+    from pymongo import ReturnDocument
     from datetime import datetime, timezone
     import asyncio
 
@@ -295,10 +296,20 @@ async def _run_ralawise_job(job_id: str, docs: List[Dict], mirror_images: bool) 
                 "brand": d["brand"], "description": d["description"], "price": d["price"],
                 "source_price": d["source_price"], "image": d["image"], "category": d["category"],
                 "colors": d["colors"], "sizes": d["sizes"], "source": "ralawise",
-                "active": True, "imported_at": now,
+                "imported_at": now,
             }
-            await db.imported_products.update_one({"id": d["id"]}, {"$set": doc}, upsert=True)
-            _apply_imported_product(doc)
+            # "active" only on first insert - re-importing must not un-hide
+            # products admin has hidden. Apply the FULL stored doc (not just the
+            # fields above) so designer/placement/tag fields aren't dropped
+            # from memory, then put admin edits back on top.
+            full = await db.imported_products.find_one_and_update(
+                {"id": d["id"]},
+                {"$set": doc, "$setOnInsert": {"active": True}},
+                upsert=True,
+                return_document=ReturnDocument.AFTER,
+            )
+            _apply_imported_product(full or {**doc, "active": True})
+            await reapply_saved_settings([d["id"]])
             job["products_done"] = i + 1
 
         # ---- Phase 2: mirror images to R2 (the slow part) ----
@@ -355,6 +366,9 @@ async def _run_ralawise_job(job_id: str, docs: List[Dict], mirror_images: bool) 
                         p["colors"] = d["colors"]
                 except Exception:
                     pass
+            # Custom designer colours / photo overrides must win over the fresh
+            # supplier colours+image written into memory just above.
+            await reapply_saved_settings([d["id"] for d in docs])
 
         job["phase"] = "done"
         job["finished"] = True

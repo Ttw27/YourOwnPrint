@@ -104,6 +104,8 @@ async def create_design(payload: CreateDesignIn):
     }
     await db.imported_products.update_one({"id": pid}, {"$set": doc}, upsert=True)
     _apply_imported_product(doc)
+    from server import reapply_saved_settings
+    await reapply_saved_settings([pid])
     return {"ok": True, "id": pid, "categories": cats, "garments": garments, "price": doc["price"]}
 
 

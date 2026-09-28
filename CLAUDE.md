@@ -146,6 +146,13 @@ frontend/src/
   `live_products()` / check `is_live(p)`**, never `PRODUCTS.values()` directly, or hidden
   products leak onto the site.
 
+- **Admin edits to supplier products live outside the product record.** Designer settings
+  (`designer_settings`), product settings (`product_meta`) and name/price/photo
+  (`product_overrides`) are overlaid onto `PRODUCTS`. `_apply_imported_product()` rebuilds an
+  entry from `imported_products` and **drops those edits**, so **always call
+  `reapply_saved_settings([ids])` after it** (startup, bulk update, imports all do). Ralawise
+  re-import sets `active` only on insert so it never un-hides hidden products.
+
 - **Image import & mirroring.** Supplier images are mirrored to R2 via
   `services/r2_storage.mirror_external_image`. **Supplier CDNs (pimber.ly, Ralawise) block bot
   user-agents** — mirror requests and the health scanner MUST send real browser headers
