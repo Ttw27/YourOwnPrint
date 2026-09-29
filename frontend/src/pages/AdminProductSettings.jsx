@@ -189,6 +189,7 @@ export default function AdminProductSettings() {
         designer_only: !!p.designer_only,
         also_bought: Array.isArray(p.also_bought) ? p.also_bought : [],
         match_with: Array.isArray(p.match_with) ? p.match_with : [],
+        image_gallery: Array.isArray(p.image_gallery) ? p.image_gallery : [],
         gender_fit: p.gender_fit || "unisex",
         industry_tags: Array.isArray(p.industry_tags) ? p.industry_tags : [],
       });

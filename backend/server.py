@@ -2035,6 +2035,24 @@ def tier_unit_price(tiers: List[Tuple[int, float]], default_price: float, total_
     return default_price
 
 
+def _with_colour_photos(new_colors: List[Dict], *old_lists) -> List[Dict]:
+    """A custom designer colour list is saved as {name, hex} only, but the shop
+    uses each colour's supplier photo (colors[i].image) on the product page.
+    Carry photos across by colour name so replacing the list never loses them."""
+    photos: Dict[str, str] = {}
+    for old in old_lists:
+        for c in old or []:
+            if isinstance(c, dict) and c.get("name") and c.get("image"):
+                photos.setdefault(c["name"], c["image"])
+    out = []
+    for c in new_colors or []:
+        c = dict(c) if isinstance(c, dict) else {"name": str(c)}
+        if not c.get("image") and photos.get(c.get("name")):
+            c["image"] = photos[c["name"]]
+        out.append(c)
+    return out
+
+
 async def _merge_designer_overrides(query: Optional[Dict] = None):
     """Read /designer_settings collection and overlay onto in-memory PRODUCTS."""
     query = query or {}
@@ -2048,7 +2066,7 @@ async def _merge_designer_overrides(query: Optional[Dict] = None):
                     PRODUCTS[pid][k] = doc[k]
             # Custom colour list overrides the garment default when set.
             if doc.get("designer_colors"):
-                PRODUCTS[pid]["colors"] = doc["designer_colors"]
+                PRODUCTS[pid]["colors"] = _with_colour_photos(doc["designer_colors"], PRODUCTS[pid].get("colors"))
     # Product meta overlay (brand/SKU/size guide/bulk pricing)
     async for doc in db.product_meta.find(query):
         pid = doc.get("product_id")
@@ -2357,7 +2375,9 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
     # default in place.
     if payload.designer_colors is not None:
         if payload.designer_colors:
-            PRODUCTS[product_id]["colors"] = payload.designer_colors
+            supplier = await db.imported_products.find_one({"id": product_id}, {"colors": 1}) or {}
+            PRODUCTS[product_id]["colors"] = _with_colour_photos(
+                payload.designer_colors, PRODUCTS[product_id].get("colors"), supplier.get("colors"))
     if payload.composition is not None:
         PRODUCTS[product_id]["composition"] = payload.composition or None
     if payload.description_long is not None:
