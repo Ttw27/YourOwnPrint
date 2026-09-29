@@ -211,6 +211,12 @@ export default function AdminDesignerProducts() {
                         {p.hidden && <span className="text-[10px] font-extrabold bg-[#e5e7eb] text-[#4b5563] rounded-full px-2 py-0.5" title="Hidden products don't show in the designer until you show them in Product settings">Hidden from site</span>}
                         <button type="button" onClick={() => removeFromDesigner(p)} className="text-[11px] font-bold text-rose-500 hover:underline" data-testid={`dp-remove-${p.id}`}>Remove from designer</button>
                       </div>
+                      <div className="mt-1 text-[11px] text-[#4b5563]" data-testid={`dp-offered-${p.id}`}>
+                        Customers can print on: <strong>Front</strong>
+                        {(p.allowed_placements || []).includes("back-print") && <> · <strong>Back</strong></>}
+                        {(p.allowed_placements || []).includes("neck-label") && <> · <strong>Neck label</strong></>}
+                        {" "}<a href={`/admin/product-settings?q=${encodeURIComponent(p.name)}`} className="text-[#166534] font-bold hover:underline whitespace-nowrap">Change in Product settings → Printing</a>
+                      </div>
                     </div>
                   </div>
 
@@ -309,11 +315,12 @@ export default function AdminDesignerProducts() {
                         </div>
                       </div>
 
-                      {p.designer_image_back && (
+                      {(p.designer_image_back || p.designer_image) && (
                         <>
                           <div>
                             <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back print area - drag the box on the image</label>
-                            <PrintAreaPicker image={p.designer_image_back} value={paBack} onChange={(next) => update(p.id, { designer_print_area_back: next })} />
+                            {!p.designer_image_back && <p className="text-[10px] text-[#4b5563] mb-1.5">Showing the front photo until you add a back photo above.</p>}
+                            <PrintAreaPicker image={p.designer_image_back || p.designer_image} value={paBack} onChange={(next) => update(p.id, { designer_print_area_back: next })} />
                             <div className="grid grid-cols-4 gap-1.5 mt-2">
                               {["x","y","w","h"].map(k => (
                                 <div key={k} className="bg-white border border-[#e5e7eb] rounded-xl px-2 py-1 text-xs flex items-center gap-1">

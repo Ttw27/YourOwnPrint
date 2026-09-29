@@ -102,6 +102,15 @@ export default function DesignYourOwn() {
   }, []);
 
   const product = products.find(p => p.id === productId);
+  // Only offer Back / Neck label where Product settings > Printing allows them
+  // (e.g. no neck label on a tote bag). No list set = everything allowed.
+  const allowedPlacements = Array.isArray(product?.allowed_placements) ? product.allowed_placements : null;
+  const canBack = !allowedPlacements || allowedPlacements.includes("back-print");
+  const canNeck = !allowedPlacements || allowedPlacements.includes("neck-label");
+  useEffect(() => {
+    if (!canBack) { setBackEnabled(false); setBackItems([]); setView((v) => (v === "back" ? "front" : v)); }
+    if (!canNeck) { setNeckEnabled(false); setNeckItems([]); setView((v) => (v === "neck" ? "front" : v)); }
+  }, [canBack, canNeck]);
 
   useEffect(() => { setSelectedColour(null); }, [productId]);
   const garmentPrintArea = product?.print_area || { x: 22, y: 20, w: 56, h: 55 };
@@ -890,16 +899,16 @@ export default function DesignYourOwn() {
                   onClick={() => setView("front")}
                   className={`px-4 py-1.5 rounded-full font-nunito font-extrabold text-sm transition-colors ${view === "front" ? "bg-[#7bc67e] text-[#1a1a1a]" : "text-[#4b5563] hover:text-[#1a1a1a]"}`}
                 >Front</button>
-                <button
+                {canBack && <button
                   data-testid="designer-view-back"
                   onClick={() => { if (!backEnabled) setBackEnabled(true); setView("back"); }}
                   className={`px-4 py-1.5 rounded-full font-nunito font-extrabold text-sm transition-colors ${view === "back" ? "bg-[#7bc67e] text-[#1a1a1a]" : "text-[#4b5563] hover:text-[#1a1a1a]"}`}
-                >Back {backEnabled && <span className="ml-1 text-[10px]">+£{backPrintPrice.toFixed(2)}</span>}</button>
-                <button
+                >Back {backEnabled && <span className="ml-1 text-[10px]">+£{backPrintPrice.toFixed(2)}</span>}</button>}
+                {canNeck && <button
                   data-testid="designer-view-neck"
                   onClick={() => { if (!neckEnabled) setNeckEnabled(true); setView("neck"); }}
                   className={`px-4 py-1.5 rounded-full font-nunito font-extrabold text-sm transition-colors ${view === "neck" ? "bg-[#7bc67e] text-[#1a1a1a]" : "text-[#4b5563] hover:text-[#1a1a1a]"}`}
-                >Neck label {neckEnabled && <span className="ml-1 text-[10px]">+£{neckLabelPrice.toFixed(2)}</span>}</button>
+                >Neck label {neckEnabled && <span className="ml-1 text-[10px]">+£{neckLabelPrice.toFixed(2)}</span>}</button>}
               </div>
               <button
                 data-testid="designer-preview-toggle"
@@ -909,7 +918,7 @@ export default function DesignYourOwn() {
                 {previewMode ? <><Pencil size={14} /> Back to editing</> : <><Eye size={14} /> Preview</>}
               </button>
               <div className="flex items-center gap-2">
-                <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-back-toggle">
+                {canBack && <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-back-toggle">
                   <input
                     type="checkbox"
                     checked={backEnabled}
@@ -917,8 +926,8 @@ export default function DesignYourOwn() {
                     className="w-4 h-4 accent-[#7bc67e]"
                   />
                   <span className="text-xs font-nunito font-extrabold">Back +£{backPrintPrice.toFixed(2)}</span>
-                </label>
-                <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-neck-toggle">
+                </label>}
+                {canNeck && <label className="inline-flex items-center gap-2 cursor-pointer bg-white border-2 border-[#dcfce7] rounded-full px-3 py-1.5" data-testid="designer-neck-toggle">
                   <input
                     type="checkbox"
                     checked={neckEnabled}
@@ -926,7 +935,7 @@ export default function DesignYourOwn() {
                     className="w-4 h-4 accent-[#7bc67e]"
                   />
                   <span className="text-xs font-nunito font-extrabold inline-flex items-center gap-1"><Tag size={11} /> Neck +£{neckLabelPrice.toFixed(2)}</span>
-                </label>
+                </label>}
               </div>
             </div>
 

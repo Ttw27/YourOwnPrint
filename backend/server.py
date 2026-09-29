@@ -2125,6 +2125,10 @@ async def list_designer_products():
                 "size_upcharges": p.get("size_upcharges", {}),
                 "back_print_price": designer_back_print_price(float(p["price"])),
                 "neck_label_price": NECK_LABEL_PRICE,
+                # Product settings > Printing - the designer only offers Back /
+                # Neck label when "back-print" / "neck-label" are ticked there.
+                # None = never set = everything allowed.
+                "allowed_placements": p.get("allowed_placements"),
                 "composition": p.get("composition"),
                 "description_long": p.get("description_long"),
                 "use_cases": p.get("use_cases") or [],
@@ -2253,6 +2257,7 @@ async def admin_list_designer_products(offset: int = 0, limit: int = 25, q: str 
             "main_image": p["image"],
             "designer_enabled": bool(p.get("designer_enabled")),
             "hidden": not is_live(p),
+            "allowed_placements": p.get("allowed_placements") if p.get("allowed_placements") is not None else list(ALLOWED_PLACEMENT_OPTIONS),
             "designer_image": p.get("designer_image") or p["image"],
             "designer_print_area": p.get("designer_print_area") or DEFAULT_PRINT_AREA,
             "designer_images_by_colour": p.get("designer_images_by_colour") or {},
