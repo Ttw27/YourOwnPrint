@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  fetchTeamKitBrands, createTeamKitBrand, updateTeamKitBrand, deleteTeamKitBrand,
+  fetchTeamKitBrandsAdmin, createTeamKitBrand, updateTeamKitBrand, deleteTeamKitBrand,
   fetchSockSizes, adminUpdateSockSizes,
 } from "../lib/api";
 import {
@@ -65,7 +65,7 @@ export default function AdminBundleVariants() {
     setLoading(true);
     try {
       const perBundle = await Promise.all(
-        ELIGIBLE_BUNDLES.map((b) => fetchTeamKitBrands(b.id).catch(() => []))
+        ELIGIBLE_BUNDLES.map((b) => fetchTeamKitBrandsAdmin(b.id).catch(() => []))
       );
       setItems(perBundle.flat());
     } catch { toast.error("Failed to load bundle variants"); }

@@ -29,11 +29,16 @@ export default function AdminDesignerProducts() {
     return () => clearTimeout(t);
   }, [filter]);
 
+  // Colour list as loaded - only sent back if actually edited, otherwise saving
+  // would freeze the product's colours (they're also the shop's colours).
+  const loadedColours = useRef({});
+
   const reload = async (targetPage = page) => {
     setLoading(true);
     try {
       const d = await fetchAdminDesignerProducts(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter);
       setProducts(d.items || []);
+      loadedColours.current = Object.fromEntries((d.items || []).map((x) => [x.id, JSON.stringify(x.colors || [])]));
       setTotal(d.total || 0);
     } finally { setLoading(false); }
   };
@@ -84,12 +89,14 @@ export default function AdminDesignerProducts() {
     try {
       const pa = p.designer_print_area || DEFAULT_PA;
       const paBack = p.designer_print_area_back || null;
+      const coloursChanged = JSON.stringify(p.colors || []) !== loadedColours.current[p.id];
+      // designer_enabled isn't sent: switching in/out of the designer is done in
+      // Product settings, and resending it could re-enable a removed product.
       await updateDesignerSettings(p.id, {
-        designer_enabled: p.designer_enabled,
         designer_image: p.designer_image || p.main_image,
         designer_print_area: { x: Number(pa.x), y: Number(pa.y), w: Number(pa.w), h: Number(pa.h) },
         designer_images_by_colour: p.designer_images_by_colour || {},
-        designer_colors: p.colors || null,
+        ...(coloursChanged ? { designer_colors: p.colors || null } : {}),
         designer_image_back: p.designer_image_back || null,
         designer_print_area_back: paBack ? { x: Number(paBack.x), y: Number(paBack.y), w: Number(paBack.w), h: Number(paBack.h) } : null,
         designer_images_by_colour_back: p.designer_images_by_colour_back || {},
@@ -97,6 +104,7 @@ export default function AdminDesignerProducts() {
         description_long: p.description_long || "",
         use_cases: p.use_cases || [],
       });
+      if (coloursChanged) loadedColours.current[p.id] = JSON.stringify(p.colors || []);
       toast.success(`${p.name} saved`);
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
     finally { setBusy(false); }

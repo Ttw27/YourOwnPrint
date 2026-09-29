@@ -2570,6 +2570,7 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
         out.append({
             "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
             "category": p["category"], "image": p["image"],
+            "description": p.get("description") or "",
             "source": p.get("source") or p.get("_source") or "native",
             "brand": p.get("brand") or "",
             "sku": p.get("sku") or "",

@@ -21,7 +21,7 @@ export default function AdminLeaversTemplates() {
     if (!draft.title.trim() || !draft.image.trim()) { toast.error("Title and image URL are required"); return; }
     setBusy(true);
     try {
-      await adminCreateLeaversTemplate({ ...draft, sort_order: Number(draft.sort_order) || 100 });
+      await adminCreateLeaversTemplate({ ...draft, sort_order: Number.isFinite(Number(draft.sort_order)) && draft.sort_order !== "" ? Number(draft.sort_order) : 100 });
       toast.success("Template added");
       setDraft({ title: "", description: "", image: "", active: true, sort_order: 100 });
       reload();
@@ -36,7 +36,7 @@ export default function AdminLeaversTemplates() {
     try {
       await adminUpdateLeaversTemplate(t.id, {
         title: t.title, description: t.description || "", image: t.image,
-        active: !!t.active, sort_order: Number(t.sort_order) || 100,
+        active: !!t.active, sort_order: Number.isFinite(Number(t.sort_order)) && t.sort_order !== "" ? Number(t.sort_order) : 100,
       });
       toast.success("Saved");
       reload();

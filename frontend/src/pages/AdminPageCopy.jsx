@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { fetchPageCopy, adminUpdatePageCopy, adminDeletePageCopy, uploadAdminImage, uploadAdminMedia } from "../lib/api";
+import { api, adminUpdatePageCopy, adminDeletePageCopy, uploadAdminImage, uploadAdminMedia } from "../lib/api";
 import { Loader2, Save, Plus, Trash2, RotateCcw, Upload, Image as ImageIcon, X, Film } from "lucide-react";
 import { MEDIA_RATIOS } from "../components/bold/MediaBlock";
 
@@ -273,18 +273,27 @@ export default function AdminPageCopy() {
   const [copy, setCopy] = useState(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // If the saved text can't be loaded, the editor would show blanks - and saving
+  // them would wipe the page. So Save is blocked until it loads properly.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = async (s) => {
     setLoading(true);
+    setLoadFailed(false);
     try {
-      const d = await fetchPageCopy(s);
+      const { data } = await api.get(`/page-copy/${s}`);
+      const d = data || {};
       setCopy({ ...EMPTY, ...d, bullets: d.bullets || [], faq: d.faq || [] });
-    } catch { setCopy(EMPTY); }
+    } catch {
+      setCopy(EMPTY);
+      setLoadFailed(true);
+    }
     finally { setLoading(false); }
   };
   useEffect(() => { load(slug); }, [slug]);
 
   const save = async () => {
+    if (loadFailed) { toast.error("This page's saved text didn't load, so saving could wipe it. Click 'Try again' first."); return; }
     setSaving(true);
     try {
       // Only send fields the admin actually filled in - empty strings are treated as "clear".
@@ -296,6 +305,7 @@ export default function AdminPageCopy() {
         hero_image: copy.hero_image || "",
         images: copy.images || {},
         media: copy.media || {},
+        extras: copy.extras || {},  // e.g. footer social links (were never saved)
       };
       await adminUpdatePageCopy(slug, payload);
       toast.success("Page copy saved");
@@ -582,7 +592,13 @@ export default function AdminPageCopy() {
 
               <div className="flex justify-between items-center pt-2 border-t border-[#dcfce7]">
                 <button onClick={revert} type="button" className="text-xs font-extrabold text-rose-500 hover:underline inline-flex items-center gap-1" data-testid="apc-revert"><RotateCcw size={12} /> Undo all my changes to this page</button>
-                <button onClick={save} disabled={saving} className="px-5 py-3 bg-[#7bc67e] rounded-full font-extrabold inline-flex items-center gap-2 hover:bg-[#5eb062] disabled:opacity-50" data-testid="apc-save">
+                {loadFailed && (
+                  <div className="text-sm text-amber-800 bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-2 inline-flex items-center gap-3" data-testid="apc-load-failed">
+                    Couldn&rsquo;t load this page&rsquo;s saved text, so saving is paused to protect it.
+                    <button type="button" onClick={() => load(slug)} className="font-extrabold underline">Try again</button>
+                  </div>
+                )}
+                <button onClick={save} disabled={saving || loadFailed} className="px-5 py-3 bg-[#7bc67e] rounded-full font-extrabold inline-flex items-center gap-2 hover:bg-[#5eb062] disabled:opacity-50" data-testid="apc-save">
                   {saving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} Save
                 </button>
               </div>

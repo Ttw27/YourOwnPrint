@@ -217,8 +217,8 @@ export async function updateBulkDefaults(payload) {
   const { data } = await api.patch("/admin/bulk-tiers/defaults", payload);
   return data;
 }
-export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "", locked = "", visibility = "", designer = "") {
-  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source, locked, visibility, designer } });
+export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "", locked = "", visibility = "", designer = "", lite = false) {
+  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source, locked, visibility, designer, lite: lite || undefined } });
   return data;
 }
 
@@ -362,6 +362,11 @@ export async function fetchTeamKitAddons() {
 }
 export async function fetchTeamKitBrands(product_id) {
   const { data } = await api.get("/team-kit-brands", { params: product_id ? { product_id } : {} });
+  return data;
+}
+// Admin list - includes switched-off variants so they can be switched back on.
+export async function fetchTeamKitBrandsAdmin(product_id) {
+  const { data } = await api.get("/admin/team-kit-brands", { params: product_id ? { product_id } : {} });
   return data;
 }
 export async function createTeamKitBrand(payload) {

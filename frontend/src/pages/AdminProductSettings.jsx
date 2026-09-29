@@ -36,6 +36,11 @@ export default function AdminProductSettings() {
     return () => clearTimeout(t);
   }, [filter]);
 
+  // What each product looked like when loaded - Save sends only the fields that
+  // differ from this, so it never overwrites settings changed elsewhere (bulk
+  // passes, Smart Re-classify, another tab) or pins untouched defaults.
+  const loadedRef = React.useRef({});
+
   const reload = async (opts = {}) => {
     const targetPage = opts.page ?? page;
     setLoading(true);
@@ -46,6 +51,7 @@ export default function AdminProductSettings() {
         fetchWorkforceTiers().catch(() => null),
       ]);
       setProducts(ps.items || []);
+      loadedRef.current = Object.fromEntries((ps.items || []).map((x) => [x.id, x]));
       setSelected(new Set());
       setTotal(ps.total || 0);
       if (ps.categories || ps.sources) setFacets({ categories: ps.categories || [], sources: ps.sources || [] });
@@ -59,7 +65,7 @@ export default function AdminProductSettings() {
   // them all as buttons that was slow, so that no longer happens).
   const loadAllLite = async () => {
     try {
-      const d = await fetchAllProductsAdmin(0, 5000, "");
+      const d = await fetchAllProductsAdmin(0, 100000, "", "", "", "", "", "", true);
       setAllProductsLite((d.items || []).map(p => ({ id: p.id, name: p.name })));
     } catch { /* non-critical - pickers just show fewer suggestions */ }
   };
@@ -169,32 +175,42 @@ export default function AdminProductSettings() {
     if (saver) basicsSavers.current[id] = saver; else delete basicsSavers.current[id];
   }, []);
 
+  const metaPayload = (p) => ({
+    brand: p.brand || "",
+    sku: p.sku || "",
+    description_full: p.description_full || "",
+    size_guide_image: p.size_guide_image || "",
+    size_guide_table: p.size_guide_table || [],
+    bulk_pricing_enabled: !!p.bulk_pricing_enabled,
+    bulk_pricing_overrides: (p.bulk_pricing_overrides || []).length ? p.bulk_pricing_overrides : null,
+    allowed_placements: Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS,
+    workforce_eligible: !!p.workforce_eligible,
+    specials_eligible: !!p.specials_eligible,
+    is_bestseller: !!p.is_bestseller,
+    designer_only: !!p.designer_only,
+    also_bought: Array.isArray(p.also_bought) ? p.also_bought : [],
+    match_with: Array.isArray(p.match_with) ? p.match_with : [],
+    image_gallery: Array.isArray(p.image_gallery) ? p.image_gallery : [],
+    gender_fit: p.gender_fit || "unisex",
+    industry_tags: Array.isArray(p.industry_tags) ? p.industry_tags : [],
+  });
+
   const save = async (p) => {
     setBusy(true);
     try {
       const basics = basicsSavers.current[p.id];
       const savedName = basics && basics.isDirty() ? await basics.save({ quiet: true }) : null;
-      await updateProductMeta(p.id, {
-        brand: p.brand || "",
-        sku: p.sku || "",
-        description_full: p.description_full || "",
-        size_guide_image: p.size_guide_image || "",
-        size_guide_table: p.size_guide_table || [],
-        bulk_pricing_enabled: !!p.bulk_pricing_enabled,
-        bulk_pricing_overrides: (p.bulk_pricing_overrides || []).length ? p.bulk_pricing_overrides : null,
-        allowed_placements: Array.isArray(p.allowed_placements) ? p.allowed_placements : ALL_PLACEMENTS,
-        workforce_eligible: !!p.workforce_eligible,
-        specials_eligible: !!p.specials_eligible,
-        is_bestseller: !!p.is_bestseller,
-        designer_only: !!p.designer_only,
-        also_bought: Array.isArray(p.also_bought) ? p.also_bought : [],
-        match_with: Array.isArray(p.match_with) ? p.match_with : [],
-        image_gallery: Array.isArray(p.image_gallery) ? p.image_gallery : [],
-        gender_fit: p.gender_fit || "unisex",
-        industry_tags: Array.isArray(p.industry_tags) ? p.industry_tags : [],
-      });
+      const now = metaPayload(p);
+      const before = metaPayload(loadedRef.current[p.id] || {});
+      const changed = Object.fromEntries(Object.entries(now).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(before[k])));
+      if (Object.keys(changed).length) {
+        await updateProductMeta(p.id, changed);
+        loadedRef.current[p.id] = { ...(loadedRef.current[p.id] || {}), ...p };
+      } else if (!savedName) {
+        toast("Nothing to save - no changes");
+        return;
+      }
       toast.success(`${savedName || p.name} saved`);
-      if (savedName) reload();
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
     finally { setBusy(false); }
   };
@@ -391,7 +407,7 @@ export default function AdminProductSettings() {
                       </div>
                     </div>
                     {/* Basics - name, price, category, descriptions (in ProductOverridePanel) */}
-                    <ProductOverridePanel key={`${p.id}-${p.hidden}`} product={p} onSaved={reload} registerSaver={registerBasicsSaver} />
+                    <ProductOverridePanel key={`${p.id}-${p.hidden}`} product={p} onSaved={(changes) => update(p.id, changes)} onReverted={reload} registerSaver={registerBasicsSaver} />
 
                     {/* Product details */}
                     <Section title="Product details" hint="Brand, code and the full description shown on the product page.">
@@ -841,7 +857,7 @@ function ImageGalleryEditor({ productId, urls, onChange }) {
  * Revert (DELETE /admin/products/{pid}/override) removes the doc and restores
  * the pristine hardcoded values immediately - no restart needed.
  */
-function ProductOverridePanel({ product, onSaved, registerSaver }) {
+function ProductOverridePanel({ product, onSaved, onReverted, registerSaver }) {
   const [draft, setDraft] = React.useState({
     name: product.name || "",
     price: product.price ?? 0,
@@ -873,21 +889,39 @@ function ProductOverridePanel({ product, onSaved, registerSaver }) {
   // quiet: called from the main Save button, which shows its own message and
   // reloads; errors are re-thrown so it can report them. Returns the saved name.
   const save = async ({ quiet = false } = {}) => {
+    // Send ONLY what changed. An emptied name/description/photo/category tells
+    // the server to go back to the original for that field.
+    const changes = {};
+    const name = (draft.name || "").trim();
+    if (name !== (product.name || "")) changes.name = name;
+    const price = Number(draft.price);
+    if (price !== Number(product.price)) {
+      if (!Number.isFinite(price) || price <= 0) {
+        const err = { response: { data: { detail: "Price must be a number above 0" } } };
+        if (quiet) throw err;
+        toast.error(err.response.data.detail);
+        return null;
+      }
+      changes.price = price;
+    }
+    if ((draft.description || "") !== (product.description || "")) changes.description = draft.description || "";
+    if ((draft.image || "").trim() !== (product.image || "")) changes.image = (draft.image || "").trim();
+    if ((draft.category || "") !== (product.category || "")) changes.category = draft.category || "";
+    if (draft.active !== !product.hidden) changes.active = draft.active;
+    if (!Object.keys(changes).length) return null;
     setBusy(true);
     try {
-      await patchProductOverride(product.id, {
-        name: draft.name?.trim() || null,
-        price: Number(draft.price) || null,
-        description: draft.description || null,
-        image: draft.image || null,
-        category: draft.category || null,
-        active: draft.active,
-      });
-      if (!quiet) {
-        toast.success(`${draft.name} saved`);
-        onSaved && onSaved();
+      await patchProductOverride(product.id, changes);
+      const cleared = ["name", "description", "image", "category"].some((k) => k in changes && !String(changes[k]).trim());
+      if (cleared) {
+        onReverted && onReverted();  // server went back to the original - fetch it
+      } else if (onSaved) {
+        const local = { ...changes };
+        if ("active" in local) { local.hidden = !local.active; delete local.active; }
+        onSaved(local);
       }
-      return draft.name?.trim() || product.name;
+      if (!quiet) toast.success(`${name || product.name} saved`);
+      return name || product.name;
     } catch (e) {
       if (quiet) throw e;
       toast.error(e?.response?.data?.detail || "Save failed");
@@ -910,7 +944,7 @@ function ProductOverridePanel({ product, onSaved, registerSaver }) {
     try {
       await clearProductOverride(product.id);
       toast.success("Back to the original");
-      onSaved && onSaved();
+      onReverted && onReverted();
     } catch (e) { toast.error(e?.response?.data?.detail || "Revert failed"); }
     finally { setBusy(false); }
   };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchProducts, fetchTeamKitBrands, createTeamKitBrand, updateTeamKitBrand, deleteTeamKitBrand } from "../lib/api";
+import { fetchProducts, fetchTeamKitBrandsAdmin, createTeamKitBrand, updateTeamKitBrand, deleteTeamKitBrand } from "../lib/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, Loader2, Sparkles } from "lucide-react";
 
@@ -11,7 +11,7 @@ export default function AdminTeamKits() {
   const [busy, setBusy] = useState(false);
 
   const reload = async () => {
-    const [ps, bs] = await Promise.all([fetchProducts("team-kits", 500), fetchTeamKitBrands()]);
+    const [ps, bs] = await Promise.all([fetchProducts("team-kits", 500), fetchTeamKitBrandsAdmin()]);
     const items = ps.items || [];
     setProducts(items);
     setBrands(bs);
@@ -25,7 +25,8 @@ export default function AdminTeamKits() {
     if (!form.product_id || !form.brand.trim() || !form.name.trim() || !form.price) { toast.error("Fill product, brand, name and price"); return; }
     setBusy(true);
     try {
-      const payload = { ...form, price: Number(form.price), active: true };
+      // Editing never changes on/off (that's on Bundle variants); new ones start live.
+      const payload = editing ? { ...form, price: Number(form.price) } : { ...form, price: Number(form.price), active: true };
       if (editing) await updateTeamKitBrand(editing, payload);
       else await createTeamKitBrand(payload);
       toast.success(editing ? "Updated" : "Added");

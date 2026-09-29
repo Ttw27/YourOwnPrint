@@ -153,6 +153,16 @@ frontend/src/
   `reapply_saved_settings([ids])` after it** (startup, bulk update, imports all do). Ralawise
   re-import sets `active` only on insert so it never un-hides hidden products.
 
+- **Admin saves are PARTIAL - send only what changed.** Product settings (`/meta`), the
+  name/price/photo box (`/override`) and Designer products send only fields the admin actually
+  changed, and those endpoints write only fields sent. Never go back to "send the whole record":
+  it pinned defaults (all 9 print placements), auto-locked products, froze supplier values and
+  overwrote changes made elsewhere. An emptied override field means "back to the original".
+  Re-imports set selling `price`/`category` on first insert only (never reset to trade cost).
+
+- **Nav default version:** bumping `DEFAULT_NAV_CONFIG["version"]` REPLACES Tim's saved menu
+  (stored `default_version` < new version). Ask Tim before bumping it.
+
 - **Image import & mirroring.** Supplier images are mirrored to R2 via
   `services/r2_storage.mirror_external_image`. **Supplier CDNs (pimber.ly, Ralawise) block bot
   user-agents** — mirror requests and the health scanner MUST send real browser headers
