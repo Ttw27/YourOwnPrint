@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct, setDesignerEnabled } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct, setDesignerEnabled, uploadAdminImage } from "../lib/api";
 import { toast } from "sonner";
-import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X, Eye, EyeOff, Copy } from "lucide-react";
+import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X, Eye, EyeOff, Copy, Upload } from "lucide-react";
 
 const PAGE_SIZE = 25;
 const CATEGORY_OPTIONS = [
@@ -741,6 +741,39 @@ function CrossSellPicker({ selectedIds, allProducts, excludeId, maxItems, onChan
   );
 }
 
+// Upload one or more images to our storage (R2) and hand back their URLs.
+function UploadImageButton({ onUploaded, multiple = false, label = "Upload", testid }) {
+  const [busy, setBusy] = React.useState(false);
+  const inputRef = React.useRef(null);
+  const onFiles = async (files) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    setBusy(true);
+    const urls = [];
+    try {
+      for (const file of list) {
+        if (file.size > 8 * 1024 * 1024) { toast.error(`${file.name} is over 8MB - please make it smaller`); continue; }
+        try {
+          const { url } = await uploadAdminImage(file, "product-images");
+          if (url) urls.push(url);
+        } catch (e) { toast.error(e?.response?.data?.detail || `Couldn't upload ${file.name}`); }
+      }
+      if (urls.length) onUploaded(urls);
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+  return (
+    <>
+      <input ref={inputRef} type="file" accept="image/*" multiple={multiple} className="hidden" onChange={(e) => onFiles(e.target.files)} />
+      <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} className="inline-flex items-center gap-1.5 border-2 border-[#7bc67e] text-[#166534] hover:bg-white font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full whitespace-nowrap disabled:opacity-50" data-testid={testid}>
+        {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} {busy ? "Uploading…" : label}
+      </button>
+    </>
+  );
+}
+
 function ImageGalleryEditor({ productId, urls, onChange }) {
   const [draft, setDraft] = React.useState("");
   const add = () => {
@@ -783,7 +816,18 @@ function ImageGalleryEditor({ productId, urls, onChange }) {
           className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full"
           data-testid={`aps-gallery-${productId}-add`}
         >+ Add</button>
+        <UploadImageButton
+          multiple
+          label="Upload photos"
+          testid={`aps-gallery-${productId}-upload`}
+          onUploaded={(newUrls) => {
+            const room = Math.max(0, 8 - urls.length);
+            if (newUrls.length > room) toast.error("Max 8 extra photos - some weren't added");
+            if (room) onChange([...urls, ...newUrls.slice(0, room)]);
+          }}
+        />
       </div>
+      <div className="text-[10px] text-[#4b5563] mt-1">Remember to click Save at the bottom.</div>
     </div>
   );
 }
@@ -900,8 +944,14 @@ function ProductOverridePanel({ product, onSaved, registerSaver }) {
       <Lab label="Short description (shown on product cards + PDP intro)">
         <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={2} className={ic + " resize-none"} data-testid={`aps-override-desc-${product.id}`} />
       </Lab>
-      <Lab label="Main image URL">
-        <input value={draft.image} onChange={(e) => setDraft({ ...draft, image: e.target.value })} className={ic} placeholder="https://…" data-testid={`aps-override-image-${product.id}`} />
+      <Lab label="Main photo">
+        <div className="flex items-center gap-2">
+          {draft.image
+            ? <img src={draft.image} alt="" className="w-12 h-12 rounded-lg object-cover border border-[#e5e7eb] bg-white flex-shrink-0" data-testid={`aps-override-image-preview-${product.id}`} />
+            : <span className="w-12 h-12 rounded-lg border border-dashed border-[#d1d5db] bg-white flex-shrink-0" />}
+          <input value={draft.image} onChange={(e) => setDraft({ ...draft, image: e.target.value })} className={ic} placeholder="Upload a photo, or paste a link https://…" data-testid={`aps-override-image-${product.id}`} />
+          <UploadImageButton testid={`aps-override-image-upload-${product.id}`} onUploaded={(urls) => { setDraft((d) => ({ ...d, image: urls[0] })); toast("Photo uploaded - click Save to use it"); }} />
+        </div>
       </Lab>
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <label className="inline-flex items-center gap-2 cursor-pointer">
