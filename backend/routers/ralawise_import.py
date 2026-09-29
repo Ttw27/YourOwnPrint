@@ -29,7 +29,7 @@ from deps import api_router, db, require_admin
 
 # Markup applied to the trade price for NEW Ralawise products (existing products keep
 # their selling price; re-price them with Import products > Bulk update).
-RALAWISE_NEW_PRODUCT_MARKUP_PCT = 45.0
+RALAWISE_NEW_PRODUCT_MARKUP_PCT = 55.0
 
 # In-memory job registry for import progress (survives for the process lifetime,
 # which is fine - a job completes in a few minutes).

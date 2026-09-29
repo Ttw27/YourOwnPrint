@@ -162,7 +162,7 @@ export default function AdminProductsImport() {
   const [bulkForm, setBulkForm] = useState({
     scope: "all", // "all" or "search" (uses the search box above)
     reprice: true,
-    markup_pct: 40,
+    markup_pct: 55,
     apply_vat: true,
     vat_rate_pct: 20,
     charm_price_99: true,
@@ -292,7 +292,7 @@ export default function AdminProductsImport() {
     default_source: "pencarrie",
     default_brand: "",
     default_gender_fit: "unisex",
-    default_markup_pct: 40,
+    default_markup_pct: 55,
     apply_vat: true,
     vat_rate_pct: 20,
     charm_price_99: true,

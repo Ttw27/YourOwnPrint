@@ -33,14 +33,14 @@ INCLUDED_POSITION = "left-breast"   # one print position included on every item
 
 
 def _discount_for(n_items: int) -> float:
-    """Bigger bundles, bigger saving."""
+    """Bigger bundles, bigger saving - kept modest so packs stay profitable."""
     if n_items >= 50:
-        return 0.25
+        return 0.12
     if n_items >= 20:
-        return 0.20
+        return 0.10
     if n_items >= 10:
-        return 0.15
-    return 0.10
+        return 0.08
+    return 0.05
 
 
 def _round99(x: float) -> float:

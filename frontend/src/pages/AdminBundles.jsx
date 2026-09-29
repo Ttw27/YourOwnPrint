@@ -104,7 +104,7 @@ export default function AdminBundles() {
         <p className="text-[#4b5563] mt-2 max-w-3xl">
           <strong>Bulk packs</strong> (e.g. 20 &times; tees, or a team pack) and <strong>per-person sets</strong>, made from products already on the site.
           Every price includes <strong>your customer&rsquo;s logo on every item</strong>, the saving grows with the size of the bundle
-          (10% &rarr; 25%), and prices end in .99. The picture is made automatically from the items&rsquo; own photos.
+          (5% &rarr; 12%), and prices end in .99. The picture is made automatically from the items&rsquo; own photos.
           New bundles start <strong>hidden</strong>: check them in Product settings, then click &ldquo;Show on site&rdquo;.
         </p>
 
