@@ -9,6 +9,7 @@ import { Plus, Minus, Loader2, Send, Zap, Sparkles, ShieldCheck, Info, Camera, U
 import PortfolioCarousel from "../components/bold/PortfolioCarousel";
 import MediaBlock from "../components/bold/MediaBlock";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
+import { ExVat } from "../components/bold/PriceTag";
 
 const SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
 
@@ -416,7 +417,10 @@ export default function FightNightTee() {
           </div>
           <div className="border-t border-white/10 mt-3 pt-3 flex items-baseline justify-between">
             <span className="font-nunito font-extrabold">Total</span>
-            <span data-testid="fn-total" className="text-[#7bc67e] font-nunito font-black text-4xl">£{total.toFixed(2)}</span>
+            <div className="text-right">
+              <span data-testid="fn-total" className="text-[#7bc67e] font-nunito font-black text-4xl">£{total.toFixed(2)}</span>
+              <ExVat amount={total} className="text-[11px] text-white/60 mt-0.5" />
+            </div>
           </div>
           <div className="text-xs text-neutral-400 mt-1">Pay now → we send a <strong className="text-[#7bc67e]">free artwork proof</strong> → only then do we print.</div>
           <div className="mt-4 flex flex-wrap gap-2">

@@ -117,7 +117,10 @@ export default function CartDrawer() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="font-black text-lg">Total</span>
-                <span className="font-black text-xl" data-testid="cart-drawer-total">£{priced.grand_total.toFixed(2)}</span>
+                <div className="text-right">
+                  <span className="font-black text-xl" data-testid="cart-drawer-total">£{priced.grand_total.toFixed(2)}</span>
+                  {priced.grand_total_ex_vat != null && <div className="text-[11px] text-[#4b5563]" data-testid="cart-drawer-total-ex-vat">£{Number(priced.grand_total_ex_vat).toFixed(2)} ex. VAT</div>}
+                </div>
               </div>
               <button
                 onClick={goCheckout}

@@ -576,12 +576,13 @@ async def rebuild_bundle_image(bundle_id: str, cutout: str = "auto"):
 @api_router.get("/bundles")
 async def public_bundles():
     """Live bundles for the public /bundles page - packs first, then sets."""
-    from server import live_products
+    from server import live_products, is_zero_rated
     out = []
     for p in live_products():
         if p.get("bundle_items"):
             out.append({
                 "id": p["id"], "name": p["name"], "price": float(p["price"]), "image": p.get("image") or "",
+                "vat_zero_rated": is_zero_rated(p),
                 "kind": p.get("bundle_kind") or "set", "item_count": p.get("bundle_item_count") or 0,
                 "full_price": p.get("bundle_full_price"), "saving_pct": p.get("bundle_saving_pct"),
                 "industry_tags": p.get("industry_tags") or [], "description": p.get("description") or "",

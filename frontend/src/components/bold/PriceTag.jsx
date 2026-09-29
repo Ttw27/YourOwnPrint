@@ -19,6 +19,17 @@ import React from "react";
 
 const money = (n) => `£${Number(n || 0).toFixed(2)}`;
 
+// "£X ex. VAT" line to sit under any total. Children's clothing is zero-rated,
+// so it says so instead of taking VAT off.
+export function ExVat({ amount, zeroRated = false, className = "text-[11px] text-[#4b5563]", testid }) {
+  const n = Number(amount) || 0;
+  return (
+    <div className={className} data-testid={testid}>
+      {zeroRated ? "No VAT - children\u2019s clothing" : `\u00a3${(n / 1.2).toFixed(2)} ex. VAT`}
+    </div>
+  );
+}
+
 export function hasVatFields(p) {
   return p && p.price_ex_vat !== undefined && p.price_ex_vat !== null;
 }

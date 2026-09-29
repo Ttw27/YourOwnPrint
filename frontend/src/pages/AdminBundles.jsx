@@ -143,7 +143,7 @@ export default function AdminBundles() {
                     <div className="text-right flex-shrink-0">
                       <div className="font-black text-lg">£{t.price.toFixed(2)}</div>
                       <div className="text-[11px] text-[#4b5563]"><span className="line-through">£{t.full_price.toFixed(2)}</span> · save {t.saving_pct}%</div>
-                      <div className="text-[10px] text-[#4b5563]">per {t.kind === "pack" ? "pack" : "set"}, logo incl.</div>
+                      <div className="text-[10px] text-[#4b5563]">£{(t.price / 1.2).toFixed(2)} ex VAT · per {t.kind === "pack" ? "pack" : "set"}, logo incl.</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -216,7 +216,7 @@ export default function AdminBundles() {
                   {preview && (
                     <div className="flex items-center justify-between pt-2 text-sm">
                       <span className="text-[#4b5563]">{preview.item_count} items, logo incl. - separately £{preview.full_price.toFixed(2)}, save {preview.saving_pct}%:</span>
-                      <span className="font-black text-lg" data-testid="bundle-custom-price">£{preview.price.toFixed(2)}</span>
+                      <span className="text-right"><span className="font-black text-lg block" data-testid="bundle-custom-price">£{preview.price.toFixed(2)}</span><span className="text-[10px] text-[#4b5563]">£{(preview.price / 1.2).toFixed(2)} ex VAT</span></span>
                     </div>
                   )}
                 </div>

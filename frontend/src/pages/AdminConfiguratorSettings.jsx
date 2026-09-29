@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   adminGetConfiguratorSettings, adminUpdateFullSquadAddons, adminUpdateSportsOutfitAddons,
+  adminGetPrintPrices, adminSetPrintPrices,
 } from "../lib/api";
 import { Loader2, Save } from "lucide-react";
 
@@ -49,6 +50,8 @@ export default function AdminConfiguratorSettings() {
         <h1 className="font-black text-3xl mb-1">Configurator prices</h1>
         <p className="text-sm text-[#4b5563] mb-6">All configurator add-on prices in one place. Changes go live the moment you save - no restart needed.</p>
 
+        <PrintPricesCard />
+
         {loading ? (
           <div className="py-10 grid place-items-center"><Loader2 className="animate-spin text-[#7bc67e]" /></div>
         ) : (
@@ -94,6 +97,52 @@ export default function AdminConfiguratorSettings() {
         )}
       </div>
       <style>{`.input { width: 100%; padding: 0.5rem 0.75rem; border-radius: 0.75rem; border: 2px solid #dcfce7; background: white; font-size: 0.875rem; } .input:focus { outline: none; border-color: #7bc67e; }`}</style>
+    </div>
+  );
+}
+
+
+// Print prices per position - used on every product page, the basket/checkout
+// and by the Bundle builder (a bundle includes one chest-size print per item).
+function PrintPricesCard() {
+  const [rows, setRows] = useState(null);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    adminGetPrintPrices().then((d) => setRows(d.placements || [])).catch(() => toast.error("Couldn't load print prices"));
+  }, []);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const d = await adminSetPrintPrices(Object.fromEntries(rows.map((r) => [r.id, Number(r.price) || 0])));
+      setRows(d.placements);
+      toast.success("Print prices saved - live now");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5 mb-6" data-testid="acs-print-prices">
+      <h2 className="font-black text-lg">Print prices</h2>
+      <p className="text-xs text-[#4b5563] mb-3">Price per item for each print position, including VAT. Used on every product page and at checkout.
+        Bulk bundles include one chest print per item at the price below - bundles already created keep the price they were made with.</p>
+      {!rows ? <Loader2 className="animate-spin text-[#7bc67e]" /> : (
+        <>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {rows.map((r) => (
+              <label key={r.id} className="block">
+                <span className="text-xs font-extrabold text-[#4b5563]">{r.label}</span>
+                <div className="mt-1 flex items-center gap-1 bg-white border-2 border-[#e5e7eb] rounded-xl px-3 py-2 focus-within:border-[#7bc67e]">
+                  <span className="text-sm text-[#4b5563]">£</span>
+                  <input type="number" step="0.01" min="0" value={r.price} onChange={(e) => setRows(rows.map((x) => x.id === r.id ? { ...x, price: e.target.value } : x))} className="w-full text-sm font-bold focus:outline-none" data-testid={`acs-print-${r.id}`} />
+                  <span className="text-[10px] text-[#9ca3af] whitespace-nowrap">£{((Number(r.price) || 0) / 1.2).toFixed(2)} ex VAT</span>
+                </div>
+              </label>
+            ))}
+          </div>
+          <button onClick={save} disabled={saving} className="mt-4 inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 text-[#1a1a1a] font-extrabold text-sm rounded-full px-5 py-2.5" data-testid="acs-print-save">
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save print prices
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leavers
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { toast } from "sonner";
 import { ArrowRight, CheckCircle2, GraduationCap, Sparkles, Loader2, ShieldCheck, Package, Upload, ImageIcon, Users, FileText, Info } from "lucide-react";
+import { ExVat } from "../components/bold/PriceTag";
 
 export default function LeaversStart() {
   const navigate = useNavigate();
@@ -403,6 +404,7 @@ export default function LeaversStart() {
           <div className="bg-[#1a1a1a] text-white rounded-3xl p-6 sticky top-24" data-testid="ls-summary">
             <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold">Live total</div>
             <div className="text-4xl font-black mt-2" data-testid="ls-total">£{totalAmount.toFixed(2)}</div>
+            <ExVat amount={totalAmount} className="text-xs opacity-70 mt-0.5" />
             <div className="text-sm text-zinc-300 mt-1">{totalQty} hoodie{totalQty === 1 ? "" : "s"}{unitPrice > 0 ? ` · £${unitPrice.toFixed(2)} ea` : ""}{addBag ? ` + £${bagPerUnit.toFixed(2)} bag` : ""}</div>
             {product && tiersAsc.length > 0 && (() => {
               const next = tiersAsc.find((t) => totalQty < t.min_qty);

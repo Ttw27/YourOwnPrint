@@ -27,6 +27,10 @@ from pydantic import BaseModel
 
 from deps import api_router, db, require_admin
 
+# Markup applied to the trade price for NEW Ralawise products (existing products keep
+# their selling price; re-price them with Import products > Bulk update).
+RALAWISE_NEW_PRODUCT_MARKUP_PCT = 45.0
+
 # In-memory job registry for import progress (survives for the process lifetime,
 # which is fine - a job completes in a few minutes).
 _JOBS: Dict[str, Dict] = {}
@@ -276,7 +280,7 @@ async def ralawise_status(job_id: str):
 
 async def _run_ralawise_job(job_id: str, docs: List[Dict], mirror_images: bool) -> None:
     """The whole import, run in the background with live progress in _JOBS."""
-    from server import PRODUCTS, _apply_imported_product, _mirror_external_image, reapply_saved_settings
+    from server import PRODUCTS, _apply_imported_product, _mirror_external_image, reapply_saved_settings, _price_with_vat_and_charm
     from pymongo import ReturnDocument
     from datetime import datetime, timezone
     import asyncio
@@ -308,7 +312,10 @@ async def _run_ralawise_job(job_id: str, docs: List[Dict], mirror_images: bool) 
                 # yours (bulk re-price markup, re-categorise, Smart Re-classify). A
                 # re-import updates the trade cost (source_price) but never resets
                 # the selling price to trade, or undoes category changes.
-                {"$set": doc, "$setOnInsert": {"active": True, "price": d["price"], "category": d["category"]}},
+                {"$set": doc, "$setOnInsert": {"active": True, "category": d["category"],
+                                               # new products: trade + markup + VAT, .99 (never sold at trade cost)
+                                               "price": _price_with_vat_and_charm(float(d["source_price"]), RALAWISE_NEW_PRODUCT_MARKUP_PCT, True, 20.0, True)
+                                               if d.get("source_price") else d["price"]}},
                 upsert=True,
                 return_document=ReturnDocument.AFTER,
             )

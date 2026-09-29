@@ -7,6 +7,7 @@ import {
   Plus, Minus, Trash2, ShieldCheck, Truck, ArrowRight, Loader2,
   Info, ChevronDown, Check, ShoppingBag,
 } from "lucide-react";
+import { ExVat } from "../components/bold/PriceTag";
 
 /**
  * Full Squad Configurator - team-focused (Football / Rugby / kit sports).
@@ -164,6 +165,7 @@ export default function FullSquadConfigurator() {
           <div className="bg-[#1a1a1a] text-white rounded-3xl p-5 sticky top-24">
             <div className="text-[#7bc67e] text-xs uppercase tracking-[0.3em] font-extrabold">Full squad summary</div>
             <div className="mt-2 text-3xl font-black">£{totals.subtotal.toFixed(2)}</div>
+            <ExVat amount={totals.subtotal} className="text-xs opacity-70 mt-0.5" />
             <div className="text-xs text-zinc-400">{totals.totalQty} kits across {activeSets.length} set{activeSets.length === 1 ? "" : "s"}{totals.gymBags > 0 ? ` · +${totals.gymBags} gym bag${totals.gymBags === 1 ? "" : "s"}` : ""}</div>
             <div className="mt-4 space-y-2 max-h-64 overflow-y-auto pr-1">
               {activeSets.map(([k, v]) => {

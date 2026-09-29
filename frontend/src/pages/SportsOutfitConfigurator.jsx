@@ -7,6 +7,7 @@ import {
   Plus, Minus, ShieldCheck, Truck, ArrowRight, Loader2, ChevronDown, Check, Info,
   Upload, Image as ImageIcon, X,
 } from "lucide-react";
+import { ExVat } from "../components/bold/PriceTag";
 
 /**
  * Sports Outfit Configurator - simpler builder for gyms, PTs, boxing/thai/kick gyms.
@@ -186,6 +187,7 @@ export default function SportsOutfitConfigurator() {
           <div className="bg-[#1a1a1a] text-white rounded-3xl p-5 sticky top-24">
             <div className="text-[#7bc67e] text-xs uppercase tracking-[0.3em] font-extrabold">Sports outfit summary</div>
             <div className="mt-2 text-3xl font-black">£{totals.subtotal.toFixed(2)}</div>
+            <ExVat amount={totals.subtotal} className="text-xs opacity-70 mt-0.5" />
             <div className="text-xs text-zinc-400">{totals.totalQty} kits across {activeSets.length} set{activeSets.length === 1 ? "" : "s"}</div>
             <div className="mt-4 space-y-2 max-h-64 overflow-y-auto pr-1">
               {activeSets.map(([k, v]) => {

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock, Eye } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import { MobileToolBar, MobileSheet, useIsMobile } from "../components/bold/MobileDesignerShell";
+import { ExVat } from "../components/bold/PriceTag";
 
 const FONTS = [
   { label: "Nunito", value: "Nunito, sans-serif" },
@@ -847,7 +848,10 @@ export default function DesignYourOwn() {
             <Panel title="Total">
               <div className="flex items-baseline justify-between">
                 <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}{neckEnabled && <> + £{neckLabelPrice.toFixed(2)} neck</>}</span>
-                <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
+                <div className="text-right">
+                  <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
+                  <ExVat amount={subtotal} zeroRated={!!product?.vat_zero_rated} testid="designer-total-ex-vat" />
+                </div>
               </div>
               {totalQty > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5" data-testid="size-breakdown">

@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import usePageTitle from "../hooks/usePageTitle";
 import { api } from "../lib/api";
 import { Loader2, BadgeCheck, Package, Users, MessageCircle } from "lucide-react";
+import { ExVat } from "../components/bold/PriceTag";
 
 /**
  * Public bundles page - bulk packs (e.g. 20 x tees, team packs) and per-person
@@ -93,7 +94,8 @@ export default function Bundles() {
                     {b.full_price ? <span className="text-xs text-[#9ca3af] line-through">£{Number(b.full_price).toFixed(2)}</span> : null}
                     {b.saving_pct ? <span className="text-[11px] font-extrabold bg-[#dcfce7] text-[#166534] rounded-full px-2 py-0.5">Save {b.saving_pct}%</span> : null}
                   </div>
-                  {b.kind === "pack" && b.item_count ? <p className="text-[11px] text-[#4b5563] mt-1">That&rsquo;s £{(b.price / b.item_count).toFixed(2)} per item with your logo</p> : null}
+                  <ExVat amount={b.price} zeroRated={b.vat_zero_rated} className="text-[11px] text-[#4b5563] mt-0.5" />
+                  {b.kind === "pack" && b.item_count ? <p className="text-[11px] text-[#4b5563] mt-1">That&rsquo;s £{(b.price / b.item_count).toFixed(2)} per item with your logo (£{(b.price / b.item_count / (b.vat_zero_rated ? 1 : 1.2)).toFixed(2)} ex. VAT)</p> : null}
                 </div>
               </Link>
             ))}

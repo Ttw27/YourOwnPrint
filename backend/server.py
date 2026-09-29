@@ -543,17 +543,29 @@ for _pid, _meta in _DESIGNER_INFO.items():
 
 
 # ---------- Print placements ----------
+# Default print prices (per item, inc VAT). Tim can change them in Admin >
+# Configurator prices > "Print prices" - saved in db.settings "print_prices" and
+# applied over these at startup and on save (see _apply_print_prices).
 PLACEMENTS: List[Dict] = [
-    {"id": "left-breast",  "label": "Left breast",  "price": 2.50, "excludes": ["full-front"]},
-    {"id": "right-breast", "label": "Right breast", "price": 2.50, "excludes": ["full-front"]},
-    {"id": "full-front",   "label": "Full front",   "price": 3.50, "excludes": ["left-breast", "right-breast"]},
-    {"id": "back-print",   "label": "Back print",   "price": 3.50, "excludes": []},
-    {"id": "left-sleeve",  "label": "Left sleeve",  "price": 1.50, "excludes": []},
-    {"id": "right-sleeve", "label": "Right sleeve", "price": 1.50, "excludes": []},
-    {"id": "left-pocket",  "label": "Below left pocket",  "price": 2.00, "excludes": []},
-    {"id": "right-pocket", "label": "Below right pocket", "price": 2.00, "excludes": []},
+    {"id": "left-breast",  "label": "Left breast",  "price": 3.50, "excludes": ["full-front"]},
+    {"id": "right-breast", "label": "Right breast", "price": 3.50, "excludes": ["full-front"]},
+    {"id": "full-front",   "label": "Full front",   "price": 5.00, "excludes": ["left-breast", "right-breast"]},
+    {"id": "back-print",   "label": "Back print",   "price": 5.00, "excludes": []},
+    {"id": "left-sleeve",  "label": "Left sleeve",  "price": 2.50, "excludes": []},
+    {"id": "right-sleeve", "label": "Right sleeve", "price": 2.50, "excludes": []},
+    {"id": "left-pocket",  "label": "Below left pocket",  "price": 3.00, "excludes": []},
+    {"id": "right-pocket", "label": "Below right pocket", "price": 3.00, "excludes": []},
 ]
 PLACEMENT_BY_ID = {p["id"]: p for p in PLACEMENTS}
+
+
+def _apply_print_prices(prices: Optional[Dict]) -> None:
+    for pid, v in (prices or {}).items():
+        if pid in PLACEMENT_BY_ID:
+            try:
+                PLACEMENT_BY_ID[pid]["price"] = round(float(v), 2)
+            except (TypeError, ValueError):
+                pass
 
 # Fight-night tee specific addon prices (overrides PLACEMENT_BY_ID for product_id='boxing-fight-tee')
 FIGHT_NIGHT_ADDONS: Dict[str, Dict] = {
@@ -880,7 +892,9 @@ async def list_products(category: Optional[str] = None, industries: Optional[str
 async def get_product(product_id: str):
     if product_id not in PRODUCTS or not is_live(PRODUCTS[product_id]):
         raise HTTPException(404, "Product not found")
-    return PRODUCTS[product_id]
+    # Include the VAT figures (ex-VAT price + children's zero-rating) the cards
+    # already get, so the product page's price and total show ex VAT correctly.
+    return {**PRODUCTS[product_id], **_vat_fields(PRODUCTS[product_id])}
 
 
 @api_router.post("/contact")
@@ -926,6 +940,40 @@ async def select_theme(payload: ThemeSelectionRequest):
 @api_router.get("/placements")
 async def list_placements():
     return PLACEMENTS
+
+
+@app.on_event("startup")
+async def _load_print_prices():
+    try:
+        doc = await db.settings.find_one({"key": "print_prices"})
+        _apply_print_prices((doc or {}).get("prices"))
+    except Exception as e:
+        logging.warning(f"print prices load skipped: {e}")
+
+
+class PrintPricesIn(BaseModel):
+    prices: Dict[str, float]
+
+
+@api_router.get("/admin/print-prices", dependencies=[Depends(require_admin)])
+async def admin_get_print_prices():
+    return {"placements": [{"id": p["id"], "label": p["label"], "price": p["price"]} for p in PLACEMENTS]}
+
+
+@api_router.put("/admin/print-prices", dependencies=[Depends(require_admin)])
+async def admin_set_print_prices(payload: PrintPricesIn):
+    clean = {}
+    for pid, v in payload.prices.items():
+        if pid not in PLACEMENT_BY_ID:
+            raise HTTPException(400, f"Unknown print position '{pid}'")
+        if not (0 <= float(v) <= 100):
+            raise HTTPException(400, "Print prices must be between £0 and £100")
+        clean[pid] = round(float(v), 2)
+    await db.settings.update_one({"key": "print_prices"},
+                                 {"$set": {"key": "print_prices", "prices": clean,
+                                           "updated_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    _apply_print_prices(clean)
+    return {"ok": True, "placements": [{"id": p["id"], "label": p["label"], "price": p["price"]} for p in PLACEMENTS]}
 
 
 @api_router.get("/fight-night/addons")
@@ -1598,7 +1646,11 @@ async def price_cart(payload: CartCheckoutRequest):
         raise HTTPException(400, "Cart limit is 20 lines")
     priced = [await _price_line_item(item) for item in payload.items]
     grand_total = round(sum(p["line_total"] for p in priced), 2)
+    # Ex-VAT total worked out per line, so children's (zero-rated) items are right.
+    grand_total_ex_vat = round(sum(p["line_total"] if is_zero_rated(p["product"]) else p["line_total"] / (1 + UK_VAT_RATE)
+                                   for p in priced), 2)
     return {
+        "grand_total_ex_vat": grand_total_ex_vat,
         "items": [
             {
                 "product_id": p["product_id"],
@@ -2252,6 +2304,7 @@ async def list_designer_products():
                 "sizes": p.get("sizes", []),
                 "size_upcharges": p.get("size_upcharges", {}),
                 "back_print_price": designer_back_print_price(float(p["price"])),
+                "vat_zero_rated": is_zero_rated(p),
                 "neck_label_price": NECK_LABEL_PRICE,
                 # Product settings > Printing - the designer only offers Back /
                 # Neck label when "back-print" / "neck-label" are ticked there.
@@ -6485,6 +6538,7 @@ class BulkUpdateImportedPayload(BaseModel):
     q: Optional[str] = ""
     brand: Optional[str] = ""
     category: Optional[str] = ""
+    source: Optional[str] = ""  # supplier, e.g. "ralawise" / "pencarrie"
     ids: Optional[List[str]] = None  # if provided, restricts to exactly these product IDs (hand-picked)
     # Re-pricing - recalculated from each product's saved trade cost (source_price).
     # Only applies to products that actually have a source_price saved (i.e.
@@ -6546,6 +6600,12 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         query["brand"] = {"$regex": f"^{re.escape(payload.brand)}$", "$options": "i"}
     if payload.category:
         query["category"] = payload.category
+    # Bundles (routers/bundles.py) are priced by the Bundle builder - never touch
+    # them in a bulk pass unless explicitly hand-picked.
+    if payload.source:
+        query["source"] = payload.source
+    elif not payload.ids:
+        query["source"] = {"$ne": "bundle"}
     if payload.q:
         query["name"] = {"$regex": re.escape(payload.q), "$options": "i"}
 

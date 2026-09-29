@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { createCheckout, submitQuoteRequest, fetchTeamKitBrands, fetchTeamKitAddons } from "../../lib/api";
 import { WhatsAppInline } from "./WhatsAppFAB";
 import { Upload, Plus, Trash2, Loader2, ShoppingCart, Send, Info, Camera, Sparkles, Check, X } from "lucide-react";
+import { ExVat } from "./PriceTag";
 
 const QUOTE_THRESHOLD = 15;
 const DEFAULT_SIZE = "M";
@@ -313,6 +314,7 @@ export default function TeamKitConfigurator({ product }) {
           <div>
             <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-nunito font-bold">Indicative total</div>
             <div className="font-nunito font-black text-4xl mt-1" data-testid="kit-total-price">£{lineTotal.toFixed(2)}</div>
+            <ExVat amount={lineTotal} zeroRated={!!product?.vat_zero_rated} className="text-[11px] text-neutral-400 mt-0.5" />
             <div className="text-xs text-neutral-400 mt-1">
               {totalKits} kits · £{effectivePrice.toFixed(2)}/player
               {addonCostPerKit > 0 && <> + £{addonCostPerKit.toFixed(2)} extras</>}

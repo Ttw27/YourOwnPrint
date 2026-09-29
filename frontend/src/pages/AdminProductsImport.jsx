@@ -187,6 +187,7 @@ export default function AdminProductsImport() {
   function buildBulkPayload(dryRun, offset) {
     return {
       q: bulkForm.scope === "search" ? importedSearch : "",
+      source: ["ralawise", "pencarrie"].includes(bulkForm.scope) ? bulkForm.scope : "",
       ids: bulkForm.scope === "selected" ? [...bulkSelectedIds] : undefined,
       reprice: bulkForm.reprice,
       markup_pct: Number(bulkForm.markup_pct) || 0,
@@ -223,6 +224,7 @@ export default function AdminProductsImport() {
     if (applying && bulkForm.randomize_main_image) {
       const scopeText = bulkForm.scope === "selected" ? `the ${bulkSelectedIds.size} selected product(s)`
         : bulkForm.scope === "search" ? `every product matching "${importedSearch}"`
+        : ["ralawise", "pencarrie"].includes(bulkForm.scope) ? `EVERY ${bulkForm.scope === "ralawise" ? "Ralawise" : "PenCarrie"} product`
         : "EVERY imported product";
       if (!window.confirm(`"Randomize main photo" will change the main photo on ${scopeText}. This can't be undone automatically.\n\nTip: click Preview first to see how many will change.\n\nContinue?`)) return false;
     }
@@ -706,6 +708,12 @@ export default function AdminProductsImport() {
               <div className="flex items-center gap-4 text-xs flex-wrap">
                 <label className="inline-flex items-center gap-1.5">
                   <input type="radio" checked={bulkForm.scope === "all"} onChange={() => setBulkForm({ ...bulkForm, scope: "all" })} /> All imported products
+                </label>
+                <label className="inline-flex items-center gap-1.5">
+                  <input type="radio" checked={bulkForm.scope === "ralawise"} onChange={() => setBulkForm({ ...bulkForm, scope: "ralawise" })} data-testid="apx-scope-ralawise" /> Only Ralawise products
+                </label>
+                <label className="inline-flex items-center gap-1.5">
+                  <input type="radio" checked={bulkForm.scope === "pencarrie"} onChange={() => setBulkForm({ ...bulkForm, scope: "pencarrie" })} /> Only PenCarrie products
                 </label>
                 <label className="inline-flex items-center gap-1.5">
                   <input type="radio" checked={bulkForm.scope === "search"} onChange={() => setBulkForm({ ...bulkForm, scope: "search" })} /> Only products matching the search box above {importedSearch ? `("${importedSearch}")` : "(type a search first)"}

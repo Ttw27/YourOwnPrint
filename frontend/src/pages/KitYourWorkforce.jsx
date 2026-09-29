@@ -7,6 +7,7 @@ import { fetchWorkforceProducts, fetchWorkforceTiers, workforceCheckout, workfor
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Plus, Minus, Trash2, ShieldCheck, Truck, Sparkles, ArrowRight, Loader2, ChevronDown } from "lucide-react";
+import { ExVat } from "../components/bold/PriceTag";
 export default function KitYourWorkforce() {
   const [products, setProducts] = useState([]);
   const [tiers, setTiers] = useState({ tiers: [], quote_threshold: 100, back_print_price: 3.5 });
@@ -377,6 +378,7 @@ export default function KitYourWorkforce() {
           <div className="bg-[#1a1a1a] text-white rounded-3xl p-6 sticky top-24" data-testid="workforce-summary">
             <div className="text-xs uppercase tracking-[0.3em] text-[#fbbf24] font-extrabold">Live total</div>
             <div className="text-4xl font-black mt-2" data-testid="workforce-total">£{totalAmount.toFixed(2)}</div>
+            <ExVat amount={totalAmount} className="text-xs opacity-70 mt-0.5" />
             <div className="text-sm text-zinc-300 mt-1" data-testid="workforce-total-qty">
               {totalQty} garment{totalQty === 1 ? "" : "s"}{currentTierPct > 0 && ` · ${currentTierPct}% bulk off applied`}
             </div>

@@ -233,6 +233,16 @@ export async function fetchProofPhoto(pid, colour = "") {
   return data;
 }
 
+// Print prices per position (Admin > Configurator prices)
+export async function adminGetPrintPrices() {
+  const { data } = await api.get("/admin/print-prices");
+  return data;
+}
+export async function adminSetPrintPrices(prices) {
+  const { data } = await api.put("/admin/print-prices", { prices });
+  return data;
+}
+
 // Bundle builder (routers/bundles.py)
 export async function fetchBundleTemplates() {
   const { data } = await api.get("/admin/bundles/templates");
