@@ -233,6 +233,24 @@ export async function fetchProofPhoto(pid, colour = "") {
   return data;
 }
 
+// Bundle builder (routers/bundles.py)
+export async function fetchBundleTemplates() {
+  const { data } = await api.get("/admin/bundles/templates");
+  return data;
+}
+export async function createTemplateBundles(names = null, cutout = "auto") {
+  const { data } = await api.post("/admin/bundles/create-templates", { names, cutout }, { timeout: 600000 });
+  return data;
+}
+export async function createCustomBundle(payload) {
+  const { data } = await api.post("/admin/bundles/create", payload, { timeout: 300000 });
+  return data;
+}
+export async function rebuildBundleImage(id, cutout = "auto") {
+  const { data } = await api.post(`/admin/bundles/${encodeURIComponent(id)}/rebuild-image`, null, { params: { cutout }, timeout: 300000 });
+  return data;
+}
+
 // Switch a product in/out of the Design Your Own tool.
 export async function setDesignerEnabled(pid, enabled) {
   const { data } = await api.post(`/admin/products/${encodeURIComponent(pid)}/designer`, { enabled });

@@ -1341,6 +1341,10 @@ async def _resolve_line_pricing(
     else:
         placements_clean = _validate_placements(placements)
         print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
+        # A bundle set is several garments, and each print position is printed on
+        # every item in the set - so charge it per item (matches ProductDetail).
+        if product.get("bundle_item_count", 0) > 1:
+            print_cost = round(print_cost * int(product["bundle_item_count"]), 2)
 
     # Validate sizes/qtys
     resolved_qtys: Dict[str, int] = {}
@@ -6295,6 +6299,9 @@ def _apply_imported_product(doc: Dict) -> None:
         "designer_print_area": doc.get("designer_print_area"),
         "designer_images_by_colour": doc.get("designer_images_by_colour") or {},
         "design_shop": bool(doc.get("design_shop")),
+        # Bundles (routers/bundles.py): what's in the set - print is charged per item.
+        "bundle_items": doc.get("bundle_items") or [],
+        "bundle_item_count": int(doc.get("bundle_item_count") or 0),
         "design_categories": doc.get("design_categories") or [],
         "design_garments": doc.get("design_garments") or [],
         "design_image": doc.get("design_image") or "",
@@ -7155,6 +7162,7 @@ import routers.design_shop  # noqa: F401 - registers /design-shop/* (ready-made 
 import routers.design_shop_admin  # noqa: F401 - registers /admin/design-shop/* (design upload tool)
 import routers.ralawise_import  # noqa: F401 - registers /admin/ralawise/* (Ralawise xlsm importer)
 import routers.proof_maker  # noqa: F401 - registers /admin/proof/* (admin proof maker)
+import routers.bundles  # noqa: F401 - registers /admin/bundles/* (bundle set builder)
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move

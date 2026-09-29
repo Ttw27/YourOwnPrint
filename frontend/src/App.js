@@ -57,6 +57,7 @@ import AdminBundleVariants from "@/pages/AdminBundleVariants";
 import AdminCollectionSeo from "@/pages/AdminCollectionSeo";
 import AdminProductsImport from "@/pages/AdminProductsImport";
 import AdminProofMaker from "@/pages/AdminProofMaker";
+import AdminBundles from "@/pages/AdminBundles";
 import AdminPageCopy from "@/pages/AdminPageCopy";
 import AdminConfiguratorSettings from "@/pages/AdminConfiguratorSettings";
 import AdminNavigation from "@/pages/AdminNavigation";
@@ -120,6 +121,7 @@ function App() {
           <Route path="/admin/collection-seo" element={<RequireAdmin><AdminLayout><AdminCollectionSeo /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/products-import" element={<RequireAdmin><AdminLayout><AdminProductsImport /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/proof-maker" element={<RequireAdmin><AdminLayout><AdminProofMaker /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/bundles" element={<RequireAdmin><AdminLayout><AdminBundles /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/reclassify" element={<RequireAdmin><AdminLayout><AdminReclassify /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/image-health" element={<RequireAdmin><AdminLayout><AdminImageHealth /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/design-shop" element={<RequireAdmin><AdminLayout><AdminDesignShop /></AdminLayout></RequireAdmin>} />

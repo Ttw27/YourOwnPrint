@@ -172,13 +172,16 @@ export default function ProductDetail() {
     setArtwork(prev => { const next = { ...prev }; delete next[pid]; return next; });
 
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
+  // Bundle sets: each print position is printed on every item in the set, so it's
+  // charged per item (matches the backend's _resolve_line_pricing).
+  const setItemCount = product?.bundle_item_count > 1 ? product.bundle_item_count : 1;
   const printCostPerGarment = useMemo(
     () => {
       if (blank) return 0;
       if (isSpecial) return 0;    // breast logo print is included in the base price for Specials
-      return selectedPlacements.reduce((s, pid) => s + (placementById[pid]?.price || 0), 0);
+      return selectedPlacements.reduce((s, pid) => s + (placementById[pid]?.price || 0), 0) * setItemCount;
     },
-    [blank, selectedPlacements, placementById, isSpecial]
+    [blank, selectedPlacements, placementById, isSpecial, setItemCount]
   );
   const lineTotal = useMemo(() => {
     if (!product) return 0;
@@ -496,7 +499,7 @@ export default function ProductDetail() {
                   )}
                   {printCostPerGarment > 0 && (
                     <div className="flex items-center justify-between text-sm mt-1 text-neutral-300">
-                      <span>Print ({selectedPlacements.length} placement{selectedPlacements.length > 1 ? "s" : ""} × £{printCostPerGarment.toFixed(2)} × {totalQty})</span>
+                      <span>Print ({selectedPlacements.length} placement{selectedPlacements.length > 1 ? "s" : ""}{setItemCount > 1 ? ` on ${setItemCount} items` : ""} × £{printCostPerGarment.toFixed(2)} × {totalQty})</span>
                       <span data-testid="price-print">£{(printCostPerGarment * totalQty).toFixed(2)}</span>
                     </div>
                   )}
@@ -558,6 +561,21 @@ export default function ProductDetail() {
                     </button>
                   </div>
                 </div>
+
+                {Array.isArray(product.bundle_items) && product.bundle_items.length > 0 && (
+                  <div className="bg-[#f0fdf4] rounded-2xl p-4 border border-[#dcfce7]" data-testid="pdp-bundle-items">
+                    <div className="text-sm font-nunito font-black">What&rsquo;s in each set</div>
+                    <ul className="mt-2 space-y-1">
+                      {product.bundle_items.map((bi) => (
+                        <li key={bi.product_id} className="text-sm flex items-center justify-between gap-3">
+                          <Link to={`/product/${bi.product_id}`} className="hover:underline truncate">{bi.qty > 1 ? `${bi.qty} × ` : ""}{bi.name}</Link>
+                          <span className="text-xs text-[#4b5563] flex-shrink-0">usually £{Number(bi.price).toFixed(2)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="text-xs text-[#166534] font-bold mt-2">Save 10% vs buying separately. Your design is printed on every item in the set.</div>
+                  </div>
+                )}
 
                 <div className="text-xs text-[#4b5563] text-center" data-testid="pdp-easy-ordering">
                   Rather not order online? <Link to="/easy-ordering" className="font-extrabold text-[#166534] hover:underline">Order by WhatsApp or email</Link> - pay by invoice or payment link.

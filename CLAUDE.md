@@ -98,6 +98,8 @@ backend/
     configurator_addons.py  # sports-outfit / full-squad configurator add-ons
     customer_auth.py        # customer accounts, cart, orders, saved designs
     admin_reviews.py        # review moderation
+    bundles.py              # Bundle builder (/admin/bundles/*): 'set' products from existing items,
+                            # price = sum - 10%, auto composite image; print charged per item in set
     proof_maker.py          # admin proof maker (/admin/proof/*) - serves garment photos so the
                             # browser can export a watermarked proof PNG (page: AdminProofMaker.jsx)
   services/
