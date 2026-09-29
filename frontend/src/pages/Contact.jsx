@@ -56,14 +56,16 @@ export default function Contact() {
             <div className="mt-8 space-y-4">
               {[
                 { icon: Phone, label: "Chat to a real human", val: "Mon–Fri · UK based" },
-                { icon: Mail, label: "Email", val: "hello@yourownprint.co.uk" },
+                { icon: Mail, label: "Email", val: "info@yourownprint.co.uk", href: "mailto:info@yourownprint.co.uk" },
                 { icon: MessageSquare, label: "Account management", val: "Large or complex orders welcome" },
-              ].map(({ icon: Icon, label, val }) => (
+              ].map(({ icon: Icon, label, val, href }) => (
                 <div key={label} className="flex items-start gap-4">
                   <span className="w-11 h-11 rounded-full bg-[#7bc67e] grid place-items-center text-[#1a1a1a]"><Icon size={18} /></span>
                   <div>
                     <div className="font-nunito font-extrabold text-[#1a1a1a]">{label}</div>
-                    <div className="text-sm text-[#4b5563]">{val}</div>
+                    {href
+                      ? <a href={href} className="text-sm text-[#166534] font-bold hover:underline" data-testid="contact-email">{val}</a>
+                      : <div className="text-sm text-[#4b5563]">{val}</div>}
                   </div>
                 </div>
               ))}
