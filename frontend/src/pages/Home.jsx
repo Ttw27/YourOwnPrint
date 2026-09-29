@@ -10,7 +10,7 @@ import { SECTORS, REVIEWS as STATIC_REVIEWS, RATING } from "../lib/data";
 import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews, fetchBestSellers } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
-import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera } from "lucide-react";
+import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera, MessageCircle } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
 import usePageTitle from "../hooks/usePageTitle";
 
@@ -180,6 +180,20 @@ export default function Home() {
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* Easy ordering - WhatsApp/email with your own account manager */}
+      <div className="bg-[#1a1a1a] text-white" data-testid="home-easy-ordering">
+        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[#7bc67e] font-nunito font-extrabold text-sm"><MessageCircle size={16} /> Talk to a real person</div>
+            <h2 className="font-nunito font-black text-2xl lg:text-3xl mt-2">Rather just message us?</h2>
+            <p className="text-neutral-300 mt-1 max-w-xl">WhatsApp or email your order - even &ldquo;same as last time&rdquo; - and your own account manager sorts the rest. Pay by invoice or payment link.</p>
+          </div>
+          <Link to="/easy-ordering" className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe5b] text-white font-nunito font-extrabold px-6 py-3 rounded-full flex-shrink-0">
+            How it works <ArrowRight size={16} />
+          </Link>
         </div>
       </div>
 

@@ -20,6 +20,7 @@ PAGE_COPY_SLUGS = [
     "teams-schools", "specials", "fight-night", "leavers-hoodies",
     "kit-your-workforce", "design-your-own", "full-squad-configurator",
     "for-business",
+    "easy-ordering",
     "school-trips",
     "sports-outfit-configurator", "team-kits", "team-kit-builder",
     "festival-tees-brands",

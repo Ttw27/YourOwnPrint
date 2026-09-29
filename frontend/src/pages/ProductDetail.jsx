@@ -559,6 +559,10 @@ export default function ProductDetail() {
                   </div>
                 </div>
 
+                <div className="text-xs text-[#4b5563] text-center" data-testid="pdp-easy-ordering">
+                  Rather not order online? <Link to="/easy-ordering" className="font-extrabold text-[#166534] hover:underline">Order by WhatsApp or email</Link> - pay by invoice or payment link.
+                </div>
+
                 {/* Trust strip */}
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   {[

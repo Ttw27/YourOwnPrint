@@ -735,6 +735,7 @@ async def sitemap_xml():
     urls = [
         ("/", "1.0", "daily"),
         ("/workwear", "0.9", "daily"),
+        ("/easy-ordering", "0.7", "monthly"),
         ("/sports-fitness", "0.8", "weekly"),
         ("/team-kits", "0.8", "weekly"),
         ("/specials", "0.7", "weekly"),
@@ -4757,6 +4758,7 @@ DEFAULT_NAV_CONFIG = {
                     {"label": "Festival & DJ Merch", "to": "/festival-tees-and-brands"},
                     {"label": "Fight Night Tees", "to": "/fight-night-tee"},
                     {"label": "Portfolio", "to": "/portfolio"},
+                    {"label": "Order by WhatsApp or email", "to": "/easy-ordering", "badge": "Easy"},
                 ]},
             ],
         },
@@ -4766,6 +4768,7 @@ DEFAULT_NAV_CONFIG = {
                 {"heading": "Shop workwear", "links": [
                     {"label": "All Workwear", "to": "/workwear"},
                     {"label": "For Business", "to": "/for-business", "badge": "Switch"},
+                    {"label": "Order by WhatsApp or email", "to": "/easy-ordering", "badge": "Easy"},
                     {"label": "Kit Your Workforce", "to": "/workforce", "badge": "Bulk"},
                     {"label": "Hi-Vis", "to": "/shop/hi-vis"},
                 ]},

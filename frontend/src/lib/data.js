@@ -142,6 +142,7 @@ export const NAV_MENU = [
           { label: "Festival & DJ Merch", to: "/festival-tees-and-brands" },
           { label: "Fight Night Tees", to: "/fight-night-tee" },
           { label: "Portfolio", to: "/portfolio" },
+          { label: "Order by WhatsApp or email", to: "/easy-ordering", badge: "Easy" },
         ],
       },
     ],
@@ -155,6 +156,7 @@ export const NAV_MENU = [
         links: [
           { label: "All Workwear", to: "/workwear" },
           { label: "For Business", to: "/for-business", badge: "Switch" },
+          { label: "Order by WhatsApp or email", to: "/easy-ordering", badge: "Easy" },
           { label: "Kit Your Workforce", to: "/workforce", badge: "Bulk" },
           { label: "Hi-Vis", to: "/shop/hi-vis" },
         ],

@@ -307,7 +307,7 @@ export function BoldFooter() {
           )}
         </div>
         <FooterCol title="Shop" links={[["The Design Shop", "/design-shop"], ["Find My Kit", "/find-my-kit"], ["Workwear", "/workwear"], ["Teams & Schools", "/teams-schools"], ["Design Your Own", "/design"], ["Portfolio", "/portfolio"]]} />
-        <FooterCol title="Help" links={[["Get a Quote", "/contact"], ["Contact", "/contact"], ["Reviews", "/reviews"]]} />
+        <FooterCol title="Help" links={[["Order by WhatsApp or email", "/easy-ordering"], ["Get a Quote", "/contact"], ["Contact", "/contact"], ["Reviews", "/reviews"]]} />
         <FooterCol title="Policies" links={[["Terms & Conditions", "/terms"], ["Privacy Policy", "/privacy"], ["Delivery & Returns", "/returns"]]} />
         <div>
           <div className="font-nunito font-bold text-sm text-neutral-400 mb-3">Payments</div>
