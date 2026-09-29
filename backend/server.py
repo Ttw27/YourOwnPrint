@@ -2,7 +2,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Request, Header, Depends,
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo import UpdateOne
+from pymongo import UpdateOne, ReturnDocument
 import os
 import asyncio
 import re
@@ -967,6 +967,18 @@ async def list_brands(product_id: Optional[str] = None):
     return out
 
 
+@api_router.get("/admin/team-kit-brands", dependencies=[Depends(require_admin)])
+async def admin_list_brands(product_id: Optional[str] = None):
+    """Admin list - includes switched-off variants so they can be switched back on."""
+    q: Dict = {}
+    if product_id:
+        q["product_id"] = product_id
+    _fields = ["id", "product_id", "brand", "name", "price", "image", "description", "active",
+               "colours", "sizes", "sock_sizes", "size_guide", "included_items", "display_order"]
+    return [{k: d.get(k) for k in _fields}
+            async for d in db.team_kit_brands.find(q).sort([("display_order", 1), ("price", 1)])]
+
+
 @api_router.post("/team-kit-brands", dependencies=[Depends(require_admin)])
 async def create_brand(payload: TeamKitBrand):
     if payload.product_id not in PRODUCTS:
@@ -998,7 +1010,10 @@ async def create_brand(payload: TeamKitBrand):
 
 @api_router.put("/team-kit-brands/{brand_id}", dependencies=[Depends(require_admin)])
 async def update_brand(brand_id: str, payload: TeamKitBrand):
-    update = {k: v for k, v in payload.model_dump().items() if k != "id"}
+    # Only the fields sent are updated - the Team kits screen sends a few basics,
+    # and rewriting the whole record wiped colours/sizes/socks/size guide set on
+    # Bundle variants.
+    update = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if k != "id"}
     # Data-URL image → object storage
     if update.get("image") and update["image"].startswith("data:"):
         try:
@@ -1286,6 +1301,8 @@ async def _resolve_line_pricing(
     if product_id not in PRODUCTS:
         raise HTTPException(400, f"Invalid product: {product_id}")
     product = PRODUCTS[product_id]
+    if not is_live(product):
+        raise HTTPException(400, f"Sorry, {product.get('name') or 'this product'} is no longer available - please remove it from your basket.")
     base_price = float(product["price"])
     size_upcharges: Dict[str, float] = product.get("size_upcharges", {}) or {}
     allowed_sizes = set(product.get("sizes", []))
@@ -1677,7 +1694,9 @@ async def import_judgeme(payload: JudgeMeImportRequest):
 
 # ---------- Designer (Design Your Own) endpoints ----------
 class DesignerSettings(BaseModel):
-    designer_enabled: bool = True
+    # None = leave as it is. Switching in/out of the designer is done from
+    # Product settings, so a Designer products save must not re-enable it.
+    designer_enabled: Optional[bool] = None
     designer_image: str
     designer_print_area: Dict[str, float]  # {x,y,w,h} percent
     designer_images_by_colour: Optional[Dict[str, str]] = None  # colour name -> image URL override
@@ -2035,6 +2054,19 @@ def tier_unit_price(tiers: List[Tuple[int, float]], default_price: float, total_
     return default_price
 
 
+async def _rebuild_product(pid: str) -> None:
+    """Rebuild one PRODUCTS entry from scratch - its source (imported doc or the
+    built-in seed) plus every saved admin setting - e.g. after an undo."""
+    doc = await db.imported_products.find_one({"id": pid})
+    if doc:
+        _apply_imported_product(doc)
+    elif pid in _PRISTINE_PRODUCTS:
+        PRODUCTS[pid] = _copy.deepcopy(_PRISTINE_PRODUCTS[pid])
+    else:
+        return
+    await reapply_saved_settings([pid])
+
+
 def _with_colour_photos(new_colors: List[Dict], *old_lists) -> List[Dict]:
     """A custom designer colour list is saved as {name, hex} only, but the shop
     uses each colour's supplier photo (colors[i].image) on the product page.
@@ -2348,7 +2380,6 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
             raise HTTPException(400, f"unknown use_case '{uc}'. Allowed: {USE_CASE_OPTIONS}")
     doc = {
         "product_id": product_id,
-        "designer_enabled": payload.designer_enabled,
         "designer_image": payload.designer_image,
         "designer_print_area": pa,
         "designer_images_by_colour": payload.designer_images_by_colour or {},
@@ -2356,14 +2387,22 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
         "designer_image_back": payload.designer_image_back or None,
         "designer_print_area_back": pa_back,
         "designer_images_by_colour_back": payload.designer_images_by_colour_back or {},
-        "composition": (payload.composition or None),
-        "description_long": (payload.description_long or None),
+        # "" (not None) when cleared, so the empty value is re-applied at startup
+        # instead of the built-in text coming back.
+        "composition": payload.composition if payload.composition is not None else None,
+        "description_long": payload.description_long if payload.description_long is not None else None,
         "use_cases": use_cases,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+    if payload.designer_enabled is not None:
+        doc["designer_enabled"] = payload.designer_enabled
+    doc = {k: v for k, v in doc.items() if not (k in ("composition", "description_long") and v is None)}
+    if "designer_colors" not in payload.model_fields_set:
+        doc.pop("designer_colors", None)  # not sent = leave the saved colour list alone
     await db.designer_settings.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     # Apply to in-memory PRODUCTS so it's immediately reflected.
-    PRODUCTS[product_id]["designer_enabled"] = payload.designer_enabled
+    if payload.designer_enabled is not None:
+        PRODUCTS[product_id]["designer_enabled"] = payload.designer_enabled
     PRODUCTS[product_id]["designer_image"] = payload.designer_image
     PRODUCTS[product_id]["designer_print_area"] = pa
     PRODUCTS[product_id]["designer_images_by_colour"] = payload.designer_images_by_colour or {}
@@ -2373,15 +2412,20 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
     # Custom colour list: apply immediately so the live designer reflects it
     # without waiting for a server restart. Empty list / None leaves the garment
     # default in place.
-    if payload.designer_colors is not None:
+    if "designer_colors" in payload.model_fields_set:
+        supplier = await db.imported_products.find_one({"id": product_id}, {"colors": 1}) or {}
         if payload.designer_colors:
-            supplier = await db.imported_products.find_one({"id": product_id}, {"colors": 1}) or {}
             PRODUCTS[product_id]["colors"] = _with_colour_photos(
                 payload.designer_colors, PRODUCTS[product_id].get("colors"), supplier.get("colors"))
+        else:
+            # Custom colours cleared - go back to the product's own colour list.
+            base = supplier.get("colors") if supplier else (_PRISTINE_PRODUCTS.get(product_id) or {}).get("colors")
+            if base is not None:
+                PRODUCTS[product_id]["colors"] = _copy.deepcopy(base)
     if payload.composition is not None:
-        PRODUCTS[product_id]["composition"] = payload.composition or None
+        PRODUCTS[product_id]["composition"] = payload.composition
     if payload.description_long is not None:
-        PRODUCTS[product_id]["description_long"] = payload.description_long or None
+        PRODUCTS[product_id]["description_long"] = payload.description_long
     PRODUCTS[product_id]["use_cases"] = use_cases
     return {"ok": True}
 
@@ -2515,7 +2559,7 @@ async def get_product_bulk_tiers(product_id: str):
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
 @api_router.get("/admin/products", dependencies=[Depends(require_admin)])
-async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = "", visibility: str = "", designer: str = ""):
+async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = "", visibility: str = "", designer: str = "", lite: bool = False):
     """Admin overview of all products with editable meta fields.
     Paginated (default 25/page), searchable, and filterable by category and
     source (supplier). This list runs into the thousands once supplier
@@ -2572,6 +2616,9 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
     elif visibility == "visible":
         out = [it for it in out if not it["hidden"]]
     total = len(out)
+    if lite:
+        # id + name for the whole catalogue (cross-sell search pickers) - cheap.
+        return {"items": [{"id": it["id"], "name": it["name"]} for it in out], "total": len(out)}
     limit = min(limit, 200)
     page = out[offset:offset + limit]
     # Distinct categories + sources present, so the admin UI can build filter
@@ -2679,46 +2726,27 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         for t in payload.industry_tags:
             if t not in INDUSTRY_SLUGS:
                 raise HTTPException(400, f"Unknown industry '{t}'. Allowed: {INDUSTRY_SLUGS}")
-    doc = {
-        "product_id": product_id,
-        "brand": payload.brand,
-        "sku": payload.sku,
-        "description_full": payload.description_full,
-        "size_guide_image": payload.size_guide_image,
-        "size_guide_table": payload.size_guide_table,
-        "bulk_pricing_enabled": bool(payload.bulk_pricing_enabled),
-        "bulk_pricing_overrides": payload.bulk_pricing_overrides,
-        "allowed_placements": payload.allowed_placements,
-        "workforce_eligible": payload.workforce_eligible if payload.workforce_eligible is not None else bool(PRODUCTS[product_id].get("workforce_eligible")),
-        "also_bought": payload.also_bought,
-        "match_with": payload.match_with,
-        "image_gallery": payload.image_gallery,
-        "specials_eligible": payload.specials_eligible if payload.specials_eligible is not None else bool(PRODUCTS[product_id].get("specials_eligible")),
-        "is_bestseller": payload.is_bestseller if payload.is_bestseller is not None else bool(PRODUCTS[product_id].get("is_bestseller")),
-        "designer_only": payload.designer_only if payload.designer_only is not None else bool(PRODUCTS[product_id].get("designer_only")),
-        "design_shop": payload.design_shop if payload.design_shop is not None else bool(PRODUCTS[product_id].get("design_shop")),
-        "design_categories": payload.design_categories if payload.design_categories is not None else (PRODUCTS[product_id].get("design_categories") or []),
-        "design_garments": payload.design_garments if payload.design_garments is not None else (PRODUCTS[product_id].get("design_garments") or []),
-        "design_image": payload.design_image if payload.design_image is not None else PRODUCTS[product_id].get("design_image"),
-        "gender_fit": payload.gender_fit,
-        "industry_tags": payload.industry_tags,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    # Auto-lock: if this edit touches an AI-managed field (industry tags or print
-    # placements), mark the product as manually edited so Smart Re-classify won't
-    # overwrite the human's decision on a later run.
-    if payload.industry_tags is not None or payload.allowed_placements is not None:
+    # PARTIAL update: only the fields the admin screen actually sent are written.
+    # (It used to rebuild the whole record from the request, so any field not
+    # sent was wiped, and every save pinned placements/tags and locked the product.)
+    sent = payload.model_dump(exclude_unset=True)
+    if "industry_tags" in sent:
+        sent["industry_tags"] = payload.industry_tags  # canonicalised above
+    if "bulk_pricing_enabled" in sent:
+        sent["bulk_pricing_enabled"] = bool(sent["bulk_pricing_enabled"])
+    cur = PRODUCTS[product_id]
+    doc = {"product_id": product_id, **sent, "updated_at": datetime.now(timezone.utc).isoformat()}
+    # Auto-lock only when an AI-managed field (industry tags / print placements)
+    # is genuinely CHANGED by hand, so Smart Re-classify won't undo the decision.
+    cur_placements = cur.get("allowed_placements") if cur.get("allowed_placements") is not None else list(ALLOWED_PLACEMENT_OPTIONS)
+    if ("industry_tags" in sent and sent["industry_tags"] != (cur.get("industry_tags") or [])) or \
+       ("allowed_placements" in sent and sent["allowed_placements"] != cur_placements):
         doc["_manual_edit"] = True
     await db.product_meta.update_one({"product_id": product_id}, {"$set": doc}, upsert=True)
     if doc.get("_manual_edit"):
-        PRODUCTS[product_id]["_manual_edit"] = True
-    for k in ("brand", "sku", "description_full", "size_guide_image", "size_guide_table",
-              "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
-              "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible", "is_bestseller",
-              "designer_only", "gender_fit", "industry_tags"):
-        v = doc.get(k)
-        if v is not None or k in ("bulk_pricing_enabled", "workforce_eligible", "specials_eligible", "is_bestseller", "designer_only"):
-            PRODUCTS[product_id][k] = v
+        cur["_manual_edit"] = True
+    for k, v in sent.items():
+        cur[k] = v
     return {"ok": True}
 
 
@@ -2866,7 +2894,7 @@ class LeaversCheckoutRequest(BaseModel):
 
 @api_router.post("/leavers/checkout", response_model=CheckoutResponse)
 async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Request):
-    if payload.product_id not in PRODUCTS:
+    if payload.product_id not in PRODUCTS or not is_live(PRODUCTS[payload.product_id]):
         raise HTTPException(400, f"Unknown product '{payload.product_id}'")
     p = PRODUCTS[payload.product_id]
     if p.get("category") != "leavers":
@@ -3603,7 +3631,9 @@ def _sports_team_products(s: Dict) -> List[Dict]:
         out.append(p)
 
     for pid in s.get("product_ids", []):
-        add(PRODUCTS.get(pid))
+        q = PRODUCTS.get(pid)
+        if q and is_live(q):
+            add(q)
 
     keywords = _sports_team_keywords(s)
     pool: List[Tuple[int, str, Dict]] = []
@@ -3789,7 +3819,7 @@ async def workforce_quote(payload: WorkforceCheckoutRequest):
         raise HTTPException(400, "Contact name and email are required for a quote")
     items = []
     for ln in payload.lines:
-        if ln.product_id not in PRODUCTS or ln.qty < 1:
+        if ln.product_id not in PRODUCTS or ln.qty < 1 or not is_live(PRODUCTS[ln.product_id]):
             continue
         items.append({
             "product_id": ln.product_id,
@@ -3819,7 +3849,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     valid_lines: List[Dict] = []
     total_qty = 0
     for ln in payload.lines:
-        if ln.product_id not in PRODUCTS:
+        if ln.product_id not in PRODUCTS or not is_live(PRODUCTS[ln.product_id]):
             raise HTTPException(400, f"Unknown product '{ln.product_id}'")
         p = PRODUCTS[ln.product_id]
         if not p.get("workforce_eligible"):
@@ -4792,15 +4822,18 @@ async def get_navigation():
     # stored one - this lets a deploy roll out nav changes without a manual reset,
     # while still respecting admin edits made on the current version.
     default_v = DEFAULT_NAV_CONFIG.get("version", 0)
-    stored_v = (stored or {}).get("version", 0) if stored else 0
-    if stored and stored_v >= default_v and stored.get("config" if False else "menu"):
+    # "version" counts admin saves; "default_version" records which code default
+    # the stored menu is based on. Only a NEWER code default replaces the stored
+    # menu (older configs without default_version are treated as up to date).
+    based_on = (stored or {}).get("default_version", default_v) if stored else 0
+    if stored and based_on >= default_v and stored.get("menu"):
         return stored
     # otherwise (no stored config, or it's an older version) serve the default
     # and persist it so admin edits start from the fresh structure.
     try:
         await db.settings.update_one(
             {"key": "navigation_config"},
-            {"$set": {"key": "navigation_config", "config": DEFAULT_NAV_CONFIG,
+            {"$set": {"key": "navigation_config", "config": {**DEFAULT_NAV_CONFIG, "default_version": default_v},
                       "updated_at": datetime.now(timezone.utc).isoformat()}},
             upsert=True,
         )
@@ -5218,6 +5251,7 @@ async def update_navigation(payload: Dict):
                     if "label" not in lnk or "to" not in lnk:
                         raise HTTPException(400, "link needs label + to")
     config["version"] = int(config.get("version", 1)) + 1
+    config["default_version"] = DEFAULT_NAV_CONFIG.get("version", 0)
     await db.settings.update_one(
         {"key": "navigation_config"},
         {"$set": {"key": "navigation_config", "config": config,
@@ -5309,6 +5343,7 @@ async def navigation_add_missing_defaults():
         col.setdefault("links", []).append(link)
 
     config["version"] = int(config.get("version", 1)) + 1
+    config["default_version"] = DEFAULT_NAV_CONFIG.get("version", 0)
     await db.settings.update_one(
         {"key": "navigation_config"},
         {"$set": {"key": "navigation_config", "config": config,
@@ -5794,7 +5829,11 @@ async def _set_product_active(pid: str, active: bool) -> bool:
     the site reflects it immediately. Returns False if the product doesn't exist."""
     active = bool(active)
     res = await db.imported_products.update_one({"id": pid}, {"$set": {"active": active}})
-    if not res.matched_count:
+    if res.matched_count:
+        # An old visibility value left in product_overrides would be re-applied on
+        # top after every rebuild and silently win - remove it.
+        await db.product_overrides.update_one({"product_id": pid}, {"$unset": {"active": ""}})
+    else:
         if pid not in PRODUCTS:
             return False
         await db.product_overrides.update_one(
@@ -5818,7 +5857,7 @@ _DUPLICATE_META_FIELDS = (
     "brand", "sku", "description_full", "size_guide_image", "size_guide_table",
     "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
     "workforce_eligible", "specials_eligible", "designer_only", "also_bought",
-    "match_with", "gender_fit", "industry_tags",
+    "match_with", "gender_fit", "industry_tags", "image_gallery",
 )
 
 
@@ -5846,7 +5885,7 @@ async def duplicate_product(pid: str, payload: DuplicateIn):
         "price": float(src.get("price") or 0),
         "category": src.get("category") or "t-shirts",
         "image": src.get("image") or "",
-        "additional_images": list(src.get("additional_images") or src.get("image_gallery") or []),
+        "additional_images": list(src.get("image_gallery") or src.get("additional_images") or []),
         "description": src.get("description") or "",
         "gender_fit": src.get("gender_fit") or "unisex",
         "industry_tags": list(src.get("industry_tags") or []),
@@ -5904,36 +5943,53 @@ async def set_products_visibility(payload: VisibilityIn):
 async def upsert_product_override(pid: str, patch: ProductOverride):
     if pid not in PRODUCTS:
         raise HTTPException(404, "Product not found")
-    up = patch.model_dump(exclude_none=True)
-    if "active" in up:
+    # Only the fields the admin actually changed are sent. An emptied name /
+    # description / photo / category means "go back to the original", so it's
+    # removed from the override rather than stored. (Storing every field on
+    # every save froze them - later supplier/bulk updates never showed.)
+    raw = patch.model_dump(exclude_unset=True)
+    active = raw.pop("active", None)
+    if active is not None:
         # Visibility is stored in one place per product (see _set_product_active)
-        # so it survives restarts for imported products too.
-        await _set_product_active(pid, up.pop("active"))
-    if not up:
+        await _set_product_active(pid, active)
+    to_set: Dict = {}
+    to_unset: List[str] = []
+    for k, v in raw.items():
+        if v is None or (k in ("name", "description", "image", "category") and isinstance(v, str) and not v.strip()):
+            to_unset.append(k)
+        elif v == PRODUCTS[pid].get(k):
+            continue  # not actually a change - storing it would freeze the value
+        else:
+            to_set[k] = v
+    if not to_set and not to_unset:
         return {"ok": True}
-    up["product_id"] = pid
-    up["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.product_overrides.update_one({"product_id": pid}, {"$set": up}, upsert=True)
-    _apply_product_override(pid, up)
-    # Auto-lock when the collection (category) is changed by hand, so a later
-    # Smart Re-classify won't move it back.
-    if "category" in up:
+    category_changed = "category" in to_set and to_set["category"] != PRODUCTS[pid].get("category")
+    update: Dict = {"$set": {**to_set, "product_id": pid, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    if to_unset:
+        update["$unset"] = {k: "" for k in to_unset}
+    await db.product_overrides.update_one({"product_id": pid}, update, upsert=True)
+    if to_unset:
+        await _rebuild_product(pid)
+    else:
+        _apply_product_override(pid, to_set)
+    # Auto-lock only when the collection (category) is genuinely changed by hand,
+    # so a later Smart Re-classify won't move it back.
+    if category_changed:
         await db.product_meta.update_one({"product_id": pid}, {"$set": {"_manual_edit": True}}, upsert=True)
-        if pid in PRODUCTS:
-            PRODUCTS[pid]["_manual_edit"] = True
-    return {"ok": True, "override": up}
+        PRODUCTS[pid]["_manual_edit"] = True
+    return {"ok": True, "override": to_set, "cleared": to_unset}
 
 
 @api_router.delete("/admin/products/{pid}/override", dependencies=[Depends(require_admin)])
 async def clear_product_override(pid: str):
-    r = await db.product_overrides.delete_one({"product_id": pid})
-    # Restore the in-memory PRODUCTS entry to its pristine hardcoded values so the
-    # site reflects the revert immediately (no restart needed).
-    if pid in _PRISTINE_PRODUCTS:
-        PRODUCTS[pid] = _copy.deepcopy(_PRISTINE_PRODUCTS[pid])
-    if r.deleted_count == 0:
-        return {"ok": True, "deleted": 0, "note": "no override existed"}
-    return {"ok": True, "deleted": r.deleted_count}
+    # Undo only the name/price/photo edits. The same record also holds the
+    # hidden/visible state for built-in products, which must survive an undo.
+    fields = ("name", "price", "description", "image", "additional_images",
+              "category", "gender_fit", "industry_tags", "colors", "sizes")
+    r = await db.product_overrides.update_one(
+        {"product_id": pid}, {"$unset": {f: "" for f in fields}})
+    await _rebuild_product(pid)
+    return {"ok": True, "deleted": r.modified_count}
 
 
 @api_router.get("/admin/products/{pid}/override", dependencies=[Depends(require_admin)])
@@ -6245,6 +6301,60 @@ def _apply_imported_product(doc: Dict) -> None:
     }
 
 
+async def _cleanup_frozen_settings_v1(imported_by_id: Dict[str, Dict]) -> None:
+    """One-off repair (marker-guarded) of values earlier admin saves froze in by
+    accident - the product screens used to send EVERY field on every save:
+      - name/price/description/photo/category "overrides" identical to the
+        original, which blocked later supplier/bulk updates
+      - print placements pinned to all 9 options (hides the per-category default)
+      - an extra-photos gallery identical to the supplier's own photos
+      - an old hidden/visible value for supplier products stored in overrides
+        (moved onto the product record, keeping what the site shows today)
+    Genuine edits differ from the original, so they're left alone."""
+    if await db.settings.find_one({"key": "overlay_cleanup_v1"}):
+        return
+    touched = set()
+    async for ov in db.product_overrides.find():
+        pid = ov.get("product_id")
+        base = imported_by_id.get(pid) or _PRISTINE_PRODUCTS.get(pid)
+        if not base:
+            continue
+        unset: Dict = {}
+        for k in ("name", "price", "description", "image", "category"):
+            if k not in ov:
+                continue
+            a, b = ov.get(k), base.get(k)
+            same = (abs(float(a) - float(b)) < 0.005) if k == "price" and a is not None and b is not None else a == b
+            if same:
+                unset[k] = ""
+        if pid in imported_by_id and "active" in ov:
+            current = (PRODUCTS.get(pid) or {}).get("active", True) is not False
+            await db.imported_products.update_one({"id": pid}, {"$set": {"active": current}})
+            unset["active"] = ""
+        if unset:
+            await db.product_overrides.update_one({"product_id": pid}, {"$unset": unset})
+            touched.add(pid)
+    all_placements = set(ALLOWED_PLACEMENT_OPTIONS)
+    async for m in db.product_meta.find({}):
+        pid = m.get("product_id")
+        unset = {}
+        ap = m.get("allowed_placements")
+        if isinstance(ap, list) and len(ap) == len(all_placements) and set(ap) == all_placements:
+            unset["allowed_placements"] = ""
+        g = m.get("image_gallery")
+        if pid in imported_by_id and isinstance(g, list) and g == (imported_by_id[pid].get("additional_images") or []):
+            unset["image_gallery"] = ""
+        if unset:
+            await db.product_meta.update_one({"product_id": pid}, {"$unset": unset})
+            touched.add(pid)
+    for pid in touched:
+        await _rebuild_product(pid)
+    await db.settings.update_one({"key": "overlay_cleanup_v1"},
+                                 {"$set": {"key": "overlay_cleanup_v1", "fixed": len(touched),
+                                           "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"frozen-settings cleanup: tidied {len(touched)} product(s)")
+
+
 @app.on_event("startup")
 async def _load_imported_products():
     """Hydrate PRODUCTS with any admin-imported products at boot."""
@@ -6253,15 +6363,21 @@ async def _load_imported_products():
         # them out via live_products(), but admin needs them to show/unhide.
         count = hidden = 0
         loaded_ids: List[str] = []
+        imported_by_id: Dict[str, Dict] = {}
         async for d in db.imported_products.find():
             _apply_imported_product(d)
             loaded_ids.append(d.get("id"))
+            imported_by_id[d.get("id")] = d
             count += 1
             if d.get("active") is False:
                 hidden += 1
         # The designer/product-settings/override overlays ran earlier in startup,
         # before these products existed - apply admin edits on top now.
         await reapply_saved_settings(loaded_ids)
+        try:
+            await _cleanup_frozen_settings_v1(imported_by_id)
+        except Exception as e:
+            logging.warning(f"frozen-settings cleanup skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:
@@ -6360,7 +6476,9 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     bulk_flag_set = 0
     retagged = 0
     randomized = 0
+    skipped_locked = 0
     rebuilt_ids: List[str] = []
+    meta_sync: List[Tuple[str, Dict]] = []
     placements_updated = 0
     sizes_repaired = 0
     gallery_rebuilt = 0
@@ -6409,7 +6527,11 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
             update["bulk_pricing_enabled"] = payload.set_bulk_pricing_enabled
             bulk_flag_set += 1
 
-        if payload.retag_industries:
+        locked = bool((PRODUCTS.get(doc.get("id")) or {}).get("_manual_edit"))
+        if (payload.retag_industries or payload.apply_placement_defaults) and locked:
+            skipped_locked += 1  # hand-edited tags/placements are left alone
+
+        if payload.retag_industries and not locked:
             try:
                 new_tags = _auto_industry_tags(doc.get("name") or "", effective_category)
                 if new_tags != canonical_industries(doc.get("industry_tags")):
@@ -6443,7 +6565,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
                 if len(error_examples) < 5:
                     error_examples.append({"id": doc.get("id"), "name": doc.get("name"), "step": "randomize_main_image", "error": str(e)[:200]})
 
-        if payload.apply_placement_defaults:
+        if payload.apply_placement_defaults and not locked:
             try:
                 new_placements = _auto_allowed_placements(doc.get("name") or "", effective_category)
                 if new_placements != (doc.get("allowed_placements") or []):
@@ -6495,7 +6617,12 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
             if not payload.dry_run and pid:
                 merged = {**doc, **update}
                 _apply_imported_product(merged)
-                rebuilt_ids.append(pid)  # always sync memory to the freshly-computed state, even if no DB write was needed this time - otherwise a stale in-memory copy from before a fix existed could persist indefinitely
+                rebuilt_ids.append(pid)
+                # These three also live in saved product settings, which are applied
+                # on top - so write the bulk choice there too, or it never shows.
+                ms = {k: update[k] for k in ("bulk_pricing_enabled", "industry_tags", "allowed_placements") if k in update}
+                if ms:
+                    meta_sync.append((pid, ms))  # always sync memory to the freshly-computed state, even if no DB write was needed this time - otherwise a stale in-memory copy from before a fix existed could persist indefinitely
                 if update:
                     pending.append((pid, update))
         except Exception as e:
@@ -6506,6 +6633,8 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
     # ---- Pass 2: write everything to Mongo concurrently (capped), instead of
     # one-at-a-time - this is what let even a 200-500 item batch take long
     # enough to look like the site had gone down. ----
+    for _pid, _ms in meta_sync:
+        await db.product_meta.update_one({"product_id": _pid}, {"$set": _ms})
     await reapply_saved_settings(rebuilt_ids)  # keep admin edits on top of the rebuilt products
 
     if pending:
@@ -6533,6 +6662,7 @@ async def bulk_update_imported(payload: BulkUpdateImportedPayload):
         "errors": errors,
         "error_examples": error_examples,
         "skipped_no_cost": skipped_no_cost,
+        "skipped_locked": skipped_locked,
         "bulk_pricing_flag_set_on": bulk_flag_set,
         "retagged": retagged,
         "randomized": randomized,
@@ -6779,7 +6909,9 @@ async def bulk_import_products(payload: BulkImportPayload):
                 "source_sku": source_sku,
                 "source_price": float(source_price_val) if source_price_val is not None else None,
                 "brand": raw.get("brand") or payload.default_brand or "",
-                "active": bool(raw.get("active", True)),
+                # Only an explicit "active" in the file changes visibility; otherwise
+                # new products start visible and existing ones keep their state.
+                "active": bool(raw["active"]) if "active" in raw else None,
                 "imported_at": now,
             }
             docs.append(doc)
@@ -6815,8 +6947,13 @@ async def bulk_import_products(payload: BulkImportPayload):
                 c["image"] = url_map.get(c["image"], c["image"])
         try:
             if not payload.dry_run:
-                await db.imported_products.update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
-                _apply_imported_product(doc)
+                set_doc = {k: v for k, v in doc.items() if not (k == "active" and v is None)}
+                update = {"$set": set_doc}
+                if doc.get("active") is None:
+                    update["$setOnInsert"] = {"active": True}
+                full = await db.imported_products.find_one_and_update(
+                    {"id": doc["id"]}, update, upsert=True, return_document=ReturnDocument.AFTER)
+                _apply_imported_product(full or {**set_doc, "active": True})
                 await reapply_saved_settings([doc["id"]])
             created.append({"id": doc["id"], "name": doc["name"], "category": doc["category"], "price": doc["price"]})
         except Exception as e:
@@ -6866,9 +7003,11 @@ async def patch_imported_product(pid: str, patch: ImportedProductPatch):
 
 @api_router.delete("/admin/products/imported/{pid}", dependencies=[Depends(require_admin)])
 async def delete_imported_product(pid: str):
-    r = await db.imported_products.delete_one({"id": pid})
-    PRODUCTS.pop(pid, None)
-    return {"ok": True, "deleted": r.deleted_count}
+    # Products are never deleted (a later import would bring them back live, and
+    # their saved settings would be orphaned) - "delete" hides the product.
+    if not await _set_product_active(pid, False):
+        raise HTTPException(404, "Product not found")
+    return {"ok": True, "deleted": 0, "hidden": 1}
 
 
 @app.on_event("startup")
@@ -6904,10 +7043,10 @@ async def _seed_default_product_meta_impl():
             existing = existing_by_id.get(pid) or {}
             patch: Dict = {}
 
-            if not existing.get("description_full") and not p.get("description_full"):
+            if "description_full" not in existing and not p.get("description_full"):
                 patch["description_full"] = _default_description(p)
 
-            if not existing.get("size_guide_table") and not p.get("size_guide_table"):
+            if "size_guide_table" not in existing and not p.get("size_guide_table"):
                 sg = _default_size_guide(p)
                 if sg:
                     patch["size_guide_table"] = sg

@@ -293,8 +293,8 @@ async def _run_ralawise_job(job_id: str, docs: List[Dict], mirror_images: bool) 
         for i, d in enumerate(docs):
             doc = {
                 "id": d["id"], "source_sku": d["source_sku"], "name": d["name"],
-                "brand": d["brand"], "description": d["description"], "price": d["price"],
-                "source_price": d["source_price"], "image": d["image"], "category": d["category"],
+                "brand": d["brand"], "description": d["description"],
+                "source_price": d["source_price"], "image": d["image"],
                 "colors": d["colors"], "sizes": d["sizes"], "source": "ralawise",
                 "imported_at": now,
             }
@@ -304,7 +304,11 @@ async def _run_ralawise_job(job_id: str, docs: List[Dict], mirror_images: bool) 
             # from memory, then put admin edits back on top.
             full = await db.imported_products.find_one_and_update(
                 {"id": d["id"]},
-                {"$set": doc, "$setOnInsert": {"active": True}},
+                # Price and category are set on FIRST import only - afterwards they're
+                # yours (bulk re-price markup, re-categorise, Smart Re-classify). A
+                # re-import updates the trade cost (source_price) but never resets
+                # the selling price to trade, or undoes category changes.
+                {"$set": doc, "$setOnInsert": {"active": True, "price": d["price"], "category": d["category"]}},
                 upsert=True,
                 return_document=ReturnDocument.AFTER,
             )

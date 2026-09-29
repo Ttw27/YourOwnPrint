@@ -295,6 +295,7 @@ async def ai_classify_apply(payload: ApplyIn):
 
     applied = 0
     skipped_manual = 0
+    applied_ids: List[str] = []
     async for d in db.ai_classify_proposals.find(q):
         pid = d["id"]
         prop = d.get("proposed", {})
@@ -320,7 +321,13 @@ async def ai_classify_apply(payload: ApplyIn):
             upsert=True,
         )
         applied += 1
+        applied_ids.append(pid)
 
+    # Make it live now (not just after the next restart): rebuild each product
+    # from its updated record, then put admin settings back on top.
+    from server import _rebuild_product
+    for pid in applied_ids:
+        await _rebuild_product(pid)
     return {"applied": applied, "skipped_manual": skipped_manual}
 
 

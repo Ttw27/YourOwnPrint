@@ -141,7 +141,7 @@ async def admin_update_review(review_id: str, payload: ReviewPatch):
             from server import PRODUCTS
         except ImportError:
             PRODUCTS = None
-        if PRODUCTS is not None and updates["product_id"] not in PRODUCTS:
+        if PRODUCTS is not None and updates["product_id"] != "store" and updates["product_id"] not in PRODUCTS:
             raise HTTPException(400, f"Unknown product_id: {updates['product_id']}")
 
     updates["edited_at"] = datetime.now(timezone.utc).isoformat()
