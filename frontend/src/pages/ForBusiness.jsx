@@ -92,6 +92,9 @@ export default function ForBusiness() {
             <Link to="/workforce" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-extrabold px-6 py-3 rounded-full" data-testid="business-cta-workforce">
               Kit out a team
             </Link>
+            <Link to="/business-enquiry" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-extrabold px-6 py-3 rounded-full" data-testid="business-cta-enquiry">
+              Get a quote
+            </Link>
           </div>
         </div>
       </section>

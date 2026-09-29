@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Package, Plus, Search, Trash2, Sparkles, RefreshCw, ExternalLink } from "lucide-react";
-import { fetchAllProductsAdmin, fetchBundleTemplates, createTemplateBundles, createCustomBundle, rebuildBundleImage } from "../lib/api";
+import { fetchAllProductsAdmin, fetchBundleTemplates, createTemplateBundles, createCustomBundle, rebuildBundleImage, previewBundlePrice } from "../lib/api";
 
 /**
- * Bundle builder - "set" products made from products already on the site.
- * Price = the items' current prices added up, minus 10%. The picture is built
- * automatically from the items' photos (backgrounds cut out, matching colour,
- * branded background). New bundles are created HIDDEN - check them in Product
- * settings, then click "Show on site". See backend/routers/bundles.py.
+ * Bundle builder - bulk packs (fixed quantities, e.g. 20 x tees or a team pack)
+ * and per-person sets, made from products already on the site. Logo included
+ * (one print position on every item); the bigger the bundle, the bigger the
+ * saving; prices end in .99 - all worked out by the server
+ * (backend/routers/bundles.py). The picture is built automatically. New
+ * bundles are created HIDDEN - check them in Product settings, then "Show on site".
  */
-const DISCOUNT = 0.10;
 
 export default function AdminBundles() {
   const [templates, setTemplates] = useState([]);
@@ -20,6 +20,8 @@ export default function AdminBundles() {
 
   // custom bundle
   const [name, setName] = useState("");
+  const [kind, setKind] = useState("pack");        // "pack" | "set"
+  const [preview, setPreview] = useState(null);    // {price, full_price, saving_pct, item_count}
   const [items, setItems] = useState([]);        // [{id, name, price, image, qty}]
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -64,20 +66,26 @@ export default function AdminBundles() {
   };
 
   const addItem = (p) => {
-    if (items.length >= 4) { toast.error("A bundle can have up to 4 products"); return; }
+    if (items.length >= 5) { toast.error("A bundle can have up to 5 products"); return; }
     if (items.some((i) => i.id === p.id)) { toast("Already in the bundle - change its quantity instead"); return; }
     setItems([...items, { id: p.id, name: p.name, price: p.price, image: p.image, qty: 1 }]);
     setQuery(""); setResults([]);
   };
-  const full = items.reduce((s, i) => s + i.price * i.qty, 0);
-  const setPrice = Math.round(full * (1 - DISCOUNT) * 100) / 100;
+  // Price comes from the server so it always matches what the bundle will cost.
+  useEffect(() => {
+    if (!items.length) { setPreview(null); return; }
+    const t = setTimeout(() => {
+      previewBundlePrice(items.map((i) => [i.id, i.qty])).then(setPreview).catch(() => setPreview(null));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [items]);
 
   const createCustom = async () => {
     if (!name.trim()) { toast.error("Give the bundle a name"); return; }
-    if (items.length < 2) { toast.error("Add at least 2 products"); return; }
+    if (kind === "set" ? items.length < 2 : items.length < 1) { toast.error(kind === "set" ? "A set needs at least 2 products" : "Add at least 1 product"); return; }
     setBusy(`Creating ${name}…`);
     try {
-      const r = await createCustomBundle({ name: name.trim(), items: items.map((i) => [i.id, i.qty]), cutout });
+      const r = await createCustomBundle({ name: name.trim(), kind, items: items.map((i) => [i.id, i.qty]), cutout });
       toast.success(`${r.name} created at £${r.price.toFixed(2)} - hidden until you show it in Product settings`);
       setName(""); setItems([]); await load();
     } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't create the bundle"); }
@@ -94,8 +102,9 @@ export default function AdminBundles() {
         <div className="text-xs uppercase tracking-[0.2em] text-[#7bc67e] font-extrabold">Admin</div>
         <h1 className="font-nunito font-black text-4xl mt-1">Bundle builder</h1>
         <p className="text-[#4b5563] mt-2 max-w-3xl">
-          Create &ldquo;set&rdquo; products from products already on the site - sold per person, like your sports bundles.
-          The price is the items added up <strong>minus 10%</strong>, and the picture is made automatically from the items&rsquo; own photos.
+          <strong>Bulk packs</strong> (e.g. 20 &times; tees, or a team pack) and <strong>per-person sets</strong>, made from products already on the site.
+          Every price includes <strong>your customer&rsquo;s logo on every item</strong>, the saving grows with the size of the bundle
+          (10% &rarr; 25%), and prices end in .99. The picture is made automatically from the items&rsquo; own photos.
           New bundles start <strong>hidden</strong>: check them in Product settings, then click &ldquo;Show on site&rdquo;.
         </p>
 
@@ -127,12 +136,14 @@ export default function AdminBundles() {
                 <div key={t.name} className={`border-2 rounded-2xl p-4 ${t.created ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#eef2f7] bg-white"}`} data-testid={`bundle-template-${t.id}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
+                      <span className={`inline-block text-[9px] font-extrabold uppercase tracking-wider rounded-full px-2 py-0.5 mb-1 ${t.kind === "pack" ? "bg-[#1a1a1a] text-white" : "bg-[#eef2ff] text-[#4338ca]"}`}>{t.kind === "pack" ? `Pack · ${t.item_count} items` : "Per-person set"}</span>
                       <div className="font-nunito font-black">{t.name}</div>
                       <div className="text-xs text-[#4b5563] mt-0.5">{t.blurb}</div>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="font-black text-lg">£{t.price.toFixed(2)}</div>
-                      <div className="text-[11px] text-[#4b5563] line-through">£{t.full_price.toFixed(2)}</div>
+                      <div className="text-[11px] text-[#4b5563]"><span className="line-through">£{t.full_price.toFixed(2)}</span> · save {t.saving_pct}%</div>
+                      <div className="text-[10px] text-[#4b5563]">per {t.kind === "pack" ? "pack" : "set"}, logo incl.</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -166,7 +177,11 @@ export default function AdminBundles() {
         {/* Custom bundle */}
         <div className="mt-12 border-2 border-[#eef2f7] rounded-2xl p-5">
           <h2 className="font-nunito font-black text-2xl">Make your own bundle</h2>
-          <p className="text-sm text-[#4b5563]">Pick 2-4 products. Tip: choose the same brand where you can, so the colours match.</p>
+          <p className="text-sm text-[#4b5563]">Pick up to 5 products and how many of each. Tip: choose the same brand where you can, so the colours match.</p>
+          <div className="mt-3 inline-flex rounded-full border-2 border-[#e5e7eb] overflow-hidden" data-testid="bundle-kind">
+            <button onClick={() => setKind("pack")} className={`px-4 py-1.5 text-xs font-extrabold ${kind === "pack" ? "bg-[#1a1a1a] text-white" : "bg-white text-[#4b5563]"}`}>Bulk pack (fixed quantities)</button>
+            <button onClick={() => setKind("set")} className={`px-4 py-1.5 text-xs font-extrabold ${kind === "set" ? "bg-[#1a1a1a] text-white" : "bg-white text-[#4b5563]"}`}>Per-person set</button>
+          </div>
           <div className="grid md:grid-cols-2 gap-5 mt-4">
             <div className="space-y-3">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bundle name, e.g. Gym Starter Set - Tee + Joggers" className={ic} data-testid="bundle-name" />
@@ -193,19 +208,21 @@ export default function AdminBundles() {
                     <div key={i.id} className="flex items-center gap-2 border border-[#e5e7eb] rounded-xl p-2">
                       <img src={i.image} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                       <span className="text-sm font-bold flex-1 min-w-0 truncate">{i.name}</span>
-                      <input type="number" min="1" max="10" value={i.qty} onChange={(e) => setItems(items.map((x) => x.id === i.id ? { ...x, qty: Math.max(1, Number(e.target.value) || 1) } : x))} className="w-14 border border-[#e5e7eb] rounded-lg px-2 py-1 text-sm" title="How many of this item per set" />
+                      <input type="number" min="1" max="200" value={i.qty} onChange={(e) => setItems(items.map((x) => x.id === i.id ? { ...x, qty: Math.max(1, Math.min(200, Number(e.target.value) || 1)) } : x))} className="w-16 border border-[#e5e7eb] rounded-lg px-2 py-1 text-sm" title={kind === "pack" ? "How many of this item in the pack" : "How many of this item per person"} />
                       <span className="text-xs w-14 text-right">£{(i.price * i.qty).toFixed(2)}</span>
                       <button onClick={() => setItems(items.filter((x) => x.id !== i.id))} className="text-rose-500 p-1"><Trash2 size={14} /></button>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between pt-2 text-sm">
-                    <span className="text-[#4b5563]">Separately £{full.toFixed(2)} - bundle price (10% off):</span>
-                    <span className="font-black text-lg" data-testid="bundle-custom-price">£{setPrice.toFixed(2)}</span>
-                  </div>
+                  {preview && (
+                    <div className="flex items-center justify-between pt-2 text-sm">
+                      <span className="text-[#4b5563]">{preview.item_count} items, logo incl. - separately £{preview.full_price.toFixed(2)}, save {preview.saving_pct}%:</span>
+                      <span className="font-black text-lg" data-testid="bundle-custom-price">£{preview.price.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               )}
-              <button onClick={createCustom} disabled={!!busy || items.length < 2 || !name.trim()} className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#1a1a1a] hover:bg-black disabled:opacity-40 text-white font-extrabold rounded-full py-3" data-testid="bundle-create-custom">
-                <Package size={16} /> Create bundle (hidden)
+              <button onClick={createCustom} disabled={!!busy || !items.length || (kind === "set" && items.length < 2) || !name.trim()} className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#1a1a1a] hover:bg-black disabled:opacity-40 text-white font-extrabold rounded-full py-3" data-testid="bundle-create-custom">
+                <Package size={16} /> Create {kind === "pack" ? "pack" : "set"} (hidden)
               </button>
             </div>
           </div>

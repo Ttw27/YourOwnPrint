@@ -242,6 +242,10 @@ export async function createTemplateBundles(names = null, cutout = "auto") {
   const { data } = await api.post("/admin/bundles/create-templates", { names, cutout }, { timeout: 600000 });
   return data;
 }
+export async function previewBundlePrice(items) {
+  const { data } = await api.post("/admin/bundles/preview-price", { items });
+  return data;
+}
 export async function createCustomBundle(payload) {
   const { data } = await api.post("/admin/bundles/create", payload, { timeout: 300000 });
   return data;

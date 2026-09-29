@@ -141,6 +141,7 @@ export const NAV_MENU = [
           { label: "Your Own Print Specials", to: "/specials", badge: "Starter" },
           { label: "Festival & DJ Merch", to: "/festival-tees-and-brands" },
           { label: "Fight Night Tees", to: "/fight-night-tee" },
+          { label: "Bulk bundles & team packs", to: "/bundles", badge: "Save" },
           { label: "Portfolio", to: "/portfolio" },
           { label: "Order by WhatsApp or email", to: "/easy-ordering", badge: "Easy" },
         ],

@@ -81,11 +81,44 @@ export default function AdminOrders() {
                   <StatusBadge status={o.payment_status} />
                 </div>
               </div>
+              <OrderDetails o={o} />
             </div>
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+// What was actually ordered: product, colour, sizes, print positions, and for
+// bulk packs the size split per garment. Collapsed by default.
+function OrderDetails({ o }) {
+  const lines = (o.items && o.items.length)
+    ? o.items.map((it) => ({ name: it.product_name, color: it.color, size_qtys: it.size_qtys, placements: it.placements, dm: it.design_meta }))
+    : o.product_name ? [{ name: o.product_name, color: o.color || (o.metadata || {}).color, size_qtys: o.size_qtys, placements: o.placements, dm: o.design_meta }] : [];
+  const extra = Object.entries(o.metadata || {}).filter(([k]) => !["product_id", "product_name", "color", "placements", "sizes", "total_qty", "blank", "print_cost_per_garment"].includes(k) && !k.startsWith("design_pack_sizes"));
+  if (!lines.length && !extra.length) return null;
+  return (
+    <details className="mt-3 group" data-testid={`admin-order-details-${o.id}`}>
+      <summary className="cursor-pointer text-xs font-bold text-emerald-400 hover:underline list-none">Show what was ordered</summary>
+      <div className="mt-2 space-y-2 text-xs text-zinc-300">
+        {lines.map((l, i) => (
+          <div key={i} className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 space-y-0.5">
+            <div className="font-bold text-zinc-100">{l.name}</div>
+            {l.color && <div>Colour: {l.color}</div>}
+            {l.size_qtys && Object.keys(l.size_qtys).length > 0 && <div>Sizes: {Object.entries(l.size_qtys).map(([sz, q]) => `${q}×${sz}`).join(", ")}</div>}
+            {l.dm && l.dm.pack_sizes_text && <div className="text-amber-300">Pack size split: {l.dm.pack_sizes_text}</div>}
+            <div>Print: {(l.placements && l.placements.length) ? l.placements.join(", ") : "blank / none"}</div>
+            {l.dm && (l.dm.mode || l.dm.flow) && <div className="text-zinc-500">Artwork: {l.dm.mode || l.dm.flow}</div>}
+          </div>
+        ))}
+        {extra.length > 0 && (
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 space-y-0.5 text-zinc-400">
+            {extra.map(([k, v]) => <div key={k}><span className="text-zinc-500">{k.replace(/_/g, " ")}:</span> {String(v)}</div>)}
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 

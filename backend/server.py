@@ -736,6 +736,8 @@ async def sitemap_xml():
         ("/", "1.0", "daily"),
         ("/workwear", "0.9", "daily"),
         ("/easy-ordering", "0.7", "monthly"),
+        ("/bundles", "0.8", "weekly"),
+        ("/business-enquiry", "0.7", "monthly"),
         ("/sports-fitness", "0.8", "weekly"),
         ("/team-kits", "0.8", "weekly"),
         ("/specials", "0.7", "weekly"),
@@ -1163,6 +1165,8 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
             "total_quantity": total_qty,
             "amount": total_amount,
             "currency": "gbp",
+            "color": payload.color or "",
+            "design_meta": payload.design_meta or {},  # full copy (Stripe metadata is capped at 400 chars)
             "metadata": metadata,
             "payment_status": "pending",
             "status": "initiated",
@@ -1172,6 +1176,40 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
     )
 
     return CheckoutResponse(url=session.url, session_id=session.id)
+
+
+def _order_details_html(doc: dict) -> str:
+    """What was actually ordered - product, colour, sizes, print positions and
+    (for bulk packs) the size split per garment - for the shop's order email."""
+    import html as _h
+    esc = lambda v: _h.escape(str(v or ""))  # noqa: E731
+
+    def one(name, color, sizes, placements, dm):
+        dm = dm or {}
+        rows = [f"<strong>{esc(name)}</strong>"]
+        if color:
+            rows.append(f"Colour: {esc(color)}")
+        if sizes:
+            rows.append(f"Sizes: {esc(sizes)}")
+        if dm.get("pack_sizes_text"):
+            rows.append(f"Pack size split: {esc(dm['pack_sizes_text'])}")
+        rows.append(f"Print: {esc(placements) if placements else 'blank / none'}")
+        if dm.get("mode") or dm.get("flow"):
+            rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
+        return "<li style='margin-bottom:8px'>" + "<br>".join(rows) + "</li>"
+
+    items = []
+    if doc.get("items"):
+        for it in doc["items"]:
+            sizes = ", ".join(f"{q}x{sz}" for sz, q in (it.get("size_qtys") or {}).items())
+            items.append(one(it.get("product_name"), it.get("color"), sizes,
+                             ", ".join(it.get("placements") or []), it.get("design_meta")))
+    elif doc.get("product_name"):
+        sizes = ", ".join(f"{q}x{sz}" for sz, q in (doc.get("size_qtys") or {}).items())
+        items.append(one(doc.get("product_name"), doc.get("color") or (doc.get("metadata") or {}).get("color"),
+                         sizes, ", ".join(doc.get("placements") or []), doc.get("design_meta")))
+    return ("<p style='margin-top:14px'><strong>What was ordered</strong></p><ul style='padding-left:18px;font-size:14px'>"
+            + "".join(items) + "</ul>") if items else ""
 
 
 async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
@@ -1214,6 +1252,7 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
                   <tr><td style="color:#4b5563"><strong>Customer</strong></td><td>{customer_email or '-'}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Session</strong></td><td>{doc.get('session_id','')}</td></tr>
                 </table>
+                {_order_details_html(doc)}
                 """,
             )
             await _send_email(to=[shop_to], subject=f"[Paid order] {order_label} - £{amount:.2f}", html=body_shop)
@@ -1281,6 +1320,34 @@ class CartCheckoutRequest(BaseModel):
     customer_email: Optional[str] = None
 
 
+def _validate_pack_sizes(product: Dict, size_qtys: Dict[str, int], design_meta: Optional[Dict]) -> None:
+    """A bulk pack is bought per pack; the customer splits sizes per garment on
+    the product page (design_meta["pack_sizes"] = JSON {product_id: {size: qty}}).
+    Check every garment's split adds up to its quantity x number of packs, then
+    store a readable version (design_meta["pack_sizes_text"]) for the order."""
+    import json as _json
+    packs = int((size_qtys or {}).get("PACK") or 0)
+    if packs < 1:
+        raise HTTPException(400, "Choose how many packs you'd like")
+    try:
+        split = _json.loads((design_meta or {}).get("pack_sizes") or "{}")
+    except Exception:
+        raise HTTPException(400, "Please split the sizes for each garment in the pack")
+    lines = []
+    for bi in product.get("bundle_items") or []:
+        need = int(bi.get("qty") or 1) * packs
+        got = {str(k): int(v) for k, v in (split.get(bi["product_id"]) or {}).items() if int(v or 0) > 0}
+        allowed = set(bi.get("sizes") or [])
+        bad = [k for k in got if allowed and k not in allowed]
+        if bad:
+            raise HTTPException(400, f"Size {bad[0]} isn't available for {bi['name']}")
+        if sum(got.values()) != need:
+            raise HTTPException(400, f"{bi['name']}: sizes add up to {sum(got.values())} but the pack needs {need}")
+        lines.append(f"{bi['name']}: " + ", ".join(f"{q}x{sz}" for sz, q in got.items()))
+    if design_meta is not None:
+        design_meta["pack_sizes_text"] = " | ".join(lines)[:1500]
+
+
 async def _resolve_line_pricing(
     *,
     product_id: str,
@@ -1341,13 +1408,19 @@ async def _resolve_line_pricing(
     else:
         placements_clean = _validate_placements(placements)
         print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
-        # A bundle set is several garments, and each print position is printed on
-        # every item in the set - so charge it per item (matches ProductDetail).
-        if product.get("bundle_item_count", 0) > 1:
-            print_cost = round(print_cost * int(product["bundle_item_count"]), 2)
+        # Bundles (routers/bundles.py): the price already includes ONE print
+        # position on every item; any extra is charged per item in the bundle
+        # (matches ProductDetail). Sets from before logo-included have no
+        # bundle_included_print, so all positions are charged per item.
+        if product.get("bundle_items"):
+            included = float((product.get("bundle_included_print") or {}).get("value") or 0)
+            per_item = max(0.0, print_cost - included) if placements_clean else 0.0
+            print_cost = round(per_item * max(1, int(product.get("bundle_item_count") or 1)), 2)
 
     # Validate sizes/qtys
     resolved_qtys: Dict[str, int] = {}
+    if product.get("bundle_kind") == "pack":
+        _validate_pack_sizes(product, size_qtys, design_meta)
     for sz, q in (size_qtys or {}).items():
         try:
             q_int = int(q)
@@ -4761,6 +4834,7 @@ DEFAULT_NAV_CONFIG = {
                     {"label": "Your Own Print Specials", "to": "/specials", "badge": "Starter"},
                     {"label": "Festival & DJ Merch", "to": "/festival-tees-and-brands"},
                     {"label": "Fight Night Tees", "to": "/fight-night-tee"},
+                    {"label": "Bulk bundles & team packs", "to": "/bundles", "badge": "Save"},
                     {"label": "Portfolio", "to": "/portfolio"},
                     {"label": "Order by WhatsApp or email", "to": "/easy-ordering", "badge": "Easy"},
                 ]},
@@ -6302,6 +6376,10 @@ def _apply_imported_product(doc: Dict) -> None:
         # Bundles (routers/bundles.py): what's in the set - print is charged per item.
         "bundle_items": doc.get("bundle_items") or [],
         "bundle_item_count": int(doc.get("bundle_item_count") or 0),
+        "bundle_kind": doc.get("bundle_kind") or ("set" if doc.get("bundle_items") else None),
+        "bundle_included_print": doc.get("bundle_included_print") or None,
+        "bundle_full_price": doc.get("bundle_full_price"),
+        "bundle_saving_pct": doc.get("bundle_saving_pct"),
         "design_categories": doc.get("design_categories") or [],
         "design_garments": doc.get("design_garments") or [],
         "design_image": doc.get("design_image") or "",

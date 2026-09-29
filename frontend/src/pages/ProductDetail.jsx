@@ -77,6 +77,8 @@ export default function ProductDetail() {
   const [color, setColor] = useState(null);
   const colorHex = useMemo(() => product?.colors?.find(c => c.name === color)?.hex || "#f0fdf4", [product, color]);
   const [sizeQtys, setSizeQtys] = useState({});
+  // Bulk packs: size split per garment, {product_id: {size: qty}}
+  const [packSizes, setPackSizes] = useState({});
   const [printMode, setPrintMode] = useState("custom"); // "custom" | "blank"
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [selectedPlacements, setSelectedPlacements] = useState([]);
@@ -175,14 +177,36 @@ export default function ProductDetail() {
   // Bundle sets: each print position is printed on every item in the set, so it's
   // charged per item (matches the backend's _resolve_line_pricing).
   const setItemCount = product?.bundle_item_count > 1 ? product.bundle_item_count : 1;
+  const isBundle = Array.isArray(product?.bundle_items) && product.bundle_items.length > 0;
+  const isPack = product?.bundle_kind === "pack";
+  // Bundles include ONE print position on every item; anything beyond that is
+  // charged per item in the set/pack (matches the backend's _resolve_line_pricing).
+  const includedPrint = Number(product?.bundle_included_print?.value || 0);
   const printCostPerGarment = useMemo(
     () => {
       if (blank) return 0;
       if (isSpecial) return 0;    // breast logo print is included in the base price for Specials
-      return selectedPlacements.reduce((s, pid) => s + (placementById[pid]?.price || 0), 0) * setItemCount;
+      const raw = selectedPlacements.reduce((s, pid) => s + (placementById[pid]?.price || 0), 0);
+      if (!isBundle) return raw;
+      const perItem = product?.bundle_included_print ? Math.max(0, raw - includedPrint) : raw;
+      return perItem * setItemCount;
     },
-    [blank, selectedPlacements, placementById, isSpecial, setItemCount]
+    [blank, selectedPlacements, placementById, isSpecial, setItemCount, isBundle, includedPrint, product]
   );
+  const packsOrdered = isPack ? (Number(sizeQtys.PACK) || 0) : 0;
+  const packProgress = isPack ? (product.bundle_items || []).map((bi) => {
+    const need = (bi.qty || 1) * packsOrdered;
+    const got = Object.values(packSizes[bi.product_id] || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+    return { ...bi, need, got };
+  }) : [];
+  const packComplete = !isPack || (packsOrdered > 0 && packProgress.every((x) => x.got === x.need));
+  const setPackSize = (pid, sz, q) => setPackSizes((prev) => {
+    const n = Math.max(0, Math.min(5000, Number(q) || 0));
+    const cur = { ...(prev[pid] || {}) };
+    if (n === 0) delete cur[sz]; else cur[sz] = n;
+    return { ...prev, [pid]: cur };
+  });
+  const packMeta = isPack ? { pack_sizes: JSON.stringify(packSizes) } : {};
   const lineTotal = useMemo(() => {
     if (!product) return 0;
     const upcharges = product.size_upcharges || {};
@@ -202,7 +226,8 @@ export default function ProductDetail() {
   );
   const checkoutBlocked = totalQty < 1
     || (!blank && selectedPlacements.length === 0)
-    || (!blank && !allArtworkUploaded);
+    || (!blank && !allArtworkUploaded)
+    || !packComplete;
 
   const setSizeQty = (sz, q) => {
     const n = Math.max(0, Math.min(5000, Number(q) || 0));
@@ -212,7 +237,8 @@ export default function ProductDetail() {
 
   const onCheckout = async () => {
     if (checkoutBlocked) {
-      if (totalQty < 1) toast.error("Add at least 1 item to a size");
+      if (totalQty < 1) toast.error(isPack ? "Choose how many packs you'd like" : "Add at least 1 item to a size");
+      else if (!packComplete) toast.error("Split the sizes for each garment in the pack - they need to add up");
       else if (!blank && selectedPlacements.length === 0) toast.error("Pick at least one print placement (or switch to Buy Blank)");
       else toast.error("Please upload artwork for every selected placement");
       return;
@@ -226,9 +252,10 @@ export default function ProductDetail() {
         placements: blank ? [] : selectedPlacements,
         blank,
         origin_url: window.location.origin,
-        design_meta: blank ? { mode: "blank" } : {
+        design_meta: blank ? { mode: "blank", ...packMeta } : {
           mode: "uploaded",
           placements_uploaded: Object.keys(artwork).join(","),
+          ...packMeta,
         },
       });
       window.location.href = url;
@@ -346,6 +373,51 @@ export default function ProductDetail() {
                 )}
 
                 {/* Sizes */}
+                {isPack ? (
+                <Section title="2. Packs & sizes" right={
+                  <span className="text-xs text-[#4b5563]">Packs: <span data-testid="size-total-qty" className="font-nunito font-extrabold text-[#1a1a1a]">{packsOrdered}</span></span>
+                }>
+                  <div className="flex items-center gap-3 flex-wrap" data-testid="pack-count">
+                    <span className="text-sm font-nunito font-extrabold">How many packs?</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => bump("PACK", -1)} disabled={packsOrdered === 0} className="w-8 h-8 grid place-items-center rounded-full bg-white border border-[#e5e7eb] hover:border-[#7bc67e] disabled:opacity-40"><Minus size={12} /></button>
+                      <input type="number" min={0} value={packsOrdered} onChange={(e) => setSizeQty("PACK", e.target.value)} className="w-14 text-center border border-[#e5e7eb] rounded-lg py-1 font-nunito font-extrabold" data-testid="pack-count-input" />
+                      <button onClick={() => bump("PACK", 1)} className="w-8 h-8 grid place-items-center rounded-full bg-white border border-[#e5e7eb] hover:border-[#7bc67e]" data-testid="pack-count-plus"><Plus size={12} /></button>
+                    </div>
+                  </div>
+                  {packsOrdered > 0 ? (
+                    <div className="mt-4 space-y-4" data-testid="pack-size-split">
+                      <p className="text-xs text-[#4b5563]">Split the sizes for each garment - the numbers just need to add up.</p>
+                      {packProgress.map((bi) => {
+                        const done = bi.got === bi.need;
+                        return (
+                          <div key={bi.product_id} className={`rounded-2xl border-2 p-3 ${done ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb]"}`} data-testid={`pack-item-${bi.product_id}`}>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-nunito font-extrabold truncate">{bi.name}</span>
+                              <span className={`text-xs font-extrabold flex-shrink-0 ${done ? "text-[#166534]" : bi.got > bi.need ? "text-rose-600" : "text-[#4b5563]"}`} data-testid={`pack-progress-${bi.product_id}`}>
+                                {done ? <><Check size={12} className="inline" /> </> : null}{bi.got} / {bi.need}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 mt-2">
+                              {(bi.sizes && bi.sizes.length ? bi.sizes : ["ONE"]).map((sz) => {
+                                const q = (packSizes[bi.product_id] || {})[sz] || 0;
+                                return (
+                                  <label key={sz} className={`rounded-lg border px-2 py-1 text-center ${q > 0 ? "border-[#7bc67e] bg-white" : "border-[#e5e7eb] bg-white"}`}>
+                                    <span className="block text-[10px] font-nunito font-extrabold text-[#4b5563]">{sz}</span>
+                                    <input type="number" min={0} value={q} onChange={(e) => setPackSize(bi.product_id, sz, e.target.value)} className="w-full text-center font-nunito font-extrabold text-sm focus:outline-none bg-transparent" data-testid={`pack-size-${bi.product_id}-${sz}`} />
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#4b5563] mt-3">Choose how many packs, then split the sizes for each garment.</p>
+                  )}
+                </Section>
+                ) : (
                 <Section title="2. Sizes & quantity" right={
                   <span className="text-xs text-[#4b5563]">Total: <span data-testid="size-total-qty" className="font-nunito font-extrabold text-[#1a1a1a]">{totalQty}</span></span>
                 }>
@@ -370,6 +442,7 @@ export default function ProductDetail() {
                     })}
                   </div>
                 </Section>
+                )}
 
                 {/* PRINT MODE - prominent segmented choice (hidden for Specials, they include a breast print in the price) */}
                 {isSpecial ? (
@@ -499,7 +572,7 @@ export default function ProductDetail() {
                   )}
                   {printCostPerGarment > 0 && (
                     <div className="flex items-center justify-between text-sm mt-1 text-neutral-300">
-                      <span>Print ({selectedPlacements.length} placement{selectedPlacements.length > 1 ? "s" : ""}{setItemCount > 1 ? ` on ${setItemCount} items` : ""} × £{printCostPerGarment.toFixed(2)} × {totalQty})</span>
+                      <span>{isBundle && product.bundle_included_print ? "Extra print positions" : "Print"} ({setItemCount > 1 ? `on ${setItemCount} items, ` : ""}£{printCostPerGarment.toFixed(2)} × {totalQty})</span>
                       <span data-testid="price-print">£{(printCostPerGarment * totalQty).toFixed(2)}</span>
                     </div>
                   )}
@@ -522,7 +595,8 @@ export default function ProductDetail() {
                       data-testid="add-to-cart"
                       onClick={() => {
                         if (checkoutBlocked) {
-                          if (totalQty < 1) toast.error("Add at least 1 item to a size");
+                          if (totalQty < 1) toast.error(isPack ? "Choose how many packs you'd like" : "Add at least 1 item to a size");
+      else if (!packComplete) toast.error("Split the sizes for each garment in the pack - they need to add up");
                           else if (!blank && selectedPlacements.length === 0) toast.error("Pick at least one print placement (or switch to Buy Blank)");
                           else toast.error("Please upload artwork for every selected placement");
                           return;
@@ -534,9 +608,10 @@ export default function ProductDetail() {
                           color,
                           placements: blank ? [] : selectedPlacements,
                           blank,
-                          design_meta: blank ? { mode: "blank" } : {
+                          design_meta: blank ? { mode: "blank", ...packMeta } : {
                             mode: "uploaded",
                             placements_uploaded: Object.keys(artwork).join(","),
+                            ...packMeta,
                           },
                         });
                       }}
@@ -564,16 +639,19 @@ export default function ProductDetail() {
 
                 {Array.isArray(product.bundle_items) && product.bundle_items.length > 0 && (
                   <div className="bg-[#f0fdf4] rounded-2xl p-4 border border-[#dcfce7]" data-testid="pdp-bundle-items">
-                    <div className="text-sm font-nunito font-black">What&rsquo;s in each set</div>
+                    <div className="text-sm font-nunito font-black">What&rsquo;s in each {isPack ? "pack" : "set"}</div>
                     <ul className="mt-2 space-y-1">
                       {product.bundle_items.map((bi) => (
                         <li key={bi.product_id} className="text-sm flex items-center justify-between gap-3">
                           <Link to={`/product/${bi.product_id}`} className="hover:underline truncate">{bi.qty > 1 ? `${bi.qty} × ` : ""}{bi.name}</Link>
-                          <span className="text-xs text-[#4b5563] flex-shrink-0">usually £{Number(bi.price).toFixed(2)}</span>
+                          <span className="text-xs text-[#4b5563] flex-shrink-0">usually £{Number(bi.price).toFixed(2)} each</span>
                         </li>
                       ))}
                     </ul>
-                    <div className="text-xs text-[#166534] font-bold mt-2">Save 10% vs buying separately. Your design is printed on every item in the set.</div>
+                    <div className="text-xs text-[#166534] font-bold mt-2">
+                      {product.bundle_included_print ? "Logo included - printed in one position on every item. " : "Your design is printed on every item. "}
+                      {product.bundle_saving_pct ? `Save ${product.bundle_saving_pct}% vs buying separately.` : ""}
+                    </div>
                   </div>
                 )}
 
