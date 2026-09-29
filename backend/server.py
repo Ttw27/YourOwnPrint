@@ -2495,7 +2495,7 @@ async def get_product_bulk_tiers(product_id: str):
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
 @api_router.get("/admin/products", dependencies=[Depends(require_admin)])
-async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = "", visibility: str = ""):
+async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = "", visibility: str = "", designer: str = ""):
     """Admin overview of all products with editable meta fields.
     Paginated (default 25/page), searchable, and filterable by category and
     source (supplier). This list runs into the thousands once supplier
@@ -2541,6 +2541,12 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
         out = [it for it in out if it.get("manual_edit")]
     elif locked == "unlocked":
         out = [it for it in out if not it.get("manual_edit")]
+    if designer == "in":
+        out = [it for it in out if it.get("designer_enabled")]
+    elif designer == "out":
+        out = [it for it in out if not it.get("designer_enabled")]
+    elif designer == "only":
+        out = [it for it in out if it.get("designer_only")]
     if visibility == "hidden":
         out = [it for it in out if it["hidden"]]
     elif visibility == "visible":

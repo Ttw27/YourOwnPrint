@@ -27,6 +27,7 @@ export default function AdminProductSettings() {
   const [srcFilter, setSrcFilter] = useState("");  // supplier/source dropdown
   const [lockedFilter, setLockedFilter] = useState("");  // "" | "locked" | "unlocked"
   const [visFilter, setVisFilter] = useState("");  // "" | "visible" | "hidden"
+  const [designerFilter, setDesignerFilter] = useState("");  // "" | "in" | "out" | "only"
   const [facets, setFacets] = useState({ categories: [], sources: [] });
 
   // Debounce the search box so we're not firing a request on every keystroke
@@ -40,7 +41,7 @@ export default function AdminProductSettings() {
     setLoading(true);
     try {
       const [ps, ds, wf] = await Promise.all([
-        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter),
+        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter, designerFilter),
         fetchBulkDefaults(),
         fetchWorkforceTiers().catch(() => null),
       ]);
@@ -64,7 +65,7 @@ export default function AdminProductSettings() {
   };
 
   useEffect(() => { loadAllLite(); }, []);
-  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter, designerFilter]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { reload({ page }); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
@@ -101,7 +102,7 @@ export default function AdminProductSettings() {
       const r = await duplicateProduct(p.id, name.trim());
       toast.success(`Copy created: ${r.name} (hidden until you show it)`);
       // Jump to the new copy, opened ready to edit.
-      setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter("");
+      setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter(""); setDesignerFilter("");
       setFilter(r.name);
       setOpenId(r.id);
     } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't copy the product"); }
@@ -286,8 +287,14 @@ export default function AdminProductSettings() {
             <option value="visible">Visible on the site</option>
             <option value="hidden">Hidden from the site</option>
           </select>
-          {(catFilter || srcFilter || filter || lockedFilter || visFilter) && (
-            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
+          <select value={designerFilter} onChange={(e) => setDesignerFilter(e.target.value)} className="bg-white border border-[#dcfce7] rounded-full px-3 py-2 text-sm" data-testid="aps-designer-filter" title="Filter by the Design Your Own tool">
+            <option value="">Designer: all products</option>
+            <option value="in">In the designer</option>
+            <option value="out">Not in the designer</option>
+            <option value="only">Only sold through the designer</option>
+          </select>
+          {(catFilter || srcFilter || filter || lockedFilter || visFilter || designerFilter) && (
+            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter(""); setDesignerFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
           )}
         </div>
         {total > 0 && <div className="text-[11px] text-[#4b5563] mt-2">{total} product{total === 1 ? "" : "s"}{debouncedFilter ? " matching" : " total"} · showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}</div>}
