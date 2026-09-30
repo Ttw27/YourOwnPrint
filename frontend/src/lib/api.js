@@ -217,8 +217,8 @@ export async function updateBulkDefaults(payload) {
   const { data } = await api.patch("/admin/bulk-tiers/defaults", payload);
   return data;
 }
-export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "", locked = "", visibility = "", designer = "", lite = false) {
-  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source, locked, visibility, designer, lite: lite || undefined } });
+export async function fetchAllProductsAdmin(offset = 0, limit = 25, q = "", category = "", source = "", locked = "", visibility = "", designer = "", lite = false, supplier_status = "") {
+  const { data } = await api.get("/admin/products", { params: { offset, limit, q, category, source, locked, visibility, designer, lite: lite || undefined, supplier_status: supplier_status || undefined } });
   return data;
 }
 
@@ -280,6 +280,12 @@ export async function duplicateProduct(pid, name) {
   const { data } = await api.post(`/admin/products/${encodeURIComponent(pid)}/duplicate`, { name });
   return data;
 }
+
+// Clearance check (routers/supplier_status.py)
+export async function clearanceStatus() { return (await api.get("/admin/clearance/status")).data; }
+export async function clearanceScan() { return (await api.post("/admin/clearance/scan", null, { timeout: 300000 })).data; }
+export async function clearanceHideEnding() { return (await api.post("/admin/clearance/hide-ending")).data; }
+export async function clearanceRemoveEndingColours() { return (await api.post("/admin/clearance/remove-ending-colours")).data; }
 
 // Hide or unhide products on the live site. Products are never deleted.
 export async function setProductsVisibility(productIds, hidden) {

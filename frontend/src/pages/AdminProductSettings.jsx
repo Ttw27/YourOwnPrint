@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct, setDesignerEnabled, uploadAdminImage } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct, setDesignerEnabled, uploadAdminImage, clearanceStatus, clearanceScan, clearanceHideEnding, clearanceRemoveEndingColours } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X, Eye, EyeOff, Copy, Upload } from "lucide-react";
 
@@ -28,6 +28,7 @@ export default function AdminProductSettings() {
   const [lockedFilter, setLockedFilter] = useState("");  // "" | "locked" | "unlocked"
   const [visFilter, setVisFilter] = useState("");  // "" | "visible" | "hidden"
   const [designerFilter, setDesignerFilter] = useState("");  // "" | "in" | "out" | "only"
+  const [clearanceFilter, setClearanceFilter] = useState("");  // "" | "ending" | "partial"
   const [facets, setFacets] = useState({ categories: [], sources: [] });
 
   // Debounce the search box so we're not firing a request on every keystroke
@@ -46,7 +47,7 @@ export default function AdminProductSettings() {
     setLoading(true);
     try {
       const [ps, ds, wf] = await Promise.all([
-        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter, designerFilter),
+        fetchAllProductsAdmin(targetPage * PAGE_SIZE, PAGE_SIZE, debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter, designerFilter, false, clearanceFilter),
         fetchBulkDefaults(),
         fetchWorkforceTiers().catch(() => null),
       ]);
@@ -71,7 +72,7 @@ export default function AdminProductSettings() {
   };
 
   useEffect(() => { loadAllLite(); }, []);
-  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter, designerFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(0); reload({ page: 0 }); }, [debouncedFilter, catFilter, srcFilter, lockedFilter, visFilter, designerFilter, clearanceFilter]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { reload({ page }); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (id, patch) => setProducts((prev) => prev.map(p => p.id === id ? { ...p, ...patch } : p));
@@ -282,6 +283,8 @@ export default function AdminProductSettings() {
           </div>
         </div>
 
+        <ClearanceCheck onFilter={(v) => { setClearanceFilter(v); setVisFilter(""); }} onChanged={() => reload({ page: 0 })} />
+
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <input data-testid="aps-filter" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search products by name, brand, or SKU…" className="bg-white border border-[#dcfce7] rounded-full px-4 py-2 text-sm w-full sm:w-72" />
           <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="bg-white border border-[#dcfce7] rounded-full px-3 py-2 text-sm" data-testid="aps-cat-filter">
@@ -310,8 +313,13 @@ export default function AdminProductSettings() {
             <option value="out">Not in the designer</option>
             <option value="only">Only sold through the designer</option>
           </select>
-          {(catFilter || srcFilter || filter || lockedFilter || visFilter || designerFilter) && (
-            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter(""); setDesignerFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
+          <select value={clearanceFilter} onChange={(e) => setClearanceFilter(e.target.value)} className="bg-white border border-[#dcfce7] rounded-full px-3 py-2 text-sm" data-testid="aps-clearance-filter" title="From the PenCarrie clearance check">
+            <option value="">Clearance: any</option>
+            <option value="ending">Clearance / discontinued</option>
+            <option value="partial">Some colours ending</option>
+          </select>
+          {(catFilter || srcFilter || filter || lockedFilter || visFilter || designerFilter || clearanceFilter) && (
+            <button onClick={() => { setFilter(""); setCatFilter(""); setSrcFilter(""); setLockedFilter(""); setVisFilter(""); setDesignerFilter(""); setClearanceFilter(""); }} className="text-xs font-bold text-rose-500 hover:underline px-2" data-testid="aps-clear-filters">Clear</button>
           )}
         </div>
         {total > 0 && <div className="text-[11px] text-[#4b5563] mt-2">{total} product{total === 1 ? "" : "s"}{debouncedFilter ? " matching" : " total"} · showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}</div>}
@@ -374,6 +382,8 @@ export default function AdminProductSettings() {
                           {/* On phones the status/price columns are hidden, so show them inline here */}
                           <span className="md:hidden text-[10px] text-[#4b5563]">£{p.price.toFixed(2)}</span>
                           {p.hidden && <span className="md:hidden text-[9px] bg-[#e5e7eb] text-[#4b5563] font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" data-testid={`aps-hidden-badge-${p.id}`}><EyeOff size={9} /> HIDDEN</span>}
+                          {(p.supplier_status === "ending" || p.supplier_status === "gone") && <span className="text-[9px] bg-rose-100 text-rose-700 font-nunito font-extrabold px-2 py-0.5 rounded-full" title={p.supplier_status === "gone" ? "No longer in PenCarrie's range" : "Clearance / discontinued at PenCarrie - won't be available for long"}>{p.supplier_status === "gone" ? "NO LONGER STOCKED" : "CLEARANCE"}</span>}
+                          {p.supplier_status === "partial" && <span className="text-[9px] bg-orange-100 text-orange-700 font-nunito font-extrabold px-2 py-0.5 rounded-full" title={`Ending colours: ${(p.ending_colours || []).join(", ")}`}>{(p.ending_colours || []).length} COLOUR{(p.ending_colours || []).length === 1 ? "" : "S"} ENDING</span>}
                           {p.manual_edit && <span className="text-[9px] bg-amber-100 text-amber-700 font-nunito font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5" title="Manually edited - protected from Smart Re-classify">🔒 EDITED</span>}
                           {p.designer_enabled && <span className="text-[9px] bg-[#eef2ff] text-[#4338ca] font-nunito font-extrabold px-2 py-0.5 rounded-full" title="Available in the Design Your Own tool">DESIGNER</span>}
                           {p.bulk_pricing_enabled && <span className="text-[9px] bg-[#dcfce7] text-[#166534] font-nunito font-extrabold px-2 py-0.5 rounded-full" title="Bulk discounts switched on">BULK</span>}
@@ -997,6 +1007,59 @@ function ProductOverridePanel({ product, onSaved, onReverted, registerSaver }) {
           {busy ? <Loader2 className="animate-spin" size={11} /> : <Save size={11} />} Save
         </button>
       </div>
+    </div>
+  );
+}
+
+
+// Clearance check - PenCarrie flags clearance / discontinued lines; this pulls
+// today's data, marks products, and offers one-click tidy-ups. Nothing is
+// deleted: products are hidden (reversible) and ending colours removed.
+function ClearanceCheck({ onFilter, onChanged }) {
+  const [info, setInfo] = React.useState(null);   // {checked_at, counts}
+  const [busy, setBusy] = React.useState("");
+  React.useEffect(() => { clearanceStatus().then(setInfo).catch(() => {}); }, []);
+  const c = (info && info.counts) || {};
+  const ending = (c.ending || 0) + (c.gone || 0);
+  const run = async (label, fn, after) => {
+    setBusy(label);
+    try { const r = await fn(); after && after(r); onChanged && onChanged(); }
+    catch (e) { toast.error(e?.response?.data?.detail || "That didn't work - try again"); }
+    finally { setBusy(""); }
+  };
+  return (
+    <div className="mt-6 bg-white border-2 border-[#fde2e2] rounded-2xl p-4" data-testid="aps-clearance-check">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <div className="font-nunito font-black">Clearance check</div>
+          <div className="text-[11px] text-[#4b5563] mt-0.5">
+            Finds PenCarrie products that are on clearance or discontinued (they won&rsquo;t be available for long), using today&rsquo;s PenCarrie data.
+            {info && info.checked_at ? ` Last checked ${new Date(info.checked_at).toLocaleString("en-GB")}.` : " Not checked yet."}
+          </div>
+        </div>
+        <button onClick={() => run("Checking PenCarrie - this can take a minute…", clearanceScan, (r) => { setInfo({ checked_at: r.checked_at, counts: r.counts }); toast.success("Clearance check done"); })} disabled={!!busy} className="inline-flex items-center gap-1.5 bg-[#1a1a1a] hover:bg-black disabled:opacity-50 text-white font-extrabold text-xs rounded-full px-4 py-2" data-testid="aps-clearance-scan">
+          {busy ? <Loader2 size={12} className="animate-spin" /> : null} Check PenCarrie now
+        </button>
+      </div>
+      {busy && <div className="text-xs text-[#166534] font-bold mt-2">{busy}</div>}
+      {info && info.counts && (
+        <div className="mt-3 grid sm:grid-cols-2 gap-2 text-sm">
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-3">
+            <div><strong>{ending}</strong> fully clearance, discontinued or no longer stocked</div>
+            <div className="flex gap-3 mt-1.5 text-xs font-extrabold flex-wrap">
+              <button onClick={() => onFilter("ending")} className="text-rose-700 hover:underline">Show them</button>
+              {ending > 0 && <button disabled={!!busy} onClick={() => { if (window.confirm(`Hide all ${ending} fully clearance / discontinued / no-longer-stocked products from the site? You can show any of them again later.`)) run("Hiding…", clearanceHideEnding, (r) => toast.success(`${r.hidden} products hidden`)); }} className="text-rose-700 hover:underline disabled:opacity-40" data-testid="aps-clearance-hide">Hide them all</button>}
+            </div>
+          </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+            <div><strong>{c.partial || 0}</strong> with some colours ending</div>
+            <div className="flex gap-3 mt-1.5 text-xs font-extrabold flex-wrap">
+              <button onClick={() => onFilter("partial")} className="text-orange-700 hover:underline">Show them</button>
+              {(c.partial || 0) > 0 && <button disabled={!!busy} onClick={() => { if (window.confirm(`Remove the ending colours from ${c.partial} products, so customers can't pick a colour that's about to run out? The rest of each product stays on sale.`)) run("Removing ending colours…", clearanceRemoveEndingColours, (r) => toast.success(`${r.colours_removed} colours removed from ${r.products_changed} products`)); }} className="text-orange-700 hover:underline disabled:opacity-40" data-testid="aps-clearance-colours">Remove ending colours</button>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

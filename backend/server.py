@@ -2690,7 +2690,7 @@ async def get_product_bulk_tiers(product_id: str):
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
 @api_router.get("/admin/products", dependencies=[Depends(require_admin)])
-async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = "", visibility: str = "", designer: str = "", lite: bool = False):
+async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "", category: str = "", source: str = "", locked: str = "", visibility: str = "", designer: str = "", lite: bool = False, supplier_status: str = ""):
     """Admin overview of all products with editable meta fields.
     Paginated (default 25/page), searchable, and filterable by category and
     source (supplier). This list runs into the thousands once supplier
@@ -2719,6 +2719,8 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
             "is_bestseller": bool(p.get("is_bestseller")),
             "designer_only": bool(p.get("designer_only")),
             "designer_enabled": bool(p.get("designer_enabled")),
+            "supplier_status": p.get("supplier_status") or "",
+            "ending_colours": p.get("ending_colours") or [],
             "manual_edit": bool(p.get("_manual_edit")),
             "hidden": not is_live(p),
             "gender_fit": p.get("gender_fit") or "unisex",
@@ -2737,6 +2739,10 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
         out = [it for it in out if it.get("manual_edit")]
     elif locked == "unlocked":
         out = [it for it in out if not it.get("manual_edit")]
+    if supplier_status == "ending":
+        out = [it for it in out if it.get("supplier_status") in ("ending", "gone")]
+    elif supplier_status == "partial":
+        out = [it for it in out if it.get("supplier_status") == "partial"]
     if designer == "in":
         out = [it for it in out if it.get("designer_enabled")]
     elif designer == "out":
@@ -6430,6 +6436,9 @@ def _apply_imported_product(doc: Dict) -> None:
         "bundle_items": doc.get("bundle_items") or [],
         "bundle_item_count": int(doc.get("bundle_item_count") or 0),
         "bundle_kind": doc.get("bundle_kind") or ("set" if doc.get("bundle_items") else None),
+        # Clearance check (routers/supplier_status.py)
+        "supplier_status": doc.get("supplier_status") or "",
+        "ending_colours": doc.get("ending_colours") or [],
         "bundle_included_print": doc.get("bundle_included_print") or None,
         "bundle_full_price": doc.get("bundle_full_price"),
         "bundle_saving_pct": doc.get("bundle_saving_pct"),
@@ -6893,6 +6902,12 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
     Returns raw CSV rows (as-is, whatever column names PenCarrie uses) for the
     frontend's existing flexible column-matching to normalise - same path as
     a manually pasted CSV."""
+    all_rows = await _pencarrie_export_rows()
+    return _pencarrie_page(all_rows, offset, limit, brand, q)
+
+
+async def _pencarrie_export_rows() -> List[Dict]:
+    """Download PenCarrie's full product export (one row per style/colour/size)."""
     token = await _get_integration_value("pencarrie_api_token")
     if not token:
         raise HTTPException(400, "PenCarrie API token not set - add it in /admin/integrations first.")
@@ -6948,7 +6963,10 @@ async def pencarrie_fetch_catalogue(offset: int = 0, limit: int = 500, brand: st
         raise HTTPException(502, "PenCarrie's response wasn't a valid ZIP file - their API format may have changed.")
 
     text = raw_bytes.decode("utf-8-sig", errors="replace")
-    all_rows = list(csv_module.DictReader(io.StringIO(text)))
+    return list(csv_module.DictReader(io.StringIO(text)))
+
+
+def _pencarrie_page(all_rows: List[Dict], offset: int, limit: int, brand: str, q: str) -> Dict:
 
     # Auto-detect which column holds the brand - varies until we've seen a real export.
     brand_col = None
@@ -7301,6 +7319,7 @@ import routers.design_shop_admin  # noqa: F401 - registers /admin/design-shop/* 
 import routers.ralawise_import  # noqa: F401 - registers /admin/ralawise/* (Ralawise xlsm importer)
 import routers.proof_maker  # noqa: F401 - registers /admin/proof/* (admin proof maker)
 import routers.bundles  # noqa: F401 - registers /admin/bundles/* (bundle set builder)
+import routers.supplier_status  # noqa: F401 - registers /admin/clearance/* (PenCarrie clearance check)
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
