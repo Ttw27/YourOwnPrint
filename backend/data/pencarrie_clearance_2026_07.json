@@ -1,0 +1,1780 @@
+{
+"source": "PenCarrie product export products.csv (10 Jul 2026)",
+"styles": {
+"01179": {
+"ending_colours": [
+"Apple Green",
+"Red"
+],
+"status": "partial"
+},
+"01209": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"01210": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"012m": {
+"ending_colours": [
+"Bright Royal",
+"Light Oxford"
+],
+"status": "partial"
+},
+"013m": {
+"ending_colours": [
+"Bright Royal",
+"Light Oxford"
+],
+"status": "partial"
+},
+"01402": {
+"ending_colours": [
+"White/Red"
+],
+"status": "partial"
+},
+"01403": {
+"ending_colours": [
+"White/Red"
+],
+"status": "partial"
+},
+"01425": {
+"ending_colours": [
+"Chestnut"
+],
+"status": "partial"
+},
+"01437": {
+"ending_colours": [
+"Metal Grey"
+],
+"status": "partial"
+},
+"015m": {
+"ending_colours": [
+"Convoy Grey"
+],
+"status": "partial"
+},
+"01618": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"01660": {
+"ending_colours": [],
+"status": "ending"
+},
+"01668": {
+"ending_colours": [
+"White/Red"
+],
+"status": "partial"
+},
+"01710": {
+"ending_colours": [],
+"status": "ending"
+},
+"01714": {
+"ending_colours": [
+"Royal Blue"
+],
+"status": "partial"
+},
+"01717": {
+"ending_colours": [],
+"status": "ending"
+},
+"01719": {
+"ending_colours": [],
+"status": "ending"
+},
+"02083": {
+"ending_colours": [
+"Orange",
+"Red"
+],
+"status": "partial"
+},
+"02084": {
+"ending_colours": [
+"Grey Marl"
+],
+"status": "partial"
+},
+"02085": {
+"ending_colours": [
+"Charcoal Marl",
+"Grey Marl"
+],
+"status": "partial"
+},
+"02109": {
+"ending_colours": [
+"Metal Grey"
+],
+"status": "partial"
+},
+"02758": {
+"ending_colours": [],
+"status": "ending"
+},
+"02936": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"02990": {
+"ending_colours": [],
+"status": "ending"
+},
+"02991": {
+"ending_colours": [
+"Ash",
+"Creamy Blue",
+"Creamy Pink",
+"White"
+],
+"status": "partial"
+},
+"02998": {
+"ending_colours": [],
+"status": "ending"
+},
+"03107": {
+"ending_colours": [],
+"status": "ending"
+},
+"03162": {
+"ending_colours": [
+"Anthracite Marl"
+],
+"status": "partial"
+},
+"03163": {
+"ending_colours": [
+"Anthracite Marl"
+],
+"status": "partial"
+},
+"03164": {
+"ending_colours": [
+"Anthracite Marl"
+],
+"status": "partial"
+},
+"03165": {
+"ending_colours": [
+"Anthracite Marl"
+],
+"status": "partial"
+},
+"03169": {
+"ending_colours": [
+"Grey Marl"
+],
+"status": "partial"
+},
+"03170": {
+"ending_colours": [
+"Grey Marl"
+],
+"status": "partial"
+},
+"03194": {
+"ending_colours": [
+"Grey Marl"
+],
+"status": "partial"
+},
+"03195": {
+"ending_colours": [],
+"status": "ending"
+},
+"03196": {
+"ending_colours": [
+"Grey Marl"
+],
+"status": "partial"
+},
+"03198": {
+"ending_colours": [
+"Soft Blue"
+],
+"status": "partial"
+},
+"03199": {
+"ending_colours": [
+"Soft Blue"
+],
+"status": "partial"
+},
+"03565": {
+"ending_colours": [
+"Apple Green",
+"Bright Red",
+"Fuchsia"
+],
+"status": "partial"
+},
+"03574": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"03575": {
+"ending_colours": [
+"Arctic Blue",
+"Frozen Green",
+"Red"
+],
+"status": "partial"
+},
+"03775": {
+"ending_colours": [],
+"status": "ending"
+},
+"03810": {
+"ending_colours": [
+"Charcoal Marl",
+"Grey Marl",
+"Lilac"
+],
+"status": "partial"
+},
+"03814": {
+"ending_colours": [
+"Orange",
+"Royal Blue"
+],
+"status": "partial"
+},
+"03823": {
+"ending_colours": [
+"Orange",
+"Red"
+],
+"status": "partial"
+},
+"03827": {
+"ending_colours": [
+"Pepper Red"
+],
+"status": "partial"
+},
+"10573": {
+"ending_colours": [
+"Ash",
+"Bottle Green",
+"Kelly Green",
+"Red"
+],
+"status": "partial"
+},
+"10578": {
+"ending_colours": [
+"Forest Green/White",
+"Grey Marl/Orange",
+"Heather Grey/Navy"
+],
+"status": "partial"
+},
+"10604": {
+"ending_colours": [
+"Bright Green"
+],
+"status": "partial"
+},
+"11150": {
+"ending_colours": [
+"Grey Marl",
+"Kelly Green"
+],
+"status": "partial"
+},
+"11310": {
+"ending_colours": [
+"Pale Pink",
+"Red",
+"Royal Blue",
+"Sand"
+],
+"status": "partial"
+},
+"11338": {
+"ending_colours": [
+"Grey Marl",
+"Orange",
+"Royal Blue",
+"Sand"
+],
+"status": "partial"
+},
+"11346": {
+"ending_colours": [
+"Aqua"
+],
+"status": "partial"
+},
+"11347": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"11377": {
+"ending_colours": [
+"Red",
+"Royal Blue"
+],
+"status": "partial"
+},
+"11475": {
+"ending_colours": [],
+"status": "ending"
+},
+"11500": {
+"ending_colours": [
+"Hibiscus"
+],
+"status": "partial"
+},
+"11981": {
+"ending_colours": [
+"Orchid Pink"
+],
+"status": "partial"
+},
+"140f": {
+"ending_colours": [
+"Bottle Green",
+"Classic Red"
+],
+"status": "partial"
+},
+"410f": {
+"ending_colours": [],
+"status": "ending"
+},
+"46800": {
+"ending_colours": [
+"Grey Marl",
+"Red",
+"Royal Blue",
+"White"
+],
+"status": "partial"
+},
+"46801": {
+"ending_colours": [
+"Army",
+"Red"
+],
+"status": "partial"
+},
+"70650": {
+"ending_colours": [],
+"status": "ending"
+},
+"70720": {
+"ending_colours": [],
+"status": "ending"
+},
+"89000": {
+"ending_colours": [
+"Lime Green"
+],
+"status": "partial"
+},
+"90010": {
+"ending_colours": [],
+"status": "ending"
+},
+"90011": {
+"ending_colours": [],
+"status": "ending"
+},
+"ac001": {
+"ending_colours": [],
+"status": "ending"
+},
+"ac001b": {
+"ending_colours": [],
+"status": "ending"
+},
+"ac002b": {
+"ending_colours": [],
+"status": "ending"
+},
+"ac003": {
+"ending_colours": [],
+"status": "ending"
+},
+"ac003b": {
+"ending_colours": [],
+"status": "ending"
+},
+"ac004": {
+"ending_colours": [],
+"status": "ending"
+},
+"am03": {
+"ending_colours": [
+"Navy"
+],
+"status": "partial"
+},
+"am04": {
+"ending_colours": [
+"Grey Marl",
+"Pink"
+],
+"status": "partial"
+},
+"am11": {
+"ending_colours": [
+"Navy"
+],
+"status": "partial"
+},
+"bh003": {
+"ending_colours": [
+"Camel"
+],
+"status": "partial"
+},
+"bh022": {
+"ending_colours": [
+"Green Camo",
+"Paw Print"
+],
+"status": "partial"
+},
+"bh101": {
+"ending_colours": [
+"Green Camo"
+],
+"status": "partial"
+},
+"br500": {
+"ending_colours": [],
+"status": "ending"
+},
+"br501": {
+"ending_colours": [],
+"status": "ending"
+},
+"br502": {
+"ending_colours": [],
+"status": "ending"
+},
+"br503": {
+"ending_colours": [],
+"status": "ending"
+},
+"br505": {
+"ending_colours": [],
+"status": "ending"
+},
+"br506": {
+"ending_colours": [],
+"status": "ending"
+},
+"br550": {
+"ending_colours": [],
+"status": "ending"
+},
+"br551": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz02": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz10": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz11": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz13": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz15": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz23": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz30": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz31": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz49": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz52": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz56": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz62": {
+"ending_colours": [],
+"status": "ending"
+},
+"bz65": {
+"ending_colours": [],
+"status": "ending"
+},
+"cvc3001": {
+"ending_colours": [
+"Heather Canvas Red",
+"Heather Cement",
+"Heather Charity Pink",
+"Heather Cool Grey",
+"Heather Emerald",
+"Heather Prism Blue",
+"Heather Prism Dusty Blue",
+"Heather Prism Mint",
+"Heather Prism Natural",
+"Heather Prism Peach",
+"Heather Prism Sunset",
+"Heather Purple",
+"Heather Sand Dune"
+],
+"status": "partial"
+},
+"f1501kc": {
+"ending_colours": [
+"Red",
+"White"
+],
+"status": "partial"
+},
+"f6089m": {
+"ending_colours": [
+"Dark Navy"
+],
+"status": "partial"
+},
+"f6089oc": {
+"ending_colours": [
+"White"
+],
+"status": "partial"
+},
+"f6100nu": {
+"ending_colours": [],
+"status": "ending"
+},
+"f6277": {
+"ending_colours": [
+"Fresh Green",
+"Royal Blue",
+"Slate Blue"
+],
+"status": "partial"
+},
+"f6277fm": {
+"ending_colours": [],
+"status": "ending"
+},
+"f6277rp": {
+"ending_colours": [
+"Khaki",
+"White"
+],
+"status": "partial"
+},
+"fr1": {
+"ending_colours": [
+"White"
+],
+"status": "partial"
+},
+"fr136": {
+"ending_colours": [],
+"status": "ending"
+},
+"gbx1l": {
+"ending_colours": [],
+"status": "ending"
+},
+"gbx1m": {
+"ending_colours": [],
+"status": "ending"
+},
+"gbx1s": {
+"ending_colours": [],
+"status": "ending"
+},
+"gd02": {
+"ending_colours": [
+"Cornsilk",
+"Heather Cardinal",
+"Kiwi"
+],
+"status": "partial"
+},
+"gd04": {
+"ending_colours": [],
+"status": "ending"
+},
+"gd07": {
+"ending_colours": [],
+"status": "ending"
+},
+"gd14": {
+"ending_colours": [
+"Cardinal Red"
+],
+"status": "partial"
+},
+"gd16": {
+"ending_colours": [],
+"status": "ending"
+},
+"gd21": {
+"ending_colours": [
+"Chalky Mint",
+"Chambray",
+"Lagoon Blue",
+"Sport Scarlet Red"
+],
+"status": "partial"
+},
+"gd22": {
+"ending_colours": [],
+"status": "ending"
+},
+"gd35": {
+"ending_colours": [
+"Daisy"
+],
+"status": "partial"
+},
+"gd40": {
+"ending_colours": [
+"Carolina Blue",
+"Gold",
+"Graphite Heather",
+"Light Blue",
+"Orange"
+],
+"status": "partial"
+},
+"gd40b": {
+"ending_colours": [
+"Red",
+"Royal Blue"
+],
+"status": "partial"
+},
+"gd52": {
+"ending_colours": [],
+"status": "ending"
+},
+"gd54": {
+"ending_colours": [],
+"status": "ending"
+},
+"gd56b": {
+"ending_colours": [
+"Dark Heather"
+],
+"status": "partial"
+},
+"gd58": {
+"ending_colours": [
+"Dark Chocolate",
+"Safety Green"
+],
+"status": "partial"
+},
+"gd75": {
+"ending_colours": [
+"Cherry Red",
+"Daisy",
+"Royal Blue",
+"Sapphire Blue"
+],
+"status": "partial"
+},
+"gd93": {
+"ending_colours": [],
+"status": "ending"
+},
+"gd95": {
+"ending_colours": [
+"Daisy",
+"Dark Heather",
+"Graphite Heather",
+"Heather Sapphire"
+],
+"status": "partial"
+},
+"h020": {
+"ending_colours": [
+"White"
+],
+"status": "partial"
+},
+"h100": {
+"ending_colours": [
+"Bottle Green",
+"Charcoal",
+"Royal Blue"
+],
+"status": "partial"
+},
+"h101": {
+"ending_colours": [
+"Bottle Green",
+"Fuchsia",
+"Heather Grey",
+"Purple",
+"Royal Blue"
+],
+"status": "partial"
+},
+"h102": {
+"ending_colours": [],
+"status": "ending"
+},
+"h121": {
+"ending_colours": [
+"White"
+],
+"status": "partial"
+},
+"h400": {
+"ending_colours": [
+"Bright Lime",
+"Dark Grey",
+"Magenta",
+"Mid Blue",
+"Orange",
+"Pink"
+],
+"status": "partial"
+},
+"h401": {
+"ending_colours": [
+"Fuchsia",
+"Sapphire Blue"
+],
+"status": "partial"
+},
+"h460": {
+"ending_colours": [
+"Bottle Green",
+"Burgundy",
+"Royal Blue",
+"Sapphire Blue"
+],
+"status": "partial"
+},
+"h592": {
+"ending_colours": [],
+"status": "ending"
+},
+"h593": {
+"ending_colours": [],
+"status": "ending"
+},
+"h850": {
+"ending_colours": [
+"Oxford Navy"
+],
+"status": "partial"
+},
+"h851": {
+"ending_colours": [
+"Fuchsia",
+"Heather Grey"
+],
+"status": "partial"
+},
+"jc020": {
+"ending_colours": [
+"Orange Crush"
+],
+"status": "partial"
+},
+"jc027": {
+"ending_colours": [],
+"status": "ending"
+},
+"jc036": {
+"ending_colours": [
+"Jet Black/Fire Red"
+],
+"status": "partial"
+},
+"jc052": {
+"ending_colours": [],
+"status": "ending"
+},
+"jc053": {
+"ending_colours": [],
+"status": "ending"
+},
+"jc074": {
+"ending_colours": [],
+"status": "ending"
+},
+"jc086": {
+"ending_colours": [],
+"status": "ending"
+},
+"jc110": {
+"ending_colours": [
+"Cobalt Navy"
+],
+"status": "partial"
+},
+"jh001": {
+"ending_colours": [
+"Sunset Orange"
+],
+"status": "partial"
+},
+"jh001f": {
+"ending_colours": [
+"Digital Lavender",
+"Peppermint"
+],
+"status": "partial"
+},
+"jh011": {
+"ending_colours": [
+"Burgundy",
+"Heather Grey",
+"New French Navy"
+],
+"status": "partial"
+},
+"jh020": {
+"ending_colours": [
+"Charcoal"
+],
+"status": "partial"
+},
+"jh021": {
+"ending_colours": [
+"Ginger Biscuit",
+"Sky Blue"
+],
+"status": "partial"
+},
+"jh037": {
+"ending_colours": [
+"Arctic White",
+"Dusty Rose"
+],
+"status": "partial"
+},
+"jh052": {
+"ending_colours": [],
+"status": "ending"
+},
+"jh100": {
+"ending_colours": [],
+"status": "ending"
+},
+"jh101": {
+"ending_colours": [
+"Bottle Green",
+"Royal Blue"
+],
+"status": "partial"
+},
+"k504": {
+"ending_colours": [
+"Black Melange"
+],
+"status": "partial"
+},
+"k755": {
+"ending_colours": [
+"White"
+],
+"status": "partial"
+},
+"k933": {
+"ending_colours": [
+"Dark Grey Marl"
+],
+"status": "partial"
+},
+"lv622": {
+"ending_colours": [],
+"status": "ending"
+},
+"lv833": {
+"ending_colours": [],
+"status": "ending"
+},
+"lw21t": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"lw22t": {
+"ending_colours": [],
+"status": "ending"
+},
+"lw50t": {
+"ending_colours": [],
+"status": "ending"
+},
+"lw655t": {
+"ending_colours": [
+"Bright Pink"
+],
+"status": "partial"
+},
+"lw82t": {
+"ending_colours": [
+"Purple",
+"White/Pale Blue"
+],
+"status": "partial"
+},
+"m01": {
+"ending_colours": [],
+"status": "ending"
+},
+"m02": {
+"ending_colours": [],
+"status": "ending"
+},
+"m03": {
+"ending_colours": [],
+"status": "ending"
+},
+"m04": {
+"ending_colours": [],
+"status": "ending"
+},
+"m05": {
+"ending_colours": [],
+"status": "ending"
+},
+"m06": {
+"ending_colours": [],
+"status": "ending"
+},
+"m96": {
+"ending_colours": [],
+"status": "ending"
+},
+"mr040": {
+"ending_colours": [],
+"status": "ending"
+},
+"mt017": {
+"ending_colours": [
+"Cardinal Red",
+"Hot Coral",
+"Military Green"
+],
+"status": "partial"
+},
+"mt018": {
+"ending_colours": [
+"Brown",
+"Camel",
+"Cardinal Red",
+"Hot Coral",
+"Military Green"
+],
+"status": "partial"
+},
+"ns300": {
+"ending_colours": [
+"Amazon Green Heather",
+"Clementine Heather",
+"Cool Blue Heather",
+"Grizzly Brown Heather",
+"Navy Blue Heather",
+"Organic Khaki Heather"
+],
+"status": "partial"
+},
+"ns326": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns327": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns400": {
+"ending_colours": [
+"Amazon Green Heather",
+"Cool Blue Heather",
+"Navy Blue Heather"
+],
+"status": "partial"
+},
+"ns401": {
+"ending_colours": [
+"Amazon Green Heather",
+"Cool Blue Heather"
+],
+"status": "partial"
+},
+"ns402": {
+"ending_colours": [
+"Light Olive Green"
+],
+"status": "partial"
+},
+"ns414": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns415": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns416": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns447": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns448": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns6000": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns6001": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns6005": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns6006": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns610": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns706": {
+"ending_colours": [
+"Paprika"
+],
+"status": "partial"
+},
+"ns715": {
+"ending_colours": [],
+"status": "ending"
+},
+"ns736": {
+"ending_colours": [
+"Jade Green"
+],
+"status": "partial"
+},
+"ns737": {
+"ending_colours": [
+"Peach"
+],
+"status": "partial"
+},
+"ns740": {
+"ending_colours": [],
+"status": "ending"
+},
+"pr162": {
+"ending_colours": [
+"Brown/Natural"
+],
+"status": "partial"
+},
+"pr238": {
+"ending_colours": [
+"White/Grey"
+],
+"status": "partial"
+},
+"pr246": {
+"ending_colours": [
+"Pale Blue"
+],
+"status": "partial"
+},
+"pr338": {
+"ending_colours": [
+"White/Grey"
+],
+"status": "partial"
+},
+"pr344": {
+"ending_colours": [
+"Pale Blue"
+],
+"status": "partial"
+},
+"pr346": {
+"ending_colours": [
+"Pale Blue"
+],
+"status": "partial"
+},
+"pr625": {
+"ending_colours": [],
+"status": "ending"
+},
+"pr626": {
+"ending_colours": [],
+"status": "ending"
+},
+"pr652": {
+"ending_colours": [],
+"status": "ending"
+},
+"pr661": {
+"ending_colours": [],
+"status": "ending"
+},
+"pr694": {
+"ending_colours": [
+"Purple",
+"Royal Blue"
+],
+"status": "partial"
+},
+"pr997": {
+"ending_colours": [],
+"status": "ending"
+},
+"pw1210": {
+"ending_colours": [],
+"status": "ending"
+},
+"pw809": {
+"ending_colours": [
+"Black/Orange",
+"Black/Yellow"
+],
+"status": "partial"
+},
+"pw983": {
+"ending_colours": [],
+"status": "ending"
+},
+"qx505": {
+"ending_colours": [
+"Grey"
+],
+"status": "partial"
+},
+"rc002": {
+"ending_colours": [
+"Bottle Green",
+"Orange",
+"Red",
+"Royal Blue",
+"White"
+],
+"status": "partial"
+},
+"rc010p": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"rc024p": {
+"ending_colours": [
+"Grey/Red",
+"Natural/Navy",
+"Red/Black"
+],
+"status": "partial"
+},
+"rc032": {
+"ending_colours": [
+"Red/Black"
+],
+"status": "partial"
+},
+"rc063": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"rc072": {
+"ending_colours": [
+"Red",
+"White"
+],
+"status": "partial"
+},
+"rc074": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"rc076": {
+"ending_colours": [
+"Bottle Green"
+],
+"status": "partial"
+},
+"rc159": {
+"ending_colours": [
+"Purple"
+],
+"status": "partial"
+},
+"rc353": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"rc354": {
+"ending_colours": [
+"Aqua/Grey"
+],
+"status": "partial"
+},
+"rg333": {
+"ending_colours": [],
+"status": "ending"
+},
+"rg334": {
+"ending_colours": [],
+"status": "ending"
+},
+"rg335": {
+"ending_colours": [],
+"status": "ending"
+},
+"rg589": {
+"ending_colours": [
+"Peat"
+],
+"status": "partial"
+},
+"rg593": {
+"ending_colours": [
+"Ash/Rio Red"
+],
+"status": "partial"
+},
+"rg594": {
+"ending_colours": [],
+"status": "ending"
+},
+"rg596": {
+"ending_colours": [],
+"status": "ending"
+},
+"rg700": {
+"ending_colours": [],
+"status": "ending"
+},
+"rg702": {
+"ending_colours": [],
+"status": "ending"
+},
+"rs189m": {
+"ending_colours": [
+"Fennel/Pink",
+"Lime Green/Royal Blue",
+"Raspberry/Lime Green"
+],
+"status": "partial"
+},
+"rs225m": {
+"ending_colours": [
+"Royal Blue"
+],
+"status": "partial"
+},
+"rs316": {
+"ending_colours": [
+"Grey/Black",
+"Royal Blue/Navy"
+],
+"status": "partial"
+},
+"rs317": {
+"ending_colours": [
+"Grey/Black",
+"Royal Blue/Navy"
+],
+"status": "partial"
+},
+"rs318": {
+"ending_colours": [
+"Grey/Black",
+"Royal Blue/Navy"
+],
+"status": "partial"
+},
+"rs319": {
+"ending_colours": [
+"Grey/Black",
+"Royal Blue/Navy"
+],
+"status": "partial"
+},
+"rs40": {
+"ending_colours": [
+"Red"
+],
+"status": "partial"
+},
+"rs45": {
+"ending_colours": [
+"Orange"
+],
+"status": "partial"
+},
+"rs455f": {
+"ending_colours": [
+"Navy"
+],
+"status": "partial"
+},
+"rs67": {
+"ending_colours": [
+"Red/Navy"
+],
+"status": "partial"
+},
+"sc19": {
+"ending_colours": [
+"Yellow"
+],
+"status": "partial"
+},
+"sf121": {
+"ending_colours": [
+"Heather Navy"
+],
+"status": "partial"
+},
+"sf130": {
+"ending_colours": [
+"Khaki",
+"Light Stone",
+"Royal Blue",
+"Stone Blue"
+],
+"status": "partial"
+},
+"sf202": {
+"ending_colours": [
+"Heather Grey/White"
+],
+"status": "partial"
+},
+"sf203": {
+"ending_colours": [],
+"status": "ending"
+},
+"sf271": {
+"ending_colours": [],
+"status": "ending"
+},
+"sf425": {
+"ending_colours": [
+"Heather Grey"
+],
+"status": "partial"
+},
+"sf514": {
+"ending_colours": [],
+"status": "ending"
+},
+"sf525": {
+"ending_colours": [],
+"status": "ending"
+},
+"sf74": {
+"ending_colours": [],
+"status": "ending"
+},
+"sf82": {
+"ending_colours": [
+"Navy/Green"
+],
+"status": "partial"
+},
+"sk121": {
+"ending_colours": [
+"Baby Pink",
+"Green",
+"Heather Blue",
+"Heather Pink",
+"Heather Red",
+"Khaki",
+"Light Stone",
+"Royal Blue",
+"Surf Blue"
+],
+"status": "partial"
+},
+"sk230": {
+"ending_colours": [
+"Dusky Pink",
+"Heather Grey"
+],
+"status": "partial"
+},
+"sk234": {
+"ending_colours": [],
+"status": "ending"
+},
+"sk235": {
+"ending_colours": [],
+"status": "ending"
+},
+"sk241": {
+"ending_colours": [],
+"status": "ending"
+},
+"sk425": {
+"ending_colours": [],
+"status": "ending"
+},
+"sk426": {
+"ending_colours": [],
+"status": "ending"
+},
+"sk82": {
+"ending_colours": [
+"Navy/Green"
+],
+"status": "partial"
+},
+"sm515": {
+"ending_colours": [],
+"status": "ending"
+},
+"sm74": {
+"ending_colours": [],
+"status": "ending"
+},
+"sp725": {
+"ending_colours": [],
+"status": "ending"
+},
+"sr177f": {
+"ending_colours": [
+"Grey/Lime Green"
+],
+"status": "partial"
+},
+"sr182f": {
+"ending_colours": [
+"White/Red"
+],
+"status": "partial"
+},
+"sr253f": {
+"ending_colours": [
+"Lime Green"
+],
+"status": "partial"
+},
+"sr253m": {
+"ending_colours": [
+"Lime Green"
+],
+"status": "partial"
+},
+"sr254f": {
+"ending_colours": [
+"Lime Green"
+],
+"status": "partial"
+},
+"sr254m": {
+"ending_colours": [
+"Lime Green"
+],
+"status": "partial"
+},
+"sr268f": {
+"ending_colours": [
+"Royal Blue/Navy"
+],
+"status": "partial"
+},
+"sr268m": {
+"ending_colours": [
+"Royal Blue/Navy"
+],
+"status": "partial"
+},
+"sr280f": {
+"ending_colours": [
+"Cloudy Grey",
+"Tangerine"
+],
+"status": "partial"
+},
+"sr282f": {
+"ending_colours": [
+"Cloudy Grey"
+],
+"status": "partial"
+},
+"sr285f": {
+"ending_colours": [
+"Sapphire Blue"
+],
+"status": "partial"
+},
+"ss120": {
+"ending_colours": [
+"Light Graphite",
+"Royal Blue",
+"White"
+],
+"status": "partial"
+},
+"ss121": {
+"ending_colours": [
+"Royal Blue",
+"White"
+],
+"status": "partial"
+},
+"ss123": {
+"ending_colours": [],
+"status": "ending"
+},
+"ss16b": {
+"ending_colours": [
+"Burgundy"
+],
+"status": "partial"
+},
+"ss180": {
+"ending_colours": [],
+"status": "ending"
+},
+"ss21b": {
+"ending_colours": [
+"Dark Heather"
+],
+"status": "partial"
+},
+"ss721": {
+"ending_colours": [
+"Athletic Heather",
+"Azure",
+"Burgundy",
+"Forest Green",
+"Heather Burgundy",
+"Heather Royal",
+"Kelly Green"
+],
+"status": "partial"
+},
+"ss801": {
+"ending_colours": [
+"Dark Heather",
+"Red",
+"Royal Blue"
+],
+"status": "partial"
+},
+"sse16": {
+"ending_colours": [
+"Charcoal",
+"Classic Olive",
+"Red",
+"Royal Blue"
+],
+"status": "partial"
+},
+"sse9": {
+"ending_colours": [
+"Burgundy",
+"Charcoal",
+"Classic Olive",
+"Red",
+"Royal Blue"
+],
+"status": "partial"
+},
+"sse9b": {
+"ending_colours": [
+"Sky Blue"
+],
+"status": "partial"
+},
+"t1000": {
+"ending_colours": [],
+"status": "ending"
+},
+"t1100": {
+"ending_colours": [],
+"status": "ending"
+},
+"t1100b": {
+"ending_colours": [],
+"status": "ending"
+},
+"t1200": {
+"ending_colours": [],
+"status": "ending"
+},
+"t5050": {
+"ending_colours": [],
+"status": "ending"
+},
+"t5072": {
+"ending_colours": [],
+"status": "ending"
+},
+"t5100": {
+"ending_colours": [],
+"status": "ending"
+},
+"t5102": {
+"ending_colours": [],
+"status": "ending"
+},
+"t5102b": {
+"ending_colours": [],
+"status": "ending"
+},
+"t5432": {
+"ending_colours": [],
+"status": "ending"
+},
+"t6001": {
+"ending_colours": [],
+"status": "ending"
+},
+"t9606": {
+"ending_colours": [
+"Navy"
+],
+"status": "partial"
+},
+"tc50": {
+"ending_colours": [],
+"status": "ending"
+},
+"tc51": {
+"ending_colours": [],
+"status": "ending"
+},
+"tl300": {
+"ending_colours": [],
+"status": "ending"
+},
+"tl370": {
+"ending_colours": [
+"Hot Coral",
+"Turquoise Blue"
+],
+"status": "partial"
+},
+"tl371": {
+"ending_colours": [
+"Hot Coral",
+"Turquoise Blue"
+],
+"status": "partial"
+},
+"tl47": {
+"ending_colours": [],
+"status": "ending"
+},
+"tl504": {
+"ending_colours": [
+"Grey Marl",
+"White"
+],
+"status": "partial"
+},
+"tl507": {
+"ending_colours": [
+"Light Grey"
+],
+"status": "partial"
+},
+"tl515": {
+"ending_colours": [
+"Grey Marl/Grey"
+],
+"status": "partial"
+},
+"tl545": {
+"ending_colours": [
+"Olympus Blue"
+],
+"status": "partial"
+},
+"tl560": {
+"ending_colours": [],
+"status": "ending"
+},
+"tl562": {
+"ending_colours": [
+"Grey Marl"
+],
+"status": "partial"
+},
+"tl690": {
+"ending_colours": [],
+"status": "ending"
+},
+"x3016": {
+"ending_colours": [
+"Caramel"
+],
+"status": "partial"
+}
+}
+}

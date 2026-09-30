@@ -99,7 +99,7 @@ async def clearance_scan():
 @api_router.get("/admin/clearance/status", dependencies=[Depends(require_admin)])
 async def clearance_status():
     doc = await db.settings.find_one({"key": "clearance_check"}) or {}
-    return {"checked_at": doc.get("checked_at"), "counts": doc.get("counts") or {}}
+    return {"checked_at": doc.get("checked_at"), "counts": doc.get("counts") or {}, "source": doc.get("source") or ""}
 
 
 @api_router.post("/admin/clearance/hide-ending", dependencies=[Depends(require_admin)])
@@ -199,3 +199,58 @@ async def clearance_scan_file(file: UploadFile = File(...)):
     if not rows:
         raise HTTPException(400, "The file had no product rows")
     return await apply_status(summarise_rows(rows))
+
+
+# ---------------------------------------------------------------------------
+# One-off: apply the clearance/discontinued list taken from PenCarrie's
+# 10 Jul 2026 product export (data/pencarrie_clearance_2026_07.json), since
+# there's no working API connection. Runs once (marker-guarded) after the
+# products load: tags matching products, hides the fully discontinued ones
+# (and bundles that include them), and removes ending colours from the rest.
+# Products not in the list are left alone (not marked "gone" - we only know
+# what the file said). All reversible from Product settings.
+# ---------------------------------------------------------------------------
+CLEARANCE_LIST_FILE = "pencarrie_clearance_2026_07.json"
+CLEARANCE_LIST_MARKER = "clearance_list_2026_07_v1"
+
+
+async def apply_clearance_list() -> Dict:
+    import json
+    from pathlib import Path
+    from server import PRODUCTS
+    data = json.loads((Path(__file__).resolve().parent.parent / "data" / CLEARANCE_LIST_FILE).read_text())
+    styles: Dict[str, Dict] = data.get("styles") or {}
+    now = datetime.now(timezone.utc).isoformat()
+    counts = {"ending": 0, "partial": 0}
+    async for doc in db.imported_products.find({"source": "pencarrie"}, {"id": 1}):
+        info = styles.get(doc["id"].lower())
+        if not info:
+            continue
+        counts[info["status"]] += 1
+        await db.imported_products.update_one({"id": doc["id"]}, {"$set": {
+            "supplier_status": info["status"], "ending_colours": info.get("ending_colours") or [],
+            "supplier_status_checked_at": now}})
+        if doc["id"] in PRODUCTS:
+            PRODUCTS[doc["id"]]["supplier_status"] = info["status"]
+            PRODUCTS[doc["id"]]["ending_colours"] = info.get("ending_colours") or []
+    hidden = await clearance_hide_ending(include_gone=False)
+    colours = await clearance_remove_ending_colours()
+    await db.settings.update_one({"key": "clearance_check"}, {"$set": {
+        "key": "clearance_check", "checked_at": now, "counts": {**counts, "gone": 0},
+        "source": data.get("source") or "PenCarrie export"}}, upsert=True)
+    return {"counts": counts, **hidden, **colours}
+
+
+@api_router.on_event("startup")
+async def _apply_clearance_list_once():
+    import logging
+    try:
+        if await db.settings.find_one({"key": CLEARANCE_LIST_MARKER}):
+            return
+        result = await apply_clearance_list()
+        await db.settings.update_one({"key": CLEARANCE_LIST_MARKER},
+                                     {"$set": {"key": CLEARANCE_LIST_MARKER, "result": result,
+                                               "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+        logging.info(f"clearance list applied: {result}")
+    except Exception as e:
+        logging.warning(f"clearance list skipped: {e}")

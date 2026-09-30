@@ -1034,7 +1034,7 @@ function ClearanceCheck({ onFilter, onChanged }) {
           <div className="font-nunito font-black">Clearance check</div>
           <div className="text-[11px] text-[#4b5563] mt-0.5">
             Finds PenCarrie products that are on clearance or discontinued (they won&rsquo;t be available for long), using today&rsquo;s PenCarrie data.
-            {info && info.checked_at ? ` Last checked ${new Date(info.checked_at).toLocaleString("en-GB")}.` : " Not checked yet."}
+            {info && info.checked_at ? ` Last checked ${new Date(info.checked_at).toLocaleString("en-GB")}${info.source ? ` (from ${info.source})` : ""}.` : " Not checked yet."}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
