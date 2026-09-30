@@ -311,6 +311,7 @@ export default function AdminDesignerProducts() {
                         </div>
                       )}
 
+                      {(p.allowed_placements || []).includes("back-print") ? (<>
                       <div className="pt-2 border-t border-dashed border-[#dcfce7]">
                         <label className="block text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Back photo (optional - used when the customer switches to Back)</label>
                         <p className="text-[10px] text-[#4b5563] mb-1.5">Add this if the product supports back print - customers switching to "back" in the designer will see this photo instead of the front one. Leave blank and it just falls back to the front photo, same as before.</p>
@@ -364,6 +365,9 @@ export default function AdminDesignerProducts() {
                             </div>
                           )}
                         </>
+                      )}
+                      </>) : (
+                        <p className="pt-2 border-t border-dashed border-[#dcfce7] text-[11px] text-[#4b5563]">This product is front print only, so there's no back photo to add. If it can be printed on the back, tick <strong>Back</strong> in <a href="/admin/product-settings" className="font-bold text-[#166534] underline">Product settings</a> → Printing and the back photo boxes will appear here. (Any back photos already saved are kept.)</p>
                       )}
 
                       <div>

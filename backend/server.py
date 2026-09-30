@@ -894,7 +894,9 @@ async def get_product(product_id: str):
         raise HTTPException(404, "Product not found")
     # Include the VAT figures (ex-VAT price + children's zero-rating) the cards
     # already get, so the product page's price and total show ex VAT correctly.
-    return {**PRODUCTS[product_id], **_vat_fields(PRODUCTS[product_id])}
+    p = {k: v for k, v in PRODUCTS[product_id].items()
+         if k not in ("_all_colors", "_all_sizes", "_shown_colors", "_shown_sizes")}
+    return {**p, **_vat_fields(PRODUCTS[product_id])}
 
 
 @api_router.post("/contact")
@@ -1947,6 +1949,8 @@ class ProductMeta(BaseModel):
     design_image: Optional[str] = None  # the print artwork (used as main image)
     gender_fit: Optional[str] = None  # mens | womens | unisex | kids
     industry_tags: Optional[List[str]] = None
+    hidden_colours: Optional[List[str]] = None  # colour names switched off on the site
+    hidden_sizes: Optional[List[str]] = None    # sizes switched off on the site
 
 
 GENDER_FIT_OPTIONS = ["mens", "womens", "unisex", "kids"]
@@ -2261,9 +2265,47 @@ async def _merge_designer_overrides(query: Optional[Dict] = None):
                      "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
                      "workforce_eligible", "also_bought", "match_with", "image_gallery", "specials_eligible", "is_bestseller",
                      "designer_only", "design_shop", "design_categories", "design_garments", "design_image",
-                     "_manual_edit", "gender_fit", "industry_tags"):
+                     "_manual_edit", "gender_fit", "industry_tags", "hidden_colours", "hidden_sizes"):
                 if k in doc and doc[k] is not None:
                     PRODUCTS[pid][k] = doc[k]
+            _apply_hidden_options(pid)
+
+
+def _apply_hidden_options(pid: str) -> None:
+    """Hide the colours/sizes the admin switched off (hidden_colours /
+    hidden_sizes in Product settings) from the product's live lists.
+
+    The full list is kept in _all_colors/_all_sizes so admin can switch them
+    back on. If anything else has since rewritten colors/sizes (designer colour
+    edit, re-import, override) the list is no longer the one we produced, so
+    that new list becomes the full list. Nothing is ever deleted, and a filter
+    that would leave nothing is ignored."""
+    p = PRODUCTS.get(pid)
+    if not p:
+        return
+    for key, full_key, shown_key, hidden_key, name_of in (
+        ("colors", "_all_colors", "_shown_colors", "hidden_colours", lambda c: (c or {}).get("name") if isinstance(c, dict) else c),
+        ("sizes", "_all_sizes", "_shown_sizes", "hidden_sizes", lambda x: x),
+    ):
+        cur = p.get(key)
+        if cur is None:
+            continue
+        if p.get(shown_key) is not cur or full_key not in p:
+            p[full_key] = cur  # colours/sizes were (re)written - this is now the full list
+        full = p[full_key] or []
+        hidden = set(p.get(hidden_key) or [])
+        shown = [x for x in full if name_of(x) not in hidden] if hidden else list(full)
+        if not shown:
+            shown = list(full)
+        p[key] = shown
+        p[shown_key] = shown
+
+
+def _apply_hidden_options_all(pids: Optional[List[str]] = None) -> None:
+    for pid in (pids if pids is not None else list(PRODUCTS.keys())):
+        if pid in PRODUCTS and (PRODUCTS[pid].get("hidden_colours") or PRODUCTS[pid].get("hidden_sizes")
+                                or "_all_colors" in PRODUCTS[pid]):
+            _apply_hidden_options(pid)
 
 
 async def reapply_saved_settings(pids: Optional[List[str]] = None) -> None:
@@ -2283,6 +2325,7 @@ async def reapply_saved_settings(pids: Optional[List[str]] = None) -> None:
     await _merge_designer_overrides(query)
     async for d in db.product_overrides.find(query):
         _apply_product_override(d.get("product_id"), d)
+    _apply_hidden_options_all(pids)
 
 
 @app.on_event("startup")
@@ -2577,6 +2620,7 @@ async def update_designer_settings(product_id: str, payload: DesignerSettings):
             base = supplier.get("colors") if supplier else (_PRISTINE_PRODUCTS.get(product_id) or {}).get("colors")
             if base is not None:
                 PRODUCTS[product_id]["colors"] = _copy.deepcopy(base)
+        _apply_hidden_options(product_id)
     if payload.composition is not None:
         PRODUCTS[product_id]["composition"] = payload.composition
     if payload.description_long is not None:
@@ -2749,6 +2793,11 @@ async def admin_list_all_products(offset: int = 0, limit: int = 25, q: str = "",
             "hidden": not is_live(p),
             "gender_fit": p.get("gender_fit") or "unisex",
             "industry_tags": p.get("industry_tags") or [],
+            # Full lists (incl. switched-off ones) so admin can tick them back on.
+            "all_colours": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("_all_colors") if p.get("_all_colors") is not None else (p.get("colors") or [])) if isinstance(c, dict)],
+            "all_sizes": list(p.get("_all_sizes") if p.get("_all_sizes") is not None else (p.get("sizes") or [])),
+            "hidden_colours": p.get("hidden_colours") or [],
+            "hidden_sizes": p.get("hidden_sizes") or [],
         })
     if q:
         q_lower = q.strip().lower()
@@ -2888,12 +2937,27 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         for t in payload.industry_tags:
             if t not in INDUSTRY_SLUGS:
                 raise HTTPException(400, f"Unknown industry '{t}'. Allowed: {INDUSTRY_SLUGS}")
+    cur_p = PRODUCTS[product_id]
+    for field, full_key, live_key, label in (("hidden_colours", "_all_colors", "colors", "colour"),
+                                             ("hidden_sizes", "_all_sizes", "sizes", "size")):
+        vals = getattr(payload, field)
+        if vals is None:
+            continue
+        full = cur_p.get(full_key) if cur_p.get(full_key) is not None else (cur_p.get(live_key) or [])
+        names = [(c.get("name") if isinstance(c, dict) else c) for c in full]
+        vals = [v for v in dict.fromkeys(vals) if v in names]
+        if names and len(vals) >= len(names):
+            raise HTTPException(400, f"Keep at least one {label} switched on")
+        setattr(payload, field, vals)
     # PARTIAL update: only the fields the admin screen actually sent are written.
     # (It used to rebuild the whole record from the request, so any field not
     # sent was wiped, and every save pinned placements/tags and locked the product.)
     sent = payload.model_dump(exclude_unset=True)
     if "industry_tags" in sent:
         sent["industry_tags"] = payload.industry_tags  # canonicalised above
+    for k in ("hidden_colours", "hidden_sizes"):
+        if k in sent:
+            sent[k] = getattr(payload, k) or []  # cleaned above; [] = all on
     if "bulk_pricing_enabled" in sent:
         sent["bulk_pricing_enabled"] = bool(sent["bulk_pricing_enabled"])
     cur = PRODUCTS[product_id]
@@ -2909,6 +2973,8 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
         cur["_manual_edit"] = True
     for k, v in sent.items():
         cur[k] = v
+    if "hidden_colours" in sent or "hidden_sizes" in sent:
+        _apply_hidden_options(product_id)
     return {"ok": True}
 
 
@@ -5698,7 +5764,37 @@ _SIZE_LABELS = {
 }
 
 
+_NON_APPAREL_CATEGORIES = {"bags", "hats", "accessories", "footwear", "towels", "promotional", "socks"}
+_ONE_SIZE_LABELS = {"one", "one size", "onesize", "os", "o/s", "n/a", ""}
+
+
+def _is_one_size_or_non_apparel(product: Dict) -> bool:
+    """Bags, caps, towels, footwear, socks, anything sold in one size - no
+    chest/length size chart applies, and garment wording doesn't fit."""
+    if (product.get("category") or "").lower() in _NON_APPAREL_CATEGORIES:
+        return True
+    sizes = [str(x).strip().lower() for x in (product.get("sizes") or [])]
+    return all(x in _ONE_SIZE_LABELS for x in sizes)
+
+
+def _is_auto_description(text: str, product: Dict) -> bool:
+    """True if `text` is the old automatic garment wording (any past version:
+    with/without the long dash or the 'Garment by' line) - never admin copy."""
+    def norm(t: str) -> str:
+        t = (t or "").replace("\u2014", "-").strip()
+        return re.sub(r"\n\nGarment by: [^\n]*$", "", t).strip()
+    return bool(text) and norm(text) == norm(_legacy_default_description(product))
+
+
 def _default_size_guide(product: Dict) -> Optional[List[Dict]]:
+    if _is_one_size_or_non_apparel(product):
+        return None
+    return _generated_size_guide(product)
+
+
+def _generated_size_guide(product: Dict) -> Optional[List[Dict]]:
+    """The auto chest/length chart (also used to recognise one that was
+    auto-added rather than typed in by the admin)."""
     garment_type = _classify_garment(product)
     rows_tpl = _SIZE_TABLE_TEMPLATES.get(garment_type)
     if not rows_tpl:
@@ -5719,6 +5815,25 @@ def _default_size_guide(product: Dict) -> Optional[List[Dict]]:
 
 
 def _default_description(product: Dict) -> str:
+    if not _is_one_size_or_non_apparel(product):
+        return _legacy_default_description(product)
+    # Bags, caps, footwear, accessories... - no garment wording.
+    name = product["name"]
+    composition = product.get("composition") or ""
+    brand = product.get("brand") or "Your Own Print"
+    printable = (product.get("allowed_placements") if product.get("allowed_placements") is not None
+                 else _auto_allowed_placements(name, product.get("category") or "")) != []
+    parts = [f"{name} - ready to carry your logo." if printable else f"{name}."]
+    if composition:
+        parts.append(f"\n\nMaterial: {composition}.")
+    if printable:
+        parts.append("\n\nBranded in-house in the UK. Tell us where you'd like your logo and we'll send a free proof before we print.")
+    if brand and brand != "Your Own Print":
+        parts.append(f"\n\nMade by: {brand}.")
+    return "".join(parts)
+
+
+def _legacy_default_description(product: Dict) -> str:
     garment_type = _classify_garment(product)
     name = product["name"]
     composition = product.get("composition") or ""
@@ -5980,6 +6095,7 @@ async def _load_product_overrides():
         async for d in db.product_overrides.find():
             _apply_product_override(d["product_id"], d)
             count += 1
+        _apply_hidden_options_all()
         if count:
             logging.info(f"Applied {count} product overrides.")
     except Exception as e:
@@ -6023,6 +6139,7 @@ _DUPLICATE_META_FIELDS = (
     "bulk_pricing_enabled", "bulk_pricing_overrides", "allowed_placements",
     "workforce_eligible", "specials_eligible", "designer_only", "also_bought",
     "match_with", "gender_fit", "industry_tags", "image_gallery",
+    "hidden_colours", "hidden_sizes",
 )
 
 
@@ -6054,8 +6171,8 @@ async def duplicate_product(pid: str, payload: DuplicateIn):
         "description": src.get("description") or "",
         "gender_fit": src.get("gender_fit") or "unisex",
         "industry_tags": list(src.get("industry_tags") or []),
-        "colors": _copy.deepcopy(src.get("colors") or []),
-        "sizes": list(src.get("sizes") or []),
+        "colors": _copy.deepcopy(src.get("_all_colors") or src.get("colors") or []),
+        "sizes": list(src.get("_all_sizes") or src.get("sizes") or []),
         "size_upcharges": dict(src.get("size_upcharges") or {}),
         "allowed_placements": src.get("allowed_placements"),
         "brand": src.get("brand") or src.get("_brand") or "",
@@ -6530,6 +6647,40 @@ async def _cleanup_frozen_settings_v1(imported_by_id: Dict[str, Dict]) -> None:
     logging.info(f"frozen-settings cleanup: tidied {len(touched)} product(s)")
 
 
+async def _cleanup_auto_size_guides_v1() -> None:
+    """One-off (marker-guarded): one-size / non-apparel products were given an
+    automatic T-shirt size chart and T-shirt wording. Remove the chart and swap
+    the description for a fitting one - ONLY where the stored value is exactly
+    what was auto-generated, so anything the admin typed is kept."""
+    if await db.settings.find_one({"key": "auto_size_guide_cleanup_v1"}):
+        return
+    charts = descs = 0
+    async for m in db.product_meta.find({}, {"product_id": 1, "size_guide_table": 1, "description_full": 1}):
+        p = PRODUCTS.get(m.get("product_id"))
+        if not p or not _is_one_size_or_non_apparel(p):
+            continue
+        upd: Dict = {}
+        unset: Dict = {}
+        if m.get("size_guide_table") and m["size_guide_table"] == _generated_size_guide(p):
+            unset["size_guide_table"] = ""
+            p["size_guide_table"] = []
+            charts += 1
+        if m.get("description_full") and _is_auto_description(m["description_full"], p):
+            upd["description_full"] = p["description_full"] = _default_description(p)
+            descs += 1
+        if upd or unset:
+            op: Dict = {}
+            if upd:
+                op["$set"] = upd
+            if unset:
+                op["$unset"] = unset
+            await db.product_meta.update_one({"product_id": m["product_id"]}, op)
+    await db.settings.update_one({"key": "auto_size_guide_cleanup_v1"}, {"$set": {
+        "key": "auto_size_guide_cleanup_v1", "charts_removed": charts, "descriptions_fixed": descs,
+        "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"auto size guide cleanup: {charts} charts removed, {descs} descriptions fixed")
+
+
 async def _mark_not_printable_v1() -> None:
     """One-off (marker-guarded): set 'no print positions' on existing products
     that can't be printed (see is_not_printable) - unless the admin has set
@@ -6579,6 +6730,10 @@ async def _load_imported_products():
             await _mark_not_printable_v1()
         except Exception as e:
             logging.warning(f"not-printable marking skipped: {e}")
+        try:
+            await _cleanup_auto_size_guides_v1()
+        except Exception as e:
+            logging.warning(f"auto size guide cleanup skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:

@@ -165,6 +165,15 @@ frontend/src/
   overwrote changes made elsewhere. An emptied override field means "back to the original".
   Re-imports set selling `price`/`category` on first insert only (never reset to trade cost).
 
+- **Colours & sizes switched off** in Product settings are stored as `hidden_colours` /
+  `hidden_sizes` in `product_meta` and filtered out of `PRODUCTS[pid]["colors"/"sizes"]` by
+  `_apply_hidden_options()` (full lists kept in `_all_colors`/`_all_sizes` for admin). Anything
+  that rewrites a product's colours/sizes must be followed by `reapply_saved_settings` or
+  `_apply_hidden_options(pid)`.
+
+- **Size guides:** one-size / non-apparel products (bags, hats, accessories, footwear...) get no
+  automatic size chart and non-garment wording (`_is_one_size_or_non_apparel`).
+
 - **Nav default version:** bumping `DEFAULT_NAV_CONFIG["version"]` REPLACES Tim's saved menu
   (stored `default_version` < new version). Ask Tim before bumping it.
 

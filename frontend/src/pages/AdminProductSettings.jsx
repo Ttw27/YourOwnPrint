@@ -194,6 +194,8 @@ export default function AdminProductSettings() {
     image_gallery: Array.isArray(p.image_gallery) ? p.image_gallery : [],
     gender_fit: p.gender_fit || "unisex",
     industry_tags: Array.isArray(p.industry_tags) ? p.industry_tags : [],
+    hidden_colours: Array.isArray(p.hidden_colours) ? p.hidden_colours : [],
+    hidden_sizes: Array.isArray(p.hidden_sizes) ? p.hidden_sizes : [],
   });
 
   const save = async (p) => {
@@ -537,6 +539,24 @@ export default function AdminProductSettings() {
                       )}
                     </Section>
 
+                    {/* Colours & sizes */}
+                    <Section title="Colours & sizes" hint="Untick any colour or size you don't want to sell. It disappears from the product page, the designer and checkout - untick it again any time to bring it back. Nothing is deleted.">
+                      <OptionToggles
+                        label="Colours"
+                        testid={`aps-colours-${p.id}`}
+                        options={(p.all_colours || []).map((c) => ({ key: c.name, label: c.name, hex: c.hex }))}
+                        hidden={p.hidden_colours || []}
+                        onChange={(next) => update(p.id, { hidden_colours: next })}
+                      />
+                      <OptionToggles
+                        label="Sizes"
+                        testid={`aps-sizes-${p.id}`}
+                        options={(p.all_sizes || []).map((sz) => ({ key: sz, label: sz }))}
+                        hidden={p.hidden_sizes || []}
+                        onChange={(next) => update(p.id, { hidden_sizes: next })}
+                      />
+                    </Section>
+
                     {/* Printing */}
                     <Section title="Printing" hint="Tick which print locations are physically possible on this garment. Anything unticked is hidden from customers on the product page and in the designer.">
                       <div className="flex flex-wrap gap-2" data-testid={`aps-placements-${p.id}`}>
@@ -662,6 +682,42 @@ export default function AdminProductSettings() {
 const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7bc67e]";
 function Lab({ label, children }) { return <div><div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">{label}</div>{children}</div>; }
 // Shopify-style section card - a titled group of related fields with breathing room.
+function OptionToggles({ label, options, hidden, onChange, testid }) {
+  if (!options.length) return null;
+  const onCount = options.filter((o) => !hidden.includes(o.key)).length;
+  return (
+    <div data-testid={testid}>
+      <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">
+        {label} - {onCount} of {options.length} on sale
+        {hidden.length > 0 && (
+          <button type="button" onClick={() => onChange([])} className="ml-2 normal-case tracking-normal text-[#166534] hover:underline">Switch all back on</button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => {
+          const on = !hidden.includes(o.key);
+          const last = on && onCount === 1;
+          return (
+            <button
+              key={o.key}
+              type="button"
+              title={last ? "At least one has to stay on" : on ? "Click to stop selling this" : "Click to sell this again"}
+              onClick={() => {
+                if (last) return;
+                onChange(on ? [...hidden, o.key] : hidden.filter((x) => x !== o.key));
+              }}
+              className={`px-3 py-1 rounded-full text-xs font-nunito font-extrabold border-2 transition inline-flex items-center gap-1.5 ${on ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#e5e7eb] text-[#9ca3af] line-through hover:border-[#7bc67e]"} ${last ? "cursor-not-allowed" : ""}`}
+            >
+              {o.hex && <span className="w-3 h-3 rounded-full border border-black/20 inline-block" style={{ background: o.hex }} />}
+              {on ? "✓ " : ""}{o.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, hint, children }) {
   return (
     <div className="bg-white border-2 border-[#eef2f7] rounded-2xl p-4 sm:p-5">
