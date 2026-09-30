@@ -175,7 +175,9 @@ frontend/src/
   was removed site-wide (never bring it back). Automatic charts come only from
   `backend/data/pencarrie_size_charts.json` (built from PenCarrie's product export "Size
   Conversions" column: chest/waist to fit in inches, UK dress size, height...) via
-  `_pencarrie_size_chart()`. Ralawise has no measurement data. Charts the admin types are never
+  `_pencarrie_size_chart()`, and `backend/data/ralawise_size_charts.json` (Ralawise xlsm "Sizing To
+  Fit" column; measurement type inferred: chest/waist inches or UK dress size) via
+  `_ralawise_size_chart()`. Charts the admin types are never
   replaced. One-size / non-apparel products get no chart (`_is_one_size_or_non_apparel`).
 
 - **Nav default version:** bumping `DEFAULT_NAV_CONFIG["version"]` REPLACES Tim's saved menu

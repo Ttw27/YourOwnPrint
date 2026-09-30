@@ -5794,7 +5794,50 @@ def _norm_size(x) -> str:
 def _default_size_guide(product: Dict) -> Optional[List[Dict]]:
     """Automatic size chart - ONLY real maker's measurements (PenCarrie's
     size conversions). Never generic made-up numbers: no real data, no chart."""
+    src = product.get("source") or product.get("_source")
+    if src == "ralawise":
+        return _ralawise_size_chart(product)
     return _pencarrie_size_chart(product)
+
+
+_RW_SIZE_CHARTS: Optional[Dict[str, Dict]] = None
+
+
+def _ralawise_size_chart(product: Dict) -> Optional[List[Dict]]:
+    """Real 'to fit' sizes from Ralawise's product file ("Sizing To Fit"
+    column, one measurement per style: chest/waist in inches or UK dress
+    size). Data: backend/data/ralawise_size_charts.json."""
+    global _RW_SIZE_CHARTS
+    if (product.get("source") or product.get("_source")) != "ralawise" or _is_one_size_or_non_apparel(product):
+        return None
+    if _RW_SIZE_CHARTS is None:
+        try:
+            with open(ROOT_DIR / "data" / "ralawise_size_charts.json") as fh:
+                _RW_SIZE_CHARTS = __import__("json").load(fh)
+        except Exception as e:
+            logging.warning(f"Ralawise size charts unavailable: {e}")
+            _RW_SIZE_CHARTS = {}
+    chart = _RW_SIZE_CHARTS.get(str(product.get("source_sku") or product.get("id") or "").upper())
+    if not chart:
+        return None
+    table = chart.get("rows") or {}
+    by_lead = {re.match(r"\d+", k).group(): v for k, v in table.items() if chart.get("ages") and re.match(r"\d+", k)}
+    rows = []
+    for sz in (product.get("_all_sizes") or product.get("sizes") or []):
+        k = _size_key(re.sub(r"(?i)\s*(years?|yrs)\b", "", str(sz)))
+        val = table.get(k)
+        if val is None and by_lead:
+            # kids ages: site says "12/13 Years", Ralawise's chart says "12/14"
+            m = re.match(r"\d+", k)
+            val = by_lead.get(m.group()) if m else None
+        if val is not None and _size_key(val) != k:
+            rows.append({"size": str(sz), chart["label"]: val})
+    if not rows:
+        return None
+    lead = [re.match(r"\d+(\.\d+)?", r["size"]) for r in rows]
+    if all(lead):
+        rows = [r for _, r in sorted(zip([float(m.group()) for m in lead], rows), key=lambda t: t[0])]
+    return rows
 
 
 _PC_SIZE_CHARTS: Optional[Dict[str, Dict[str, Dict[str, str]]]] = None
@@ -6807,11 +6850,11 @@ async def _remove_auto_size_guides_v3() -> None:
     logging.info(f"auto size guides removed: {removed}")
 
 
-async def _fill_pencarrie_size_charts_v1() -> None:
-    """One-off (marker-guarded): give PenCarrie products their REAL size chart
-    from PenCarrie's product file - only where the product has no chart, so a
-    chart the admin typed in is never replaced."""
-    if await db.settings.find_one({"key": "pencarrie_size_charts_v1"}):
+async def _fill_pencarrie_size_charts_v1(marker: str = "pencarrie_size_charts_v1") -> None:
+    """One-off (marker-guarded): give supplier products their REAL size chart
+    from the supplier's product file - only where the product has no chart, so
+    a chart the admin typed in is never replaced."""
+    if await db.settings.find_one({"key": marker}):
         return
     have = set()
     async for m in db.product_meta.find({"size_guide_table.0": {"$exists": True}}, {"product_id": 1}):
@@ -6820,16 +6863,16 @@ async def _fill_pencarrie_size_charts_v1() -> None:
     for pid, p in PRODUCTS.items():
         if pid in have or p.get("size_guide_table"):
             continue
-        chart = _pencarrie_size_chart(p)
+        chart = _default_size_guide(p)
         if chart:
             writes.append(UpdateOne({"product_id": pid}, {"$set": {"product_id": pid, "size_guide_table": chart}}, upsert=True))
             p["size_guide_table"] = chart
     for i in range(0, len(writes), 500):
         await db.product_meta.bulk_write(writes[i:i + 500], ordered=False)
-    await db.settings.update_one({"key": "pencarrie_size_charts_v1"}, {"$set": {
-        "key": "pencarrie_size_charts_v1", "filled": len(writes),
+    await db.settings.update_one({"key": marker}, {"$set": {
+        "key": marker, "filled": len(writes),
         "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
-    logging.info(f"PenCarrie size charts: {len(writes)} product(s) given their real size chart")
+    logging.info(f"{marker}: {len(writes)} product(s) given their real size chart")
 
 
 async def _mark_not_printable_v1() -> None:
@@ -6895,8 +6938,9 @@ async def _load_imported_products():
             logging.warning(f"auto size guide removal skipped: {e}")
         try:
             await _fill_pencarrie_size_charts_v1()
+            await _fill_pencarrie_size_charts_v1("ralawise_size_charts_v1")
         except Exception as e:
-            logging.warning(f"PenCarrie size charts skipped: {e}")
+            logging.warning(f"supplier size charts skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:
