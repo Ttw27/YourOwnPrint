@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Package, Plus, Search, Trash2, Sparkles, RefreshCw, ExternalLink } from "lucide-react";
-import { fetchAllProductsAdmin, fetchBundleTemplates, createTemplateBundles, createCustomBundle, rebuildBundleImage, previewBundlePrice } from "../lib/api";
+import { fetchAllProductsAdmin, fetchBundleTemplates, createTemplateBundles, createCustomBundle, rebuildBundleImage, previewBundlePrice, fetchMyBundles } from "../lib/api";
 
 /**
  * Bundle builder - bulk packs (fixed quantities, e.g. 20 x tees or a team pack)
@@ -14,6 +14,8 @@ import { fetchAllProductsAdmin, fetchBundleTemplates, createTemplateBundles, cre
 
 export default function AdminBundles() {
   const [templates, setTemplates] = useState([]);
+  const [mine, setMine] = useState([]);           // every bundle created so far (hidden or live)
+  const [zoom, setZoom] = useState(null);         // picture opened full size
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");          // what's running, for the spinner text
   const [cutout, setCutout] = useState("auto");  // "auto" | "removebg"
@@ -28,7 +30,11 @@ export default function AdminBundles() {
 
   const load = async () => {
     setLoading(true);
-    try { setTemplates((await fetchBundleTemplates()).templates || []); }
+    try {
+      const [t, m] = await Promise.all([fetchBundleTemplates(), fetchMyBundles().catch(() => ({ bundles: [] }))]);
+      setTemplates(t.templates || []);
+      setMine(m.bundles || []);
+    }
     catch (e) { toast.error(e?.response?.data?.detail || "Couldn't load suggested bundles"); }
     finally { setLoading(false); }
   };
@@ -116,6 +122,46 @@ export default function AdminBundles() {
           </select>
           {busy && <span className="inline-flex items-center gap-2 text-sm text-[#166534] font-bold"><Loader2 size={14} className="animate-spin" /> {busy}</span>}
         </div>
+
+        {/* Your bundles - everything created so far, with its picture */}
+        {mine.length > 0 && (
+          <div className="mt-8" data-testid="bundle-mine">
+            <h2 className="font-nunito font-black text-2xl">Your bundles <span className="text-base text-[#4b5563] font-bold">({mine.length})</span></h2>
+            <p className="text-sm text-[#4b5563]">Click a picture to see it full size. Hidden ones aren&rsquo;t on the site yet - show them from Product settings.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
+              {mine.map((b) => (
+                <div key={b.id} className="border-2 border-[#eef2f7] rounded-2xl overflow-hidden bg-white" data-testid={`bundle-mine-${b.id}`}>
+                  <button onClick={() => setZoom(b)} className="block w-full aspect-square bg-[#f0fdf4]" title="View full size">
+                    {b.image ? <img src={b.image} alt={b.name} className="w-full h-full object-cover" loading="lazy" /> : null}
+                  </button>
+                  <div className="p-2.5">
+                    <div className="text-xs font-extrabold leading-snug line-clamp-2">{b.name}</div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-sm font-black">£{b.price.toFixed(2)}</span>
+                      <span className={`text-[9px] font-extrabold rounded-full px-2 py-0.5 ${b.live ? "bg-[#dcfce7] text-[#166534]" : "bg-[#e5e7eb] text-[#4b5563]"}`}>{b.live ? "LIVE" : "HIDDEN"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-[11px] font-bold whitespace-nowrap">
+                      <a href={`/admin/product-settings?q=${encodeURIComponent(b.name)}`} className="text-[#166534] hover:underline" title="Edit it, or show / hide it on the site">Edit</a>
+                      {b.live && <a href={`/product/${b.id}`} target="_blank" rel="noopener noreferrer" className="text-[#166534] hover:underline">View</a>}
+                      <button onClick={() => rebuild(b)} disabled={!!busy} className="text-[#4b5563] hover:underline disabled:opacity-40 ml-auto" title="Make the picture again">Remake</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {zoom && (
+          <div className="fixed inset-0 z-50 bg-black/70 grid place-items-center p-4" onClick={() => setZoom(null)} data-testid="bundle-zoom">
+            <div className="bg-white rounded-2xl p-3 max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+              <img src={zoom.image} alt={zoom.name} className="w-full rounded-xl" />
+              <div className="flex items-center justify-between mt-2 px-1">
+                <span className="font-black text-sm">{zoom.name}</span>
+                <button onClick={() => setZoom(null)} className="text-sm font-bold text-[#4b5563] hover:underline">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Suggested bundles */}
         <div className="mt-8 flex items-end justify-between flex-wrap gap-3">

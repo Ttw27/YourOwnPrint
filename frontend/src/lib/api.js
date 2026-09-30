@@ -244,6 +244,10 @@ export async function adminSetPrintPrices(prices) {
 }
 
 // Bundle builder (routers/bundles.py)
+export async function fetchMyBundles() {
+  const { data } = await api.get("/admin/bundles/list");
+  return data;
+}
 export async function fetchBundleTemplates() {
   const { data } = await api.get("/admin/bundles/templates");
   return data;

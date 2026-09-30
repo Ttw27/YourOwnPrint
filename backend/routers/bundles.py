@@ -590,3 +590,17 @@ async def public_bundles():
             })
     out.sort(key=lambda b: (b["kind"] != "pack", b["price"]))
     return {"bundles": out}
+
+
+@api_router.get("/admin/bundles/list", dependencies=[Depends(require_admin)])
+async def admin_list_bundles():
+    """Every bundle created (hidden or live) with its picture - for the
+    'Your bundles' gallery in the Bundle builder."""
+    from server import PRODUCTS, is_live
+    out = [{
+        "id": p["id"], "name": p["name"], "price": float(p["price"]), "image": p.get("image") or "",
+        "kind": p.get("bundle_kind") or "set", "item_count": p.get("bundle_item_count") or 0,
+        "saving_pct": p.get("bundle_saving_pct"), "live": is_live(p), "created_at": p.get("created_at") or "",
+    } for p in PRODUCTS.values() if p.get("bundle_items")]
+    out.sort(key=lambda b: b["created_at"], reverse=True)
+    return {"bundles": out}
