@@ -5786,10 +5786,24 @@ def _is_auto_description(text: str, product: Dict) -> bool:
     return bool(text) and norm(text) == norm(_legacy_default_description(product))
 
 
+def _norm_size(x) -> str:
+    x = str(x).strip().upper()
+    return {"2XL": "XXL", "XXXL": "3XL", "XXXXL": "4XL", "XXXXXL": "5XL"}.get(x, x)
+
+
 def _default_size_guide(product: Dict) -> Optional[List[Dict]]:
+    """Automatic chart, trimmed to the sizes the product actually comes in.
+    None when the product has any size the generic chart doesn't cover (kids
+    ages, waist sizes, S/M-L/XL...) - no chart beats a wrong one."""
     if _is_one_size_or_non_apparel(product):
         return None
-    return _generated_size_guide(product)
+    rows = _generated_size_guide(product)
+    if not rows:
+        return None
+    sizes = {_norm_size(x) for x in (product.get("_all_sizes") or product.get("sizes") or [])}
+    if not sizes or not sizes <= {_norm_size(r["size"]) for r in rows}:
+        return None
+    return [r for r in rows if _norm_size(r["size"]) in sizes]
 
 
 def _generated_size_guide(product: Dict) -> Optional[List[Dict]]:
@@ -6681,6 +6695,37 @@ async def _cleanup_auto_size_guides_v1() -> None:
     logging.info(f"auto size guide cleanup: {charts} charts removed, {descs} descriptions fixed")
 
 
+async def _fix_auto_size_guides_v2() -> None:
+    """One-off (marker-guarded): the automatic size charts were a generic adult
+    XS-4XL template stuck on every garment, whatever sizes it comes in (e.g.
+    kids 3-4 to 12-13). Where the stored chart is EXACTLY that automatic one:
+    remove it if the product has sizes it doesn't cover, otherwise trim it to
+    the product's own sizes. Charts the admin typed in are never touched."""
+    if await db.settings.find_one({"key": "auto_size_guide_fix_v2"}):
+        return
+    removed = trimmed = 0
+    writes = []
+    async for m in db.product_meta.find({"size_guide_table": {"$exists": True}}, {"product_id": 1, "size_guide_table": 1}):
+        p = PRODUCTS.get(m.get("product_id"))
+        if not p or not m.get("size_guide_table") or m["size_guide_table"] != _generated_size_guide(p):
+            continue
+        new = _default_size_guide(p)
+        if not new:
+            writes.append(UpdateOne({"product_id": m["product_id"]}, {"$unset": {"size_guide_table": ""}}))
+            p["size_guide_table"] = []
+            removed += 1
+        elif new != m["size_guide_table"]:
+            writes.append(UpdateOne({"product_id": m["product_id"]}, {"$set": {"size_guide_table": new}}))
+            p["size_guide_table"] = new
+            trimmed += 1
+    for i in range(0, len(writes), 500):
+        await db.product_meta.bulk_write(writes[i:i + 500], ordered=False)
+    await db.settings.update_one({"key": "auto_size_guide_fix_v2"}, {"$set": {
+        "key": "auto_size_guide_fix_v2", "removed": removed, "trimmed": trimmed,
+        "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"auto size guide fix: {removed} wrong charts removed, {trimmed} trimmed to the product's sizes")
+
+
 async def _mark_not_printable_v1() -> None:
     """One-off (marker-guarded): set 'no print positions' on existing products
     that can't be printed (see is_not_printable) - unless the admin has set
@@ -6734,6 +6779,10 @@ async def _load_imported_products():
             await _cleanup_auto_size_guides_v1()
         except Exception as e:
             logging.warning(f"auto size guide cleanup skipped: {e}")
+        try:
+            await _fix_auto_size_guides_v2()
+        except Exception as e:
+            logging.warning(f"auto size guide fix skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:
