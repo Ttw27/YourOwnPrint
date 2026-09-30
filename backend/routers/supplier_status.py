@@ -19,7 +19,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Dict, List
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, File, HTTPException, UploadFile
 
 from deps import api_router, db, require_admin
 
@@ -134,3 +134,46 @@ async def clearance_remove_ending_colours():
         changed += 1
     await reapply_saved_settings(ids)
     return {"ok": True, "products_changed": changed, "colours_removed": colours_removed}
+
+
+@api_router.post("/admin/clearance/scan-file", dependencies=[Depends(require_admin)])
+async def clearance_scan_file(file: UploadFile = File(...)):
+    """Same check, from PenCarrie's product export uploaded by hand (the .zip
+    from their website, or the products.csv inside it) - no API token needed.
+    Read as a stream, keeping only the few columns the check needs."""
+    import csv
+    import io
+    import tempfile
+    import zipfile
+    csv.field_size_limit(10 ** 9)
+    keep = ("style code", "colourway name", "clearance", "discontinued")
+    rows: List[Dict] = []
+    with tempfile.TemporaryFile() as tmp:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            tmp.write(chunk)
+        tmp.seek(0)
+        head = tmp.read(4)
+        tmp.seek(0)
+        if head.startswith(b"PK"):
+            try:
+                zf = zipfile.ZipFile(tmp)
+            except zipfile.BadZipFile:
+                raise HTTPException(400, "That zip file couldn't be opened")
+            name = next((n for n in zf.namelist() if n.lower().endswith(".csv")), None)
+            if not name:
+                raise HTTPException(400, "No CSV file inside that zip")
+            raw = zf.open(name)
+        else:
+            raw = tmp
+        text = io.TextIOWrapper(raw, encoding="utf-8-sig", errors="replace", newline="")
+        reader = csv.DictReader(text)
+        if not reader.fieldnames or "clearance" not in {h.strip().lower() for h in reader.fieldnames}:
+            raise HTTPException(400, "That doesn't look like PenCarrie's product export (no Clearance column)")
+        for r in reader:
+            rows.append({k: v for k, v in r.items() if k and k.strip().lower() in keep})
+    if not rows:
+        raise HTTPException(400, "The file had no product rows")
+    return await apply_status(summarise_rows(rows))

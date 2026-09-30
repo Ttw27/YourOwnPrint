@@ -284,6 +284,15 @@ export async function duplicateProduct(pid, name) {
 // Clearance check (routers/supplier_status.py)
 export async function clearanceStatus() { return (await api.get("/admin/clearance/status")).data; }
 export async function clearanceScan() { return (await api.post("/admin/clearance/scan", null, { timeout: 300000 })).data; }
+export async function clearanceScanFile(file, onProgress) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const { data } = await api.post("/admin/clearance/scan-file", fd, {
+    headers: { "Content-Type": "multipart/form-data" }, timeout: 900000,
+    onUploadProgress: (e) => onProgress && e.total && onProgress(Math.round((e.loaded / e.total) * 100)),
+  });
+  return data;
+}
 export async function clearanceHideEnding() { return (await api.post("/admin/clearance/hide-ending")).data; }
 export async function clearanceRemoveEndingColours() { return (await api.post("/admin/clearance/remove-ending-colours")).data; }
 

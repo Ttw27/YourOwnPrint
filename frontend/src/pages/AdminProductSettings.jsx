@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct, setDesignerEnabled, uploadAdminImage, clearanceStatus, clearanceScan, clearanceHideEnding, clearanceRemoveEndingColours } from "../lib/api";
+import { fetchAllProductsAdmin, updateProductMeta, fetchBulkDefaults, updateBulkDefaults, ALL_PLACEMENTS, PLACEMENT_LABELS, fetchWorkforceTiers, updateWorkforceTiers, GENDER_FIT_VALUES, INDUSTRY_SLUGS, patchProductOverride, clearProductOverride, fetchProductOverride, suggestCrossSell, unlockProducts, setProductsVisibility, duplicateProduct, setDesignerEnabled, uploadAdminImage, clearanceStatus, clearanceScan, clearanceScanFile, clearanceHideEnding, clearanceRemoveEndingColours } from "../lib/api";
 import { toast } from "sonner";
 import { Save, Loader2, Plus, Trash2, Sparkles, Briefcase, Pencil, RotateCcw, ChevronLeft, ChevronRight, Search, X, Eye, EyeOff, Copy, Upload } from "lucide-react";
 
@@ -1037,10 +1037,23 @@ function ClearanceCheck({ onFilter, onChanged }) {
             {info && info.checked_at ? ` Last checked ${new Date(info.checked_at).toLocaleString("en-GB")}.` : " Not checked yet."}
           </div>
         </div>
-        <button onClick={() => run("Checking PenCarrie - this can take a minute…", clearanceScan, (r) => { setInfo({ checked_at: r.checked_at, counts: r.counts }); toast.success("Clearance check done"); })} disabled={!!busy} className="inline-flex items-center gap-1.5 bg-[#1a1a1a] hover:bg-black disabled:opacity-50 text-white font-extrabold text-xs rounded-full px-4 py-2" data-testid="aps-clearance-scan">
-          {busy ? <Loader2 size={12} className="animate-spin" /> : null} Check PenCarrie now
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className={`inline-flex items-center gap-1.5 bg-white border-2 border-[#1a1a1a] hover:bg-[#f9fafb] text-[#1a1a1a] font-extrabold text-xs rounded-full px-4 py-2 cursor-pointer ${busy ? "opacity-50 pointer-events-none" : ""}`} title="PenCarrie's product export - the .zip from their website, or the products.csv inside it">
+            <Upload size={12} /> Upload PenCarrie file
+            <input type="file" accept=".zip,.csv" className="hidden" data-testid="aps-clearance-file" onChange={(e) => {
+              const file = e.target.files && e.target.files[0];
+              e.target.value = "";
+              if (!file) return;
+              run(`Uploading ${file.name}…`, () => clearanceScanFile(file, (pct) => setBusy(pct < 100 ? `Uploading ${file.name}… ${pct}%` : "Checking the file…")),
+                (r) => { setInfo({ checked_at: r.checked_at, counts: r.counts }); toast.success("Clearance check done"); });
+            }} />
+          </label>
+          <button onClick={() => run("Checking PenCarrie - this can take a minute…", clearanceScan, (r) => { setInfo({ checked_at: r.checked_at, counts: r.counts }); toast.success("Clearance check done"); })} disabled={!!busy} className="inline-flex items-center gap-1.5 bg-[#1a1a1a] hover:bg-black disabled:opacity-50 text-white font-extrabold text-xs rounded-full px-4 py-2" data-testid="aps-clearance-scan" title="Needs a PenCarrie API token in Integrations">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : null} Check automatically
+          </button>
+        </div>
       </div>
+      <div className="text-[11px] text-[#4b5563] mt-2">No PenCarrie API token? Download the product export from your PenCarrie account (a .zip) and use <strong>Upload PenCarrie file</strong>. The zip is much quicker to upload than the unzipped CSV.</div>
       {busy && <div className="text-xs text-[#166534] font-bold mt-2">{busy}</div>}
       {info && info.counts && (
         <div className="mt-3 grid sm:grid-cols-2 gap-2 text-sm">
