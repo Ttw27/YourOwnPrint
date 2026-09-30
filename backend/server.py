@@ -5859,6 +5859,11 @@ def _pencarrie_size_chart(product: Dict) -> Optional[List[Dict]]:
         try:
             with open(ROOT_DIR / "data" / "pencarrie_size_charts.json") as fh:
                 _PC_SIZE_CHARTS = __import__("json").load(fh)
+            # SOL'S codes are "04770" in PenCarrie's file but "4770" on the site
+            # (Excel dropped the leading zero at import) - match either way.
+            for k in list(_PC_SIZE_CHARTS):
+                if k.startswith("0") and k.lstrip("0") and k.lstrip("0") not in _PC_SIZE_CHARTS:
+                    _PC_SIZE_CHARTS[k.lstrip("0")] = _PC_SIZE_CHARTS[k]
         except Exception as e:
             logging.warning(f"PenCarrie size charts unavailable: {e}")
             _PC_SIZE_CHARTS = {}
@@ -6939,6 +6944,7 @@ async def _load_imported_products():
         try:
             await _fill_pencarrie_size_charts_v1()
             await _fill_pencarrie_size_charts_v1("ralawise_size_charts_v1")
+            await _fill_pencarrie_size_charts_v1("sols_leading_zero_size_charts_v1")
         except Exception as e:
             logging.warning(f"supplier size charts skipped: {e}")
         if count:
