@@ -582,7 +582,7 @@ export default function AdminProductSettings() {
                     </Section>
 
                     {/* Size guide */}
-                    <Section title="Size guide" hint="Optional. A size chart shown on the product page.">
+                    <Section title="Size guide" hint="Optional. Only add the maker's real measurements (from their size chart) - or paste a link to their size-chart image. Leave empty and no size guide shows on the product page.">
                       <Lab label="Size guide image URL"><input data-testid={`aps-sg-img-${p.id}`} value={p.size_guide_image || ""} onChange={(e) => update(p.id, { size_guide_image: e.target.value })} className={ic} placeholder="https://…" /></Lab>
                       <div>
                         <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Size guide table</div>

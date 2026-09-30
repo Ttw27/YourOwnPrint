@@ -5792,7 +5792,14 @@ def _norm_size(x) -> str:
 
 
 def _default_size_guide(product: Dict) -> Optional[List[Dict]]:
-    """Automatic chart, trimmed to the sizes the product actually comes in.
+    """No automatic size charts any more: the only template was generic made-up
+    measurements, not the maker's real ones. Charts come from the admin (or a
+    real supplier source) only."""
+    return None
+
+
+def _trimmed_generated_size_guide(product: Dict) -> Optional[List[Dict]]:
+    """The old automatic chart, trimmed to the sizes the product actually comes in.
     None when the product has any size the generic chart doesn't cover (kids
     ages, waist sizes, S/M-L/XL...) - no chart beats a wrong one."""
     if _is_one_size_or_non_apparel(product):
@@ -6709,7 +6716,7 @@ async def _fix_auto_size_guides_v2() -> None:
         p = PRODUCTS.get(m.get("product_id"))
         if not p or not m.get("size_guide_table") or m["size_guide_table"] != _generated_size_guide(p):
             continue
-        new = _default_size_guide(p)
+        new = _trimmed_generated_size_guide(p) if not _is_one_size_or_non_apparel(p) else None
         if not new:
             writes.append(UpdateOne({"product_id": m["product_id"]}, {"$unset": {"size_guide_table": ""}}))
             p["size_guide_table"] = []
@@ -6724,6 +6731,32 @@ async def _fix_auto_size_guides_v2() -> None:
         "key": "auto_size_guide_fix_v2", "removed": removed, "trimmed": trimmed,
         "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
     logging.info(f"auto size guide fix: {removed} wrong charts removed, {trimmed} trimmed to the product's sizes")
+
+
+async def _remove_auto_size_guides_v3() -> None:
+    """One-off (marker-guarded): remove EVERY automatic size chart - they were
+    generic made-up measurements. Only removes a chart that is exactly the
+    automatic one (full or trimmed to the product's sizes); charts the admin
+    typed in are never touched."""
+    if await db.settings.find_one({"key": "auto_size_guide_remove_v3"}):
+        return
+    removed = 0
+    writes = []
+    async for m in db.product_meta.find({"size_guide_table": {"$exists": True}}, {"product_id": 1, "size_guide_table": 1}):
+        p = PRODUCTS.get(m.get("product_id"))
+        sg = m.get("size_guide_table")
+        if not p or not sg:
+            continue
+        if sg == _generated_size_guide(p) or sg == _trimmed_generated_size_guide(p):
+            writes.append(UpdateOne({"product_id": m["product_id"]}, {"$unset": {"size_guide_table": ""}}))
+            p["size_guide_table"] = []
+            removed += 1
+    for i in range(0, len(writes), 500):
+        await db.product_meta.bulk_write(writes[i:i + 500], ordered=False)
+    await db.settings.update_one({"key": "auto_size_guide_remove_v3"}, {"$set": {
+        "key": "auto_size_guide_remove_v3", "removed": removed,
+        "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"auto size guides removed: {removed}")
 
 
 async def _mark_not_printable_v1() -> None:
@@ -6783,6 +6816,10 @@ async def _load_imported_products():
             await _fix_auto_size_guides_v2()
         except Exception as e:
             logging.warning(f"auto size guide fix skipped: {e}")
+        try:
+            await _remove_auto_size_guides_v3()
+        except Exception as e:
+            logging.warning(f"auto size guide removal skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:
