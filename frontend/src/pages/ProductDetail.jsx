@@ -122,6 +122,11 @@ export default function ProductDetail() {
     return placements.filter(p => allowedPlacements.includes(p.id));
   }, [placements, allowedPlacements, isSpecial]);
 
+  // No print positions allowed for this product (e.g. footwear, socks - set in
+  // Product settings > Printing): it's sold as-is, so skip the print step.
+  const notPrintable = !isSpecial && Array.isArray(allowedPlacements) && visiblePlacements.length === 0 && placements.length > 0;
+  useEffect(() => { if (notPrintable) setPrintMode("blank"); }, [notPrintable]);
+
   const togglePlacement = (pid) => {
     if (blank) return;
     setSelectedPlacements((prev) => {
@@ -464,6 +469,11 @@ export default function ProductDetail() {
                       variant="banner"
                     />
                   </>
+                ) : notPrintable ? (
+                  <div className="bg-[#f9fafb] border-2 border-[#e5e7eb] rounded-2xl p-4 text-sm text-[#4b5563] flex items-start gap-2" data-testid="not-printable-note">
+                    <Info size={14} className="mt-0.5 text-[#1a1a1a] flex-shrink-0" />
+                    <span>This item is sold <strong>as it is</strong> - it can&rsquo;t be printed or branded. Just pick your sizes and buy.</span>
+                  </div>
                 ) : (
                   <Section title="3. Print options">
                     <div className="grid grid-cols-2 gap-2 mb-4" data-testid="print-mode-toggle">
@@ -629,7 +639,7 @@ export default function ProductDetail() {
                       {checkingOut
                         ? <><Loader2 className="animate-spin" size={16} /> Redirecting…</>
                         : blank
-                          ? <><ShoppingCart size={16} /> Buy Blank</>
+                          ? (notPrintable ? <><ShoppingCart size={16} /> Buy now £{lineTotal.toFixed(2)}</> : <><ShoppingCart size={16} /> Buy Blank</>)
                           : !allArtworkUploaded
                             ? <><Lock size={14} /> Upload prints to buy</>
                             : <><ShoppingCart size={16} /> Buy now £{lineTotal.toFixed(2)}</>}
@@ -757,7 +767,7 @@ export default function ProductDetail() {
               }}
             />
 
-            <HowWePrint variant="compact" className="mb-6" />
+            {!notPrintable && <HowWePrint variant="compact" className="mb-6" />}
             <ProductReviews productId={product.id} productName={product.name} />
           </>
         )}

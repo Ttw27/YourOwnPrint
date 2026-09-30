@@ -1454,7 +1454,13 @@ async def _resolve_line_pricing(
             extra += NECK_LABEL_PRICE
         print_cost = round(extra, 2)
     else:
-        placements_clean = _validate_placements(placements)
+        # Only positions this product allows (Product settings > Printing; none
+        # at all for e.g. footwear) - the product page hides the rest, and this
+        # makes sure nothing else can reach an order.
+        allowed = product.get("allowed_placements")
+        if allowed is None:
+            allowed = _auto_allowed_placements(product.get("name") or "", product.get("category") or "")
+        placements_clean = [p for p in _validate_placements(placements) if p in allowed]
         print_cost = round(sum(PLACEMENT_BY_ID[p]["price"] for p in placements_clean), 2)
         # Bundles (routers/bundles.py): the price already includes ONE print
         # position on every item; any extra is charged per item in the bundle
