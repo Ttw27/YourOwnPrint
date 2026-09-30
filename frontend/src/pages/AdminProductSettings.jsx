@@ -150,11 +150,15 @@ export default function AdminProductSettings() {
     finally { setBusy(false); }
   };
 
-  const addRow = (id) => update(id, { size_guide_table: [...(products.find(p => p.id === id).size_guide_table || []), { size: "", chest: "", length: "" }] });
+  const addRow = (id) => {
+    const rows = products.find(p => p.id === id).size_guide_table || [];
+    const cols = rows.length ? sgCols(rows) : ["chest", "length"];
+    update(id, { size_guide_table: [...rows, { size: "", ...Object.fromEntries(cols.map((c) => [c, ""])) }] });
+  };
   const setRow = (id, i, k, v) => {
     const p = products.find(x => x.id === id);
     const t = [...(p.size_guide_table || [])];
-    t[i] = { ...t[i], [k]: k === "size" ? v : (Number(v) || v) };
+    t[i] = { ...t[i], [k]: k === "chest" || k === "length" ? (Number(v) || v) : v };
     update(id, { size_guide_table: t });
   };
   const delRow = (id, i) => update(id, { size_guide_table: (products.find(p => p.id === id).size_guide_table || []).filter((_, j) => j !== i) });
@@ -587,14 +591,25 @@ export default function AdminProductSettings() {
                       <div>
                         <div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">Size guide table</div>
                         <div className="space-y-1.5">
-                          {(p.size_guide_table || []).map((r, i) => (
-                            <div key={i} className="grid grid-cols-12 gap-1 items-center" data-testid={`aps-sg-row-${p.id}-${i}`}>
-                              <input value={r.size || ""} onChange={(e) => setRow(p.id, i, "size", e.target.value)} placeholder="Size" className={ic + " col-span-3"} />
-                              <input value={r.chest || ""} onChange={(e) => setRow(p.id, i, "chest", e.target.value)} placeholder="Chest cm" className={ic + " col-span-4"} />
-                              <input value={r.length || ""} onChange={(e) => setRow(p.id, i, "length", e.target.value)} placeholder="Length cm" className={ic + " col-span-4"} />
-                              <button onClick={() => delRow(p.id, i)} className="col-span-1 grid place-items-center text-rose-500"><Trash2 size={12} /></button>
-                            </div>
-                          ))}
+                          {(() => {
+                            const rows = p.size_guide_table || [];
+                            const cols = sgCols(rows);
+                            const tpl = { gridTemplateColumns: `repeat(${cols.length + 1}, minmax(0, 1fr)) 28px` };
+                            return rows.length > 0 && (
+                              <>
+                                <div className="grid gap-1 text-[10px] font-nunito font-extrabold text-[#4b5563] px-1" style={tpl}>
+                                  <span>Size</span>{cols.map((c) => <span key={c} className="capitalize">{c}{c === "chest" || c === "length" ? " (cm)" : ""}</span>)}<span />
+                                </div>
+                                {rows.map((r, i) => (
+                                  <div key={i} className="grid gap-1 items-center" style={tpl} data-testid={`aps-sg-row-${p.id}-${i}`}>
+                                    <input value={r.size || ""} onChange={(e) => setRow(p.id, i, "size", e.target.value)} placeholder="Size" className={ic} />
+                                    {cols.map((c) => <input key={c} value={r[c] ?? ""} onChange={(e) => setRow(p.id, i, c, e.target.value)} placeholder={c} className={ic} />)}
+                                    <button onClick={() => delRow(p.id, i)} className="grid place-items-center text-rose-500"><Trash2 size={12} /></button>
+                                  </div>
+                                ))}
+                              </>
+                            );
+                          })()}
                         </div>
                         <button data-testid={`aps-sg-add-${p.id}`} onClick={() => addRow(p.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline"><Plus size={11} /> Add size row</button>
                       </div>
@@ -682,6 +697,13 @@ export default function AdminProductSettings() {
 const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7bc67e]";
 function Lab({ label, children }) { return <div><div className="text-[10px] uppercase tracking-wider font-nunito font-extrabold text-[#4b5563] mb-1">{label}</div>{children}</div>; }
 // Shopify-style section card - a titled group of related fields with breathing room.
+// Every column used by any size-guide row (charts differ: chest, waist, UK dress size, age...).
+function sgCols(rows) {
+  const cols = [];
+  (rows || []).forEach((r) => Object.keys(r || {}).forEach((k) => { if (k !== "size" && !cols.includes(k)) cols.push(k); }));
+  return cols;
+}
+
 function OptionToggles({ label, options, hidden, onChange, testid }) {
   if (!options.length) return null;
   const onCount = options.filter((o) => !hidden.includes(o.key)).length;

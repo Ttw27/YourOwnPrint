@@ -5792,10 +5792,58 @@ def _norm_size(x) -> str:
 
 
 def _default_size_guide(product: Dict) -> Optional[List[Dict]]:
-    """No automatic size charts any more: the only template was generic made-up
-    measurements, not the maker's real ones. Charts come from the admin (or a
-    real supplier source) only."""
-    return None
+    """Automatic size chart - ONLY real maker's measurements (PenCarrie's
+    size conversions). Never generic made-up numbers: no real data, no chart."""
+    return _pencarrie_size_chart(product)
+
+
+_PC_SIZE_CHARTS: Optional[Dict[str, Dict[str, Dict[str, str]]]] = None
+
+
+def _size_key(x) -> str:
+    # "11-12" / "1112", "35-36" / "3536": match however the label was written
+    return re.sub(r"[^A-Z0-9.]", "", str(x).upper())
+
+
+def _pencarrie_size_chart(product: Dict) -> Optional[List[Dict]]:
+    """Real size chart from PenCarrie's product file ("Size Conversions":
+    chest/waist to fit, UK dress size, age, height...), in the product's own
+    sizes. Data: backend/data/pencarrie_size_charts.json (style -> size -> fields)."""
+    global _PC_SIZE_CHARTS
+    if (product.get("source") or product.get("_source")) != "pencarrie" or _is_one_size_or_non_apparel(product):
+        return None
+    if _PC_SIZE_CHARTS is None:
+        try:
+            with open(ROOT_DIR / "data" / "pencarrie_size_charts.json") as fh:
+                _PC_SIZE_CHARTS = __import__("json").load(fh)
+        except Exception as e:
+            logging.warning(f"PenCarrie size charts unavailable: {e}")
+            _PC_SIZE_CHARTS = {}
+    chart = _PC_SIZE_CHARTS.get(str(product.get("source_sku") or product.get("id") or "").upper())
+    if not chart:
+        return None
+    rows = []
+    for sz in (product.get("_all_sizes") or product.get("sizes") or []):
+        d = chart.get(_size_key(sz))
+        if d:
+            rows.append({"size": str(sz), **d})
+    if not rows:
+        return None
+    # Ages / waist / collar sizes: smallest first (supplier lists can be jumbled).
+    lead = [re.match(r"\d+(\.\d+)?", r["size"]) for r in rows]
+    if all(lead):
+        rows = [r for _, r in sorted(zip([float(m.group()) for m in lead], rows), key=lambda t: t[0])]
+    # Keep only columns that tell the customer something beyond the size name
+    # (e.g. drop "Waist to fit: 30/R" on size 30/R, "Age 3-4" on size 3-4).
+    cols: List[str] = []
+    for r in rows:
+        for k in r:
+            if k != "size" and k not in cols:
+                cols.append(k)
+    cols = [c for c in cols if any(r.get(c) and _size_key(r[c]) != _size_key(r["size"]) for r in rows)]
+    if not cols:
+        return None
+    return [{"size": r["size"], **{c: r.get(c, "-") for c in cols}} for r in rows]
 
 
 def _trimmed_generated_size_guide(product: Dict) -> Optional[List[Dict]]:
@@ -6759,6 +6807,31 @@ async def _remove_auto_size_guides_v3() -> None:
     logging.info(f"auto size guides removed: {removed}")
 
 
+async def _fill_pencarrie_size_charts_v1() -> None:
+    """One-off (marker-guarded): give PenCarrie products their REAL size chart
+    from PenCarrie's product file - only where the product has no chart, so a
+    chart the admin typed in is never replaced."""
+    if await db.settings.find_one({"key": "pencarrie_size_charts_v1"}):
+        return
+    have = set()
+    async for m in db.product_meta.find({"size_guide_table.0": {"$exists": True}}, {"product_id": 1}):
+        have.add(m.get("product_id"))
+    writes = []
+    for pid, p in PRODUCTS.items():
+        if pid in have or p.get("size_guide_table"):
+            continue
+        chart = _pencarrie_size_chart(p)
+        if chart:
+            writes.append(UpdateOne({"product_id": pid}, {"$set": {"product_id": pid, "size_guide_table": chart}}, upsert=True))
+            p["size_guide_table"] = chart
+    for i in range(0, len(writes), 500):
+        await db.product_meta.bulk_write(writes[i:i + 500], ordered=False)
+    await db.settings.update_one({"key": "pencarrie_size_charts_v1"}, {"$set": {
+        "key": "pencarrie_size_charts_v1", "filled": len(writes),
+        "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"PenCarrie size charts: {len(writes)} product(s) given their real size chart")
+
+
 async def _mark_not_printable_v1() -> None:
     """One-off (marker-guarded): set 'no print positions' on existing products
     that can't be printed (see is_not_printable) - unless the admin has set
@@ -6820,6 +6893,10 @@ async def _load_imported_products():
             await _remove_auto_size_guides_v3()
         except Exception as e:
             logging.warning(f"auto size guide removal skipped: {e}")
+        try:
+            await _fill_pencarrie_size_charts_v1()
+        except Exception as e:
+            logging.warning(f"PenCarrie size charts skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:

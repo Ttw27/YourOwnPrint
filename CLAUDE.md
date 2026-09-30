@@ -171,8 +171,12 @@ frontend/src/
   that rewrites a product's colours/sizes must be followed by `reapply_saved_settings` or
   `_apply_hidden_options(pid)`.
 
-- **Size guides:** one-size / non-apparel products (bags, hats, accessories, footwear...) get no
-  automatic size chart and non-garment wording (`_is_one_size_or_non_apparel`).
+- **Size guides: real measurements only.** The old generic chart template (made-up XS-4XL numbers)
+  was removed site-wide (never bring it back). Automatic charts come only from
+  `backend/data/pencarrie_size_charts.json` (built from PenCarrie's product export "Size
+  Conversions" column: chest/waist to fit in inches, UK dress size, height...) via
+  `_pencarrie_size_chart()`. Ralawise has no measurement data. Charts the admin types are never
+  replaced. One-size / non-apparel products get no chart (`_is_one_size_or_non_apparel`).
 
 - **Nav default version:** bumping `DEFAULT_NAV_CONFIG["version"]` REPLACES Tim's saved menu
   (stored `default_version` < new version). Ask Tim before bumping it.

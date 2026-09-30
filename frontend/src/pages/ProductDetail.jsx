@@ -871,8 +871,15 @@ function ProductGallery({ product, color }) {
 }
 
 // ---- Inline size-guide table preview (left column under description) ----
+// Every column used by any row (charts differ: chest, waist, UK dress size, age...).
+function sizeGuideCols(rows) {
+  const cols = [];
+  (rows || []).forEach((r) => Object.keys(r || {}).forEach((k) => { if (k !== "size" && !cols.includes(k)) cols.push(k); }));
+  return cols;
+}
+
 function SizeGuidePanel({ rows, name, onOpenModal, embedded = false }) {
-  const cols = rows.length > 0 ? Object.keys(rows[0]).filter((k) => k !== "size") : [];
+  const cols = sizeGuideCols(rows);
   const wrapperClass = embedded ? "" : "bg-white rounded-2xl border-2 border-[#dcfce7] p-4";
   return (
     <div className={wrapperClass} data-testid="pdp-size-guide-panel">
@@ -880,14 +887,14 @@ function SizeGuidePanel({ rows, name, onOpenModal, embedded = false }) {
         <div className="flex items-center justify-between mb-3">
           <div>
             <div className="text-[10px] font-nunito font-extrabold uppercase tracking-[0.3em] text-[#7bc67e]">Size guide</div>
-            <div className="text-xs text-[#4b5563]">All measurements in cm · {name}</div>
+            <div className="text-xs text-[#4b5563]">{name}</div>
           </div>
           <button onClick={onOpenModal} className="text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline" data-testid="pdp-size-guide-expand">Expand →</button>
         </div>
       )}
       {embedded && (
         <div className="text-xs text-[#4b5563] mb-2">
-          All measurements in cm · {name} ·{" "}
+          {name} ·{" "}
           <button onClick={onOpenModal} className="font-nunito font-extrabold text-[#7bc67e] hover:underline" data-testid="pdp-size-guide-expand-embedded">expand full guide →</button>
         </div>
       )}
@@ -895,13 +902,13 @@ function SizeGuidePanel({ rows, name, onOpenModal, embedded = false }) {
         <table className="w-full text-xs">
           <thead><tr className="border-b border-[#dcfce7]">
             <th className="text-left py-1.5 px-2 font-nunito font-extrabold">Size</th>
-            {cols.map((c) => <th key={c} className="text-left py-1.5 px-2 font-nunito font-extrabold capitalize">{c}</th>)}
+            {cols.map((c) => <th key={c} className="text-left py-1.5 px-2 font-nunito font-extrabold capitalize">{c}{c === "chest" || c === "length" ? " (cm)" : ""}</th>)}
           </tr></thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={i} className="border-b border-[#dcfce7]/40">
                 <td className="py-1.5 px-2 font-nunito font-extrabold">{r.size}</td>
-                {cols.map((c) => <td key={c} className="py-1.5 px-2 text-[#4b5563]">{r[c]}{typeof r[c] === "number" ? " cm" : ""}</td>)}
+                {cols.map((c) => <td key={c} className="py-1.5 px-2 text-[#4b5563]">{r[c] ?? "-"}</td>)}
               </tr>
             ))}
           </tbody>
@@ -914,7 +921,7 @@ function SizeGuidePanel({ rows, name, onOpenModal, embedded = false }) {
 // ---- Size guide modal ----
 function SizeGuideModal({ product, onClose }) {
   const rows = product.size_guide_table || [];
-  const cols = rows.length > 0 ? Object.keys(rows[0]).filter(k => k !== "size") : [];
+  const cols = sizeGuideCols(rows);
   return (
     <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={onClose} data-testid="size-guide-modal">
       <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-auto p-6 relative">
@@ -929,13 +936,13 @@ function SizeGuideModal({ product, onClose }) {
             <table className="w-full text-sm">
               <thead><tr className="border-b border-[#dcfce7]">
                 <th className="text-left py-2 px-3 font-nunito font-extrabold">Size</th>
-                {cols.map((c) => <th key={c} className="text-left py-2 px-3 font-nunito font-extrabold capitalize">{c}</th>)}
+                {cols.map((c) => <th key={c} className="text-left py-2 px-3 font-nunito font-extrabold capitalize">{c}{c === "chest" || c === "length" ? " (cm)" : ""}</th>)}
               </tr></thead>
               <tbody>
                 {rows.map((r, i) => (
                   <tr key={i} className="border-b border-[#dcfce7]/50">
                     <td className="py-2 px-3 font-nunito font-extrabold">{r.size}</td>
-                    {cols.map((c) => <td key={c} className="py-2 px-3 text-[#4b5563]">{r[c]}{typeof r[c] === "number" ? " cm" : ""}</td>)}
+                    {cols.map((c) => <td key={c} className="py-2 px-3 text-[#4b5563]">{r[c] ?? "-"}</td>)}
                   </tr>
                 ))}
               </tbody>
