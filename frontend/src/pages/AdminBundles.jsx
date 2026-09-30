@@ -200,7 +200,7 @@ export default function AdminBundles() {
                       </span>
                     ))}
                   </div>
-                  {t.missing.length > 0 && <div className="mt-2 text-xs text-amber-700 font-bold">Missing from your catalogue: {t.missing.join(", ")} - this one can't be created.</div>}
+                  {t.missing.length > 0 && <div className="mt-2 text-xs text-amber-700 font-bold">Can&rsquo;t be created - not available: {t.missing.join(", ")}.</div>}
                   <div className="mt-3 flex items-center gap-3 flex-wrap">
                     {t.created ? (
                       <>

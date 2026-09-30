@@ -1061,14 +1061,14 @@ function ClearanceCheck({ onFilter, onChanged }) {
             <div><strong>{ending}</strong> fully clearance, discontinued or no longer stocked</div>
             <div className="flex gap-3 mt-1.5 text-xs font-extrabold flex-wrap">
               <button onClick={() => onFilter("ending")} className="text-rose-700 hover:underline">Show them</button>
-              {ending > 0 && <button disabled={!!busy} onClick={() => { if (window.confirm(`Hide all ${ending} fully clearance / discontinued / no-longer-stocked products from the site? You can show any of them again later.`)) run("Hiding…", clearanceHideEnding, (r) => toast.success(`${r.hidden} products hidden`)); }} className="text-rose-700 hover:underline disabled:opacity-40" data-testid="aps-clearance-hide">Hide them all</button>}
+              {ending > 0 && <button disabled={!!busy} onClick={() => { if (window.confirm(`Hide all ${ending} fully clearance / discontinued / no-longer-stocked products from the site - plus any bundles that include them? You can show any of them again later.`)) run("Hiding…", clearanceHideEnding, (r) => toast.success(`${r.hidden} products hidden${r.bundles_hidden ? ` + ${r.bundles_hidden} bundles that used them` : ""}`)); }} className="text-rose-700 hover:underline disabled:opacity-40" data-testid="aps-clearance-hide">Hide them all</button>}
             </div>
           </div>
           <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
             <div><strong>{c.partial || 0}</strong> with some colours ending</div>
             <div className="flex gap-3 mt-1.5 text-xs font-extrabold flex-wrap">
               <button onClick={() => onFilter("partial")} className="text-orange-700 hover:underline">Show them</button>
-              {(c.partial || 0) > 0 && <button disabled={!!busy} onClick={() => { if (window.confirm(`Remove the ending colours from ${c.partial} products, so customers can't pick a colour that's about to run out? The rest of each product stays on sale.`)) run("Removing ending colours…", clearanceRemoveEndingColours, (r) => toast.success(`${r.colours_removed} colours removed from ${r.products_changed} products`)); }} className="text-orange-700 hover:underline disabled:opacity-40" data-testid="aps-clearance-colours">Remove ending colours</button>}
+              {(c.partial || 0) > 0 && <button disabled={!!busy} onClick={() => { if (window.confirm(`Remove the ending colours from ${c.partial} products, so customers can't pick a colour that's about to run out? The rest of each product stays on sale.`)) run("Removing ending colours…", clearanceRemoveEndingColours, (r) => toast.success(`${r.colours_removed} colours removed from ${r.products_changed} products${r.bundles_changed ? ` (and ${r.bundles_changed} bundles)` : ""}`)); }} className="text-orange-700 hover:underline disabled:opacity-40" data-testid="aps-clearance-colours">Remove ending colours</button>}
             </div>
           </div>
         </div>

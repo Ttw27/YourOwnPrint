@@ -68,9 +68,9 @@ _FRONT_BACK = ["left-breast", "right-breast", "full-front", "back-print"]
 _FRONT = ["left-breast", "right-breast", "full-front"]
 BUNDLE_TEMPLATES: List[Dict] = [
     # ---- Bulk packs: single garment ----
-    {"kind": "pack", "group": "Bulk deals", "name": "20 x Promo T-Shirts Deal", "items": [["gd07", 20]], "placements": _FRONT_BACK,
+    {"kind": "pack", "group": "Bulk deals", "name": "20 x Promo T-Shirts Deal", "items": [["gd03", 20]], "placements": _FRONT_BACK,
      "industries": [], "blurb": "20 lightweight Gildan tees with your logo - perfect for events, giveaways and volunteers."},
-    {"kind": "pack", "group": "Bulk deals", "name": "50 x Promo T-Shirts Deal", "items": [["gd07", 50]], "placements": _FRONT_BACK,
+    {"kind": "pack", "group": "Bulk deals", "name": "50 x Promo T-Shirts Deal", "items": [["gd03", 50]], "placements": _FRONT_BACK,
      "industries": [], "blurb": "50 Gildan tees with your logo at our lowest per-shirt price - ideal for big events and campaigns."},
     {"kind": "pack", "group": "Bulk deals", "name": "20 x Pro Work T-Shirts Deal", "items": [["rx151", 20]], "placements": _FRONT_BACK,
      "industries": ["construction-trades", "industrial", "cleaning"], "blurb": "20 hard-wearing Pro RTX work tees with your logo."},
@@ -112,7 +112,7 @@ BUNDLE_TEMPLATES: List[Dict] = [
     {"kind": "pack", "group": "Industry packs", "name": "School Staff Pack - 10 People", "items": [["rx101", 10], ["rx301", 10]],
      "placements": _FRONT_BACK, "industries": ["education-schools"],
      "blurb": "10 school or nursery staff: a polo and a sweatshirt each."},
-    {"kind": "pack", "group": "Industry packs", "name": "Event Crew Pack - 10 People", "items": [["gd07", 20], ["bb10", 10]],
+    {"kind": "pack", "group": "Industry packs", "name": "Event Crew Pack - 10 People", "items": [["gd03", 20], ["bb10", 10]],
      "placements": ["full-front", "back-print"], "industries": [],
      "blurb": "10 event staff or volunteers: 2 tees and a cap each - easy to spot in the crowd."},
     # ---- Per-person sets ----
@@ -167,8 +167,21 @@ def _resolve(items: List[List]) -> List[Tuple[Dict, int]]:
         p = PRODUCTS.get(pid)
         if not p:
             raise HTTPException(400, f"Product '{pid}' isn't in the catalogue")
+        problem = _unavailable_reason(p)
+        if problem:
+            raise HTTPException(400, f"{p['name']} {problem} - choose a different product for this bundle")
         out.append((p, max(1, int(qty))))
     return out
+
+
+def _unavailable_reason(p: Dict) -> str:
+    """Why a product can't go in a bundle ('' = fine): hidden from the site, or
+    clearance / discontinued / no longer stocked (Clearance check)."""
+    if p.get("active") is False:
+        return "is hidden from the site"
+    if p.get("supplier_status") in ("ending", "gone"):
+        return "is clearance / discontinued at the supplier"
+    return ""
 
 
 # ---------------------------------------------------------------- images ----
@@ -349,7 +362,9 @@ def _photo_for_set(items: List[Tuple[Dict, int]]) -> List[str]:
     (black/navy first), so the set looks like a matching set. Items that don't
     have that colour (e.g. a hi-vis vest) use their own black/default photo."""
     def colour_photos(p):
-        return {(c.get("name") or "").strip().lower(): c.get("image") for c in (p.get("colors") or []) if c.get("image")}
+        ending = {(c or "").strip().lower() for c in (p.get("ending_colours") or [])}
+        return {(c.get("name") or "").strip().lower(): c.get("image") for c in (p.get("colors") or [])
+                if c.get("image") and (c.get("name") or "").strip().lower() not in ending}
     maps = [colour_photos(p) for p, _ in items]
     shared = set.intersection(*[set(m) for m in maps]) if maps else set()
     # Only use a shared colour if it's a sensible "uniform" one (black, navy...);
@@ -416,12 +431,14 @@ def _bundle_doc(bundle_id: str, name: str, items: List[Tuple[Dict, int]], blurb:
     price, full, pct = _bundle_price(items)
     inc = _included_print_value()
     # Colours all the items share (by name); otherwise the main item's colours.
-    names = [{(c.get("name") or "").strip().lower() for c in (p.get("colors") or [])} for p, _ in items]
+    ending = {(c or "").strip().lower() for p, _ in items for c in (p.get("ending_colours") or [])}
+    names = [{(c.get("name") or "").strip().lower() for c in (p.get("colors") or [])} - ending for p, _ in items]
     shared = set.intersection(*names) if names else set()
     colours = [{"name": c["name"], "hex": c.get("hex") or "#cccccc"}
                for c in (main.get("colors") or []) if (c.get("name") or "").strip().lower() in shared]
     if len(colours) < 2:
-        colours = [{"name": c["name"], "hex": c.get("hex") or "#cccccc"} for c in (main.get("colors") or []) if c.get("name")]
+        colours = [{"name": c["name"], "hex": c.get("hex") or "#cccccc"} for c in (main.get("colors") or [])
+                   if c.get("name") and c["name"].strip().lower() not in ending]
     if placements is None:
         common = set(_effective_placements(main))
         for p, _ in items[1:]:
@@ -509,6 +526,8 @@ async def bundle_templates():
     out = []
     for t in BUNDLE_TEMPLATES:
         missing = [pid for pid, _ in t["items"] if pid not in PRODUCTS]
+        missing += [f"{PRODUCTS[pid]['name']} ({_unavailable_reason(PRODUCTS[pid])})" for pid, _ in t["items"]
+                    if pid in PRODUCTS and _unavailable_reason(PRODUCTS[pid])]
         items = [(PRODUCTS[pid], q) for pid, q in t["items"] if pid in PRODUCTS]
         price, full, pct = _bundle_price(items) if items else (0, 0, 0)
         bid = "bundle-" + _slug(t["name"])

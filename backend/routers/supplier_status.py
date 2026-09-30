@@ -109,10 +109,18 @@ async def clearance_hide_ending(include_gone: bool = True):
     from server import _set_product_active
     statuses = ["ending", "gone"] if include_gone else ["ending"]
     hidden = 0
-    async for doc in db.imported_products.find({"supplier_status": {"$in": statuses}, "active": {"$ne": False}}, {"id": 1}):
-        if await _set_product_active(doc["id"], False):
+    ending_ids = set()
+    async for doc in db.imported_products.find({"supplier_status": {"$in": statuses}}, {"id": 1, "active": 1}):
+        ending_ids.add(doc["id"])
+        if doc.get("active") is not False and await _set_product_active(doc["id"], False):
             hidden += 1
-    return {"ok": True, "hidden": hidden}
+    # Bundles that include any of them can't be fulfilled either - hide those too.
+    bundles_hidden = 0
+    async for b in db.imported_products.find({"source": "bundle", "active": {"$ne": False}}, {"id": 1, "bundle_items": 1}):
+        if any(i.get("product_id") in ending_ids for i in b.get("bundle_items") or []):
+            if await _set_product_active(b["id"], False):
+                bundles_hidden += 1
+    return {"ok": True, "hidden": hidden, "bundles_hidden": bundles_hidden}
 
 
 @api_router.post("/admin/clearance/remove-ending-colours", dependencies=[Depends(require_admin)])
@@ -132,8 +140,22 @@ async def clearance_remove_ending_colours():
         _apply_imported_product({**doc, "colors": keep})
         ids.append(doc["id"])
         changed += 1
+    # Bundles using those products: drop the ending colours from the bundle's
+    # colour choices too (never removing every colour).
+    ending_by_pid = {}
+    async for doc in db.imported_products.find({"supplier_status": "partial"}, {"id": 1, "ending_colours": 1}):
+        ending_by_pid[doc["id"]] = {(c or "").strip().lower() for c in doc.get("ending_colours") or []}
+    bundles_changed = 0
+    async for b in db.imported_products.find({"source": "bundle"}):
+        drop = set().union(*[ending_by_pid.get(i.get("product_id"), set()) for i in b.get("bundle_items") or []] or [set()])
+        keep = [c for c in (b.get("colors") or []) if (c.get("name") or "").strip().lower() not in drop]
+        if drop and keep and len(keep) < len(b.get("colors") or []):
+            await db.imported_products.update_one({"id": b["id"]}, {"$set": {"colors": keep}})
+            _apply_imported_product({**b, "colors": keep})
+            ids.append(b["id"])
+            bundles_changed += 1
     await reapply_saved_settings(ids)
-    return {"ok": True, "products_changed": changed, "colours_removed": colours_removed}
+    return {"ok": True, "products_changed": changed, "colours_removed": colours_removed, "bundles_changed": bundles_changed}
 
 
 @api_router.post("/admin/clearance/scan-file", dependencies=[Depends(require_admin)])
