@@ -1891,7 +1891,25 @@ def _repair_size_value(raw: str) -> str:
     return s
 
 
+# Items that can't be printed (PPE, footwear, socks, gloves...), matched on whole
+# words in the product name. The exclusions keep printable things that merely
+# mention them (a shoe BAG, a coverall with knee-pad pockets, jogger shorts).
+_NOT_PRINTABLE_RX = re.compile(
+    r"\b(spectacles?|safety glasses|glasses|goggles?|face ?shields?|gloves?|glove-mitts?|gauntlets?|mitts|"
+    r"ear ?defenders?|ear ?plugs?|earmuffs?|masks?|respirators?|knee ?pads?|kneepads?|boots?|shoes?|trainers?|"
+    r"clogs?|wellingtons?|wellies|socks?|insoles?|laces|hard ?hats?|helmets?|bump caps?)\b", re.I)
+_NOT_PRINTABLE_EXCLUDE_RX = re.compile(
+    r"\b(bags?|coveralls?|trousers|shorts|joggers?|jackets?|umbrellas?|tops?|t-shirts?|hoodies?)\b", re.I)
+
+
+def is_not_printable(name: str) -> bool:
+    name = name or ""
+    return bool(_NOT_PRINTABLE_RX.search(name)) and not _NOT_PRINTABLE_EXCLUDE_RX.search(name)
+
+
 def _auto_allowed_placements(name: str, category: str) -> List[str]:
+    if is_not_printable(name):
+        return []
     normalized_category = str(category or "").strip().lower()
     base = list(CATEGORY_PLACEMENT_DEFAULTS.get(normalized_category, ALLOWED_PLACEMENT_OPTIONS))
     hay = name.lower()
@@ -6512,6 +6530,28 @@ async def _cleanup_frozen_settings_v1(imported_by_id: Dict[str, Dict]) -> None:
     logging.info(f"frozen-settings cleanup: tidied {len(touched)} product(s)")
 
 
+async def _mark_not_printable_v1() -> None:
+    """One-off (marker-guarded): set 'no print positions' on existing products
+    that can't be printed (see is_not_printable) - unless the admin has set
+    print positions for that product by hand (product settings), which win."""
+    if await db.settings.find_one({"key": "not_printable_v1"}):
+        return
+    manual = {m["product_id"] async for m in db.product_meta.find({"allowed_placements": {"$exists": True}}, {"product_id": 1})}
+    changed = 0
+    async for doc in db.imported_products.find({}, {"id": 1, "name": 1, "allowed_placements": 1, "source": 1}):
+        if doc.get("source") == "bundle" or doc["id"] in manual or not is_not_printable(doc.get("name") or ""):
+            continue
+        if doc.get("allowed_placements") == []:
+            continue
+        await db.imported_products.update_one({"id": doc["id"]}, {"$set": {"allowed_placements": []}})
+        if doc["id"] in PRODUCTS:
+            PRODUCTS[doc["id"]]["allowed_placements"] = []
+        changed += 1
+    await db.settings.update_one({"key": "not_printable_v1"}, {"$set": {"key": "not_printable_v1", "changed": changed,
+                                  "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"not-printable: {changed} product(s) set to no print positions")
+
+
 @app.on_event("startup")
 async def _load_imported_products():
     """Hydrate PRODUCTS with any admin-imported products at boot."""
@@ -6535,6 +6575,10 @@ async def _load_imported_products():
             await _cleanup_frozen_settings_v1(imported_by_id)
         except Exception as e:
             logging.warning(f"frozen-settings cleanup skipped: {e}")
+        try:
+            await _mark_not_printable_v1()
+        except Exception as e:
+            logging.warning(f"not-printable marking skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:
