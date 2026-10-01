@@ -197,8 +197,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Reviews */}
-      <div className="max-w-7xl mx-auto px-6 py-20">
+      {/* Reviews + recent work together - the "proof" section */}
+      <div className="max-w-7xl mx-auto px-6 pt-20 pb-2">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
           <div>
             <h2 className="font-nunito font-black text-4xl lg:text-5xl text-[#1a1a1a]">Loved by 400+ teams</h2>
@@ -227,7 +227,13 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <div className="mt-8 text-center bg-[#f0fdf4] rounded-2xl p-6 border border-[#dcfce7]">
+      </div>
+
+      {/* Recent work - only renders when admin has marked portfolio items as featured */}
+      <PortfolioStrip />
+
+      <div className="max-w-7xl mx-auto px-6 pb-20">
+        <div className="text-center bg-[#f0fdf4] rounded-2xl p-6 border border-[#dcfce7]">
           <Camera className="mx-auto text-[#7bc67e]" size={28} />
           <h3 className="font-nunito font-extrabold text-xl mt-2">Got photos? Share them with your review!</h3>
           <p className="text-sm text-[#4b5563] mt-1">Help other customers see exactly what they're getting.</p>
@@ -264,10 +270,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Portfolio strip - only renders when admin has marked items as featured */}
       <HowWePrint className="my-16" />
-
-      <PortfolioStrip />
 
       <BoldFooter />
     </div>
