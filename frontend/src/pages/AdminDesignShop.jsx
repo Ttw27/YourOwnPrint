@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Sparkles, Loader2, Upload, Trash2, Check } from "lucide-react";
-import { uploadDesignImage, createDesign, listDesigns, deleteDesign } from "../lib/api";
+import { uploadDesignImage, createDesign, listDesigns, deleteDesign, adminGetDesignGarments, adminSaveDesignGarments } from "../lib/api";
 
 const GARMENTS = [
   { slug: "t-shirt", title: "T-Shirt", price: "£14.99" },
@@ -73,6 +73,8 @@ export default function AdminDesignShop() {
       <div className="text-xs uppercase tracking-[0.3em] text-[#a855f7] font-extrabold">Admin</div>
       <h1 className="font-black text-4xl mt-2 flex items-center gap-3"><Sparkles className="text-[#a855f7]" size={30} /> The Design Shop</h1>
       <p className="text-[#4b5563] mt-2 max-w-2xl">Upload one print artwork, name it, choose garments and collections. It goes straight into the shop, ready to buy. Leave collections blank and we'll guess them from the name.</p>
+
+      <GarmentsCard />
 
       {/* Upload + form */}
       <div className="mt-8 grid md:grid-cols-[260px_1fr] gap-6">
@@ -158,6 +160,78 @@ export default function AdminDesignShop() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+
+/**
+ * Garments & prices - for each garment type a design can be sold on: the price
+ * (print included) and which real garment it's printed on. That garment's
+ * colours, sizes, per-colour photos and print area (Admin > Designer products)
+ * are what customers choose from and what the mockup is drawn on. A type with
+ * no garment picked isn't offered on the site.
+ */
+function GarmentsCard() {
+  const [rows, setRows] = useState(null);
+  const [options, setOptions] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    adminGetDesignGarments()
+      .then((d) => { setRows(d.garments || []); setOptions(d.options || []); })
+      .catch(() => toast.error("Couldn't load Design Shop garments"));
+  }, []);
+
+  const set = (slug, patch) => { setRows((r) => r.map((g) => (g.slug === slug ? { ...g, ...patch } : g))); setDirty(true); };
+  const save = async () => {
+    setSaving(true);
+    try {
+      const d = await adminSaveDesignGarments(rows.map((g) => ({ slug: g.slug, price: Number(g.price), product_id: g.product_id || "" })));
+      setRows(d.garments); setDirty(false);
+      toast.success("Garments & prices saved");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setSaving(false); }
+  };
+
+  if (!rows) return null;
+  return (
+    <div className="mt-8 border-2 border-[#e9d5ff] rounded-3xl p-6" data-testid="ds-garments-card">
+      <h2 className="font-black text-xl">Garments &amp; prices</h2>
+      <p className="text-sm text-[#4b5563] mt-1">
+        The price of each garment with a design printed on it, and which garment from <a href="/admin/designer-products" className="font-bold text-[#7c3aed] underline">Designer products</a> it&rsquo;s
+        printed on. Customers choose from that garment&rsquo;s colours and sizes, and see the design on its photo for each colour. Leave a garment as
+        &ldquo;Not offered&rdquo; and it won&rsquo;t show on any design.
+      </p>
+      <div className="mt-4 space-y-2">
+        {rows.map((g) => {
+          const opt = options.find((o) => o.id === g.product_id);
+          return (
+            <div key={g.slug} className="grid grid-cols-1 sm:grid-cols-[150px_110px_1fr] gap-2 items-center" data-testid={`ds-garment-row-${g.slug}`}>
+              <div className="font-extrabold text-sm">{g.title}</div>
+              <label className="inline-flex items-center gap-1 text-sm">£
+                <input type="number" step="0.01" min="1" value={g.price} onChange={(e) => set(g.slug, { price: e.target.value })}
+                  className="w-20 border-2 border-[#e5e7eb] rounded-xl px-2 py-1 text-sm" />
+              </label>
+              <div>
+                <select value={g.product_id || ""} onChange={(e) => set(g.slug, { product_id: e.target.value || null })}
+                  className="w-full border-2 border-[#e5e7eb] rounded-xl px-2 py-1.5 text-sm bg-white">
+                  <option value="">Not offered</option>
+                  {g.product_id && !opt && <option value={g.product_id}>{g.product_id} (not in Designer products)</option>}
+                  {options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+                {opt && opt.colour_photos < opt.colours && (
+                  <div className="text-[11px] text-[#b45309] mt-0.5">{opt.colour_photos} of {opt.colours} colours have a photo - the rest show as a plain block of colour in the mockup. Add them in Designer products.</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button onClick={save} disabled={!dirty || saving} className="mt-4 inline-flex items-center gap-2 bg-[#a855f7] hover:bg-[#9333ea] disabled:opacity-40 text-white font-extrabold px-5 py-2 rounded-full text-sm">
+        {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save garments &amp; prices
+      </button>
     </div>
   );
 }

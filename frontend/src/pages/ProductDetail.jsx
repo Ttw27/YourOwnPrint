@@ -98,6 +98,8 @@ export default function ProductDetail() {
       fetchProductQA(id).catch(() => []),
     ])
       .then(([p, pl, ag, ap, qaList]) => {
+        // Design Shop designs have their own page (garment choice + mockup, no print options).
+        if (p && p.design_shop) { navigate(`/design/${p.id}`, { replace: true }); return; }
         setProduct(p); setPlacements(pl); setAggregates(ag);
         setAllowedPlacements(ap);
         setQA(qaList || []);

@@ -141,7 +141,7 @@ export default function DesignShop() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="design-grid">
               {items.map((p) => (
-                <Link key={p.id} to={`/product/${p.id}`} className="group bg-white border-2 border-[#f0e6ff] hover:border-[#a855f7] rounded-2xl overflow-hidden transition-colors" data-testid={`design-item-${p.id}`}>
+                <Link key={p.id} to={`/design/${p.id}`} className="group bg-white border-2 border-[#f0e6ff] hover:border-[#a855f7] rounded-2xl overflow-hidden transition-colors" data-testid={`design-item-${p.id}`}>
                   <div className="aspect-square bg-[#faf5ff] overflow-hidden grid place-items-center p-4">
                     <SiteImage src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" testid={`design-img-${p.id}`} />
                   </div>

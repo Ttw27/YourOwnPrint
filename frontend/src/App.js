@@ -22,6 +22,7 @@ import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import ProductDetail from "@/pages/ProductDetail";
 import FindMyKit from "@/pages/FindMyKit";
 import DesignShop from "@/pages/DesignShop";
+import DesignShopProduct from "@/pages/DesignShopProduct";
 import ReviewsPage from "@/pages/Reviews";
 import AdminImport from "@/pages/AdminImport";
 import AdminReviews from "@/pages/AdminReviews";
@@ -109,6 +110,7 @@ function App() {
           <Route path="/find-my-kit" element={<FindMyKit />} />
           <Route path="/design-shop" element={<DesignShop />} />
           <Route path="/design-shop/:slug" element={<DesignShop />} />
+          <Route path="/design/:id" element={<DesignShopProduct />} />
           <Route path="/teams-schools" element={<TeamsSchools />} />
           <Route path="/sports" element={<Sports />} />
           <Route path="/sports-teams/:slug" element={<SportsTeamDetail />} />

@@ -1219,7 +1219,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
             "amount": total_amount,
             "currency": "gbp",
             "color": payload.color or "",
-            "design_meta": payload.design_meta or {},  # full copy (Stripe metadata is capped at 400 chars)
+            "design_meta": priced["design_meta"] or {},  # full copy (Stripe metadata is capped at 400 chars)
             "metadata": metadata,
             "payment_status": "pending",
             "status": "initiated",
@@ -1246,7 +1246,11 @@ def _order_details_html(doc: dict) -> str:
             rows.append(f"Sizes: {esc(sizes)}")
         if dm.get("pack_sizes_text"):
             rows.append(f"Pack size split: {esc(dm['pack_sizes_text'])}")
-        rows.append(f"Print: {esc(placements) if placements else 'blank / none'}")
+        if not dm.get("garment_name"):
+            rows.append(f"Print: {esc(placements) if placements else 'blank / none'}")
+        if dm.get("garment_name"):
+            rows.append(f"Design Shop: {esc(dm.get('garment_name'))} - print this design: "
+                        f"<a href='{esc(dm.get('design_image'))}'>artwork</a>")
         if dm.get("mode") or dm.get("flow"):
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
         return "<li style='margin-bottom:8px'>" + "<br>".join(rows) + "</li>"
@@ -1437,6 +1441,24 @@ async def _resolve_line_pricing(
     size_upcharges: Dict[str, float] = product.get("size_upcharges", {}) or {}
     allowed_sizes = set(product.get("sizes", []))
 
+    # Design Shop: a ready-made design printed on the garment the customer chose
+    # (design_meta.garment). Price, sizes and colours come from that garment; the
+    # print is included, so no print positions or print cost.
+    is_design = bool(product.get("design_shop"))
+    if is_design:
+        from routers.design_shop import resolve_design_garment
+        dg = await resolve_design_garment(product, (design_meta or {}).get("garment"))
+        base_price = float(dg["price"])
+        size_upcharges = dg["base"].get("size_upcharges", {}) or {}
+        allowed_sizes = set(dg["base"].get("sizes", []))
+        colour_names = [(c.get("name") if isinstance(c, dict) else c) for c in (dg["base"].get("colors") or [])]
+        if colour_names and color not in colour_names:
+            raise HTTPException(400, f"Please choose a colour for {product.get('name')}")
+        design_meta = {**(design_meta or {}), "garment": dg["slug"], "garment_name": dg["title"],
+                       "garment_product_id": dg["base"]["id"],
+                       "design_image": product.get("design_image") or product.get("image") or ""}
+        placements, blank = [], True
+
     # Strip back-print for bottoms / shorts / joggers etc.
     placements = list(placements or [])
     if product_id in NO_BACK_PRINT_PRODUCT_IDS and placements:
@@ -1507,7 +1529,9 @@ async def _resolve_line_pricing(
         raise HTTPException(400, f"{product_id}: qty must be 1–5000")
 
     # Bulk-tier pricing
-    if product_id == "boxing-fight-tee":
+    if is_design:
+        pass  # Design Shop: flat retail price per garment
+    elif product_id == "boxing-fight-tee":
         base_price = tier_unit_price(FIGHT_NIGHT_BULK_TIERS, base_price, total_qty)
     elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
         base_price = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base_price, total_qty)
@@ -1549,7 +1573,7 @@ async def _resolve_line_pricing(
         "size_qtys": resolved_qtys,
         "placements_clean": placements_clean,
         "print_cost": print_cost,
-        "blank": blank or not placements_clean,
+        "blank": False if is_design else (blank or not placements_clean),
         "color": color,
         "total_qty": total_qty,
         "line_total": line_total,

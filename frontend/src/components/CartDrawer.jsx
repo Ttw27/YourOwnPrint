@@ -69,8 +69,11 @@ export default function CartDrawer() {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {items.map((line) => {
-                const pi = priceById.get(line.product_id);
+              {items.map((line, idx) => {
+                // Priced lines come back in basket order - match by position so two
+                // lines of the same product (other colour / garment) keep their own price.
+                const pi = priced.items[idx]?.product_id === line.product_id ? priced.items[idx] : priceById.get(line.product_id);
+                const garmentName = line.design_meta?.garment_name;
                 const name = pi?.product_name || line.product_id;
                 const image = pi?.product_image;
                 const lineTotal = pi?.line_total || 0;
@@ -83,8 +86,9 @@ export default function CartDrawer() {
                         <div className="min-w-0">
                           <p className="font-black text-sm truncate">{name}</p>
                           <p className="text-[11px] text-[#4b5563]">
+                            {garmentName ? `${garmentName} · ` : ""}
                             {line.color ? `${line.color} · ` : ""}
-                            {line.blank ? "Blank" : ((line.placements || []).join(" + ") || "Print")}
+                            {garmentName ? "Design printed" : line.blank ? "Blank" : ((line.placements || []).join(" + ") || "Print")}
                             {unit ? ` · £${unit.toFixed(2)} ea` : ""}
                           </p>
                         </div>

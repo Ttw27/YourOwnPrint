@@ -144,6 +144,13 @@ frontend/src/
   `design_categories`, `design_garments`, `design_image`. They are **excluded** from the workwear
   catalogue (`/products`), `/search`, and Find My Kit. Don't let them leak into workwear listings.
 
+- **Design Shop product page** is `/design/:id` (`DesignShopProduct.jsx`; `/product/:id` redirects there).
+  No print options: customer picks garment type -> colour -> sizes. Each garment type (t-shirt, hoodie...)
+  is linked to a real Designer product + price in Admin > Design Shop > Garments & prices
+  (`db.settings` `design_shop_garments`, defaults in `routers/design_shop.DEFAULT_GARMENT_PRODUCTS`).
+  The mockup lays `design_image` onto that garment's per-colour designer photo inside its print area.
+  Checkout prices from `design_meta.garment` (`resolve_design_garment`); sizes/colours from the linked garment.
+
 - **Hidden products.** Products are never deleted — they're hidden with `active: False`
   (stored on the `imported_products` doc for supplier products, or in `product_overrides`
   for built-in ones; always set it via `_set_product_active()`). Hidden products **stay in
