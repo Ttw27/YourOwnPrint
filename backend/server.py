@@ -5712,6 +5712,10 @@ async def list_integrations():
             "is_set": bool(effective),
             "source": "db" if db_val else ("env" if env_val else "none"),
             "masked": _mask_secret(effective) if meta["kind"] == "secret" else effective,
+            # Stripe: which mode payments are in right now (live = real money).
+            **({"mode": "live" if effective.startswith(("sk_live_", "rk_live_")) else
+                        "test" if effective.startswith(("sk_test_", "rk_test_")) else "unknown",
+                "webhook_secret_set": bool(STRIPE_WEBHOOK_SECRET)} if k == "stripe_api_key" else {}),
         })
     return out
 
@@ -5744,6 +5748,23 @@ async def update_integrations(payload: Dict):
 
 
 from deps import _get_integration_value  # replaces the local duplicate
+
+
+@app.on_event("startup")
+async def _load_saved_stripe_key():
+    """A Stripe key saved in Admin > Integrations wins over the Railway
+    STRIPE_API_KEY variable - and must survive restarts (it used to apply only
+    until the next restart, then silently fall back to Railway's)."""
+    global STRIPE_API_KEY
+    try:
+        v = await _get_integration_value("stripe_api_key")
+        if v:
+            STRIPE_API_KEY = v
+    except Exception as e:
+        logging.warning(f"Stripe key load skipped: {e}")
+    mode = "LIVE" if STRIPE_API_KEY.startswith(("sk_live_", "rk_live_")) else \
+           "TEST" if STRIPE_API_KEY.startswith(("sk_test_", "rk_test_")) else "NOT SET"
+    logging.info(f"Stripe: {mode} mode; webhook secret {'set' if STRIPE_WEBHOOK_SECRET else 'NOT set'}")
 
 
 @api_router.get("/site/whatsapp")

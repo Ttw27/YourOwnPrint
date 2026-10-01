@@ -72,6 +72,16 @@ export default function AdminIntegrations() {
                   )}
                 </div>
 
+                {it.key === "stripe_api_key" && it.is_set && (
+                  <div className="mb-2 flex flex-wrap gap-2 text-xs font-extrabold" data-testid="stripe-mode">
+                    {it.mode === "live"
+                      ? <span className="bg-[#dcfce7] text-[#166534] rounded-full px-3 py-1">LIVE - taking real payments</span>
+                      : <span className="bg-[#fef3c7] text-[#92400e] rounded-full px-3 py-1">TEST mode - no real money is taken</span>}
+                    {it.webhook_secret_set
+                      ? <span className="bg-[#dcfce7] text-[#166534] rounded-full px-3 py-1">Webhook secret set</span>
+                      : <span className="bg-[#fee2e2] text-[#991b1b] rounded-full px-3 py-1">Webhook secret NOT set (STRIPE_WEBHOOK_SECRET on Railway)</span>}
+                  </div>
+                )}
                 {it.is_set && it.kind === "secret" && (
                   <div className="text-xs text-[#4b5563] mb-2 font-mono bg-[#f8fafc] px-3 py-1.5 rounded inline-block">
                     Current: {it.masked}
