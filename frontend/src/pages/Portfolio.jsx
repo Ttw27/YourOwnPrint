@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchAllPortfolio, mediaUrl } from "../lib/api";
@@ -27,6 +27,7 @@ export default function Portfolio() {
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState("all");
   const [lightbox, setLightbox] = useState(null);
+  const [searchParams] = useSearchParams();
   // Admin → Page Copy → "Portfolio": edit the heading/intro without code.
   const copy = usePageCopy("portfolio", {
     title: "Real work, printed in the UK",
@@ -37,7 +38,13 @@ export default function Portfolio() {
   useEffect(() => {
     setLoading(true);
     fetchAllPortfolio()
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        // /portfolio?item=<id> (e.g. from the homepage strip) opens that job full size.
+        const want = searchParams.get("item");
+        const hit = want && (d.items || []).find((i) => String(i.id) === want);
+        if (hit) setLightbox(hit);
+      })
       .catch(() => setData({ categories: [], items: [] }))
       .finally(() => setLoading(false));
   }, []);

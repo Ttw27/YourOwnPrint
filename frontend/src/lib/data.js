@@ -8,7 +8,7 @@ export const SECTORS = [
   { name: "Hospitality", href: "/industries/hospitality-catering", image: "https://images.pexels.com/photos/15323377/pexels-photo-15323377.png?auto=compress&cs=tinysrgb&w=800" },
   { name: "Retail", href: "/industries/retail", image: "https://images.pexels.com/photos/18703556/pexels-photo-18703556.jpeg?auto=compress&cs=tinysrgb&w=800" },
   { name: "Sports & Fitness", href: "/industries/sports-fitness", image: "https://images.pexels.com/photos/12097160/pexels-photo-12097160.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { name: "Dance & Theatre", href: "/sports", image: "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { name: "Dance & Theatre", href: "/sports-teams/dance-studios", image: "https://images.pexels.com/photos/4250534/pexels-photo-4250534.jpeg?auto=compress&cs=tinysrgb&w=800" },
   { name: "Schools & Leavers", href: "/leavers-hoodies", image: "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg?auto=compress&cs=tinysrgb&w=800" },
   { name: "Hi-Vis", href: "/shop/hi-vis", image: "https://images.pexels.com/photos/34859873/pexels-photo-34859873.jpeg?auto=compress&cs=tinysrgb&w=800" },
   { name: "Security", href: "/industries/security", image: "https://images.pexels.com/photos/35562107/pexels-photo-35562107.png?auto=compress&cs=tinysrgb&w=800" },

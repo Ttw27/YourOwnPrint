@@ -52,7 +52,7 @@ export default function PortfolioStrip() {
         {items.map((it) => (
           <Link
             key={it.id}
-            to="/portfolio"
+            to={`/portfolio?item=${encodeURIComponent(it.id)}`}
             className="group relative flex-shrink-0 w-[46%] sm:w-[30%] md:w-[23%] aspect-square overflow-hidden rounded-3xl bg-[#f0fdf4] border-2 border-[#dcfce7] hover:border-[#7bc67e] transition snap-start"
             data-testid={`portfolio-strip-item-${it.id}`}
           >

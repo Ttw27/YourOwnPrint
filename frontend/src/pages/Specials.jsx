@@ -128,7 +128,7 @@ export default function Specials() {
         ) : filtered.length === 0 ? (
           <div className="bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-5 text-sm" data-testid="specials-empty">
             Nothing in the lineup matches that fit just yet - try another one, or{" "}
-            <Link to="/shop" className="font-extrabold underline">browse the full range</Link>.
+            <Link to="/workwear" className="font-extrabold underline">browse the full range</Link>.
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" data-testid="specials-grid">
