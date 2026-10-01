@@ -97,7 +97,8 @@ function OrderDetails({ o }) {
     ? o.items.map((it) => ({ name: it.product_name, color: it.color, size_qtys: it.size_qtys, placements: it.placements, dm: it.design_meta }))
     : o.product_name ? [{ name: o.product_name, color: o.color || (o.metadata || {}).color, size_qtys: o.size_qtys, placements: o.placements, dm: o.design_meta }] : [];
   const extra = Object.entries(o.metadata || {}).filter(([k]) => !["product_id", "product_name", "color", "placements", "sizes", "total_qty", "blank", "print_cost_per_garment"].includes(k) && !k.startsWith("design_pack_sizes"));
-  if (!lines.length && !extra.length) return null;
+  const dl = o.delivery;
+  if (!lines.length && !extra.length && !dl) return null;
   return (
     <details className="mt-3 group" data-testid={`admin-order-details-${o.id}`}>
       <summary className="cursor-pointer text-xs font-bold text-emerald-400 hover:underline list-none">Show what was ordered</summary>
@@ -112,6 +113,15 @@ function OrderDetails({ o }) {
             {l.dm && (l.dm.mode || l.dm.flow) && <div className="text-zinc-500">Artwork: {l.dm.mode || l.dm.flow}</div>}
           </div>
         ))}
+        {dl && (
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 space-y-0.5" data-testid={`admin-order-delivery-${o.id}`}>
+            <div className="font-bold text-zinc-100">Delivery: {dl.method || "-"} {dl.cost ? `(£${Number(dl.cost).toFixed(2)})` : "(free)"}</div>
+            {dl.name && <div>{dl.name}</div>}
+            {dl.address && <div>{[dl.address.line1, dl.address.line2, dl.address.city, dl.address.state, dl.address.postal_code].filter(Boolean).join(", ")}</div>}
+            {dl.phone && <div>Phone: {dl.phone}</div>}
+            {dl.warning && <div className="text-amber-300 font-bold">{dl.warning}</div>}
+          </div>
+        )}
         {extra.length > 0 && (
           <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 space-y-0.5 text-zinc-400">
             {extra.map(([k, v]) => <div key={k}><span className="text-zinc-500">{k.replace(/_/g, " ")}:</span> {String(v)}</div>)}

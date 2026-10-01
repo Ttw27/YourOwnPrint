@@ -1203,6 +1203,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         cancel_url=cancel_url,
         metadata=metadata,
         product_name=product["name"],
+        shipping_options=await _delivery_options_for([(product, total_qty)], total_amount),
     )
 
     await db.payment_transactions.insert_one(
@@ -1276,6 +1277,50 @@ def _order_details_html(doc: dict) -> str:
             + "".join(items) + "</ul>") if items else ""
 
 
+def _sget(obj, *path):
+    """Read nested Stripe object / dict fields safely."""
+    for k in path:
+        if obj is None:
+            return None
+        try:
+            obj = obj[k] if isinstance(obj, dict) else getattr(obj, k, None)
+        except Exception:
+            try:
+                obj = obj.get(k)
+            except Exception:
+                return None
+    return obj
+
+
+async def _capture_delivery(doc: dict, status_resp) -> Optional[Dict]:
+    """Save the delivery choice, address and phone from Stripe onto the order,
+    flagging a 'free local delivery' to an address outside the local area."""
+    from routers.delivery import local_ok
+    rate = _sget(status_resp, "shipping_cost", "shipping_rate")
+    method = _sget(rate, "display_name") if rate is not None and not isinstance(rate, str) else None
+    cost_p = _sget(status_resp, "shipping_cost", "amount_total")
+    ship = _sget(status_resp, "collected_information", "shipping_details") or _sget(status_resp, "shipping_details")
+    addr = _sget(ship, "address")
+    address = {k: _sget(addr, k) for k in ("line1", "line2", "city", "state", "postal_code", "country")} if addr else {}
+    if not (method or address):
+        return None
+    delivery = {
+        "method": method or "",
+        "cost": round((cost_p or 0) / 100.0, 2),
+        "name": _sget(ship, "name") or "",
+        "address": address,
+        "phone": _sget(status_resp, "customer_details", "phone") or "",
+    }
+    if method and "local" in method.lower() and not await local_ok(address.get("postal_code") or ""):
+        delivery["warning"] = (f"Free LOCAL delivery was chosen but the postcode ({address.get('postal_code') or '?'}) "
+                               "is outside the local area - contact the customer about delivery.")
+    if method and "collect" in method.lower():
+        delivery["collection"] = True
+    await db.payment_transactions.update_one({"session_id": doc.get("session_id")}, {"$set": {"delivery": delivery}})
+    doc["delivery"] = delivery
+    return delivery
+
+
 async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
     """Fires the shop notification + customer receipt for a completed order.
     Idempotent: only sends once per order, guarded by the `receipt_sent` flag
@@ -1291,6 +1336,22 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
     if claim.modified_count == 0:
         return  # someone else already claimed it (webhook vs poll race)
 
+    delivery_html = ""
+    try:
+        delivery = await _capture_delivery(doc, status_resp)
+        if delivery:
+            a = delivery.get("address") or {}
+            addr = ", ".join(x for x in [delivery.get("name"), a.get("line1"), a.get("line2"), a.get("city"),
+                                         a.get("state"), a.get("postal_code")] if x)
+            delivery_html = (
+                "<p style='margin-top:14px'><strong>Delivery</strong></p><p style='font-size:14px'>"
+                f"{delivery.get('method') or '-'}"
+                f"{' - £%.2f' % delivery['cost'] if delivery.get('cost') else ' - free'}<br>"
+                f"{addr or '-'}<br>{('Phone: ' + delivery['phone']) if delivery.get('phone') else ''}</p>"
+                + (f"<p style='font-size:14px;color:#b91c1c'><strong>Check:</strong> {delivery['warning']}</p>"
+                   if delivery.get("warning") else ""))
+    except Exception as e:
+        logging.warning(f"delivery capture failed: {e}")
     try:
         customer_email = None
         details = getattr(status_resp, "customer_details", None)
@@ -1317,6 +1378,7 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
                   <tr><td style="color:#4b5563"><strong>Session</strong></td><td>{doc.get('session_id','')}</td></tr>
                 </table>
                 {_order_details_html(doc)}
+                {delivery_html}
                 """,
             )
             await _send_email(to=[shop_to], subject=f"[Paid order] {order_label} - £{amount:.2f}", html=body_shop)
@@ -1330,6 +1392,7 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
                   <tr><td style="color:#4b5563"><strong>Order</strong></td><td>{order_label}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Amount paid</strong></td><td>£{amount:.2f} {currency}</td></tr>
                 </table>
+                {delivery_html}
                 <p style="margin-top:16px;color:#4b5563">We'll be in touch if we need anything from you (like artwork approval); otherwise we'll email you again once it's shipped.</p>
                 <p style="margin-top:16px">- The Your Own Print team</p>
                 """,
@@ -1410,6 +1473,22 @@ def _validate_pack_sizes(product: Dict, size_qtys: Dict[str, int], design_meta: 
         lines.append(f"{bi['name']}: " + ", ".join(f"{q}x{sz}" for sz, q in got.items()))
     if design_meta is not None:
         design_meta["pack_sizes_text"] = " | ".join(lines)[:1500]
+
+
+async def _delivery_quote_for(priced: List[Dict], goods_total: float) -> Dict:
+    """Basket preview: estimated UK delivery + the free options."""
+    from routers.delivery import get_settings as _ds, garment_weight_kg, quote
+    st = await _ds()
+    weight = sum(garment_weight_kg(p["product"], st) * p["total_qty"] for p in priced)
+    return await quote(weight, goods_total)
+
+
+async def _delivery_options_for(weighted: List, goods_total: float) -> List[Dict]:
+    """Stripe delivery choices for an order: weighted = [(product, qty), ...]."""
+    from routers.delivery import get_settings as _ds, garment_weight_kg, stripe_shipping_options
+    st = await _ds()
+    weight = sum(garment_weight_kg(p or {}, st) * int(q or 0) for p, q in weighted)
+    return await stripe_shipping_options(weight, goods_total)
 
 
 async def account_discount_for_request(request: Request) -> float:
@@ -1678,6 +1757,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         cancel_url=cancel_url,
         metadata=metadata,
         product_name="Your Own Print cart order",
+        shipping_options=await _delivery_options_for([(p["product"], p["total_qty"]) for p in priced], grand_total),
     )
 
     await db.payment_transactions.insert_one({
@@ -1749,6 +1829,7 @@ async def price_cart(payload: CartCheckoutRequest, request: Request):
         "total_qty": sum(p["total_qty"] for p in priced),
         "account_discount_pct": acct_pct,
         "account_saving": round(sum(p["account_saving"] for p in priced), 2),
+        "delivery": await _delivery_quote_for(priced, grand_total),
     }
 
 
@@ -3283,6 +3364,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         success_url=success_url, cancel_url=cancel_url,
         metadata=metadata,
         product_name="Leavers hoodie order",
+        shipping_options=await _delivery_options_for([({"name": "hoodie"}, total_qty)], total_amount),
     )
 
     artwork_id = None
@@ -4237,6 +4319,8 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         success_url=success_url, cancel_url=cancel_url,
         metadata=metadata,
         product_name="Workforce order",
+        shipping_options=await _delivery_options_for(
+            [(PRODUCTS.get(ln["product_id"]) or {}, ln["qty"]) for ln in valid_lines], total_amount),
     )
 
     artwork_doc_id = str(uuid.uuid4())
@@ -7874,6 +7958,7 @@ import routers.ralawise_import  # noqa: F401 - registers /admin/ralawise/* (Rala
 import routers.proof_maker  # noqa: F401 - registers /admin/proof/* (admin proof maker)
 import routers.bundles  # noqa: F401 - registers /admin/bundles/* (bundle set builder)
 import routers.supplier_status  # noqa: F401 - registers /admin/clearance/* (PenCarrie clearance check)
+import routers.delivery  # noqa: F401 - registers /delivery/info + /admin/delivery-settings
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move

@@ -11,6 +11,13 @@ export default function Returns() {
           usually need a design proof approved first, which we'll always confirm with you before
           production starts.
         </p>
+        <p>You choose how you&rsquo;d like your order on the checkout page:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li><strong>Collect from us in Leicester</strong> - free. We&rsquo;ll email you when it&rsquo;s ready.</li>
+          <li><strong>Free local delivery</strong> - Leicester postcodes LE1, LE2, LE3, LE4 and LE5.</li>
+          <li><strong>UK delivery</strong> - tracked, priced by the weight of your order (from £3.99), and
+            <strong> free on orders over £150</strong>. Delivery usually takes 3-7 working days after dispatch.</li>
+        </ul>
       </LegalSection>
 
       <LegalSection title="Personalised & custom items">

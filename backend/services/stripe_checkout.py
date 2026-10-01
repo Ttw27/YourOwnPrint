@@ -16,7 +16,7 @@ only need to rename `session.session_id` -> `session.id`.
 from __future__ import annotations
 
 import asyncio
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import stripe
 
@@ -33,6 +33,7 @@ async def create_checkout_session(
     cancel_url: str,
     metadata: Optional[Dict[str, str]] = None,
     product_name: str = "Your Own Print order",
+    shipping_options: Optional[List[Dict]] = None,
 ):
     """Creates a single-line-item Checkout Session for `amount` (major units, e.g. GBP)."""
     _configure(api_key)
@@ -53,12 +54,18 @@ async def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=metadata or {},
+        # Delivery choice (collect / local / UK by weight) + address + phone on
+        # Stripe's page - see routers/delivery.py.
+        **({"shipping_options": shipping_options,
+            "shipping_address_collection": {"allowed_countries": ["GB"]},
+            "phone_number_collection": {"enabled": True}} if shipping_options else {}),
     )
 
 
 async def get_checkout_status(api_key: str, session_id: str):
     _configure(api_key)
-    return await asyncio.to_thread(stripe.checkout.Session.retrieve, session_id)
+    return await asyncio.to_thread(stripe.checkout.Session.retrieve, session_id,
+                                   expand=["shipping_cost.shipping_rate"])
 
 
 def construct_webhook_event(payload: bytes, signature: str, webhook_secret: str):

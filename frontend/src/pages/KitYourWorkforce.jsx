@@ -425,7 +425,7 @@ export default function KitYourWorkforce() {
 
           <div className="mt-4 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-4 text-xs space-y-2">
             <div className="flex items-start gap-2"><Sparkles size={14} className="text-[#fbbf24] mt-0.5"/> <span><strong>Breast logo print</strong> included on every garment (no charge).</span></div>
-            <div className="flex items-start gap-2"><Truck size={14} className="text-[#fbbf24] mt-0.5"/> <span>Free UK delivery on orders over £50. 7–10 working days for most kits.</span></div>
+            <div className="flex items-start gap-2"><Truck size={14} className="text-[#fbbf24] mt-0.5"/> <span>Free UK delivery on orders over £150. 7–10 working days for most kits.</span></div>
           </div>
         </aside>
       </div>

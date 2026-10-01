@@ -1008,3 +1008,13 @@ export async function adminSaveDesignGarments(garments) {
   const { data } = await api.put("/admin/design-shop/garments", { garments });
   return data;
 }
+
+// ---- Delivery (rates by weight, free local/collection) ----
+export async function adminGetDeliverySettings() {
+  const { data } = await api.get("/admin/delivery-settings");
+  return data;
+}
+export async function adminSaveDeliverySettings(values) {
+  const { data } = await api.put("/admin/delivery-settings", values);
+  return data;
+}

@@ -119,6 +119,14 @@ export default function CartDrawer() {
                 <span className="text-[#4b5563]">Items ({priced.total_qty})</span>
                 <span className="font-extrabold">£{priced.grand_total.toFixed(2)}</span>
               </div>
+              {priced.delivery && (
+                <div className="text-[11px] text-[#4b5563] bg-[#f9fafb] rounded-xl p-2.5" data-testid="cart-drawer-delivery">
+                  <div className="font-extrabold text-[#1a1a1a]">Delivery - choose at checkout:</div>
+                  <div>UK delivery: {priced.delivery.uk_price > 0 ? `£${Number(priced.delivery.uk_price).toFixed(2)}` : "FREE"}{priced.delivery.uk_price > 0 && priced.delivery.free_over > 0 ? ` (free over £${Number(priced.delivery.free_over).toFixed(0)})` : ""}</div>
+                  {priced.delivery.local_postcodes?.length > 0 && <div>Free local delivery: Leicester {priced.delivery.local_postcodes.join(", ")}</div>}
+                  {priced.delivery.collection && <div>Free collection from us in Leicester</div>}
+                </div>
+              )}
               {priced.account_saving > 0 && (
                 <div className="flex items-center justify-between text-sm text-[#166534] font-bold" data-testid="cart-drawer-account-discount">
                   <span>Includes your {priced.account_discount_pct}% regular-customer discount</span>

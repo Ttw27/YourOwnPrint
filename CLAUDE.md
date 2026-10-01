@@ -190,6 +190,12 @@ frontend/src/
 - **Design Your Own products** (`designer_enabled`) are sold ONLY through the designer: `/product/:id`
   redirects to `/design?product=:id`. For a garment that should also be sold normally, duplicate it first.
 
+- **Delivery** (`routers/delivery.py`, Admin > Configurator prices > Delivery): chosen on Stripe's
+  checkout page via `shipping_options` passed by ALL 4 checkout paths (`_delivery_options_for`):
+  free collection, free local (LE1-LE5, checked after payment -> warning on the order), UK by
+  total weight (garment weights by name keyword) with bands + extra 25kg boxes, free over £150.
+  Stripe collects address + phone; `_capture_delivery` saves them on the order (`delivery`) + emails.
+
 - **Regular-customer discounts** (Admin > Customers, `customers.discount_pct`, max 50): % off the
   GARMENT price only (print full price), on top of bulk tiers, never on bundles. Applied server-side
   in `_resolve_line_pricing(account_discount_pct=...)` from `account_discount_for_request()` (reads
