@@ -14,8 +14,9 @@ use themselves (account required + a monthly cap).
 from __future__ import annotations
 
 import base64
+import logging
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, Optional
 
 import httpx
 from fastapi import Depends, HTTPException
@@ -94,11 +95,20 @@ async def designer_remove_bg(payload: Dict, customer: Dict = Depends(require_cus
     except Exception:
         raise HTTPException(400, "image_base64 is not valid base64")
     if len(raw) > 22 * 1024 * 1024:
-        raise HTTPException(413, "Image exceeds 22MB (remove.bg limit)")
+        raise HTTPException(413, "Image exceeds 22MB")
+    # Cutout.pro first (cheaper per image, and the same key runs the AI effects);
+    # remove.bg if that's the only key set, or as a fallback if Cutout.pro fails.
+    cutout_key = await _get_integration_value("cutoutpro_api_key")
     api_key = await _get_integration_value("removebg_api_key")
-    if not api_key:
-        raise HTTPException(503, "remove.bg API key not configured - paste it in /admin/integrations")
+    if not cutout_key and not api_key:
+        raise HTTPException(503, "Background removal isn't set up - add a Cutout.pro (or remove.bg) key in Admin > Integrations")
     remaining = await _check_and_record_ai_usage(customer["id"])
+    if cutout_key:
+        out = await _cutout_remove_bg(raw, cutout_key)
+        if out:
+            return {"image_base64": f"data:image/png;base64,{out}", "ai_uses_remaining": remaining}
+        if not api_key:
+            raise HTTPException(502, "Background removal didn't work on that image - please try another")
     try:
         async with httpx.AsyncClient(timeout=45.0) as http:
             resp = await http.post(
@@ -119,6 +129,34 @@ async def designer_remove_bg(payload: Dict, customer: Dict = Depends(require_cus
         raise HTTPException(resp.status_code, f"remove.bg: {detail}")
     out_b64 = base64.b64encode(resp.content).decode("ascii")
     return {"image_base64": f"data:image/png;base64,{out_b64}", "ai_uses_remaining": remaining}
+
+
+async def _cutout_remove_bg(raw: bytes, key: str) -> Optional[str]:
+    """Cutout.pro background removal (general objects - logos, photos, products).
+    Returns base64 PNG, or None if it failed (caller may fall back to remove.bg)."""
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as http:
+            resp = await http.post("https://www.cutout.pro/api/v1/matting",
+                                   params={"mattingType": "6"},
+                                   files={"file": ("upload.png", raw, "image/png")},
+                                   headers={"APIKEY": key})
+    except Exception as e:
+        logging.warning(f"Cutout.pro remove-bg failed: {e}")
+        return None
+    if resp.status_code != 200:
+        logging.warning(f"Cutout.pro remove-bg HTTP {resp.status_code}: {resp.text[:160]}")
+        return None
+    if "json" in (resp.headers.get("content-type") or ""):
+        try:
+            j = resp.json()
+            b = (j.get("data") or {}).get("imageBase64")
+            if b:
+                return b
+            logging.warning(f"Cutout.pro remove-bg: {str(j)[:160]}")
+        except Exception:
+            pass
+        return None
+    return base64.b64encode(resp.content).decode("ascii") if resp.content else None
 
 
 # ---------------------------------------------------------------------------
