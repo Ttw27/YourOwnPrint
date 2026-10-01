@@ -28,7 +28,7 @@ export default function DesignerBanner({ image }) {
             <span className="w-2.5 h-2.5 rounded-full bg-[#f87171]" /><span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24]" /><span className="w-2.5 h-2.5 rounded-full bg-[#4ade80]" />
             <span className="ml-3 text-[11px] text-[#9ca3af] font-bold truncate">yourownprint.co.uk/design</span>
           </div>
-          <img src={mediaUrl(image)} alt="Our online designer - a logo placed on a royal blue t-shirt" loading="lazy" className="w-full h-auto block" />
+          <img src={mediaUrl(image)} alt="Our online designer - a logo placed on a navy t-shirt" loading="lazy" className="w-full h-auto block" />
         </Link>
         <div className="text-center min-w-0">
           <div className="font-nunito font-black text-xl sm:text-2xl tracking-wide text-[#1a1a1a]">DESIGN IT YOURSELF WITH</div>
