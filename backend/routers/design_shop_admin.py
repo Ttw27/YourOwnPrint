@@ -123,6 +123,7 @@ async def list_designs(offset: int = 0, limit: int = 60):
             "categories": p.get("design_categories") or [],
             "garments": p.get("design_garments") or [],
             "placement": p.get("design_placement") or {},
+            "hidden_colours": p.get("design_hidden_colours") or [],
             "active": p.get("active", True),
         } for p in page],
         "total": total, "offset": offset,
@@ -171,3 +172,22 @@ async def set_design_placement(pid: str, payload: PlacementIn):
     await db.imported_products.update_one({"id": pid}, {"$set": {"design_placement": pl}})
     p["design_placement"] = pl
     return {"ok": True, "placement": pl}
+
+
+class DesignColoursIn(BaseModel):
+    hidden: List[str] = []   # colour names this design is NOT sold in (on any garment)
+
+
+@api_router.put("/admin/design-shop/{pid}/colours", dependencies=[Depends(require_admin)])
+async def set_design_colours(pid: str, payload: DesignColoursIn):
+    """Switch colours off for one design - e.g. a design with black text
+    shouldn't be sold on black garments."""
+    from fastapi import HTTPException
+    from server import PRODUCTS
+    p = PRODUCTS.get(pid)
+    if not p or not p.get("design_shop"):
+        raise HTTPException(404, "Design not found")
+    hidden = sorted({str(c).strip() for c in payload.hidden if str(c).strip()})[:100]
+    await db.imported_products.update_one({"id": pid}, {"$set": {"design_hidden_colours": hidden}})
+    p["design_hidden_colours"] = hidden
+    return {"ok": True, "hidden": hidden}

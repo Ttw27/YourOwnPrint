@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Sparkles, Loader2, Upload, Trash2, Check, Maximize2, X } from "lucide-react";
-import { uploadDesignImage, createDesign, listDesigns, deleteDesign, adminGetDesignGarments, adminSaveDesignGarments, fetchDesignShopProduct, adminSetDesignPlacement } from "../lib/api";
+import { uploadDesignImage, createDesign, listDesigns, deleteDesign, adminGetDesignGarments, adminSaveDesignGarments, fetchDesignShopProduct, adminSetDesignPlacement, adminSetDesignColours } from "../lib/api";
 import { DesignMockup } from "./DesignShopProduct";
 
 const GARMENTS = [
@@ -272,9 +272,26 @@ function AdjustSize({ design, onClose }) {
   const [scope, setScope] = useState("all");     // "all" | "this"
   const [vals, setVals] = useState({ scale: 100, y: 0 });
   const [saving, setSaving] = useState(false);
+  const [hiddenCols, setHiddenCols] = useState(design.hidden_colours || []);
+  const [savingCols, setSavingCols] = useState(false);
+  const allColours = React.useMemo(() => {
+    const seen = new Map();
+    (data?.garments || []).forEach((g) => g.colours.forEach((c) => { if (!seen.has(c.name)) seen.set(c.name, c.hex); }));
+    return [...seen.entries()].map(([name, hex]) => ({ name, hex }));
+  }, [data]);
+  const toggleCol = (name) => setHiddenCols((h) => (h.includes(name) ? h.filter((x) => x !== name) : [...h, name]));
+  const saveCols = async () => {
+    setSavingCols(true);
+    try {
+      const r = await adminSetDesignColours(design.id, hiddenCols);
+      design.hidden_colours = r.hidden;
+      toast.success(r.hidden.length ? `Not sold in: ${r.hidden.join(", ")}` : "Sold in every colour");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setSavingCols(false); }
+  };
 
   useEffect(() => {
-    fetchDesignShopProduct(design.id)
+    fetchDesignShopProduct(design.id, { includeHidden: true })
       .then((d) => { setData(d); setSlug(d.garments[0]?.slug || ""); })
       .catch(() => setErr("This design is hidden or has no garments set up, so there's nothing to preview."));
   }, [design.id]);
@@ -283,7 +300,7 @@ function AdjustSize({ design, onClose }) {
   useEffect(() => {
     if (!slug) return;
     setVals(current(slug));
-    setScope(placement[slug] ? "this" : "all");
+    setScope("this");   // saves to the garment you're looking at unless you pick "all"
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const garment = data?.garments.find((g) => g.slug === slug);
@@ -367,6 +384,25 @@ function AdjustSize({ design, onClose }) {
                 {placement[slug] && <button onClick={resetThis} className="text-xs font-bold text-[#4b5563] hover:underline">Use the all-garments setting for this one</button>}
               </div>
               <p className="text-[11px] text-[#4b5563] mt-3">A dot (•) on a garment means it has its own setting.</p>
+            </div>
+            <div className="md:col-span-2 border-t-2 border-[#f3e8ff] pt-5" data-testid="design-colours">
+              <div className="font-black text-lg">Colours this design is sold in</div>
+              <p className="text-xs text-[#4b5563] mt-0.5">Untick any colour the design doesn&rsquo;t work on (e.g. black text on black). It&rsquo;s taken off every garment for this design only.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {allColours.map((c) => {
+                  const on = !hiddenCols.includes(c.name);
+                  return (
+                    <button key={c.name} type="button" onClick={() => toggleCol(c.name)} data-testid={`design-colour-${c.name}`}
+                      className={`px-3 py-1 rounded-full text-xs font-extrabold border-2 inline-flex items-center gap-1.5 ${on ? "bg-[#a855f7] border-[#a855f7] text-white" : "bg-white border-[#e5e7eb] text-[#9ca3af] line-through"}`}>
+                      <span className="w-3 h-3 rounded-full border border-black/20" style={{ background: c.hex || "#ccc" }} />
+                      {on ? "✓ " : ""}{c.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={saveCols} disabled={savingCols} className="mt-3 inline-flex items-center gap-2 bg-[#a855f7] hover:bg-[#9333ea] disabled:opacity-40 text-white font-extrabold px-5 py-2 rounded-full text-sm" data-testid="design-colours-save">
+                {savingCols ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save colours
+              </button>
             </div>
           </div>
         )}

@@ -152,6 +152,8 @@ frontend/src/
   Checkout prices from `design_meta.garment` (`resolve_design_garment`); sizes/colours from the linked garment.
   Per-design size/height (`design_placement`, {"all"|garment: {scale, y}}) set via "Adjust size" in
   Admin > Design Shop; used by the mockup and noted on the order (`design_meta.print_size`).
+  `design_hidden_colours` (same window): colour names a design is not sold in, on any garment;
+  filtered from /design-shop/product and refused at checkout.
 
 - **Hidden products.** Products are never deleted — they're hidden with `active: False`
   (stored on the `imported_products` doc for supplier products, or in `product_overrides`

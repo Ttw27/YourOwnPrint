@@ -988,12 +988,16 @@ export async function adminSetCustomerDiscount(customerId, discountPct) {
 }
 
 // ---- Design Shop: one design + garments (mockup data); admin garment settings ----
-export async function fetchDesignShopProduct(id) {
-  const { data } = await api.get(`/design-shop/product/${id}`);
+export async function fetchDesignShopProduct(id, opts = {}) {
+  const { data } = await api.get(`/design-shop/product/${id}`, { params: opts.includeHidden ? { include_hidden: true } : {} });
   return data;
 }
 export async function adminGetDesignGarments() {
   const { data } = await api.get("/admin/design-shop/garments");
+  return data;
+}
+export async function adminSetDesignColours(id, hidden) {
+  const { data } = await api.put(`/admin/design-shop/${id}/colours`, { hidden });
   return data;
 }
 export async function adminSetDesignPlacement(id, body) {

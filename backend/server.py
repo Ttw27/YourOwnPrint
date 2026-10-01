@@ -1459,6 +1459,9 @@ async def _resolve_line_pricing(
         colour_names = [(c.get("name") if isinstance(c, dict) else c) for c in (dg["base"].get("colors") or [])]
         if colour_names and color not in colour_names:
             raise HTTPException(400, f"Please choose a colour for {product.get('name')}")
+        if color in (product.get("design_hidden_colours") or []) and \
+                any(c not in (product.get("design_hidden_colours") or []) for c in colour_names):
+            raise HTTPException(400, f"Sorry, {product.get('name')} isn't available in {color} - please pick another colour.")
         from routers.design_shop import placement_for
         design_meta = {**(design_meta or {}), "garment": dg["slug"], "garment_name": dg["title"],
                        "print_size": placement_for(product, dg["slug"]),
@@ -6768,6 +6771,8 @@ def _apply_imported_product(doc: Dict) -> None:
         # Design Shop: how big / how high the design sits in the garment's print
         # area, {"all"|garment slug: {"scale": %, "y": %}} (Admin > Design Shop).
         "design_placement": doc.get("design_placement") or {},
+        # Colours this design is NOT sold in (e.g. black text -> no black garments).
+        "design_hidden_colours": doc.get("design_hidden_colours") or [],
         "created_at": doc.get("created_at") or doc.get("imported_at") or "",
         "_imported": True,
         "_source": doc.get("source") or "manual",

@@ -190,7 +190,7 @@ async def design_shop_products(
 
 
 @api_router.get("/design-shop/product/{pid}")
-async def design_shop_product(pid: str):
+async def design_shop_product(pid: str, include_hidden: bool = False):
     """One design + the garments it can be bought on, each with the real
     garment's colours (and per-colour photo + print area for the mockup) and
     sizes. Garment types with no real garment linked yet are left out."""
@@ -206,8 +206,15 @@ async def design_shop_product(pid: str):
         if not g or not base or not (base.get("sizes") or []):
             continue
         by_colour = base.get("designer_images_by_colour") or {}
+        hidden = set(p.get("design_hidden_colours") or [])
         colours = [{"name": _colour_name(c), "hex": (c.get("hex") if isinstance(c, dict) else None),
-                    "photo": by_colour.get(_colour_name(c)) or ""} for c in (base.get("colors") or [])]
+                    "photo": by_colour.get(_colour_name(c)) or "", "hidden": _colour_name(c) in hidden}
+                   for c in (base.get("colors") or [])]
+        if not include_hidden:
+            # Colours switched off for this design (Admin > Design Shop > Adjust)
+            # - never all of them, so a garment can't end up with none.
+            shown = [c for c in colours if not c["hidden"]]
+            colours = shown or colours
         garments.append({
             "slug": slug, "title": g["title"], "price": g["price"],
             "placement": placement_for(p, slug),
