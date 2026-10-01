@@ -16,6 +16,9 @@ export default function CartDrawer() {
   const { isDrawerOpen, closeDrawer, items, priced, pricing, setLineQty, removeLine, clear } = useCart();
   const { customer } = useCustomerAuth();
   const [checkingOut, setCheckingOut] = useState(false);
+  // Where the order's going - decides which delivery prices / countries Stripe offers.
+  const [region, setRegionState] = useState(() => { try { return localStorage.getItem("yop_delivery_region") || "uk"; } catch { return "uk"; } });
+  const setRegion = (r) => { setRegionState(r); try { localStorage.setItem("yop_delivery_region", r); } catch { /* storage blocked */ } };
   const navigate = useNavigate();
 
   if (!isDrawerOpen) return null;
@@ -26,7 +29,8 @@ export default function CartDrawer() {
     try {
       const payload = items.map(({ product_id, size_qtys, color, placements, blank, design_meta }) =>
         ({ product_id, size_qtys, color, placements, blank, design_meta }));
-      const { url } = await createCartCheckout(payload, customer?.email);
+      const intl = priced.delivery?.international || {};
+      const { url } = await createCartCheckout(payload, customer?.email, intl[region] != null ? region : "uk");
       if (url) window.location.href = url;
     } catch (e) { toast.error(e?.response?.data?.detail || "Checkout failed"); }
     finally { setCheckingOut(false); }
@@ -121,10 +125,29 @@ export default function CartDrawer() {
               </div>
               {priced.delivery && (
                 <div className="text-[11px] text-[#4b5563] bg-[#f9fafb] rounded-xl p-2.5" data-testid="cart-drawer-delivery">
-                  <div className="font-extrabold text-[#1a1a1a]">Delivery - choose at checkout:</div>
-                  <div>UK delivery: {priced.delivery.uk_price > 0 ? `£${Number(priced.delivery.uk_price).toFixed(2)}` : "FREE"}{priced.delivery.uk_price > 0 && priced.delivery.free_over > 0 ? ` (free over £${Number(priced.delivery.free_over).toFixed(0)})` : ""}</div>
-                  {priced.delivery.local_postcodes?.length > 0 && <div>Free local delivery: Leicester {priced.delivery.local_postcodes.join(", ")}</div>}
-                  {priced.delivery.collection && <div>Free collection from us in Leicester</div>}
+                  {Object.values(priced.delivery.international || {}).some((v) => v != null) && (
+                    <label className="flex items-center justify-between gap-2 mb-1.5 font-extrabold text-[#1a1a1a]">
+                      Delivering to
+                      <select value={region} onChange={(e) => setRegion(e.target.value)} className="border border-[#e5e7eb] rounded-lg px-2 py-1 bg-white text-[12px]" data-testid="cart-delivery-region">
+                        <option value="uk">United Kingdom</option>
+                        {priced.delivery.international.europe != null && <option value="europe">Europe</option>}
+                        {priced.delivery.international.world != null && <option value="world">Rest of the world</option>}
+                      </select>
+                    </label>
+                  )}
+                  {region !== "uk" && priced.delivery.international?.[region] != null ? (
+                    <>
+                      <div className="font-extrabold text-[#1a1a1a]">{region === "europe" ? "Europe" : "Worldwide"} tracked delivery: £{Number(priced.delivery.international[region]).toFixed(2)}</div>
+                      <div>Import taxes or duties may be charged by your country on arrival.</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-extrabold text-[#1a1a1a]">Delivery - choose at checkout:</div>
+                      <div>UK delivery: {priced.delivery.uk_price > 0 ? `£${Number(priced.delivery.uk_price).toFixed(2)}` : "FREE"}{priced.delivery.uk_price > 0 && priced.delivery.free_over > 0 ? ` (free over £${Number(priced.delivery.free_over).toFixed(0)})` : ""}</div>
+                      {priced.delivery.local_postcodes?.length > 0 && <div>Free local delivery: Leicester {priced.delivery.local_postcodes.join(", ")}</div>}
+                      {priced.delivery.collection && <div>Free collection from us in Leicester</div>}
+                    </>
+                  )}
                 </div>
               )}
               {priced.account_saving > 0 && (

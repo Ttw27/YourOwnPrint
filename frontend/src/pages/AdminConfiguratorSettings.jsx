@@ -125,6 +125,10 @@ function DeliveryCard() {
         free_over: Number(s.free_over) || 0, bands: s.bands.map(([kg, p]) => [Number(kg), Number(p)]),
         box_kg: Number(s.box_kg) || 25, extra_box_price: Number(s.extra_box_price) || 0,
         weights: Object.fromEntries(Object.entries(s.weights).map(([k, v]) => [k, Number(v) || 0])),
+        international_enabled: !!s.international_enabled,
+        zones: Object.fromEntries(Object.entries(s.zones || {}).map(([k, z]) => [k, {
+          bands: z.bands.map(([kg, p]) => [Number(kg), Number(p)]), box_kg: Number(z.box_kg) || 20, extra_box_price: Number(z.extra_box_price) || 0,
+        }])),
       });
       setS(d); toast.success("Delivery saved - live now");
     } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
@@ -152,6 +156,24 @@ function DeliveryCard() {
       </div>
       <div className="mt-2 text-sm flex flex-wrap items-center gap-2">Heavier than that: each extra <input type="number" value={s.box_kg} onChange={(e) => set({ box_kg: e.target.value })} className={inp + " w-16"} /> kg box costs £<input type="number" step="0.01" value={s.extra_box_price} onChange={(e) => set({ extra_box_price: e.target.value })} className={inp + " w-24"} /></div>
       <div className="mt-2 text-sm flex items-center gap-2">Free UK delivery on orders over £<input type="number" value={s.free_over} onChange={(e) => set({ free_over: e.target.value })} className={inp + " w-24"} /> <span className="text-xs text-[#4b5563]">(0 = never free)</span></div>
+      <div className="mt-5 border-t-2 border-[#f0fdf4] pt-4">
+        <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={!!s.international_enabled} onChange={(e) => set({ international_enabled: e.target.checked })} /> International delivery (customer picks Europe / Rest of the world in the basket)</label>
+        {s.international_enabled && Object.entries(s.zones || {}).map(([key, z]) => {
+          const setZ = (patch) => set({ zones: { ...s.zones, [key]: { ...z, ...patch } } });
+          return (
+            <div key={key} className="mt-3 bg-[#f8fafc] rounded-2xl p-3" data-testid={`delivery-zone-${key}`}>
+              <div className="text-sm font-black">{key === "europe" ? "Europe" : "Rest of the world"} <span className="text-xs font-normal text-[#4b5563]">({(z.countries || []).length} countries)</span></div>
+              {z.bands.map(([kg, p], i) => (
+                <div key={i} className="flex items-center gap-2 text-sm mt-1">
+                  up to <input type="number" step="0.5" value={kg} onChange={(e) => setZ({ bands: z.bands.map((b, j) => (j === i ? [e.target.value, b[1]] : b)) })} className={inp + " w-20"} /> kg
+                  = £<input type="number" step="0.01" value={p} onChange={(e) => setZ({ bands: z.bands.map((b, j) => (j === i ? [b[0], e.target.value] : b)) })} className={inp + " w-24"} />
+                </div>
+              ))}
+              <div className="mt-1 text-sm flex flex-wrap items-center gap-2">Heavier: each extra <input type="number" value={z.box_kg} onChange={(e) => setZ({ box_kg: e.target.value })} className={inp + " w-16"} /> kg box £<input type="number" step="0.01" value={z.extra_box_price} onChange={(e) => setZ({ extra_box_price: e.target.value })} className={inp + " w-24"} /></div>
+            </div>
+          );
+        })}
+      </div>
       <details className="mt-4">
         <summary className="text-sm font-bold cursor-pointer">Garment weights (kg) - matched on the product name</summary>
         <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">

@@ -50,7 +50,7 @@ export default function FreeLogoDesign() {
           ))}
         </div>
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link to="/contact" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-6 py-3">Start my free logo <ArrowRight size={16} /></Link>
+          <Link to="/contact?topic=logo" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-6 py-3">Start my free logo <ArrowRight size={16} /></Link>
           <Link to="/easy-ordering" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] font-extrabold rounded-full px-6 py-3">Message us on WhatsApp</Link>
         </div>
       </section>

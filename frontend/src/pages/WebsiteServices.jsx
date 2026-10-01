@@ -12,12 +12,12 @@ import { Check, Globe, ShoppingCart, Megaphone, Package, ArrowRight } from "luci
  */
 const WEBSITES = [
   {
-    icon: Globe, name: "Business website", price: "£200", note: "one-off",
+    icon: Globe, name: "Business website", service: "website", price: "£200", note: "one-off",
     blurb: "A clean, professional website so customers can find you, see what you do and get in touch.",
     points: ["Up to 5 pages - home, about, services, gallery, contact", "Mobile-friendly design in your brand colours", "Contact form + click-to-call / WhatsApp", "Help registering your domain name", "Basic Google (SEO) setup", "You own it all - website, domain and content"],
   },
   {
-    icon: ShoppingCart, name: "Full e-commerce shop", price: "£1,000+", note: "quoted to your needs",
+    icon: ShoppingCart, name: "Full e-commerce shop", service: "ecommerce", price: "£1,000+", note: "quoted to your needs",
     blurb: "A proper online shop to sell your products, take card payments and manage orders.",
     points: ["Product catalogue with photos, sizes and variants", "Secure card payments (Stripe / PayPal)", "Basket, checkout, delivery options and order emails", "Admin area to add products and manage orders", "SEO setup so your products can be found", "You own it all - no monthly platform fees to us"],
   },
@@ -54,7 +54,7 @@ export default function WebsiteServices() {
               <ul className="mt-4 space-y-1.5 text-sm flex-1">
                 {w.points.map((p) => <li key={p} className="flex gap-2"><Check size={16} className="text-[#16a34a] flex-shrink-0 mt-0.5" />{p}</li>)}
               </ul>
-              <Link to="/business-enquiry" className="mt-5 inline-flex items-center justify-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-6 py-3">Get started <ArrowRight size={16} /></Link>
+              <Link to={`/business-enquiry?service=${w.service}`} className="mt-5 inline-flex items-center justify-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-6 py-3">Get started <ArrowRight size={16} /></Link>
             </div>
           ))}
         </div>
@@ -72,7 +72,7 @@ export default function WebsiteServices() {
                 <li key={p} className="flex gap-2"><Check size={16} className="text-[#7bc67e] flex-shrink-0 mt-0.5" />{p}</li>
               ))}
             </ul>
-            <Link to="/business-enquiry" className="mt-5 inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold rounded-full px-6 py-3">Ask about ads <ArrowRight size={16} /></Link>
+            <Link to="/business-enquiry?service=ads" className="mt-5 inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold rounded-full px-6 py-3">Ask about ads <ArrowRight size={16} /></Link>
           </div>
         </div>
       </section>
@@ -83,7 +83,7 @@ export default function WebsiteServices() {
           <div>
             <h2 className="font-black text-3xl">White label printing</h2>
             <p className="text-[#4b5563] mt-2 max-w-3xl">Run your own clothing or print business? We&rsquo;ll print and send orders on your behalf - to you or straight to your customers - with no Your Own Print branding. Include your own invoice or packing slip and add your own markup.</p>
-            <Link to="/business-enquiry" className="mt-5 inline-flex items-center gap-2 border-2 border-[#1a1a1a] font-extrabold rounded-full px-6 py-3">Talk to us about white label <ArrowRight size={16} /></Link>
+            <Link to="/business-enquiry?service=white-label" className="mt-5 inline-flex items-center gap-2 border-2 border-[#1a1a1a] font-extrabold rounded-full px-6 py-3">Talk to us about white label <ArrowRight size={16} /></Link>
           </div>
         </div>
       </section>

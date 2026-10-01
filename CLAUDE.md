@@ -195,6 +195,8 @@ frontend/src/
   free collection, free local (LE1-LE5, checked after payment -> warning on the order), UK by
   total weight (garment weights by name keyword) with bands + extra 25kg boxes, free over £150.
   Stripe collects address + phone; `_capture_delivery` saves them on the order (`delivery`) + emails.
+  International: the basket's "Delivering to" (uk/europe/world) is sent as `delivery_region`; Stripe then
+  gets ONLY that zone's price and `allowed_countries` (zones in delivery.DEFAULTS["zones"], editable).
 
 - **Regular-customer discounts** (Admin > Customers, `customers.discount_pct`, max 50): % off the
   GARMENT price only (print full price), on top of bulk tiers, never on bundles. Applied server-side

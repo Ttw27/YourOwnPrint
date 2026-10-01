@@ -46,6 +46,28 @@ DEFAULTS: Dict = {
         "towel": 0.5, "sock": 0.1,
     },
     "default_weight": 0.4,
+    # International - the customer picks the region in the basket; Stripe's
+    # checkout then only offers that region's price and only accepts addresses
+    # in its countries. Prices based on Royal Mail International Tracked
+    # (Europe) and UPS Worldwide Economy via a broker (rest of world), Oct 2026.
+    "international_enabled": True,
+    "zones": {
+        "europe": {
+            "label": "Europe tracked delivery", "days": [5, 10],
+            "bands": [[1, 14.99], [2, 17.99], [5, 22.99], [10, 29.99], [20, 44.99]],
+            "box_kg": 20, "extra_box_price": 39.99,
+            "countries": ["IE", "FR", "DE", "NL", "BE", "LU", "ES", "PT", "IT", "AT", "DK", "SE", "FI", "NO",
+                          "CH", "PL", "CZ", "SK", "HU", "SI", "HR", "RO", "BG", "GR", "CY", "MT", "EE", "LV",
+                          "LT", "IS", "LI", "MC", "AD", "SM", "GI"],
+        },
+        "world": {
+            "label": "Worldwide tracked delivery", "days": [6, 14],
+            "bands": [[1, 19.99], [2, 24.99], [5, 34.99], [10, 49.99], [20, 79.99]],
+            "box_kg": 20, "extra_box_price": 69.99,
+            "countries": ["US", "CA", "AU", "NZ", "JP", "SG", "HK", "AE", "SA", "QA", "KW", "BH", "OM", "IL",
+                          "ZA", "IN", "MY", "KR", "TW", "TH", "PH", "MX", "BR"],
+        },
+    },
 }
 
 
@@ -53,6 +75,8 @@ async def get_settings() -> Dict:
     doc = await db.settings.find_one({"key": SETTINGS_KEY}) or {}
     out = {**DEFAULTS, **{k: v for k, v in (doc.get("values") or {}).items() if k in DEFAULTS}}
     out["weights"] = {**DEFAULTS["weights"], **((doc.get("values") or {}).get("weights") or {})}
+    out["zones"] = {k: {**v, **(((doc.get("values") or {}).get("zones") or {}).get(k) or {})}
+                    for k, v in DEFAULTS["zones"].items()}
     return out
 
 
@@ -74,6 +98,23 @@ def garment_weight_kg(product: Dict, s: Dict) -> float:
     return float(s.get("default_weight") or 0.4)
 
 
+def band_price(weight_kg: float, bands_in, box_kg: float, extra_box_price: float) -> float:
+    bands = sorted([(float(k), float(p)) for k, p in bands_in])
+    for kg, price in bands:
+        if weight_kg <= kg:
+            return price
+    top_kg, top_price = bands[-1]
+    extra_boxes = math.ceil((weight_kg - top_kg) / float(box_kg or 20))
+    return round(top_price + extra_boxes * float(extra_box_price or 0), 2)
+
+
+def zone_price(zone: str, weight_kg: float, s: Dict) -> Optional[float]:
+    z = (s.get("zones") or {}).get(zone)
+    if not z or not s.get("international_enabled"):
+        return None
+    return band_price(weight_kg, z["bands"], z.get("box_kg") or 20, z.get("extra_box_price") or 0)
+
+
 def uk_price(weight_kg: float, goods_total: float, s: Dict) -> float:
     if s.get("free_over") and goods_total >= float(s["free_over"]):
         return 0.0
@@ -89,13 +130,15 @@ def uk_price(weight_kg: float, goods_total: float, s: Dict) -> float:
 async def quote(weight_kg: float, goods_total: float) -> Dict:
     s = await get_settings()
     return {"weight_kg": round(weight_kg, 2), "uk_price": uk_price(weight_kg, goods_total, s),
+            "international": {z: zone_price(z, weight_kg, s) for z in (s.get("zones") or {})} if s.get("international_enabled") else {},
             "free_over": s.get("free_over") or 0,
             "local_postcodes": s["local_postcodes"] if s.get("local_enabled") else [],
             "collection": bool(s.get("collection_enabled"))}
 
 
-async def stripe_shipping_options(weight_kg: float, goods_total: float) -> List[Dict]:
-    """The delivery choices shown on Stripe's checkout page."""
+async def stripe_shipping_options(weight_kg: float, goods_total: float, region: str = "uk") -> List[Dict]:
+    """The delivery choices shown on Stripe's checkout page (for the region the
+    customer picked in the basket)."""
     s = await get_settings()
     uk = uk_price(weight_kg, goods_total, s)
 
@@ -107,6 +150,11 @@ async def stripe_shipping_options(weight_kg: float, goods_total: float) -> List[
                                       "maximum": {"unit": "business_day", "value": hi}}
         return {"shipping_rate_data": d}
 
+    zp = zone_price(region, weight_kg, s) if region and region != "uk" else None
+    if zp is not None:
+        z = s["zones"][region]
+        lo, hi = (z.get("days") or [5, 12])[:2]
+        return [opt(z.get("label") or "International tracked delivery", zp, lo, hi)]
     out = [opt(("UK delivery - FREE" if uk == 0 else "UK delivery (tracked)"), uk, 3, 7)]
     if s.get("local_enabled") and s.get("local_postcodes"):
         out.append(opt(f"Free local delivery - Leicester {', '.join(s['local_postcodes'])} only", 0))
@@ -119,6 +167,13 @@ def postcode_district(postcode: str) -> str:
     """'LE2 7AB' / 'le27ab' -> 'LE2'."""
     pc = re.sub(r"\s+", "", (postcode or "").upper())
     return pc[:-3] if len(pc) > 3 else pc
+
+
+async def allowed_countries(region: str = "uk") -> List[str]:
+    s = await get_settings()
+    if region and region != "uk" and s.get("international_enabled") and region in (s.get("zones") or {}):
+        return list(s["zones"][region]["countries"])
+    return ["GB"]
 
 
 async def local_ok(postcode: str) -> bool:
@@ -137,7 +192,9 @@ async def delivery_info():
     s = await get_settings()
     return {"collection": s["collection_enabled"], "local_postcodes": s["local_postcodes"] if s["local_enabled"] else [],
             "free_over": s["free_over"], "bands": s["bands"], "box_kg": s["box_kg"],
-            "extra_box_price": s["extra_box_price"]}
+            "extra_box_price": s["extra_box_price"],
+            "international": ({k: {"label": z.get("label"), "bands": z["bands"], "days": z.get("days")}
+                               for k, z in (s.get("zones") or {}).items()} if s.get("international_enabled") else {})}
 
 
 @api_router.get("/admin/delivery-settings", dependencies=[Depends(require_admin)])
@@ -163,6 +220,21 @@ async def admin_save_delivery(payload: Dict):
                 vals[k] = max(0.0, float(vals[k]))
             except (TypeError, ValueError):
                 raise HTTPException(400, f"{k} must be a number")
+    if "zones" in vals:
+        clean = {}
+        for k, z in (vals["zones"] or {}).items():
+            if k not in DEFAULTS["zones"]:
+                continue
+            zz = {}
+            if "bands" in z:
+                zz["bands"] = sorted([[float(a), round(float(b), 2)] for a, b in z["bands"] if float(a) > 0])
+            for f in ("box_kg", "extra_box_price"):
+                if f in z:
+                    zz[f] = max(0.0, float(z[f]))
+            if "label" in z:
+                zz["label"] = str(z["label"])[:80]
+            clean[k] = zz
+        vals["zones"] = clean
     if "weights" in vals:
         vals["weights"] = {str(k).lower().strip(): float(v) for k, v in (vals["weights"] or {}).items() if str(k).strip()}
     doc = await db.settings.find_one({"key": SETTINGS_KEY}) or {}

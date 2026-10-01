@@ -17,6 +17,8 @@ export default function Returns() {
           <li><strong>Free local delivery</strong> - Leicester postcodes LE1, LE2, LE3, LE4 and LE5.</li>
           <li><strong>UK delivery</strong> - tracked, priced by the weight of your order (from £3.99), and
             <strong> free on orders over £150</strong>. Delivery usually takes 3-7 working days after dispatch.</li>
+          <li><strong>Europe and worldwide</strong> - tracked, priced by weight (Europe from £14.99, rest of the world from £19.99).
+            Pick your region in the basket. Import taxes or duties charged by your country are paid by the customer.</li>
         </ul>
       </LegalSection>
 

@@ -878,8 +878,8 @@ export async function priceCart(items) {
   const { data } = await api.post("/cart/price", { items, origin_url: window.location.origin });
   return data;
 }
-export async function createCartCheckout(items, customer_email) {
-  const { data } = await api.post("/checkout/cart-session", { items, origin_url: window.location.origin, customer_email: customer_email || null });
+export async function createCartCheckout(items, customer_email, delivery_region = "uk") {
+  const { data } = await api.post("/checkout/cart-session", { items, origin_url: window.location.origin, customer_email: customer_email || null, delivery_region });
   return data;
 }
 

@@ -1448,6 +1448,7 @@ class CartCheckoutRequest(BaseModel):
     items: List[CartLineItem]
     origin_url: str
     customer_email: Optional[str] = None
+    delivery_region: Optional[str] = "uk"   # "uk" | "europe" | "world" - picked in the basket
 
 
 def _validate_pack_sizes(product: Dict, size_qtys: Dict[str, int], design_meta: Optional[Dict]) -> None:
@@ -1478,6 +1479,11 @@ def _validate_pack_sizes(product: Dict, size_qtys: Dict[str, int], design_meta: 
         design_meta["pack_sizes_text"] = " | ".join(lines)[:1500]
 
 
+async def _allowed_countries(region: str) -> List[str]:
+    from routers.delivery import allowed_countries
+    return await allowed_countries(region)
+
+
 async def _delivery_quote_for(priced: List[Dict], goods_total: float) -> Dict:
     """Basket preview: estimated UK delivery + the free options."""
     from routers.delivery import get_settings as _ds, garment_weight_kg, quote
@@ -1486,12 +1492,12 @@ async def _delivery_quote_for(priced: List[Dict], goods_total: float) -> Dict:
     return await quote(weight, goods_total)
 
 
-async def _delivery_options_for(weighted: List, goods_total: float) -> List[Dict]:
+async def _delivery_options_for(weighted: List, goods_total: float, region: str = "uk") -> List[Dict]:
     """Stripe delivery choices for an order: weighted = [(product, qty), ...]."""
     from routers.delivery import get_settings as _ds, garment_weight_kg, stripe_shipping_options
     st = await _ds()
     weight = sum(garment_weight_kg(p or {}, st) * int(q or 0) for p, q in weighted)
-    return await stripe_shipping_options(weight, goods_total)
+    return await stripe_shipping_options(weight, goods_total, region or "uk")
 
 
 async def account_discount_for_request(request: Request) -> float:
@@ -1760,7 +1766,9 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         cancel_url=cancel_url,
         metadata=metadata,
         product_name="Your Own Print cart order",
-        shipping_options=await _delivery_options_for([(p["product"], p["total_qty"]) for p in priced], grand_total),
+        shipping_options=await _delivery_options_for([(p["product"], p["total_qty"]) for p in priced], grand_total,
+                                                     payload.delivery_region or "uk"),
+        allowed_countries=await _allowed_countries(payload.delivery_region or "uk"),
     )
 
     await db.payment_transactions.insert_one({

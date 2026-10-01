@@ -34,6 +34,7 @@ async def create_checkout_session(
     metadata: Optional[Dict[str, str]] = None,
     product_name: str = "Your Own Print order",
     shipping_options: Optional[List[Dict]] = None,
+    allowed_countries: Optional[List[str]] = None,
 ):
     """Creates a single-line-item Checkout Session for `amount` (major units, e.g. GBP)."""
     _configure(api_key)
@@ -57,7 +58,7 @@ async def create_checkout_session(
         # Delivery choice (collect / local / UK by weight) + address + phone on
         # Stripe's page - see routers/delivery.py.
         **({"shipping_options": shipping_options,
-            "shipping_address_collection": {"allowed_countries": ["GB"]},
+            "shipping_address_collection": {"allowed_countries": allowed_countries or ["GB"]},
             "phone_number_collection": {"enabled": True}} if shipping_options else {}),
     )
 

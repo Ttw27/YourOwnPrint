@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { submitContact } from "../lib/api";
 import { toast } from "sonner";
@@ -7,8 +8,22 @@ import usePageCopy from "../hooks/usePageCopy";
 import { Phone, Mail, MessageSquare, Send, Sparkles } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 
+// "What's it about?" - prefixed onto the message so the enquiry email/admin
+// shows it at a glance. ?topic=website etc. pre-selects it (service pages link here).
+const TOPICS = [
+  { key: "clothing", label: "Clothing / printing quote" },
+  { key: "order", label: "An existing order" },
+  { key: "logo", label: "Free logo design" },
+  { key: "website", label: "Website (business site or online shop)" },
+  { key: "ads", label: "Ads (Facebook / Instagram / Google / TikTok)" },
+  { key: "white-label", label: "White label printing" },
+  { key: "other", label: "Something else" },
+];
+
 export default function Contact() {
   usePageTitle("Contact");
+  const [params] = useSearchParams();
+  const [topic, setTopic] = useState(() => TOPICS.find((t) => t.key === params.get("topic"))?.key || "clothing");
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "", quantity: "", sector: "" });
   const [submitting, setSubmitting] = useState(false);
 
@@ -27,8 +42,9 @@ export default function Contact() {
     }
     setSubmitting(true);
     try {
-      await submitContact(form);
-      toast.success("Thanks! We'll be in touch within 1 working day. 🌟");
+      const t = TOPICS.find((x) => x.key === topic);
+      await submitContact({ ...form, message: `[${t ? t.label : "Enquiry"}]\n\n${form.message}` });
+      toast.success("Thanks! Your message is with us - we'll be in touch soon.");
       setForm({ name: "", email: "", phone: "", company: "", message: "", quantity: "", sector: "" });
     } catch {
       toast.error("Something went wrong. Please try again or email us.");
@@ -73,6 +89,12 @@ export default function Contact() {
           </div>
 
           <form onSubmit={onSubmit} className="lg:col-span-3 bg-white rounded-3xl border-2 border-[#dcfce7] p-6 lg:p-8 shadow-lg" data-testid="contact-form">
+            <div className="mb-4">
+              <label className="block text-xs font-nunito font-bold text-[#1a1a1a] mb-2">What&rsquo;s it about?</label>
+              <select data-testid="contact-topic" value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full bg-white border border-[#e5e7eb] focus:border-[#7bc67e] outline-none rounded-xl px-3 py-2.5">
+                {TOPICS.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+              </select>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Name *" value={form.name} onChange={update("name")} testId="contact-name" />
               <Field label="Email *" type="email" value={form.email} onChange={update("email")} testId="contact-email" />

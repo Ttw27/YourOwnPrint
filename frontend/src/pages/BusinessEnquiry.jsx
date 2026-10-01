@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import usePageCopy from "../hooks/usePageCopy";
@@ -18,7 +18,11 @@ import {
  * so they land in Admin > Enquiries and the shop inbox. Deliberately no reply-
  * time promise. Headline/intro editable in Admin > Pages ("business-enquiry").
  */
-const NEEDS = ["Workwear & uniforms", "Team, club or school kit", "Merch & event t-shirts", "Bulk pack / bundle", "Something else"];
+const NEEDS = ["Workwear & uniforms", "Team, club or school kit", "Merch & event t-shirts", "Bulk pack / bundle",
+  "Business website (£200)", "E-commerce shop (£1,000+)", "Ads (Facebook / Google / TikTok)", "White label printing", "Free logo design", "Something else"];
+// ?service=... from the Website & Ad Services / Free Logo pages pre-selects the right one.
+const SERVICE_PARAM = { website: "Business website (£200)", ecommerce: "E-commerce shop (£1,000+)", ads: "Ads (Facebook / Google / TikTok)", "white-label": "White label printing", logo: "Free logo design" };
+const NOT_CLOTHING = ["Business website (£200)", "E-commerce shop (£1,000+)", "Ads (Facebook / Google / TikTok)", "Free logo design"];
 const QTYS = ["1-10", "10-50", "50-100", "100-250", "250+"];
 
 export default function BusinessEnquiry() {
@@ -29,7 +33,9 @@ export default function BusinessEnquiry() {
   const title = copy.title || "Branded clothing for your business, sorted.";
   const subtitle = copy.subtitle || "Uniforms, workwear, merch or event tees - tell us what you need and a real person from our team will come back with ideas, a free mock-up and a price.";
 
-  const [form, setForm] = useState({ name: "", company: "", email: "", phone: "", sector: NEEDS[0], quantity: QTYS[1], message: "" });
+  const [params] = useSearchParams();
+  const [form, setForm] = useState({ name: "", company: "", email: "", phone: "", sector: SERVICE_PARAM[params.get("service")] || NEEDS[0], quantity: QTYS[1], message: "" });
+  const clothing = !NOT_CLOTHING.includes(form.sector);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -39,7 +45,7 @@ export default function BusinessEnquiry() {
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) { toast.error("Please add your name, email and a short message"); return; }
     setSending(true);
     try {
-      await submitContact({ ...form, message: `[Business enquiry - ${form.sector}, approx ${form.quantity}]\n\n${form.message}` });
+      await submitContact({ ...form, message: `[Business enquiry - ${form.sector}${clothing ? `, approx ${form.quantity}` : ""}]\n\n${form.message}` });
       setSent(true);
     } catch (err) {
       toast.error(err?.response?.data?.detail?.[0]?.msg || err?.response?.data?.detail || "Couldn't send - please email us instead");
@@ -97,7 +103,7 @@ export default function BusinessEnquiry() {
                   <input type="email" value={form.email} onChange={set("email")} placeholder="Email *" className={ic} data-testid="biz-email" />
                   <input value={form.phone} onChange={set("phone")} placeholder="Phone" className={ic} data-testid="biz-phone" />
                   <select value={form.sector} onChange={set("sector")} className={ic} aria-label="What do you need?">{NEEDS.map((n) => <option key={n}>{n}</option>)}</select>
-                  <select value={form.quantity} onChange={set("quantity")} className={ic} aria-label="Roughly how many?">{QTYS.map((q) => <option key={q} value={q}>{`Roughly ${q} items`}</option>)}</select>
+                  {clothing && <select value={form.quantity} onChange={set("quantity")} className={ic} aria-label="Roughly how many?">{QTYS.map((q) => <option key={q} value={q}>{`Roughly ${q} items`}</option>)}</select>}
                 </div>
                 <textarea value={form.message} onChange={set("message")} rows={4} placeholder="Tell us a bit about what you need - garments, colours, where the logo goes… *" className={ic + " resize-none"} data-testid="biz-message" />
                 <button type="submit" disabled={sending} className="w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-extrabold rounded-full py-3.5" data-testid="biz-submit">
