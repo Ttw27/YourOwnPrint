@@ -30,6 +30,12 @@ export function clearAdminToken() { setAdminToken(""); }
 api.interceptors.request.use((config) => {
   const token = getAdminToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Signed-in customer: lets the server apply their regular-customer discount
+  // to basket prices and checkout (separate header so it never clashes with admin).
+  try {
+    const ct = localStorage.getItem("yop_customer_token");
+    if (ct) config.headers["X-Customer-Token"] = ct;
+  } catch { /* storage blocked */ }
   return config;
 });
 
@@ -968,5 +974,15 @@ export async function adminListEnquiries(limit = 200) {
 // ----- PenCarrie API import -----
 export async function pencarrieFetchCatalogue(offset = 0, limit = 500, brand = "", q = "") {
   const { data } = await api.get("/admin/pencarrie/fetch-catalogue", { params: { offset, limit, brand, q } });
+  return data;
+}
+
+// ---- Admin: customers + regular-customer discounts ----
+export async function adminListCustomers(params = {}) {
+  const { data } = await api.get("/admin/customers", { params });
+  return data;
+}
+export async function adminSetCustomerDiscount(customerId, discountPct) {
+  const { data } = await api.put(`/admin/customers/${customerId}/discount`, { discount_pct: discountPct });
   return data;
 }

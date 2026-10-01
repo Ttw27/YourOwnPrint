@@ -115,6 +115,12 @@ export default function CartDrawer() {
                 <span className="text-[#4b5563]">Items ({priced.total_qty})</span>
                 <span className="font-extrabold">£{priced.grand_total.toFixed(2)}</span>
               </div>
+              {priced.account_saving > 0 && (
+                <div className="flex items-center justify-between text-sm text-[#166534] font-bold" data-testid="cart-drawer-account-discount">
+                  <span>Includes your {priced.account_discount_pct}% regular-customer discount</span>
+                  <span>-£{Number(priced.account_saving).toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="font-black text-lg">Total</span>
                 <div className="text-right">

@@ -78,6 +78,22 @@ export function CustomerAuthProvider({ children }) {
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 
+// Regular-customer discount (% off garments, set in Admin > Customers). Safe to
+// call anywhere - 0 for guests or outside the provider.
+export function useAccountDiscount() {
+  const ctx = useContext(AuthCtx);
+  const pct = Number(ctx?.customer?.discount_pct) || 0;
+  return pct > 0 ? pct : 0;
+}
+
+// Garment price after the account discount (never on bundles - they have their
+// own fixed price). Rounded like the server does.
+export function discounted(price, pct, product) {
+  const n = Number(price) || 0;
+  if (!pct || (product && (product.bundle_items?.length || product.bundle_kind))) return n;
+  return Math.round(n * (1 - pct / 100) * 100) / 100;
+}
+
 export function useCustomerAuth() {
   const ctx = useContext(AuthCtx);
   if (!ctx) throw new Error("useCustomerAuth must be used inside <CustomerAuthProvider>");

@@ -1160,6 +1160,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         blank=payload.blank,
         color=payload.color,
         design_meta=payload.design_meta,
+        account_discount_pct=await account_discount_for_request(http_request),
     )
     product = priced["product"]
     placements_clean = priced["placements_clean"]
@@ -1188,6 +1189,8 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         "total_qty": str(total_qty),
         "print_cost_per_garment": f"£{print_cost:.2f}",
     }
+    if priced["account_saving"] > 0:
+        metadata["account_discount"] = f"{priced['account_discount_pct']:g}% off garments (-£{priced['account_saving']:.2f})"
     if payload.design_meta:
         for k, v in payload.design_meta.items():
             metadata[f"design_{k}"] = str(v)[:400]
@@ -1249,6 +1252,8 @@ def _order_details_html(doc: dict) -> str:
         return "<li style='margin-bottom:8px'>" + "<br>".join(rows) + "</li>"
 
     items = []
+    if (doc.get("metadata") or {}).get("account_discount"):
+        items.append(f"<li style='margin-bottom:8px'><strong>Regular-customer discount:</strong> {esc(doc['metadata']['account_discount'])}</li>")
     if doc.get("items"):
         for it in doc["items"]:
             sizes = ", ".join(f"{q}x{sz}" for sz, q in (it.get("size_qtys") or {}).items())
@@ -1398,6 +1403,12 @@ def _validate_pack_sizes(product: Dict, size_qtys: Dict[str, int], design_meta: 
         design_meta["pack_sizes_text"] = " | ".join(lines)[:1500]
 
 
+async def account_discount_for_request(request: Request) -> float:
+    """Signed-in customer's regular-customer discount % (0 for guests)."""
+    from routers.customer_auth import account_discount_for_request as _f
+    return await _f(request)
+
+
 async def _resolve_line_pricing(
     *,
     product_id: str,
@@ -1406,6 +1417,7 @@ async def _resolve_line_pricing(
     blank: bool = False,
     color: Optional[str] = None,
     design_meta: Optional[Dict] = None,
+    account_discount_pct: float = 0.0,
 ) -> Dict:
     """Canonical per-line pricing - called by both single-item /checkout/session
     and multi-line /checkout/cart-session so bulk-tier + upcharge maths is
@@ -1512,11 +1524,20 @@ async def _resolve_line_pricing(
             tiers_pct = sorted([(int(t[0]), float(t[1])) for t in tiers_pct], key=lambda x: -x[0])
         base_price = apply_bulk_tier_pct(base_price, total_qty, tiers_pct)
 
+    # Regular-customer account discount (Admin > Customers): % off the GARMENT
+    # only (print stays full price), on top of bulk pricing. Never on bundles -
+    # they're already discounted packs.
+    acct_pct = float(account_discount_pct or 0) if not product.get("bundle_items") else 0.0
+    acct_factor = 1 - acct_pct / 100.0
     line_total = 0.0
+    account_saving = 0.0
     breakdown: List[str] = []
     for sz, q in resolved_qtys.items():
-        unit = base_price + float(size_upcharges.get(sz, 0.0)) + print_cost
+        garment = base_price + float(size_upcharges.get(sz, 0.0))
+        garment_disc = round(garment * acct_factor, 2) if acct_pct > 0 else garment
+        unit = garment_disc + print_cost
         line_total += round(unit * q, 2)
+        account_saving += round((garment - garment_disc) * q, 2)
         breakdown.append(f"{sz}×{q}@£{unit:.2f}")
     line_total = round(line_total, 2)
 
@@ -1534,10 +1555,12 @@ async def _resolve_line_pricing(
         "line_total": line_total,
         "breakdown": breakdown,
         "design_meta": design_meta or {},
+        "account_discount_pct": acct_pct,
+        "account_saving": round(account_saving, 2),
     }
 
 
-async def _price_line_item(item: CartLineItem) -> Dict:
+async def _price_line_item(item: CartLineItem, account_discount_pct: float = 0.0) -> Dict:
     """Backwards-compatible wrapper - resolves the pricing for one CartLineItem
     by delegating to the shared `_resolve_line_pricing()` helper."""
     return await _resolve_line_pricing(
@@ -1547,6 +1570,7 @@ async def _price_line_item(item: CartLineItem) -> Dict:
         blank=item.blank,
         color=item.color,
         design_meta=item.design_meta,
+        account_discount_pct=account_discount_pct,
     )
 
 
@@ -1579,7 +1603,8 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         raise HTTPException(400, "Cart limit is 20 lines - please split into two orders")
     _assert_origin_ok(payload.origin_url)
 
-    priced = [await _price_line_item(item) for item in payload.items]
+    acct_pct = await account_discount_for_request(http_request)
+    priced = [await _price_line_item(item, acct_pct) for item in payload.items]
     grand_total = round(sum(p["line_total"] for p in priced), 2)
     total_qty = sum(p["total_qty"] for p in priced)
 
@@ -1600,6 +1625,9 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         "total_qty": str(total_qty),
         "items_summary": item_summary,
     }
+    acct_saving = round(sum(p["account_saving"] for p in priced), 2)
+    if acct_saving > 0:
+        metadata["account_discount"] = f"{acct_pct:g}% off garments (-£{acct_saving:.2f})"
 
     session = await create_checkout_session(
         api_key=STRIPE_API_KEY,
@@ -1645,14 +1673,15 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
 
 
 @api_router.post("/cart/price")
-async def price_cart(payload: CartCheckoutRequest):
+async def price_cart(payload: CartCheckoutRequest, request: Request):
     """Repriced cart preview - used by the drawer to show the correct total incl. bulk tiers,
     print upcharges, size upcharges. Does NOT create a Stripe session."""
     if not payload.items:
         return {"items": [], "grand_total": 0.0, "total_qty": 0}
     if len(payload.items) > 20:
         raise HTTPException(400, "Cart limit is 20 lines")
-    priced = [await _price_line_item(item) for item in payload.items]
+    acct_pct = await account_discount_for_request(request)
+    priced = [await _price_line_item(item, acct_pct) for item in payload.items]
     grand_total = round(sum(p["line_total"] for p in priced), 2)
     # Ex-VAT total worked out per line, so children's (zero-rated) items are right.
     grand_total_ex_vat = round(sum(p["line_total"] if is_zero_rated(p["product"]) else p["line_total"] / (1 + UK_VAT_RATE)
@@ -1677,6 +1706,8 @@ async def price_cart(payload: CartCheckoutRequest):
         ],
         "grand_total": grand_total,
         "total_qty": sum(p["total_qty"] for p in priced),
+        "account_discount_pct": acct_pct,
+        "account_saving": round(sum(p["account_saving"] for p in priced), 2),
     }
 
 

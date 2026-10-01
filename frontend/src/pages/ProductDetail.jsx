@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, ShoppingBag, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import PriceTag from "../components/bold/PriceTag";
+import { useAccountDiscount, discounted } from "../context/CustomerAuthContext";
 
 // Common garment colour names → hex, so a swatch still shows a colour when the
 // supplier data didn't include a hex value.
@@ -81,6 +82,7 @@ export default function ProductDetail() {
   const [packSizes, setPackSizes] = useState({});
   const [printMode, setPrintMode] = useState("custom"); // "custom" | "blank"
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const accountPct = useAccountDiscount();
   const [selectedPlacements, setSelectedPlacements] = useState([]);
   // Per-placement artwork uploads (data URLs)
   const [artwork, setArtwork] = useState({}); // { 'left-breast': dataUrl, ... }
@@ -219,11 +221,20 @@ export default function ProductDetail() {
     Object.entries(sizeQtys).forEach(([sz, q]) => {
       const qn = Number(q) || 0;
       if (qn <= 0) return;
-      const unit = (product.price || 0) + (upcharges[sz] || 0) + printCostPerGarment;
-      total += unit * qn;
+      // Regular-customer discount: garment only, print stays full price (matches server).
+      const unit = discounted((product.price || 0) + (upcharges[sz] || 0), accountPct, product) + printCostPerGarment;
+      total += Math.round(unit * qn * 100) / 100;
     });
     return total;
-  }, [product, sizeQtys, printCostPerGarment]);
+  }, [product, sizeQtys, printCostPerGarment, accountPct]);
+  const accountSaving = useMemo(() => {
+    if (!product || !accountPct) return 0;
+    const upcharges = product.size_upcharges || {};
+    return Object.entries(sizeQtys).reduce((s, [sz, q]) => {
+      const g = (product.price || 0) + (upcharges[sz] || 0);
+      return s + (g - discounted(g, accountPct, product)) * (Number(q) || 0);
+    }, 0);
+  }, [product, sizeQtys, accountPct]);
 
   const allArtworkUploaded = useMemo(
     () => blank || (selectedPlacements.length > 0 && selectedPlacements.every(p => artwork[p])),
@@ -584,6 +595,12 @@ export default function ProductDetail() {
                     <div className="flex items-center justify-between text-sm mt-1 text-neutral-300">
                       <span>{isBundle && product.bundle_included_print ? "Extra print positions" : "Print"} ({setItemCount > 1 ? `on ${setItemCount} items, ` : ""}£{printCostPerGarment.toFixed(2)} × {totalQty})</span>
                       <span data-testid="price-print">£{(printCostPerGarment * totalQty).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {accountSaving > 0 && (
+                    <div className="flex items-center justify-between text-sm mt-1 text-[#86efac]" data-testid="price-account-discount-line">
+                      <span>Your {accountPct}% regular-customer discount (garments)</span>
+                      <span>-£{accountSaving.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="border-t border-white/10 mt-3 pt-3 flex items-baseline justify-between">

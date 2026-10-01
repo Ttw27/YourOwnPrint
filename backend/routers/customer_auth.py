@@ -28,7 +28,7 @@ import jwt
 from fastapi import Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 
-from deps import api_router, db, JWT_SECRET, JWT_ALGORITHM
+from deps import api_router, db, JWT_SECRET, JWT_ALGORITHM, require_admin
 from services.email import email_wrap, send_email, shop_notification_recipient
 from services.r2_storage import storage_put_async as _r2_put, get_public_url as _r2_public_url
 
@@ -92,6 +92,7 @@ class CustomerOut(BaseModel):
     role: str = "customer"
     created_at: str
     business: BusinessProfileOut = Field(default_factory=BusinessProfileOut)
+    discount_pct: float = 0  # regular-customer discount on garments (set by admin)
 
 
 class BusinessProfileIn(BaseModel):
@@ -188,6 +189,7 @@ def _serialise_customer(doc: Dict) -> Dict:
         "name": doc.get("name", ""),
         "role": "customer",
         "created_at": doc.get("created_at", ""),
+        "discount_pct": _clean_discount(doc.get("discount_pct")),
         # Business profile - everything that lets a company reorder without
         # re-explaining who they are. Absent/empty for personal accounts, which
         # is what keeps the business UI hidden for them.
@@ -199,6 +201,39 @@ def _serialise_customer(doc: Dict) -> Dict:
             "notes": biz.get("notes", ""),
         },
     }
+
+
+MAX_ACCOUNT_DISCOUNT_PCT = 50.0
+
+
+def _clean_discount(v) -> float:
+    try:
+        return max(0.0, min(MAX_ACCOUNT_DISCOUNT_PCT, round(float(v or 0), 1)))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+async def account_discount_for_request(request: Request) -> float:
+    """The signed-in customer's regular-customer discount (% off garments), or 0.
+    Never raises - pricing must work the same for guests. The site sends the
+    customer token as X-Customer-Token (the Authorization header can carry the
+    admin token when Tim is signed in to admin in the same browser)."""
+    tokens = [request.headers.get("X-Customer-Token") or "", request.cookies.get("customer_access_token") or ""]
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        tokens.append(auth[7:])
+    for token in tokens:
+        if not token:
+            continue
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        except jwt.InvalidTokenError:
+            continue
+        if payload.get("role") != "customer" or payload.get("type") != "access":
+            continue
+        doc = await db.customers.find_one({"id": payload.get("sub")}, {"discount_pct": 1})
+        return _clean_discount((doc or {}).get("discount_pct"))
+    return 0.0
 
 
 async def get_current_customer(request: Request) -> Dict:
@@ -609,3 +644,44 @@ async def customer_delete_design(design_id: str, customer: Dict = Depends(requir
     if r.deleted_count == 0:
         raise HTTPException(404, "Design not found")
     return {"ok": True}
+
+
+# ---------- Admin: regular-customer discounts ----------
+class CustomerDiscountIn(BaseModel):
+    discount_pct: float = Field(ge=0, le=MAX_ACCOUNT_DISCOUNT_PCT)
+
+
+@api_router.get("/admin/customers", dependencies=[Depends(require_admin)])
+async def admin_list_customers(q: str = "", discounted: bool = False, offset: int = 0, limit: int = 50):
+    """Customer accounts for the admin Customers screen (search by name, email
+    or company; optionally only those with a discount)."""
+    query: Dict = {}
+    if discounted:
+        query["discount_pct"] = {"$gt": 0}
+    if q.strip():
+        rx = {"$regex": re.escape(q.strip()), "$options": "i"}
+        query["$or"] = [{"email": rx}, {"name": rx}, {"business.company_name": rx}]
+    total = await db.customers.count_documents(query)
+    items = []
+    cursor = db.customers.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).skip(max(0, offset)).limit(min(limit, 200))
+    async for d in cursor:
+        em = d.get("email", "")
+        orders = await db.payment_transactions.count_documents({
+            "payment_status": "paid", "$or": [{"customer_email": em}, {"metadata.customer_email": em}]})
+        items.append({
+            "id": d["id"], "email": d.get("email", ""), "name": d.get("name", ""),
+            "company_name": (d.get("business") or {}).get("company_name", ""),
+            "created_at": d.get("created_at", ""),
+            "discount_pct": _clean_discount(d.get("discount_pct")),
+            "paid_orders": orders,
+        })
+    return {"items": items, "total": total}
+
+
+@api_router.put("/admin/customers/{customer_id}/discount", dependencies=[Depends(require_admin)])
+async def admin_set_customer_discount(customer_id: str, payload: CustomerDiscountIn):
+    pct = _clean_discount(payload.discount_pct)
+    res = await db.customers.update_one({"id": customer_id}, {"$set": {"discount_pct": pct}})
+    if not res.matched_count:
+        raise HTTPException(404, "Customer not found")
+    return {"ok": True, "discount_pct": pct}

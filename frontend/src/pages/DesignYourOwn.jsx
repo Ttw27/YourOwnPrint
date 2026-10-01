@@ -6,7 +6,7 @@ import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import FontPicker from "../components/bold/FontPicker";
 import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
-import { useCustomerAuth } from "../context/CustomerAuthContext";
+import { useCustomerAuth, useAccountDiscount, discounted } from "../context/CustomerAuthContext";
 import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock, Eye } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
@@ -61,6 +61,7 @@ export default function DesignYourOwn() {
   const [aiUsage, setAiUsage] = useState(null); // {used, limit, remaining} once we know the customer's logged in
   const isLoggedIn = !!getCustomerToken();
   const { customer } = useCustomerAuth();
+  const accountPct = useAccountDiscount();
   const savedLogoUrl = customer?.business?.logo_url || "";
 
   useEffect(() => {
@@ -167,10 +168,11 @@ export default function DesignYourOwn() {
     Object.entries(sizeQtys).forEach(([sz, q]) => {
       const qn = Number(q) || 0;
       if (qn <= 0) return;
-      t += (unitPrice + (u[sz] || 0) + extra) * qn;
+      // Regular-customer discount on the garment only (prints full price), as the server does.
+      t += Math.round((discounted(unitPrice + (u[sz] || 0), accountPct, product) + extra) * qn * 100) / 100;
     });
     return t;
-  }, [sizeQtys, unitPrice, product, backEnabled, backPrintPrice, neckEnabled, neckLabelPrice]);
+  }, [sizeQtys, unitPrice, product, backEnabled, backPrintPrice, neckEnabled, neckLabelPrice, accountPct]);
   const selected = items.find(i => i.id === selectedId) || null;
 
   // Reset state when product changes
@@ -851,6 +853,7 @@ export default function DesignYourOwn() {
                 <div className="text-right">
                   <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
                   <ExVat amount={subtotal} zeroRated={!!product?.vat_zero_rated} testid="designer-total-ex-vat" />
+                  {accountPct > 0 && <div className="text-[11px] font-bold text-[#166534]" data-testid="designer-account-discount">Includes your {accountPct}% regular-customer discount</div>}
                 </div>
               </div>
               {totalQty > 0 && (

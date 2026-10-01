@@ -171,6 +171,12 @@ frontend/src/
   that rewrites a product's colours/sizes must be followed by `reapply_saved_settings` or
   `_apply_hidden_options(pid)`.
 
+- **Regular-customer discounts** (Admin > Customers, `customers.discount_pct`, max 50): % off the
+  GARMENT price only (print full price), on top of bulk tiers, never on bundles. Applied server-side
+  in `_resolve_line_pricing(account_discount_pct=...)` from `account_discount_for_request()` (reads
+  the `X-Customer-Token` header the api.js interceptor sends). Frontend mirrors it via
+  `useAccountDiscount()` / `discounted()` (CustomerAuthContext) in PriceTag, PDP, designer, cart.
+
 - **Size guides: real measurements only.** The old generic chart template (made-up XS-4XL numbers)
   was removed site-wide (never bring it back). Automatic charts come only from
   `backend/data/pencarrie_size_charts.json` (built from PenCarrie's product export "Size

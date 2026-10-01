@@ -1,4 +1,5 @@
 import React from "react";
+import { useAccountDiscount, discounted } from "../../context/CustomerAuthContext";
 
 /**
  * PriceTag - one place that decides how a price is written on the site.
@@ -44,10 +45,25 @@ export default function PriceTag({
   suffix,            // e.g. " /player" - rendered small, beside the figure
   inline = false,    // one line, for pills and tight spaces
 }) {
+  const pct = useAccountDiscount();
   if (!product) return null;
 
-  const gross = Number(product.price_inc_vat ?? product.price ?? 0);
-  const net = hasVatFields(product) ? Number(product.price_ex_vat) : null;
+  // Signed-in regular with an account discount: their price leads, the normal
+  // price is shown crossed out (bundles keep their own price).
+  const fullGross = Number(product.price_inc_vat ?? product.price ?? 0);
+  const gross = discounted(fullGross, pct, product);
+  const hasDisc = gross < fullGross;
+  const factor = fullGross ? gross / fullGross : 1;
+  const net = hasVatFields(product) ? Math.round(Number(product.price_ex_vat) * factor * 100) / 100 : null;
+  const Was = () => hasDisc ? (
+    <span className="block text-[11px] font-nunito font-bold text-[#4b5563] mt-0.5" data-testid="price-account-discount">
+      <span className="line-through mr-1">{money(fullGross)}</span>
+      <span className="text-[#166534]">Your {pct}% discount</span>
+    </span>
+  ) : null;
+  const WasInline = () => hasDisc ? (
+    <span className={`text-[10px] text-[#4b5563] ml-1.5 line-through`}>{money(fullGross)}</span>
+  ) : null;
   const zeroRated = Boolean(product.vat_zero_rated);
 
   const bigClass = size === "xl" ? "text-4xl" : size === "lg" ? "text-3xl" : size === "sm" ? "text-lg" : "text-2xl";
@@ -69,6 +85,7 @@ export default function PriceTag({
     return (
       <div className={className} data-testid={testid}>
         <Headline>{money(gross)}</Headline>
+        <Was />
       </div>
     );
   }
@@ -77,7 +94,7 @@ export default function PriceTag({
     if (inline) {
       return (
         <span className={className} data-testid={testid}>
-          {prefix ? `${prefix} ` : ""}{money(gross)}
+          {prefix ? `${prefix} ` : ""}{money(gross)}<WasInline />
           <span className={`${subClass} text-[#4b5563] ml-1.5`}>no VAT</span>
         </span>
       );
@@ -85,6 +102,7 @@ export default function PriceTag({
     return (
       <div className={className} data-testid={testid}>
         <Headline>{money(gross)}</Headline>
+        <Was />
         <div className={`${subClass} text-[#4b5563] mt-0.5`}>No VAT - children&rsquo;s clothing</div>
       </div>
     );
@@ -93,7 +111,7 @@ export default function PriceTag({
   if (inline) {
     return (
       <span className={className} data-testid={testid}>
-        {prefix ? `${prefix} ` : ""}{money(gross)}
+        {prefix ? `${prefix} ` : ""}{money(gross)}<WasInline />
         <span className={`${subClass} text-[#4b5563] ml-1.5`}>{money(net)} ex. VAT</span>
       </span>
     );
@@ -102,6 +120,7 @@ export default function PriceTag({
   return (
     <div className={className} data-testid={testid}>
       <Headline>{money(gross)}</Headline>
+      <Was />
       <div className={`${subClass} text-[#4b5563] mt-0.5`}>{money(net)} ex. VAT</div>
     </div>
   );

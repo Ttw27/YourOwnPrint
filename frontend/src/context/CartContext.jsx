@@ -105,7 +105,7 @@ export function CartProvider({ children }) {
     }
     reprice();
     return () => { cancelled = true; };
-  }, [items]);
+  }, [items, token]);   // re-price on sign in/out: regulars get their account discount
 
   const addLine = useCallback((line) => {
     // { product_id, size_qtys, color, placements, blank, design_meta, name?: display hint }

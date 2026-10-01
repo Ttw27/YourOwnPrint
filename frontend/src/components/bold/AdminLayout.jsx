@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingBag, MessageSquare, HelpCircle, Star,
   Package, Upload, Sparkles, ImageOff, Wand2, Tags, Layers,
   FileText, Menu as MenuIcon, Image, Shirt, GraduationCap,
-  Plug, SlidersHorizontal, LogOut, X, Store, Stamp, PackagePlus,
+  Plug, SlidersHorizontal, LogOut, X, Store, Stamp, PackagePlus, Users,
 } from "lucide-react";
 
 /**
@@ -18,6 +18,7 @@ const GROUPS = [
     heading: "Orders & customers",
     items: [
       { label: "Orders", to: "/admin/orders", icon: ShoppingBag },
+      { label: "Customers", to: "/admin/customers", icon: Users },
       { label: "Enquiries", to: "/admin/enquiries", icon: MessageSquare },
       { label: "Questions (Q&A)", to: "/admin/qa", icon: HelpCircle },
       { label: "Reviews", to: "/admin/reviews", icon: Star },

@@ -6,9 +6,11 @@ import { fetchNavigation } from "../../lib/api";
 import { Facebook, Instagram, Youtube, Linkedin, Music2, Twitter, Star, ChevronDown, Menu, X, Search } from "lucide-react";
 import CartIcon from "../CartIcon";
 import AccountButton from "../AccountButton";
+import { useAccountDiscount } from "../../context/CustomerAuthContext";
 import usePageCopy from "../../hooks/usePageCopy";
 
 export function BoldNavbar() {
+  const accountPct = useAccountDiscount();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [openKey, setOpenKey] = useState(null);
@@ -86,6 +88,11 @@ export function BoldNavbar() {
 
   return (
     <nav ref={rootRef} className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb]" data-testid="bold-navbar">
+      {accountPct > 0 && (
+        <div className="bg-[#166534] text-white text-center text-xs font-nunito font-extrabold px-4 py-1.5" data-testid="account-discount-bar">
+          Your {accountPct}% regular-customer discount is on - taken off garment prices, right through to checkout.
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" data-testid="nav-logo" className="flex-shrink-0 inline-flex items-center" aria-label="Your Own Print - home">
           <img src="/logo.png" alt="Your Own Print" className="h-10 w-auto md:h-11 select-none" draggable="false" />
