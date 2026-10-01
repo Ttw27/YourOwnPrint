@@ -1488,7 +1488,7 @@ async def _resolve_line_pricing(
         wanted = set(placements)
         placements_clean = ["drawstring-bag"] if "drawstring-bag" in wanted else []
         print_cost = LEAVERS_BAG_PRICE if "drawstring-bag" in wanted else 0.0
-    elif product.get("specials_eligible") and not product.get("bundle_items"):
+    elif product.get("specials_eligible") and not product.get("bundle_items") and not product.get("designer_enabled"):
         # Your Own Print Specials: ONE breast-pocket logo, included in the price.
         placements_clean = ["left-breast"]
         print_cost = 0.0
@@ -3442,7 +3442,8 @@ async def list_specials_products():
     """Your Own Print Specials - single breast-pocket logo print, no MOQ, starter-business pricing."""
     out = []
     for p in live_products():
-        if p.get("specials_eligible"):
+        # Design Your Own products live only in the designer - never in Specials.
+        if p.get("specials_eligible") and not p.get("designer_enabled"):
             out.append({
                 "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
                 "image": p["image"],
@@ -6071,12 +6072,42 @@ def _legacy_default_description(product: Dict) -> str:
     return "".join(parts)
 
 
+async def _untangle_old_specials_v1() -> None:
+    """One-off (marker-guarded): an old seed flagged 6 general products as
+    Specials (and locked them to left-breast only). The real Specials range is
+    now its own 13 products (routers/specials.py), and Design Your Own products
+    must only live in the designer - so take those 6 out of Specials, and give
+    back their normal print positions where the seed's left-breast-only lock is
+    still exactly what's stored (i.e. never changed by hand)."""
+    if await db.settings.find_one({"key": "old_specials_untangle_v1"}):
+        return
+    done = []
+    for pid in ["workwear-tshirt", "polo-shirt", "workwear-sweatshirt", "personalised-tee", "personalised-hoodie", "hi-vis-vest"]:
+        m = await db.product_meta.find_one({"product_id": pid}) or {}
+        if not m.get("specials_eligible"):
+            continue
+        upd: Dict = {"$set": {"specials_eligible": False}}
+        if m.get("allowed_placements") == ["left-breast"]:
+            upd["$unset"] = {"allowed_placements": ""}
+        await db.product_meta.update_one({"product_id": pid}, upd)
+        if pid in PRODUCTS:
+            PRODUCTS[pid]["specials_eligible"] = False
+            if "$unset" in upd:
+                PRODUCTS[pid].pop("allowed_placements", None)
+        done.append(pid)
+    await db.settings.update_one({"key": "old_specials_untangle_v1"}, {"$set": {
+        "key": "old_specials_untangle_v1", "products": done,
+        "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"old specials untangled: {done}")
+
+
 @app.on_event("startup")
 async def _seed_specials_defaults():
     """One-time seed: flag a sensible starter lineup as Specials-eligible (left-breast only)."""
     try:
         marker = await db.settings.find_one({"key": "specials_seed_v2"})
         if marker is not None:
+            await _untangle_old_specials_v1()
             return
         defaults = ["workwear-tshirt", "polo-shirt", "workwear-sweatshirt", "personalised-tee", "personalised-hoodie", "hi-vis-vest"]
         for pid in defaults:

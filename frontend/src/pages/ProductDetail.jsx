@@ -100,6 +100,9 @@ export default function ProductDetail() {
       .then(([p, pl, ag, ap, qaList]) => {
         // Design Shop designs have their own page (garment choice + mockup, no print options).
         if (p && p.design_shop) { navigate(`/design/${p.id}`, { replace: true }); return; }
+        // Design Your Own products are only sold through the designer - wherever
+        // they're clicked (collections, search...), open them there.
+        if (p && p.designer_enabled) { navigate(`/design?product=${encodeURIComponent(p.id)}`, { replace: true }); return; }
         setProduct(p); setPlacements(pl); setAggregates(ag);
         setAllowedPlacements(ap);
         setQA(qaList || []);

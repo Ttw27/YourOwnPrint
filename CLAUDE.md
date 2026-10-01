@@ -186,7 +186,9 @@ frontend/src/
   forces placements to ["left-breast"] at £0 print and only accepts the product's own colours.
   The 13-product range (from the old Shopify store) is created once from `backend/data/specials_range.json`
   by `routers/specials.create_specials_range()` (photos mirrored to R2). `colour_upcharges` (e.g.
-  {"Black": 2.0}) adds to the garment price per colour, server + PDP.
+  {"Black": 2.0}) adds to the garment price per colour, server + PDP. Designer products are never Specials.
+- **Design Your Own products** (`designer_enabled`) are sold ONLY through the designer: `/product/:id`
+  redirects to `/design?product=:id`. For a garment that should also be sold normally, duplicate it first.
 
 - **Regular-customer discounts** (Admin > Customers, `customers.discount_pct`, max 50): % off the
   GARMENT price only (print full price), on top of bulk tiers, never on bundles. Applied server-side
