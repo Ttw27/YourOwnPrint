@@ -109,6 +109,14 @@ def placement_for(design: Dict, garment_slug: Optional[str]) -> Dict:
     return {"scale": p.get("scale", 100), "y": p.get("y", 0)}
 
 
+async def offered_garments() -> List[Dict]:
+    """Garment types that are on sale: linked to a real garment that exists."""
+    from server import PRODUCTS
+    gs = await garment_settings()
+    return [{"slug": g["slug"], "title": g["title"], "price": g["price"]}
+            for g in gs.values() if g.get("product_id") and g["product_id"] in PRODUCTS]
+
+
 def is_design_product(p: Dict) -> bool:
     return bool(p.get("design_shop"))
 
@@ -125,7 +133,9 @@ async def design_shop_categories():
         for c in (p.get("design_categories") or []):
             counts[c] = counts.get(c, 0) + 1
     cats = [{**c, "count": counts.get(c["slug"], 0)} for c in DESIGN_CATEGORIES]
-    return {"categories": cats, "garments": DESIGN_GARMENTS}
+    # Only garment types customers can actually buy (a real garment linked in
+    # Admin > Design Shop > Garments & prices), at their current price.
+    return {"categories": cats, "garments": await offered_garments()}
 
 
 @api_router.get("/design-shop/products")
@@ -139,20 +149,29 @@ async def design_shop_products(
     """Browse the Design Shop. Only returns design-shop products (never workwear)."""
     from server import PRODUCTS
 
+    offered = {g["slug"]: g["price"] for g in await offered_garments()}
+
+    def from_price(p: Dict) -> Optional[float]:
+        # "from £X" = cheapest garment this design is actually on sale on
+        prices = [offered[g] for g in (p.get("design_garments") or []) if g in offered]
+        return min(prices) if prices else None
+
     items = []
     for p in PRODUCTS.values():
         if not is_design_product(p) or p.get("active") is False:
             continue
+        if from_price(p) is None:
+            continue  # no garment it can be bought on yet
         if category and category not in (p.get("design_categories") or []):
             continue
-        if garment and garment not in (p.get("design_garments") or []):
+        if garment and (garment not in (p.get("design_garments") or []) or garment not in offered):
             continue
         items.append(p)
 
     if sort == "price-low":
-        items.sort(key=lambda x: float(x.get("price") or 0))
+        items.sort(key=lambda x: from_price(x) or 0)
     elif sort == "price-high":
-        items.sort(key=lambda x: -float(x.get("price") or 0))
+        items.sort(key=lambda x: -(from_price(x) or 0))
     else:  # newest
         items.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
 
@@ -162,10 +181,10 @@ async def design_shop_products(
     out = [{
         "id": p["id"],
         "name": p["name"],
-        "price": round(float(p.get("price") or 0), 2),
+        "price": round(float(offered[garment] if garment else from_price(p)), 2),
         "image": p.get("design_image") or p.get("image") or "",
         "categories": p.get("design_categories") or [],
-        "garments": p.get("design_garments") or [],
+        "garments": [g for g in (p.get("design_garments") or []) if g in offered],
     } for p in page]
     return {"items": out, "total": total, "offset": offset, "returned": len(page)}
 
