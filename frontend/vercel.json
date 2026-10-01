@@ -110,12 +110,12 @@
       "permanent": true
     },
     {
-      "source": "/products/yourownprint-special:rest*",
+      "source": "/products/yourownprint-special(.*)",
       "destination": "/specials",
       "permanent": true
     },
     {
-      "source": "/products/personalised:rest*",
+      "source": "/products/personalised(.*)",
       "destination": "/design",
       "permanent": true
     },
