@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import FindMyKitPromo from "../components/bold/FindMyKitPromo";
+import DesignerBanner from "../components/bold/DesignerBanner";
 import TrustedBy from "../components/bold/TrustedBy";
 import PortfolioStrip from "../components/bold/PortfolioStrip";
 import HowWePrint from "../components/bold/HowWePrint";
@@ -138,51 +139,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Designer feature */}
-      <div className="bg-[#f0fdf4] border-y border-[#dcfce7]">
-        <div className="max-w-7xl mx-auto px-6 py-14 grid lg:grid-cols-2 gap-10 items-center">          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white text-[#1a1a1a] font-nunito font-extrabold rounded-full text-xs">
-              <Smile size={14} className="text-[#7bc67e]" /> So easy, anyone can do it
-            </div>
-            <h2 className="mt-3 font-nunito font-black text-4xl lg:text-5xl text-[#1a1a1a]">Design your tee in 60 seconds</h2>
-            <p className="mt-4 text-[#4b5563]">Upload, drag, drop, done. Real preview on a real shirt. Order with one tap.</p>
-            <Link to="/design" data-testid="home-design-cta" className="mt-7 inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#333] text-white font-nunito font-extrabold px-7 py-3.5 rounded-full transition-colors">
-              Launch Designer <ArrowRight size={16} />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {[0, 1].map((i) => {
-              // Photo set in Admin → Pages → Home ("designer:1" / "designer:2") wins;
-              // otherwise fall back to a best-selling product card.
-              const custom = copy.images && copy.images[`designer:${i + 1}`];
-              if (custom) {
-                return (
-                  <Link key={`designer-${i}`} to="/design" className="block bg-white rounded-2xl p-3 border border-[#dcfce7] shadow-sm hover:shadow-md transition-shadow" data-testid={`home-designer-photo-${i + 1}`}>
-                    <div className="aspect-square rounded-xl overflow-hidden bg-[#f0fdf4]">
-                      <SiteImage src={custom} alt="" loading="lazy" className="w-full h-full object-cover" testid={`home-designer-photo-img-${i + 1}`} />
-                    </div>
-                  </Link>
-                );
-              }
-              const p = bestSellers[i];
-              if (!p) return null;
-              const agg = aggregates[p.id];
-              return (
-                <Link key={p.id} to={`/product/${p.id}`} className="bg-white rounded-2xl p-4 border border-[#dcfce7] shadow-sm hover:shadow-md transition-shadow">
-                  <div className="aspect-square rounded-xl overflow-hidden bg-[#f0fdf4]">
-                    <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="mt-3 font-nunito font-bold text-sm">{p.name}</div>
-                  <div className="flex items-center justify-between mt-1">
-                    <PriceTag product={p} size="sm" tone="brand" testid={`price-${p.id}`} />
-                    {agg && <StarRating value={agg.average} size={12} />}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      {/* Designer banner - in the style of the old site's "Design it yourself" banner */}
+      <DesignerBanner image={(copy.images && copy.images["designer:banner"]) || "/banners/designer-screenshot.jpg"} />
 
       {/* Easy ordering - WhatsApp/email with your own account manager */}
       <div className="bg-[#1a1a1a] text-white" data-testid="home-easy-ordering">

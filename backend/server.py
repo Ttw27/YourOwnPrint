@@ -754,6 +754,8 @@ async def sitemap_xml():
         ("/team-kits", "0.8", "weekly"),
         ("/specials", "0.7", "weekly"),
         ("/dtf-printing", "0.6", "monthly"),
+        ("/website-ad-services", "0.5", "monthly"),
+        ("/free-logo-design", "0.5", "monthly"),
         ("/design", "0.7", "weekly"),
         ("/industries", "0.7", "weekly"),
         ("/reviews", "0.5", "weekly"),

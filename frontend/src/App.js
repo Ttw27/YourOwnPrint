@@ -24,6 +24,8 @@ import FindMyKit from "@/pages/FindMyKit";
 import DesignShop from "@/pages/DesignShop";
 import DesignShopProduct from "@/pages/DesignShopProduct";
 import DtfPrinting from "@/pages/DtfPrinting";
+import WebsiteServices from "@/pages/WebsiteServices";
+import FreeLogoDesign from "@/pages/FreeLogoDesign";
 import ReviewsPage from "@/pages/Reviews";
 import AdminImport from "@/pages/AdminImport";
 import AdminReviews from "@/pages/AdminReviews";
@@ -113,6 +115,8 @@ function App() {
           <Route path="/design-shop/:slug" element={<DesignShop />} />
           <Route path="/design/:id" element={<DesignShopProduct />} />
           <Route path="/dtf-printing" element={<DtfPrinting />} />
+          <Route path="/website-ad-services" element={<WebsiteServices />} />
+          <Route path="/free-logo-design" element={<FreeLogoDesign />} />
           <Route path="/teams-schools" element={<TeamsSchools />} />
           <Route path="/sports" element={<Sports />} />
           <Route path="/sports-teams/:slug" element={<SportsTeamDetail />} />

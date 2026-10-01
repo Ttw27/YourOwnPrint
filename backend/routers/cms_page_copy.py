@@ -22,6 +22,8 @@ PAGE_COPY_SLUGS = [
     "for-business",
     "easy-ordering",
     "dtf-printing",
+    "website-services",
+    "free-logo-design",
     "business-enquiry",
     "school-trips",
     "sports-outfit-configurator", "team-kits", "team-kit-builder",

@@ -302,7 +302,7 @@ export function BoldFooter() {
           )}
         </div>
         <FooterCol title="Shop" links={[["Our full catalogue", "/workwear"], ["Design Your Own", "/design"], ["The Design Shop", "/design-shop"], ["Teams & Schools", "/teams-schools"], ["Bulk bundles & packs", "/bundles"], ["Find My Kit", "/find-my-kit"], ["Search", "/search"]]} />
-        <FooterCol title="Services" links={[["Starting a business", "/specials"], ["Starting a brand", "/festival-tees-and-brands"], ["Business enquiries", "/business-enquiry"], ["Order by WhatsApp or email", "/easy-ordering"], ["Why we print with DTF", "/dtf-printing"], ["Previous work", "/portfolio"], ["Reviews", "/reviews"]]} />
+        <FooterCol title="Services" links={[["Starting a business", "/specials"], ["Starting a brand", "/festival-tees-and-brands"], ["Business enquiries", "/business-enquiry"], ["Order by WhatsApp or email", "/easy-ordering"], ["Free logo design", "/free-logo-design"], ["Website & ad services", "/website-ad-services"], ["White label printing", "/website-ad-services"], ["Why we print with DTF", "/dtf-printing"], ["Previous work", "/portfolio"], ["Reviews", "/reviews"]]} />
         <FooterCol title="Help" links={[["Get a Quote", "/contact"], ["Contact us", "/contact"], ["Delivery & Returns", "/returns"], ["Privacy Policy", "/privacy"], ["Terms & Conditions", "/terms"]]} />
         <div>
           <div className="font-nunito font-bold text-sm text-neutral-400 mb-3">Payments</div>
