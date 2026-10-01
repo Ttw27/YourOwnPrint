@@ -233,6 +233,15 @@ export default function ProductDetail() {
     });
     return total;
   }, [product, sizeQtys, printCostPerGarment, accountPct, color]);
+  // Headline price follows the chosen colour when that colour costs more
+  // (e.g. Black +£2 on the Specials range).
+  const priceShown = useMemo(() => {
+    const up = Number(product?.colour_upcharges?.[color] || 0);
+    if (!product || !up) return product;
+    const gross = Math.round(((Number(product.price_inc_vat ?? product.price) || 0) + up) * 100) / 100;
+    return { ...product, price: gross, price_inc_vat: gross,
+      price_ex_vat: product.vat_zero_rated ? gross : Math.round((gross / 1.2) * 100) / 100 };
+  }, [product, color]);
   const accountSaving = useMemo(() => {
     if (!product || !accountPct) return 0;
     const upcharges = product.size_upcharges || {};
@@ -361,7 +370,7 @@ export default function ProductDetail() {
                   <div className="mt-3 flex items-center gap-3 flex-wrap">
                     {agg ? <><StarRating value={agg.average} size={16} /><span className="text-sm text-[#4b5563]">{agg.average.toFixed(1)} ({agg.count} reviews)</span></> : <span className="text-sm text-[#4b5563]">No reviews yet</span>}
                     <span className="text-xs font-nunito font-bold text-[#1a1a1a] bg-[#f0fdf4] px-2 py-1 rounded-full border border-[#dcfce7]">
-                      <PriceTag product={product} inline size="sm" prefix="From" testid="product-price-badge" />
+                      <PriceTag product={priceShown} inline size="sm" prefix="From" testid="product-price-badge" />
                     </span>
                     {(product.size_guide_image || (product.size_guide_table || []).length > 0) && (
                       <button data-testid="open-size-guide" onClick={() => setShowSizeGuide(true)} className="text-xs font-nunito font-extrabold text-[#7bc67e] hover:underline inline-flex items-center gap-1">📏 Size guide</button>
