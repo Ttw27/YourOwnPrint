@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl } from "../lib/api";
-import { Upload, Trash2, Star, Eye, EyeOff, Loader2, Save, Image as ImageIcon } from "lucide-react";
+import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl, fetchTrustedLogos, adminSaveTrustedLogos, uploadAdminImage } from "../lib/api";
+import { Upload, Trash2, Star, Eye, EyeOff, Loader2, Save, Image as ImageIcon, ArrowLeft, ArrowRight } from "lucide-react";
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -80,6 +80,8 @@ export default function AdminPortfolio() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         <h1 className="font-black text-3xl mb-1">Photo gallery</h1>
         <p className="text-sm text-[#4b5563] mb-8">Photos of real work - customer prints, finished kits, studio shots. <strong>Category</strong> decides which page each photo appears on, so it matters: pick &ldquo;Festival Tees And Brands&rdquo; and it shows in the gallery on the Festival &amp; DJ page, &ldquo;Workwear&rdquo; on the workwear pages, and so on. Tick <strong>Featured</strong> to push a photo to the front.</p>
+
+        <TrustedLogosCard />
 
         {/* Add new */}
         <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-6 mb-10" data-testid="admin-portfolio-create">
@@ -230,6 +232,68 @@ export function AdminTopBar() {
         </div>
         <button onClick={() => { localStorage.removeItem("yop_admin_token"); window.location.href = "/admin/login"; }} className="text-zinc-400 hover:text-white">Sign out</button>
       </div>
+    </div>
+  );
+}
+
+
+/**
+ * Trusted by logos - the customer logos that scroll across the homepage.
+ * Add (upload), rename, reorder or remove; Save puts it live.
+ */
+function TrustedLogosCard() {
+  const [logos, setLogos] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => { fetchTrustedLogos().then(setLogos).catch(() => setLogos([])); }, []);
+  const change = (next) => { setLogos(next); setDirty(true); };
+  const add = async (files) => {
+    setBusy(true);
+    try {
+      const added = [];
+      for (const f of files) {
+        const r = await uploadAdminImage(f, "trusted-logos");
+        added.push({ name: f.name.replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " "), image: r.url });
+      }
+      change([...(logos || []), ...added]);
+      toast.success(`${added.length} logo${added.length === 1 ? "" : "s"} added - click Save to put ${added.length === 1 ? "it" : "them"} live`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Upload failed"); }
+    finally { setBusy(false); }
+  };
+  const move = (i, d) => { const n = [...logos]; const j = i + d; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; change(n); };
+  const save = async () => {
+    setBusy(true);
+    try { setLogos(await adminSaveTrustedLogos(logos)); setDirty(false); toast.success("Trusted by logos saved - live on the homepage"); }
+    catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setBusy(false); }
+  };
+  if (!logos) return null;
+  return (
+    <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-6 mb-10" data-testid="admin-trusted-logos">
+      <div className="text-xs uppercase tracking-wider text-[#7bc67e] font-extrabold">Trusted by logos</div>
+      <p className="text-sm text-[#4b5563] mt-1">Customer logos that scroll across the homepage under &ldquo;Trusted by&rdquo;. Square images look best. Only show customers who are happy for you to use their logo.</p>
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        {logos.map((l, i) => (
+          <div key={i} className="border-2 border-[#eef2f7] rounded-2xl p-2" data-testid={`trusted-logo-${i}`}>
+            <div className="aspect-square rounded-xl overflow-hidden bg-[#f8fafc]"><img src={mediaUrl(l.image)} alt={l.name} className="w-full h-full object-cover" /></div>
+            <input value={l.name} onChange={(e) => change(logos.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Business name" className="mt-2 w-full border border-[#e5e7eb] rounded-lg px-2 py-1 text-xs" />
+            <div className="mt-1 flex items-center justify-between">
+              <span className="flex gap-1">
+                <button onClick={() => move(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-[#f0fdf4] disabled:opacity-30" title="Move left"><ArrowLeft size={12} /></button>
+                <button onClick={() => move(i, 1)} disabled={i === logos.length - 1} className="p-1 rounded hover:bg-[#f0fdf4] disabled:opacity-30" title="Move right"><ArrowRight size={12} /></button>
+              </span>
+              <button onClick={() => change(logos.filter((_, j) => j !== i))} className="p-1 rounded text-rose-500 hover:bg-rose-50" title="Remove"><Trash2 size={12} /></button>
+            </div>
+          </div>
+        ))}
+        <label className="border-2 border-dashed border-[#7bc67e] rounded-2xl grid place-items-center aspect-square cursor-pointer text-[#166534] text-xs font-extrabold text-center p-2 hover:bg-[#f0fdf4]" data-testid="trusted-logo-add">
+          {busy ? <Loader2 className="animate-spin" size={18} /> : <span><Upload size={18} className="mx-auto mb-1" />Add logos</span>}
+          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files?.length && add([...e.target.files])} />
+        </label>
+      </div>
+      <button onClick={save} disabled={!dirty || busy} className="mt-4 inline-flex items-center gap-2 bg-[#1a1a1a] text-white font-extrabold rounded-full px-5 py-2 text-sm disabled:opacity-40" data-testid="trusted-logos-save">
+        <Save size={14} /> Save logos
+      </button>
     </div>
   );
 }

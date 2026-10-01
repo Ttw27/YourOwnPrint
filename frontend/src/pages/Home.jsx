@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import FindMyKitPromo from "../components/bold/FindMyKitPromo";
+import TrustedBy from "../components/bold/TrustedBy";
 import PortfolioStrip from "../components/bold/PortfolioStrip";
 import HowWePrint from "../components/bold/HowWePrint";
 import PricePromise from "../components/bold/PricePromise";
@@ -240,6 +241,9 @@ export default function Home() {
           <Link to="/reviews" className="mt-4 inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-6 py-2.5 rounded-full transition-colors">Browse & review →</Link>
         </div>
       </div>
+
+      {/* Customer logos - managed in Admin > Photo gallery */}
+      <TrustedBy />
 
       {/* Full price promise hero */}
       <PricePromise variant="hero" />

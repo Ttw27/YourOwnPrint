@@ -21,6 +21,7 @@ PAGE_COPY_SLUGS = [
     "kit-your-workforce", "design-your-own", "full-squad-configurator",
     "for-business",
     "easy-ordering",
+    "dtf-printing",
     "business-enquiry",
     "school-trips",
     "sports-outfit-configurator", "team-kits", "team-kit-builder",

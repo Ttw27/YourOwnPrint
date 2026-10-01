@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, Layers, Palette, ShieldCheck } from "lucide-react";
+import { Sparkles, Layers, Palette, ShieldCheck, Type } from "lucide-react";
+import { DtfComparison } from "../../pages/DtfPrinting";
 import usePageCopy from "../../hooks/usePageCopy";
 
 /**
@@ -24,8 +25,8 @@ export default function HowWePrint({ className = "", variant = "section" }) {
   //   cta_label→ the button label
   const copy = usePageCopy("how-we-print", {
     title: "How we print",
-    body: "Every order is printed with DTF - our go-to method for vibrant, full-colour, long-lasting prints with no minimums and no setup fees. One tee or five hundred, DTF gives you the same crisp finish.",
-    subtitle: "Prefer embroidery or screen print for a larger run? Get in touch and we'll put a quote together for you.",
+    body: "Every order is printed with DTF - sharper detail than embroidery, every colour you need, and a print that's bonded into the fabric to last as long as the garment. No minimums, no setup fees.",
+    subtitle: "Ordering a big run or need something specific? Get in touch and we'll put a quote together for you.",
     cta_label: "Get a quote",
   });
   const heading = copy.title || "How we print";
@@ -34,9 +35,10 @@ export default function HowWePrint({ className = "", variant = "section" }) {
   const enquiry_cta = copy.cta_label || "Get a quote";
 
   const points = [
-    { icon: Palette, label: "Full colour", sub: "Photos, gradients, fine detail" },
+    { icon: Type, label: "Small text stays sharp", sub: "Fine detail embroidery can't stitch" },
+    { icon: Palette, label: "Every colour", sub: "Gradients, shading, even photos" },
+    { icon: ShieldCheck, label: "Lasts as long as the garment", sub: "No loose threads, no fraying" },
     { icon: Layers, label: "No minimums", sub: "One item or hundreds" },
-    { icon: ShieldCheck, label: "Built to last", sub: "Washes and wears well" },
   ];
 
   if (variant === "compact") {
@@ -47,6 +49,7 @@ export default function HowWePrint({ className = "", variant = "section" }) {
           <div>
             <div className="font-black text-sm">{heading}</div>
             <p className="text-xs text-[#4b5563] mt-1">{body}</p>
+            <Link to="/dtf-printing" className="inline-block text-xs font-extrabold text-[#166534] hover:underline mt-1">Why DTF beats embroidery →</Link>
             <p className="text-xs text-[#4b5563] mt-2">{enquiry}{" "}
               <Link to="/contact" className="font-extrabold text-[#166534] hover:underline">{enquiry_cta} →</Link>
             </p>
@@ -66,9 +69,14 @@ export default function HowWePrint({ className = "", variant = "section" }) {
             </div>
             <p className="mt-4 text-xl font-bold leading-relaxed text-[#1a1a1a]">{body}</p>
             <p className="mt-4 text-[#4b5563]">{enquiry}</p>
-            <Link to="/contact" className="mt-5 inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-6 py-3" data-testid="how-we-print-cta">
-              {enquiry_cta} →
-            </Link>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link to="/dtf-printing" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-6 py-3" data-testid="how-we-print-more">
+                Why DTF beats embroidery →
+              </Link>
+              <Link to="/contact" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] font-extrabold rounded-full px-6 py-3" data-testid="how-we-print-cta">
+                {enquiry_cta}
+              </Link>
+            </div>
           </div>
           <div className="grid sm:grid-cols-1 gap-3">
             {points.map((p, i) => {
@@ -84,6 +92,10 @@ export default function HowWePrint({ className = "", variant = "section" }) {
               );
             })}
           </div>
+        </div>
+        <div className="mt-8 border-t-2 border-[#f0fdf4] pt-6">
+          <div className="font-black text-lg mb-2">DTF vs embroidery at a glance</div>
+          <DtfComparison compact />
         </div>
       </div>
     </section>

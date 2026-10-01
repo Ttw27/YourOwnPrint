@@ -17,6 +17,7 @@ const PAGE_COPY_SLUGS = [
   { slug: "workwear", label: "Workwear index" },
   { slug: "for-business", label: "For Business (switchers) page" },
   { slug: "easy-ordering", label: "Order by WhatsApp or email page" },
+  { slug: "dtf-printing", label: "Why we print with DTF page" },
   { slug: "business-enquiry", label: "Business enquiry page" },
   { slug: "school-trips", label: "School Trip T-shirts page" },
   { slug: "portfolio", label: "Portfolio page" },

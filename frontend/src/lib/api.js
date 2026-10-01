@@ -1018,3 +1018,13 @@ export async function adminSaveDeliverySettings(values) {
   const { data } = await api.put("/admin/delivery-settings", values);
   return data;
 }
+
+// ---- "Trusted by" homepage logos ----
+export async function fetchTrustedLogos() {
+  const { data } = await api.get("/trusted-logos");
+  return data.logos || [];
+}
+export async function adminSaveTrustedLogos(logos) {
+  const { data } = await api.put("/admin/trusted-logos", { logos });
+  return data.logos || [];
+}

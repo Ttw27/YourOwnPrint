@@ -753,6 +753,7 @@ async def sitemap_xml():
         ("/sports-fitness", "0.8", "weekly"),
         ("/team-kits", "0.8", "weekly"),
         ("/specials", "0.7", "weekly"),
+        ("/dtf-printing", "0.6", "monthly"),
         ("/design", "0.7", "weekly"),
         ("/industries", "0.7", "weekly"),
         ("/reviews", "0.5", "weekly"),
@@ -7959,6 +7960,7 @@ import routers.proof_maker  # noqa: F401 - registers /admin/proof/* (admin proof
 import routers.bundles  # noqa: F401 - registers /admin/bundles/* (bundle set builder)
 import routers.supplier_status  # noqa: F401 - registers /admin/clearance/* (PenCarrie clearance check)
 import routers.delivery  # noqa: F401 - registers /delivery/info + /admin/delivery-settings
+import routers.trusted_logos  # noqa: F401 - registers /trusted-logos (homepage "Trusted by")
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
