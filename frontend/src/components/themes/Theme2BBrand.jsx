@@ -115,7 +115,7 @@ export default function Theme2BBrand({ inShowcase = true, themeNumber = "2B" }) 
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {SECTORS.map((s, i) => (
-            <Link key={s.name} to="/workwear" data-testid={`t2b-sector-${i}`} className="group bg-white border-2 border-black hover:bg-black hover:text-white transition-colors overflow-hidden">
+            <Link key={s.name} to={s.href || "/workwear"} data-testid={`t2b-sector-${i}`} className="group bg-white border-2 border-black hover:bg-black hover:text-white transition-colors overflow-hidden">
               <div className="aspect-[4/3] overflow-hidden bg-black">
                 <img src={s.image} alt={s.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" />
               </div>

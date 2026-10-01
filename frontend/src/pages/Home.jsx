@@ -124,7 +124,7 @@ export default function Home() {
             const accents = ["#7bc67e", "#D85A30", "#378ADD", "#D4537E", "#1D9E75", "#BA7517"];
             const accent = accents[i % accents.length];
             return (
-              <Link key={s.name} to="/workwear" data-testid={`home-sector-${i}`} className="group relative aspect-[4/5] rounded-2xl overflow-hidden" style={{ boxShadow: `inset 0 0 0 3px ${accent}` }}>
+              <Link key={s.name} to={s.href || "/workwear"} data-testid={`home-sector-${i}`} className="group relative aspect-[4/5] rounded-2xl overflow-hidden" style={{ boxShadow: `inset 0 0 0 3px ${accent}` }}>
                 <SiteImage src={sectorImage(s)} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" testid={`home-sector-image-${i}`} />
                 <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4">

@@ -89,7 +89,7 @@ export default function Theme3Bold({ inShowcase = true, themeNumber = 3 }) {
           {SECTORS.map((s, i) => {
             const colors = ["bg-[#7bc67e]", "bg-[#fde68a]", "bg-[#fbcfe8]", "bg-[#bfdbfe]", "bg-[#fed7aa]"];
             return (
-              <Link key={s.name} to="/workwear" data-testid={`t3-sector-${i}`} className="group relative aspect-[4/5] rounded-2xl overflow-hidden">
+              <Link key={s.name} to={s.href || "/workwear"} data-testid={`t3-sector-${i}`} className="group relative aspect-[4/5] rounded-2xl overflow-hidden">
                 <img src={s.image} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 <div className={`absolute inset-0 ${colors[i % colors.length]} mix-blend-multiply opacity-50 group-hover:opacity-30 transition-opacity`} />
                 <div className="absolute inset-x-0 bottom-0 p-4">

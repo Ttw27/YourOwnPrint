@@ -95,7 +95,7 @@ export default function Theme2Clean({ inShowcase = true, themeNumber = 2 }) {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
           {SECTORS.map((s, i) => (
-            <Link key={s.name} to="/workwear" data-testid={`t2-sector-${i}`} className="group bg-white rounded-lg border border-[#e2e8f0] hover:border-[#0066ff] hover:shadow-md transition-all overflow-hidden">
+            <Link key={s.name} to={s.href || "/workwear"} data-testid={`t2-sector-${i}`} className="group bg-white rounded-lg border border-[#e2e8f0] hover:border-[#0066ff] hover:shadow-md transition-all overflow-hidden">
               <div className="aspect-[4/3] overflow-hidden">
                 <img src={s.image} alt={s.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>

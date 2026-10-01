@@ -109,7 +109,7 @@ export default function Theme1Industrial({ inShowcase = true, themeNumber = 1 })
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {SECTORS.map((s, i) => (
-            <Link key={s.name} to="/workwear" data-testid={`t1-sector-${i}`} className="group relative aspect-square overflow-hidden bg-[#1a1a1a] border border-[#222]">
+            <Link key={s.name} to={s.href || "/workwear"} data-testid={`t1-sector-${i}`} className="group relative aspect-square overflow-hidden bg-[#1a1a1a] border border-[#222]">
               <img src={s.image} alt={s.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-4">

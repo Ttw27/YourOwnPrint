@@ -78,7 +78,7 @@ export default function Theme4Premium({ inShowcase = true, themeNumber = 4 }) {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {SECTORS.map((s, i) => (
-            <Link key={s.name} to="/workwear" data-testid={`t4-sector-${i}`} className="group relative aspect-[3/4] overflow-hidden border border-transparent hover:border-[#c9a84c] transition-colors">
+            <Link key={s.name} to={s.href || "/workwear"} data-testid={`t4-sector-${i}`} className="group relative aspect-[3/4] overflow-hidden border border-transparent hover:border-[#c9a84c] transition-colors">
               <img src={s.image} alt={s.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#1e1e2e] via-transparent to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-4">
