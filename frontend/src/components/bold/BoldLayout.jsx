@@ -260,13 +260,6 @@ export function BoldNavbar() {
   );
 }
 
-// The logo is dark artwork on a light background, so on the black footer it had
-// to sit in a white patch that read as a sticker stuck on the page. A wordmark
-// set in the brand colours belongs there instead - same identity, no box.
-const WORDMARK = [
-  ["YOUR", "#D85A30"], ["OWN", "#378ADD"], ["PRINT", "#7bc67e"],
-];
-
 // Only platforms with a link saved in the admin are rendered, so an unused one
 // never shows as a dead icon pointing at "#".
 const SOCIALS = [
@@ -287,13 +280,8 @@ export function BoldFooter() {
     <footer className="bg-[#1a1a1a] text-white">
       <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-5 gap-8">
         <div>
-          <Link to="/" className="inline-flex items-baseline font-nunito font-black text-2xl tracking-tight" aria-label="Your Own Print - home">
-            {WORDMARK.map(([text, colour]) => (
-              <span key={text} style={{ color: colour }}>{text}</span>
-            ))}
-            <span className="text-neutral-500 text-sm ml-1">.co.uk</span>
-          </Link>
-          <p className="mt-3 text-sm text-neutral-300">Custom print & workwear, based in Leicester - delivering across the whole of the UK.</p>
+          <div className="font-nunito font-black text-lg text-white">About Your Own Print</div>
+          <p className="mt-3 text-sm text-neutral-300 leading-relaxed">Affordable, high-quality custom clothing for businesses, teams and brands - t-shirts, hoodies, polos, workwear and more. Printed in-house in Leicester and delivered across the UK.</p>
           {links.length > 0 && (
             <div className="flex gap-3 mt-4" data-testid="footer-socials">
               {links.map(({ key, label, Icon }) => (
@@ -313,9 +301,9 @@ export function BoldFooter() {
             </div>
           )}
         </div>
-        <FooterCol title="Shop" links={[["The Design Shop", "/design-shop"], ["Find My Kit", "/find-my-kit"], ["Workwear", "/workwear"], ["Teams & Schools", "/teams-schools"], ["Design Your Own", "/design"], ["Bulk bundles & packs", "/bundles"], ["Portfolio", "/portfolio"]]} />
-        <FooterCol title="Help" links={[["Business enquiries", "/business-enquiry"], ["Order by WhatsApp or email", "/easy-ordering"], ["Get a Quote", "/contact"], ["Contact", "/contact"], ["Reviews", "/reviews"]]} />
-        <FooterCol title="Policies" links={[["Terms & Conditions", "/terms"], ["Privacy Policy", "/privacy"], ["Delivery & Returns", "/returns"]]} />
+        <FooterCol title="Shop" links={[["Our full catalogue", "/workwear"], ["Design Your Own", "/design"], ["The Design Shop", "/design-shop"], ["Teams & Schools", "/teams-schools"], ["Bulk bundles & packs", "/bundles"], ["Find My Kit", "/find-my-kit"], ["Search", "/search"]]} />
+        <FooterCol title="Services" links={[["Starting a business", "/specials"], ["Starting a brand", "/festival-tees-and-brands"], ["Business enquiries", "/business-enquiry"], ["Order by WhatsApp or email", "/easy-ordering"], ["Why we print with DTF", "/dtf-printing"], ["Previous work", "/portfolio"], ["Reviews", "/reviews"]]} />
+        <FooterCol title="Help" links={[["Get a Quote", "/contact"], ["Contact us", "/contact"], ["Delivery & Returns", "/returns"], ["Privacy Policy", "/privacy"], ["Terms & Conditions", "/terms"]]} />
         <div>
           <div className="font-nunito font-bold text-sm text-neutral-400 mb-3">Payments</div>
           <div className="flex flex-wrap gap-2 text-xs">
