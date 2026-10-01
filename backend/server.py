@@ -722,7 +722,7 @@ async def root():
     return {"message": "Your Own Print API"}
 
 
-SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "https://your-own-print.vercel.app")
+SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "https://yourownprint.co.uk")
 
 
 def is_live(p: Dict) -> bool:
