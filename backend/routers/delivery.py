@@ -31,7 +31,7 @@ DEFAULTS: Dict = {
     "free_over": 150.0,             # UK delivery free when the goods total is at least this (0 = never)
     # UK delivery by weight: [up to kg, price]; above the last band, each extra
     # started `box_kg` box costs `extra_box_price`.
-    "bands": [[1, 3.99], [2, 4.99], [5, 6.99], [10, 8.99], [15, 10.99], [25, 13.99]],
+    "bands": [[1, 3.99], [5, 4.99], [10, 8.99], [15, 10.99], [25, 13.99]],
     "box_kg": 25,
     "extra_box_price": 12.99,
     # Weight per garment (kg), by type. First matching word wins.
