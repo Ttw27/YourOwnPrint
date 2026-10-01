@@ -224,11 +224,12 @@ export default function ProductDetail() {
       const qn = Number(q) || 0;
       if (qn <= 0) return;
       // Regular-customer discount: garment only, print stays full price (matches server).
-      const unit = discounted((product.price || 0) + (upcharges[sz] || 0), accountPct, product) + printCostPerGarment;
+      const colourUp = Number(product.colour_upcharges?.[color] || 0);   // e.g. Black +£2 on Specials
+      const unit = discounted((product.price || 0) + (upcharges[sz] || 0) + colourUp, accountPct, product) + printCostPerGarment;
       total += Math.round(unit * qn * 100) / 100;
     });
     return total;
-  }, [product, sizeQtys, printCostPerGarment, accountPct]);
+  }, [product, sizeQtys, printCostPerGarment, accountPct, color]);
   const accountSaving = useMemo(() => {
     if (!product || !accountPct) return 0;
     const upcharges = product.size_upcharges || {};
@@ -370,7 +371,7 @@ export default function ProductDetail() {
 
                 {/* Colours */}
                 {product.colors?.length > 0 && (
-                  <Section title="1. Colour" right={<span className="text-xs text-[#4b5563]">{color || "Pick one"}</span>}>
+                  <Section title="1. Colour" right={<span className="text-xs text-[#4b5563]">{color || "Pick one"}{Number(product.colour_upcharges?.[color] || 0) > 0 ? ` (+£${Number(product.colour_upcharges[color]).toFixed(2)})` : ""}</span>}>
                     <div className="flex gap-2 flex-wrap" data-testid="color-swatches">
                       {product.colors.map((c) => {
                         const bg = swatchBackground(c);
@@ -387,6 +388,11 @@ export default function ProductDetail() {
                         );
                       })}
                     </div>
+                    {Object.entries(product.colour_upcharges || {}).some(([, v]) => Number(v) > 0) && (
+                      <div className="text-[11px] text-[#4b5563] mt-2" data-testid="colour-upcharges-note">
+                        {Object.entries(product.colour_upcharges).filter(([, v]) => Number(v) > 0).map(([n, v]) => `${n} +£${Number(v).toFixed(2)} per item`).join(" · ")}
+                      </div>
+                    )}
                   </Section>
                 )}
 
@@ -587,6 +593,12 @@ export default function ProductDetail() {
                     <span>Base price ({totalQty || 0} × £{product.price.toFixed(2)})</span>
                     <span data-testid="price-base">£{((product.price || 0) * totalQty).toFixed(2)}</span>
                   </div>
+                  {Number(product.colour_upcharges?.[color] || 0) > 0 && totalQty > 0 && (
+                    <div className="flex items-center justify-between text-sm mt-1 text-neutral-300" data-testid="price-colour-extra">
+                      <span>{color} ({totalQty} × £{Number(product.colour_upcharges[color]).toFixed(2)})</span>
+                      <span>£{(Number(product.colour_upcharges[color]) * totalQty).toFixed(2)}</span>
+                    </div>
+                  )}
                   {Object.entries(product.size_upcharges || {}).some(([sz]) => (sizeQtys[sz] || 0) > 0) && (
                     <div className="flex items-center justify-between text-sm mt-1 text-neutral-300">
                       <span>Size upcharges</span>

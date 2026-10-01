@@ -376,7 +376,7 @@ async def customer_forgot_password(payload: ForgotPasswordRequest, request: Requ
         if not origin:
             # Fallback for server-to-server calls without an Origin header.
             import os
-            origin = (os.environ.get("YOP_APP_ORIGIN") or "https://yourownprint.co.uk").rstrip("/")
+            origin = (os.environ.get("YOP_APP_ORIGIN") or "https://www.yourownprint.co.uk").rstrip("/")
         reset_link = f"{origin}/reset-password?token={token}"
         body = email_wrap(
             "Reset your password",

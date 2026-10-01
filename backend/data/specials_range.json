@@ -1,0 +1,518 @@
+[
+ {
+  "id": "special-gd01-white",
+  "name": "Special - Gildan SoftStyle Adult T-Shirt (GD01) in White - Breast Print",
+  "base": "GD01",
+  "category": "t-shirts",
+  "gender_fit": "unisex",
+  "price": 4.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   }
+  ],
+  "colour_upcharges": {},
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/41913_source_1640064755_41cecd6b-a875-4ed2-82e4-0d6f3ded1bc6.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01WHIMODEL1_03e8fc46-5719-4aee-bf1e-a245b9d81891.jpg"
+  ]
+ },
+ {
+  "id": "special-gd01b-white",
+  "name": "Special - Gildan SoftStyle Kids T-Shirt (GD01B) in White - Breast Print",
+  "base": "GD01B",
+  "category": "t-shirts",
+  "gender_fit": "kids",
+  "price": 3.99,
+  "sizes": [
+   "3-4 yrs",
+   "5-6 yrs",
+   "7-8 yrs",
+   "9-11 yrs",
+   "12-14 yrs"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   }
+  ],
+  "colour_upcharges": {},
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01B_WHI_FRONT_3599b0ef-95bf-438d-8bd6-b7b20d2b6773.jpg"
+  ]
+ },
+ {
+  "id": "special-gd01",
+  "name": "Special - Gildan SoftStyle Adult T-Shirt (GD01) - Breast Print",
+  "base": "GD01",
+  "category": "t-shirts",
+  "gender_fit": "unisex",
+  "price": 6.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   },
+   {
+    "name": "Sport Grey",
+    "hex": "#a9a9ab"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/41913_source_1640064755_c223d52c-3a7c-4039-83c4-71354f155a30.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01WHIMODEL1_ba55ea6b-4535-45cb-a9b5-2a534fc1d3c1.jpg"
+  ]
+ },
+ {
+  "id": "special-gd01b",
+  "name": "Special - Gildan SoftStyle Kids T-Shirt (GD01B) - Breast Print",
+  "base": "GD01B",
+  "category": "t-shirts",
+  "gender_fit": "kids",
+  "price": 5.99,
+  "sizes": [
+   "3-4 yrs",
+   "5-6 yrs",
+   "7-8 yrs",
+   "9-11 yrs",
+   "12-14 yrs"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01B_WHI_FRONT_7d5d72d6-e927-4929-886e-b6eb1699360b.jpg"
+   },
+   {
+    "name": "Sport Grey",
+    "hex": "#a9a9ab",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01B_SGY_FRONT_0f0540cf-2bb5-4443-a618-8ae07b09cb93.jpg"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01B_BLK_FRONT_a8674672-026d-4e83-a7be-13a504196676.jpg"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/40900_source_1640063597_b1796a1c-003a-47f7-ab49-f1a1c705653a.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01BSGYMODEL1HERO_886abacd-0e7f-47f3-a196-5c5329aeaca5.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01B_WHI_FRONT_7d5d72d6-e927-4929-886e-b6eb1699360b.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01B_SGY_FRONT_0f0540cf-2bb5-4443-a618-8ae07b09cb93.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD01B_BLK_FRONT_a8674672-026d-4e83-a7be-13a504196676.jpg"
+  ]
+ },
+ {
+  "id": "special-gd95",
+  "name": "Special - Gildan Ladies T-Shirt (GD95) - Breast Print",
+  "base": "GD95",
+  "category": "t-shirts",
+  "gender_fit": "womens",
+  "price": 6.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   },
+   {
+    "name": "Sport Grey",
+    "hex": "#a9a9ab"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/41070_source_1640063706_8a3e315d-a5ca-468b-8369-a705ba903528.jpg"
+  ]
+ },
+ {
+  "id": "special-gd11",
+  "name": "Special - Gildan SoftStyle Long Sleeve T-Shirt (GD11) - Breast Print",
+  "base": "GD11",
+  "category": "t-shirts",
+  "gender_fit": "unisex",
+  "price": 8.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   },
+   {
+    "name": "Sport Grey",
+    "hex": "#a9a9ab"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD11_WHI_FRONT_c134a596-0367-4116-871d-a9aad92ae495.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GildanSoftStyle_LongSleeveT-Shirt-GD11_64400_7b087774-e957-4c3b-a834-2b26e83ef6ee.jpg"
+  ]
+ },
+ {
+  "id": "special-gd12",
+  "name": "Special - Gildan SoftStyle Tank Top (GD12) - Breast Print",
+  "base": "GD12",
+  "category": "t-shirts",
+  "gender_fit": "unisex",
+  "price": 6.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   },
+   {
+    "name": "Sport Grey",
+    "hex": "#a9a9ab"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/gd12copy_7932d224-7ad4-4091-8c0d-077f127f253f.jpg"
+  ]
+ },
+ {
+  "id": "special-gd56",
+  "name": "Special - Gildan Heavy Blend Crew Sweatshirt (18000) - Breast Print",
+  "base": "GD56",
+  "category": "sweatshirts",
+  "gender_fit": "unisex",
+  "price": 15.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD56_WHI_FRONT_578fb4ed-c2ae-4e15-ac7f-3473c23eddd2.jpg"
+   },
+   {
+    "name": "Sport Grey",
+    "hex": "#a9a9ab",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD56_SGY_FRONT_96fccebb-3c0a-4b4f-8b24-491999f82ef1.jpg"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD56_BLK_FRONT_17e59550-725b-49e9-9970-428e6f625d5d.jpg"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/JH030HEATHERGREY_FRONT_9d5d344f-8390-4432-abd6-66c46d901fb1.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD56_WHI_FRONT_578fb4ed-c2ae-4e15-ac7f-3473c23eddd2.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD56_SGY_FRONT_96fccebb-3c0a-4b4f-8b24-491999f82ef1.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD56_BLK_FRONT_17e59550-725b-49e9-9970-428e6f625d5d.jpg"
+  ]
+ },
+ {
+  "id": "special-gd57",
+  "name": "Special - Gildan Heavy Blend Hoodie (18500) - Breast Print",
+  "base": "GD57",
+  "category": "hoodies",
+  "gender_fit": "unisex",
+  "price": 16.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL"
+  ],
+  "size_upcharges": {
+   "4XL": 3.0,
+   "5XL": 3.0
+  },
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD57_WHI_FRONT_96e5d76f-0d21-4a4a-a2e4-54419497bdeb.jpg"
+   },
+   {
+    "name": "Sport Grey",
+    "hex": "#a9a9ab",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD57_SGY_FRONT_7c88f57b-0361-41f2-ae52-d5947814d059.jpg"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD57_BLK_FRONT_4dbe5e90-fc58-4639-976b-0fd42b26a080.jpg"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/JH001JGREY_TORSO_73a92e68-f2a3-439a-9e2d-47db171c6c8e.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD57_WHI_FRONT_96e5d76f-0d21-4a4a-a2e4-54419497bdeb.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD57_SGY_FRONT_7c88f57b-0361-41f2-ae52-d5947814d059.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/GD57_BLK_FRONT_4dbe5e90-fc58-4639-976b-0fd42b26a080.jpg"
+  ]
+ },
+ {
+  "id": "special-rx151",
+  "name": "Special - Pro RTX Pro T-Shirt (RX151) - Breast Print",
+  "base": "RX151",
+  "category": "t-shirts",
+  "gender_fit": "unisex",
+  "price": 7.99,
+  "sizes": [
+   "XS",
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL",
+   "6XL"
+  ],
+  "size_upcharges": {
+   "5XL": 1.0,
+   "6XL": 1.0
+  },
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   },
+   {
+    "name": "Heather Grey",
+    "hex": "#a7a9ac"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/rx151_white_ft_5661886b-f27c-43c3-a1db-2c2f05bc0b9c.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/ProRTXProT-Shirt-RX151_3a20abdc-3640-48c9-9851-b24fb4e019e8.jpg"
+  ]
+ },
+ {
+  "id": "special-rx301",
+  "name": "Special - Pro RTX Pro Sweatshirt (RX301) - Breast Print",
+  "base": "RX301",
+  "category": "sweatshirts",
+  "gender_fit": "unisex",
+  "price": 14.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL",
+   "6XL"
+  ],
+  "size_upcharges": {
+   "5XL": 1.0,
+   "6XL": 1.0
+  },
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   },
+   {
+    "name": "Heather Grey",
+    "hex": "#a7a9ac"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/rx301_white_ft_e47d4b3e-177a-459e-a7db-7f5f96002679.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/ProRTXProSweatshirt-RX301_77c82138-68da-4ee7-b7f0-7f85e482d27e.jpg"
+  ]
+ },
+ {
+  "id": "special-rx101",
+  "name": "Special - Pro RTX Pro Pique Polo Shirt (RX101) - Breast Print",
+  "base": "RX101",
+  "category": "polos",
+  "gender_fit": "unisex",
+  "price": 10.99,
+  "sizes": [
+   "XS",
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL",
+   "6XL"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   },
+   {
+    "name": "Heather Grey",
+    "hex": "#a7a9ac",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/rx101_heathergrey_ft4_092f6904-c210-4f6a-9e1d-754479d837f8.jpg"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111",
+    "image": "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/rx101_black_ft4_2cf53fac-ee02-4c6d-bb69-936d584aaa73.jpg"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/RX101_e37290c4-878b-45f2-9cf0-761a14b60622.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/rx101_heathergrey_ft4_092f6904-c210-4f6a-9e1d-754479d837f8.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/rx101_black_ft4_2cf53fac-ee02-4c6d-bb69-936d584aaa73.jpg"
+  ]
+ },
+ {
+  "id": "special-rx101f",
+  "name": "Special - Pro RTX Ladies Pro Pique Polo Shirt (RX101F) - Breast Print",
+  "base": "RX101F",
+  "category": "polos",
+  "gender_fit": "womens",
+  "price": 10.99,
+  "sizes": [
+   "XS",
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "White",
+    "hex": "#ffffff"
+   },
+   {
+    "name": "Heather Grey",
+    "hex": "#a7a9ac"
+   },
+   {
+    "name": "Black",
+    "hex": "#111111"
+   }
+  ],
+  "colour_upcharges": {
+   "Black": 2.0
+  },
+  "images": [
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/rx01f_white_ft2_edb185dd-b4bc-48a1-a5db-1fffd90ea21a.jpg",
+   "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/ProRTXLadiesProPiquePoloShirt-RX101F_3bae4643-38d7-4592-94f0-36611c8959d7.jpg"
+  ]
+ }
+]

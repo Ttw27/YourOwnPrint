@@ -722,7 +722,7 @@ async def root():
     return {"message": "Your Own Print API"}
 
 
-SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "https://yourownprint.co.uk")
+SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "https://www.yourownprint.co.uk")
 
 
 def is_live(p: Dict) -> bool:
@@ -1488,6 +1488,13 @@ async def _resolve_line_pricing(
         wanted = set(placements)
         placements_clean = ["drawstring-bag"] if "drawstring-bag" in wanted else []
         print_cost = LEAVERS_BAG_PRICE if "drawstring-bag" in wanted else 0.0
+    elif product.get("specials_eligible") and not product.get("bundle_items"):
+        # Your Own Print Specials: ONE breast-pocket logo, included in the price.
+        placements_clean = ["left-breast"]
+        print_cost = 0.0
+        sp_colours = [(c.get("name") if isinstance(c, dict) else c) for c in (product.get("colors") or [])]
+        if sp_colours and color not in sp_colours:
+            raise HTTPException(400, f"Sorry, {product.get('name')} comes in {', '.join(sp_colours)} only - please pick one of those.")
     elif (design_meta or {}).get("flow") == "designer":
         wanted = set(placements)
         placements_clean = []
@@ -1567,7 +1574,7 @@ async def _resolve_line_pricing(
     account_saving = 0.0
     breakdown: List[str] = []
     for sz, q in resolved_qtys.items():
-        garment = base_price + float(size_upcharges.get(sz, 0.0))
+        garment = base_price + float(size_upcharges.get(sz, 0.0)) + float((product.get("colour_upcharges") or {}).get(color or "", 0.0))
         garment_disc = round(garment * acct_factor, 2) if acct_pct > 0 else garment
         unit = garment_disc + print_cost
         line_total += round(unit * q, 2)
@@ -6792,6 +6799,8 @@ def _apply_imported_product(doc: Dict) -> None:
         # Design Shop: how big / how high the design sits in the garment's print
         # area, {"all"|garment slug: {"scale": %, "y": %}} (Admin > Design Shop).
         "design_placement": doc.get("design_placement") or {},
+        # Extra charge per colour, e.g. {"Black": 2.0} on the Specials range.
+        "colour_upcharges": doc.get("colour_upcharges") or {},
         # Colours this design is NOT sold in (e.g. black text -> no black garments).
         "design_hidden_colours": doc.get("design_hidden_colours") or [],
         "created_at": doc.get("created_at") or doc.get("imported_at") or "",
@@ -7024,6 +7033,11 @@ async def _load_imported_products():
             await _cleanup_auto_size_guides_v1()
         except Exception as e:
             logging.warning(f"auto size guide cleanup skipped: {e}")
+        try:
+            from routers.specials import create_specials_range
+            asyncio.create_task(create_specials_range())
+        except Exception as e:
+            logging.warning(f"specials range skipped: {e}")
         try:
             await _fix_auto_size_guides_v2()
         except Exception as e:

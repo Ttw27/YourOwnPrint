@@ -182,6 +182,12 @@ frontend/src/
   that rewrites a product's colours/sizes must be followed by `reapply_saved_settings` or
   `_apply_hidden_options(pid)`.
 
+- **Your Own Print Specials** (`specials_eligible`): ONE left-breast logo included in the price - checkout
+  forces placements to ["left-breast"] at £0 print and only accepts the product's own colours.
+  The 13-product range (from the old Shopify store) is created once from `backend/data/specials_range.json`
+  by `routers/specials.create_specials_range()` (photos mirrored to R2). `colour_upcharges` (e.g.
+  {"Black": 2.0}) adds to the garment price per colour, server + PDP.
+
 - **Regular-customer discounts** (Admin > Customers, `customers.discount_pct`, max 50): % off the
   GARMENT price only (print full price), on top of bulk tiers, never on bundles. Applied server-side
   in `_resolve_line_pricing(account_discount_pct=...)` from `account_discount_for_request()` (reads

@@ -139,8 +139,9 @@ export default function Specials() {
                 className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition-shadow hover:shadow-md"
                 data-testid={`specials-product-${p.id}`}
               >
-                <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
+                <div className="aspect-square overflow-hidden bg-[#f0fdf4] relative">
                   <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+                  <span className="absolute top-3 left-3 w-16 h-16 rounded-full bg-[#5ec4c7] text-white font-nunito font-black text-[11px] leading-tight grid place-items-center text-center shadow" data-testid={`specials-print-inc-${p.id}`}>Print<br />inc. in<br />price</span>
                 </div>
                 <div className="p-4">
                   <div className="font-extrabold text-base">{p.name}</div>
