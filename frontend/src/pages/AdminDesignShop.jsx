@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Sparkles, Loader2, Upload, Trash2, Check } from "lucide-react";
-import { uploadDesignImage, createDesign, listDesigns, deleteDesign, adminGetDesignGarments, adminSaveDesignGarments } from "../lib/api";
+import { Sparkles, Loader2, Upload, Trash2, Check, Maximize2, X } from "lucide-react";
+import { uploadDesignImage, createDesign, listDesigns, deleteDesign, adminGetDesignGarments, adminSaveDesignGarments, fetchDesignShopProduct, adminSetDesignPlacement } from "../lib/api";
+import { DesignMockup } from "./DesignShopProduct";
 
 const GARMENTS = [
   { slug: "t-shirt", title: "T-Shirt", price: "£14.99" },
@@ -18,6 +19,7 @@ const GARMENTS = [
  * auto-guessed from the name if you leave them blank.
  */
 export default function AdminDesignShop() {
+  const [adjusting, setAdjusting] = useState(null);   // design whose size/position is being edited
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [name, setName] = useState("");
@@ -135,6 +137,8 @@ export default function AdminDesignShop() {
         </div>
       </div>
 
+      {adjusting && <AdjustSize design={adjusting} onClose={() => setAdjusting(null)} />}
+
       {/* Existing designs */}
       <div className="mt-12">
         <h2 className="font-black text-xl mb-4">Designs in the shop ({designs.length})</h2>
@@ -151,6 +155,9 @@ export default function AdminDesignShop() {
                   <div className="font-extrabold text-sm truncate">{d.name}</div>
                   <div className="text-xs text-[#4b5563] mt-0.5">from £{Number(d.price).toFixed(2)} · {d.garments.length} garment{d.garments.length === 1 ? "" : "s"}</div>
                   <div className="text-[10px] text-[#a855f7] mt-1 truncate">{d.categories.join(", ")}</div>
+                  <button onClick={() => setAdjusting(d)} className="mt-2 inline-flex items-center gap-1 text-xs font-extrabold text-[#7c3aed] hover:underline" data-testid={`design-adjust-${d.id}`}>
+                    <Maximize2 size={12} /> Adjust size
+                  </button>
                 </div>
                 <button onClick={() => remove(d.id, d.name)} className="absolute top-2 right-2 bg-white/90 hover:bg-rose-500 hover:text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition" title="Remove" data-testid={`design-remove-${d.id}`}>
                   <Trash2 size={14} />
@@ -232,6 +239,109 @@ function GarmentsCard() {
       <button onClick={save} disabled={!dirty || saving} className="mt-4 inline-flex items-center gap-2 bg-[#a855f7] hover:bg-[#9333ea] disabled:opacity-40 text-white font-extrabold px-5 py-2 rounded-full text-sm">
         {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save garments &amp; prices
       </button>
+    </div>
+  );
+}
+
+
+/**
+ * Adjust size - how big the design is and how high it sits on each garment,
+ * with the live mockup. "All garments" sets the default; a garment can have
+ * its own setting (e.g. smaller on the hoodie, whose print area is smaller).
+ * Also printed on the order email so the print matches what the customer saw.
+ */
+function AdjustSize({ design, onClose }) {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
+  const [slug, setSlug] = useState("");
+  const [colourIdx, setColourIdx] = useState(0);
+  const [placement, setPlacement] = useState(design.placement || {});
+  const [scope, setScope] = useState("all");     // "all" | "this"
+  const [vals, setVals] = useState({ scale: 100, y: 0 });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchDesignShopProduct(design.id)
+      .then((d) => { setData(d); setSlug(d.garments[0]?.slug || ""); })
+      .catch(() => setErr("This design is hidden or has no garments set up, so there's nothing to preview."));
+  }, [design.id]);
+
+  const current = (s) => placement[s] || placement.all || { scale: 100, y: 0 };
+  useEffect(() => {
+    if (!slug) return;
+    setVals(current(slug));
+    setScope(placement[slug] ? "this" : "all");
+  }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const garment = data?.garments.find((g) => g.slug === slug);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const r = await adminSetDesignPlacement(design.id, { garment: scope === "all" ? "all" : slug, scale: Number(vals.scale), y: Number(vals.y) });
+      setPlacement(r.placement);
+      design.placement = r.placement;
+      toast.success(scope === "all" ? "Saved for all garments" : `Saved for the ${garment?.title.toLowerCase()}`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setSaving(false); }
+  };
+  const resetThis = async () => {
+    const r = await adminSetDesignPlacement(design.id, { garment: slug, clear: true });
+    setPlacement(r.placement); design.placement = r.placement;
+    setVals(r.placement.all || { scale: 100, y: 0 }); setScope("all");
+    toast.success(`The ${garment?.title.toLowerCase()} now uses the all-garments setting`);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-auto p-6 relative" data-testid="design-adjust-modal">
+        <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#faf5ff] grid place-items-center"><X size={14} /></button>
+        <h2 className="font-black text-2xl pr-10">Adjust size - {design.name}</h2>
+        <p className="text-sm text-[#4b5563] mt-1">Drag the sliders and watch the mockup. This is what customers see, and the size is noted on the order so the print matches.</p>
+        {err ? <p className="mt-6 text-sm text-[#b45309]">{err}</p> : !data ? (
+          <div className="py-16 text-center"><Loader2 className="inline animate-spin" /></div>
+        ) : (
+          <div className="mt-5 grid md:grid-cols-2 gap-6">
+            <div>
+              {garment && <DesignMockup garment={garment} colour={garment.colours[colourIdx] || garment.colours[0]} designImage={data.design_image} placement={vals} />}
+              {garment && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {garment.colours.slice(0, 14).map((c, i) => (
+                    <button key={c.name} title={c.name} onClick={() => setColourIdx(i)} className={`w-6 h-6 rounded-full border-2 ${i === colourIdx ? "border-[#7c3aed]" : "border-[#e5e7eb]"}`} style={{ background: c.hex || "#ccc" }} />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-xs font-extrabold uppercase tracking-wider text-[#4b5563] mb-2">Garment</div>
+              <div className="flex flex-wrap gap-2">
+                {data.garments.map((g) => (
+                  <button key={g.slug} onClick={() => setSlug(g.slug)} className={`px-3 py-1.5 rounded-full text-xs font-extrabold border-2 ${g.slug === slug ? "bg-[#7c3aed] border-[#7c3aed] text-white" : "border-[#e9d5ff]"}`}>
+                    {g.title}{placement[g.slug] ? " •" : ""}
+                  </button>
+                ))}
+              </div>
+              <label className="block mt-5 text-sm font-extrabold">Size: {Math.round(vals.scale)}%
+                <input type="range" min="20" max="100" step="1" value={vals.scale} onChange={(e) => setVals((v) => ({ ...v, scale: e.target.value }))} className="w-full accent-[#a855f7]" data-testid="design-adjust-scale" />
+              </label>
+              <label className="block mt-3 text-sm font-extrabold">Move down: {Math.round(vals.y)}%
+                <input type="range" min="0" max="60" step="1" value={vals.y} onChange={(e) => setVals((v) => ({ ...v, y: e.target.value }))} className="w-full accent-[#a855f7]" data-testid="design-adjust-y" />
+              </label>
+              <p className="text-[11px] text-[#4b5563] mt-1">Size is a % of the garment&rsquo;s print area. &ldquo;Move down&rdquo; lowers the design inside it (0% = top of the print area).</p>
+              <div className="mt-4 space-y-1.5 text-sm">
+                <label className="flex items-center gap-2"><input type="radio" checked={scope === "all"} onChange={() => setScope("all")} /> Use for all garments</label>
+                <label className="flex items-center gap-2"><input type="radio" checked={scope === "this"} onChange={() => setScope("this")} /> Only the {garment?.title.toLowerCase()}</label>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 bg-[#a855f7] hover:bg-[#9333ea] disabled:opacity-40 text-white font-extrabold px-5 py-2 rounded-full text-sm" data-testid="design-adjust-save">
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save
+                </button>
+                {placement[slug] && <button onClick={resetThis} className="text-xs font-bold text-[#4b5563] hover:underline">Use the all-garments setting for this one</button>}
+              </div>
+              <p className="text-[11px] text-[#4b5563] mt-3">A dot (•) on a garment means it has its own setting.</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

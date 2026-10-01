@@ -996,6 +996,10 @@ export async function adminGetDesignGarments() {
   const { data } = await api.get("/admin/design-shop/garments");
   return data;
 }
+export async function adminSetDesignPlacement(id, body) {
+  const { data } = await api.put(`/admin/design-shop/${id}/placement`, body);
+  return data;
+}
 export async function adminSaveDesignGarments(garments) {
   const { data } = await api.put("/admin/design-shop/garments", { garments });
   return data;

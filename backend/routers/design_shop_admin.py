@@ -122,6 +122,7 @@ async def list_designs(offset: int = 0, limit: int = 60):
             "image": p.get("design_image") or p.get("image") or "",
             "categories": p.get("design_categories") or [],
             "garments": p.get("design_garments") or [],
+            "placement": p.get("design_placement") or {},
             "active": p.get("active", True),
         } for p in page],
         "total": total, "offset": offset,
@@ -141,3 +142,32 @@ async def delete_design(payload: DeleteDesignIn):
     if pid in PRODUCTS:
         PRODUCTS[pid]["active"] = False
     return {"ok": True}
+
+
+class PlacementIn(BaseModel):
+    garment: str = "all"     # "all" or a garment slug (e.g. "hoodie")
+    scale: float = 100       # % of the garment's print area
+    y: float = 0             # % of the print area down from the top
+    clear: bool = False      # remove this garment's own setting (back to "all")
+
+
+@api_router.put("/admin/design-shop/{pid}/placement", dependencies=[Depends(require_admin)])
+async def set_design_placement(pid: str, payload: PlacementIn):
+    """Set how big / how high a design sits on its garments (the mockup, and
+    the print size noted on orders)."""
+    from fastapi import HTTPException
+    from server import PRODUCTS
+    p = PRODUCTS.get(pid)
+    if not p or not p.get("design_shop"):
+        raise HTTPException(404, "Design not found")
+    if payload.garment != "all" and payload.garment not in DESIGN_GARMENT_SLUGS:
+        raise HTTPException(400, "Unknown garment")
+    pl = dict(p.get("design_placement") or {})
+    if payload.clear and payload.garment != "all":
+        pl.pop(payload.garment, None)
+    else:
+        pl[payload.garment] = {"scale": round(max(20.0, min(100.0, payload.scale)), 1),
+                               "y": round(max(0.0, min(80.0, payload.y)), 1)}
+    await db.imported_products.update_one({"id": pid}, {"$set": {"design_placement": pl}})
+    p["design_placement"] = pl
+    return {"ok": True, "placement": pl}

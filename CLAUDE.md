@@ -150,6 +150,8 @@ frontend/src/
   (`db.settings` `design_shop_garments`, defaults in `routers/design_shop.DEFAULT_GARMENT_PRODUCTS`).
   The mockup lays `design_image` onto that garment's per-colour designer photo inside its print area.
   Checkout prices from `design_meta.garment` (`resolve_design_garment`); sizes/colours from the linked garment.
+  Per-design size/height (`design_placement`, {"all"|garment: {scale, y}}) set via "Adjust size" in
+  Admin > Design Shop; used by the mockup and noted on the order (`design_meta.print_size`).
 
 - **Hidden products.** Products are never deleted — they're hidden with `active: False`
   (stored on the `imported_products` doc for supplier products, or in `product_overrides`

@@ -18,7 +18,7 @@ import usePageTitle from "../hooks/usePageTitle";
  * checkout re-prices server-side from design_meta.garment.
  */
 
-export function DesignMockup({ garment, colour, designImage, className = "" }) {
+export function DesignMockup({ garment, colour, designImage, placement, className = "" }) {
   // The chosen colour's own photo; never another colour's (that would show the
   // wrong shade) - without one, a plain block of the colour, like the designer.
   const photo = colour ? colour.photo : garment?.photo || "";
@@ -36,12 +36,19 @@ export function DesignMockup({ garment, colour, designImage, className = "" }) {
       ) : (
         <div className="w-full aspect-square" style={{ background: colour?.hex || "#e5e7eb" }} />
       )}
-      {designImage && (
+      {designImage && (() => {
+        // Size + height set per design in Admin > Design Shop ("Adjust size"):
+        // scale = % of the print area, y = % of the print area down from its top.
+        const pl = placement || garment?.placement || { scale: 100, y: 0 };
+        const k = (Number(pl.scale) || 100) / 100;
+        const box = { left: pa.x + (pa.w * (1 - k)) / 2, top: pa.y + (pa.h * (Number(pl.y) || 0)) / 100, width: pa.w * k, height: pa.h * k };
+        return (
         <div className="absolute flex items-start justify-center pointer-events-none"
-             style={{ left: `${pa.x}%`, top: `${pa.y}%`, width: `${pa.w}%`, height: `${pa.h}%` }}>
+             style={{ left: `${box.left}%`, top: `${box.top}%`, width: `${box.width}%`, height: `${box.height}%` }}>
           <img src={designImage} alt="" className="max-w-full max-h-full object-contain" draggable="false" />
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

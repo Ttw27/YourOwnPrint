@@ -97,6 +97,18 @@ async def resolve_design_garment(design: Dict, garment_slug: Optional[str]) -> D
     return {**g, "base": base}
 
 
+DEFAULT_PLACEMENT = {"scale": 100, "y": 0}
+
+
+def placement_for(design: Dict, garment_slug: Optional[str]) -> Dict:
+    """How big (scale, % of the print area) and how far down (y, % of the print
+    area) the design sits on this garment: its own setting, else the design's
+    'all garments' setting, else full size at the top."""
+    pl = design.get("design_placement") or {}
+    p = pl.get(garment_slug or "") or pl.get("all") or DEFAULT_PLACEMENT
+    return {"scale": p.get("scale", 100), "y": p.get("y", 0)}
+
+
 def is_design_product(p: Dict) -> bool:
     return bool(p.get("design_shop"))
 
@@ -179,6 +191,7 @@ async def design_shop_product(pid: str):
                     "photo": by_colour.get(_colour_name(c)) or ""} for c in (base.get("colors") or [])]
         garments.append({
             "slug": slug, "title": g["title"], "price": g["price"],
+            "placement": placement_for(p, slug),
             **{k: v for k, v in _vat_fields({**base, "price": g["price"]}).items()},
             "product_id": base["id"],
             "photo": base.get("designer_image") or base.get("image") or "",

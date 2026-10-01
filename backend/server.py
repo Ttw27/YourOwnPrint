@@ -1251,6 +1251,10 @@ def _order_details_html(doc: dict) -> str:
         if dm.get("garment_name"):
             rows.append(f"Design Shop: {esc(dm.get('garment_name'))} - print this design: "
                         f"<a href='{esc(dm.get('design_image'))}'>artwork</a>")
+            ps = dm.get("print_size") or {}
+            if ps:
+                rows.append(f"Print size: {esc(ps.get('scale', 100))}% of the print area, "
+                            f"{esc(ps.get('y', 0))}% down from the top")
         if dm.get("mode") or dm.get("flow"):
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
         return "<li style='margin-bottom:8px'>" + "<br>".join(rows) + "</li>"
@@ -1454,7 +1458,9 @@ async def _resolve_line_pricing(
         colour_names = [(c.get("name") if isinstance(c, dict) else c) for c in (dg["base"].get("colors") or [])]
         if colour_names and color not in colour_names:
             raise HTTPException(400, f"Please choose a colour for {product.get('name')}")
+        from routers.design_shop import placement_for
         design_meta = {**(design_meta or {}), "garment": dg["slug"], "garment_name": dg["title"],
+                       "print_size": placement_for(product, dg["slug"]),
                        "garment_product_id": dg["base"]["id"],
                        "design_image": product.get("design_image") or product.get("image") or ""}
         placements, blank = [], True
@@ -6758,6 +6764,9 @@ def _apply_imported_product(doc: Dict) -> None:
         "design_categories": doc.get("design_categories") or [],
         "design_garments": doc.get("design_garments") or [],
         "design_image": doc.get("design_image") or "",
+        # Design Shop: how big / how high the design sits in the garment's print
+        # area, {"all"|garment slug: {"scale": %, "y": %}} (Admin > Design Shop).
+        "design_placement": doc.get("design_placement") or {},
         "created_at": doc.get("created_at") or doc.get("imported_at") or "",
         "_imported": True,
         "_source": doc.get("source") or "manual",
