@@ -1253,8 +1253,9 @@ def _order_details_html(doc: dict) -> str:
                         f"<a href='{esc(dm.get('design_image'))}'>artwork</a>")
             ps = dm.get("print_size") or {}
             if ps:
-                rows.append(f"Print size: {esc(ps.get('scale', 100))}% of the print area, "
-                            f"{esc(ps.get('y', 0))}% down from the top")
+                y = float(ps.get("y", 0) or 0)
+                pos = "standard position" if not y else (f"moved {abs(y):g}% of the print area {'down' if y > 0 else 'up'}")
+                rows.append(f"Print size: {esc(ps.get('scale', 100))}% of the standard print area, {esc(pos)}")
         if dm.get("mode") or dm.get("flow"):
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
         return "<li style='margin-bottom:8px'>" + "<br>".join(rows) + "</li>"

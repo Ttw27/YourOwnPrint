@@ -146,8 +146,8 @@ async def delete_design(payload: DeleteDesignIn):
 
 class PlacementIn(BaseModel):
     garment: str = "all"     # "all" or a garment slug (e.g. "hoodie")
-    scale: float = 100       # % of the garment's print area
-    y: float = 0             # % of the print area down from the top
+    scale: float = 100       # % of the garment's print area (100 = standard; up to 180)
+    y: float = 0             # % of the print area height: + moves down, - moves up (towards the collar)
     clear: bool = False      # remove this garment's own setting (back to "all")
 
 
@@ -166,8 +166,8 @@ async def set_design_placement(pid: str, payload: PlacementIn):
     if payload.clear and payload.garment != "all":
         pl.pop(payload.garment, None)
     else:
-        pl[payload.garment] = {"scale": round(max(20.0, min(100.0, payload.scale)), 1),
-                               "y": round(max(0.0, min(80.0, payload.y)), 1)}
+        pl[payload.garment] = {"scale": round(max(20.0, min(180.0, payload.scale)), 1),
+                               "y": round(max(-150.0, min(80.0, payload.y)), 1)}
     await db.imported_products.update_one({"id": pid}, {"$set": {"design_placement": pl}})
     p["design_placement"] = pl
     return {"ok": True, "placement": pl}

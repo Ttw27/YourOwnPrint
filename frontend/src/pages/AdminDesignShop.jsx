@@ -250,6 +250,19 @@ function GarmentsCard() {
  * its own setting (e.g. smaller on the hoodie, whose print area is smaller).
  * Also printed on the order email so the print matches what the customer saw.
  */
+// Size slider: 0-100 with 50 = standard (100% of the print area); left shrinks
+// down to 20%, right grows up to 180%. Stored as the real % (scale).
+const scaleFromSlider = (s) => (s <= 50 ? 20 + (s / 50) * 80 : 100 + ((s - 50) / 50) * 80);
+const sliderFromScale = (sc) => (sc <= 100 ? ((sc - 20) / 80) * 50 : 50 + ((sc - 100) / 80) * 50);
+// How far the design can move up/down (% of the print area height): up as far
+// as the top of the photo (the collar), max 60 either way, same both ways so
+// "standard" stays in the middle of the slider.
+const posRoom = (g) => {
+  const pa = g?.print_area;
+  if (!pa || !pa.h) return 60;
+  return Math.max(10, Math.min(60, Math.floor((pa.y / pa.h) * 100)));
+};
+
 function AdjustSize({ design, onClose }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
@@ -320,13 +333,29 @@ function AdjustSize({ design, onClose }) {
                   </button>
                 ))}
               </div>
-              <label className="block mt-5 text-sm font-extrabold">Size: {Math.round(vals.scale)}%
-                <input type="range" min="20" max="100" step="1" value={vals.scale} onChange={(e) => setVals((v) => ({ ...v, scale: e.target.value }))} className="w-full accent-[#a855f7]" data-testid="design-adjust-scale" />
-              </label>
-              <label className="block mt-3 text-sm font-extrabold">Move down: {Math.round(vals.y)}%
-                <input type="range" min="0" max="60" step="1" value={vals.y} onChange={(e) => setVals((v) => ({ ...v, y: e.target.value }))} className="w-full accent-[#a855f7]" data-testid="design-adjust-y" />
-              </label>
-              <p className="text-[11px] text-[#4b5563] mt-1">Size is a % of the garment&rsquo;s print area. &ldquo;Move down&rdquo; lowers the design inside it (0% = top of the print area).</p>
+              {(() => {
+                const sizeSlider = sliderFromScale(Number(vals.scale));
+                const room = posRoom(garment);
+                const y = Number(vals.y) || 0;
+                return (
+                  <>
+                    <label className="block mt-5 text-sm font-extrabold">Size: {Math.round(sizeSlider)}{Math.round(sizeSlider) === 50 ? " (standard)" : ""}
+                      <input type="range" min="0" max="100" step="1" value={sizeSlider}
+                        onChange={(e) => setVals((v) => ({ ...v, scale: Math.round(scaleFromSlider(Number(e.target.value)) * 10) / 10 }))}
+                        className="w-full accent-[#a855f7]" data-testid="design-adjust-scale" />
+                      <span className="flex justify-between text-[10px] font-bold text-[#9ca3af]"><span>Smaller</span><span>Standard</span><span>Bigger</span></span>
+                    </label>
+                    <label className="block mt-3 text-sm font-extrabold">Position: {y === 0 ? "standard" : y < 0 ? `up ${Math.round(-y)}` : `down ${Math.round(y)}`}
+                      <input type="range" min={-room} max={room} step="1" value={Math.max(-room, Math.min(room, y))}
+                        onChange={(e) => setVals((v) => ({ ...v, y: Number(e.target.value) }))}
+                        className="w-full accent-[#a855f7]" data-testid="design-adjust-y" />
+                      <span className="flex justify-between text-[10px] font-bold text-[#9ca3af]"><span>Up (towards the collar)</span><span>Standard</span><span>Down</span></span>
+                    </label>
+                    <button type="button" onClick={() => setVals({ scale: 100, y: 0 })} className="mt-2 text-xs font-bold text-[#7c3aed] hover:underline">Back to standard size &amp; position</button>
+                  </>
+                );
+              })()}
+              <p className="text-[11px] text-[#4b5563] mt-1">Both sliders start in the middle = the standard print. Make it bigger or smaller, and move it up (as far as the collar) or down.</p>
               <div className="mt-4 space-y-1.5 text-sm">
                 <label className="flex items-center gap-2"><input type="radio" checked={scope === "all"} onChange={() => setScope("all")} /> Use for all garments</label>
                 <label className="flex items-center gap-2"><input type="radio" checked={scope === "this"} onChange={() => setScope("this")} /> Only the {garment?.title.toLowerCase()}</label>
