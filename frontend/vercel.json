@@ -1,7 +1,148 @@
 {
   "rewrites": [
-    { "source": "/sitemap.xml", "destination": "https://yourownprint-production.up.railway.app/api/sitemap.xml" },
-    { "source": "/robots.txt", "destination": "https://yourownprint-production.up.railway.app/api/robots.txt" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://yourownprint-production.up.railway.app/api/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "https://yourownprint-production.up.railway.app/api/robots.txt"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/pages/contact",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
+      "source": "/pages/contact-us",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
+      "source": "/pages/get-a-quote",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
+      "source": "/pages/delivery",
+      "destination": "/returns",
+      "permanent": true
+    },
+    {
+      "source": "/pages/returns-policy",
+      "destination": "/returns",
+      "permanent": true
+    },
+    {
+      "source": "/policies/refund-policy",
+      "destination": "/returns",
+      "permanent": true
+    },
+    {
+      "source": "/policies/shipping-policy",
+      "destination": "/returns",
+      "permanent": true
+    },
+    {
+      "source": "/pages/privacy-policy",
+      "destination": "/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/policies/privacy-policy",
+      "destination": "/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/policies/terms-of-service",
+      "destination": "/terms",
+      "permanent": true
+    },
+    {
+      "source": "/pages/leavers-hoodies",
+      "destination": "/leavers-hoodies",
+      "permanent": true
+    },
+    {
+      "source": "/pages/previous-work-done",
+      "destination": "/portfolio",
+      "permanent": true
+    },
+    {
+      "source": "/pages/reviews",
+      "destination": "/reviews",
+      "permanent": true
+    },
+    {
+      "source": "/pages/free-logo-design",
+      "destination": "/free-logo-design",
+      "permanent": true
+    },
+    {
+      "source": "/pages/website-services",
+      "destination": "/website-ad-services",
+      "permanent": true
+    },
+    {
+      "source": "/pages/ad-services",
+      "destination": "/website-ad-services",
+      "permanent": true
+    },
+    {
+      "source": "/pages/starting-a-brand",
+      "destination": "/festival-tees-and-brands",
+      "permanent": true
+    },
+    {
+      "source": "/pages/starting-a-business",
+      "destination": "/specials",
+      "permanent": true
+    },
+    {
+      "source": "/pages/our-full-collection",
+      "destination": "/workwear",
+      "permanent": true
+    },
+    {
+      "source": "/products/yourownprint-special:rest*",
+      "destination": "/specials",
+      "permanent": true
+    },
+    {
+      "source": "/products/personalised:rest*",
+      "destination": "/design",
+      "permanent": true
+    },
+    {
+      "source": "/products/:handle*",
+      "destination": "/workwear",
+      "permanent": true
+    },
+    {
+      "source": "/collections/:handle*",
+      "destination": "/workwear",
+      "permanent": true
+    },
+    {
+      "source": "/blogs/:path*",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/cart",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/account/login",
+      "destination": "/account",
+      "permanent": true
+    }
   ]
 }
