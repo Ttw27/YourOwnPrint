@@ -121,7 +121,7 @@ export default function Portfolio() {
                 className="group relative aspect-square overflow-hidden rounded-3xl bg-[#f0fdf4] border-2 border-[#dcfce7] hover:border-[#7bc67e] transition cursor-pointer"
                 data-testid={`portfolio-item-${it.id}`}
               >
-                <ImageSwiper images={it.images || [it.image_url]} meta={it.image_meta || []} alt={it.alt_text || it.title} imgClassName="w-full h-full object-cover" />
+                <ImageSwiper images={it.images || [it.image_url]} meta={it.image_meta || []} size="thumb" alt={it.alt_text || it.title} imgClassName="w-full h-full object-cover" />
                 <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 via-black/20 to-transparent text-left">
                   <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#7bc67e]">{PRETTY[it.category] || it.category}</div>
                   <div className="text-white text-sm font-extrabold leading-tight line-clamp-2">{it.title}</div>
@@ -156,7 +156,7 @@ export default function Portfolio() {
         <div className="fixed inset-0 z-50 bg-black/80 grid place-items-center p-4" onClick={() => setLightbox(null)} data-testid="portfolio-lightbox">
           <div className="max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
             <div className="w-full h-[70vh] rounded-2xl bg-white overflow-hidden">
-              <ImageSwiper images={lightbox.images || [lightbox.image_url]} alt={lightbox.alt_text || lightbox.title} imgClassName="w-full h-full object-contain" />
+              <ImageSwiper images={lightbox.images || [lightbox.image_url]} meta={(lightbox.image_meta || []).map((m) => ({ ...m, fit: "contain", zoom: 1 }))} size="web" alt={lightbox.alt_text || lightbox.title} imgClassName="w-full h-full object-contain" />
             </div>
             {(lightbox.images || []).length > 1 && <div className="text-zinc-400 text-xs mt-2">Swipe or use the arrows to see all {lightbox.images.length} photos</div>}
             <div className="text-white mt-3">

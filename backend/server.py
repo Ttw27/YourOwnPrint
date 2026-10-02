@@ -4951,8 +4951,9 @@ async def list_portfolio(category: Optional[str] = None, featured_only: bool = F
             # all photos for this job: main first, then extras (front/back/close-ups)
             "images": [d.get("image_url")] + [x.get("url") for x in (d.get("extra_images") or []) if x.get("url")],
             # how each photo sits in the square frame (focus point / show whole photo)
-            "image_meta": [{"url": d.get("image_url"), **_focus(d.get("focus"))}] +
-                          [{"url": x.get("url"), **_focus(x.get("focus"))} for x in (d.get("extra_images") or []) if x.get("url")],
+            "image_meta": [{"url": d.get("image_url"), "thumb": d.get("thumb_url"), "web": d.get("web_url"), **_focus(d.get("focus"))}] +
+                          [{"url": x.get("url"), "thumb": x.get("thumb_url"), "web": x.get("web_url"), **_focus(x.get("focus"))}
+                           for x in (d.get("extra_images") or []) if x.get("url")],
             "display_order": d.get("display_order", 0),
             "featured": bool(d.get("featured", False)),
             "created_at": d.get("created_at"),
@@ -4985,9 +4986,11 @@ async def admin_create_portfolio(payload: PortfolioCreate):
     image_url: str
     storage_meta: Optional[Dict] = None
     # Try object storage; fall back to inline base64 if it fails (so admin can still upload)
+    versions: Dict[str, str] = {}
     try:
         storage_meta = _storage_put(storage_path, raw, content_type)
         image_url = f"/api/portfolio/file/{item_id}.{ext}"
+        versions = await _pf_versions_async(raw, f"{_OBJ_APP_NAME}/portfolio-web/{item_id}-{uuid.uuid4().hex[:6]}")
     except HTTPException:
         # No storage configured - fall back to inline base64
         image_url = payload.image_data_url
@@ -5007,6 +5010,7 @@ async def admin_create_portfolio(payload: PortfolioCreate):
         "is_hidden": False,
         "size_bytes": len(raw),
         "created_at": datetime.now(timezone.utc).isoformat(),
+        **versions,
     }
     await db.portfolio.insert_one(doc)
     doc.pop("_id", None)
@@ -5032,6 +5036,9 @@ async def admin_update_portfolio(item_id: str, payload: PortfolioPatch):
             _storage_put(storage_path, raw, content_type)
             patch["image_url"] = f"/api/portfolio/file/{item_id}.{ext}"
             patch["storage_path"] = storage_path
+            v = await _pf_versions_async(raw, f"{_OBJ_APP_NAME}/portfolio-web/{item_id}-{uuid.uuid4().hex[:6]}")
+            patch["thumb_url"] = v.get("thumb_url")
+            patch["web_url"] = v.get("web_url")
         except HTTPException:
             patch["image_url"] = payload.image_data_url
             patch["storage_path"] = ""
@@ -5060,7 +5067,8 @@ async def admin_list_portfolio():
             "caption": d.get("caption", ""),
             "alt_text": d.get("alt_text", ""),
             "image_url": d.get("image_url"),
-            "extra_images": [{"id": x.get("id"), "url": x.get("url"), "focus": _focus(x.get("focus"))} for x in (d.get("extra_images") or [])],
+            "extra_images": [{"id": x.get("id"), "url": x.get("url"), "thumb": x.get("thumb_url"), "focus": _focus(x.get("focus"))} for x in (d.get("extra_images") or [])],
+            "thumb_url": d.get("thumb_url"),
             "focus": _focus(d.get("focus")),
             "display_order": d.get("display_order", 0),
             "featured": bool(d.get("featured", False)),
@@ -5073,6 +5081,42 @@ async def admin_list_portfolio():
 
 class PortfolioImageIn(BaseModel):
     image_data_url: str
+
+
+_PF_SIZES = {"thumb": 800, "web": 1800}
+
+
+def _portfolio_web_versions(raw: bytes, key_base: str) -> Dict[str, str]:
+    """Web-ready copies of a portfolio photo - the original is kept untouched.
+    'thumb' (cards, ~800px) and 'web' (full-size view, ~1800px) as WebP, with
+    the phone's rotation baked in, stored in R2 and served straight from its
+    public URL (fast, cached). Returns {} if anything fails - the original is
+    then used as before."""
+    try:
+        from PIL import Image as _Img, ImageOps as _Ops
+        import io as _io
+        im = _Ops.exif_transpose(_Img.open(_io.BytesIO(raw)))
+        im = im.convert("RGBA") if im.mode in ("RGBA", "LA", "P") else im.convert("RGB")
+        out: Dict[str, str] = {}
+        for name, px in _PF_SIZES.items():
+            v = im.copy()
+            v.thumbnail((px, px), _Img.LANCZOS)          # never upscales
+            buf = _io.BytesIO()
+            v.save(buf, "WEBP", quality=82 if name == "web" else 80, method=6)
+            path = f"{key_base}_{name}.webp"
+            _storage_put(path, buf.getvalue(), "image/webp", cache_control="public, max-age=31536000, immutable")
+            url = _get_public_url(path)
+            if not url:
+                return {}
+            out[f"{name}_url"] = url
+        return out
+    except Exception as e:
+        logging.warning(f"portfolio web versions failed for {key_base}: {e}")
+        return {}
+
+
+async def _pf_versions_async(raw: bytes, key_base: str) -> Dict[str, str]:
+    return await asyncio.to_thread(_portfolio_web_versions, raw, key_base)
 
 
 def _focus(f) -> Dict:
@@ -5109,7 +5153,8 @@ async def admin_reorder_portfolio_photos(item_id: str, payload: PhotoOrderIn):
     if not doc:
         raise HTTPException(404, "Portfolio item not found")
     photos = {"main": {"id": uuid.uuid4().hex[:10], "url": doc.get("image_url"), "storage_path": doc.get("storage_path", ""),
-                       "content_type": doc.get("content_type"), "focus": doc.get("focus")}}
+                       "content_type": doc.get("content_type"), "focus": doc.get("focus"),
+                       "thumb_url": doc.get("thumb_url"), "web_url": doc.get("web_url")}}
     for x in doc.get("extra_images") or []:
         photos[x["id"]] = x
     if sorted(payload.order) != sorted(photos):
@@ -5119,6 +5164,7 @@ async def admin_reorder_portfolio_photos(item_id: str, payload: PhotoOrderIn):
     await db.portfolio.update_one({"id": item_id}, {"$set": {
         "image_url": first.get("url"), "storage_path": first.get("storage_path", ""),
         "content_type": first.get("content_type"), "focus": first.get("focus"),
+        "thumb_url": first.get("thumb_url"), "web_url": first.get("web_url"),
         "extra_images": rest, "updated_at": datetime.now(timezone.utc).isoformat()}})
     return {"ok": True}
 
@@ -5150,12 +5196,14 @@ async def admin_add_portfolio_image(item_id: str, payload: PortfolioImageIn):
     raw, content_type, ext = _parse_data_url(payload.image_data_url)
     xid = uuid.uuid4().hex[:10]
     path = f"{_OBJ_APP_NAME}/portfolio/{item_id}__{xid}.{ext}"
+    versions: Dict[str, str] = {}
     try:
         _storage_put(path, raw, content_type)
         url = f"/api/portfolio/file/{item_id}__{xid}.{ext}"
+        versions = await _pf_versions_async(raw, f"{_OBJ_APP_NAME}/portfolio-web/{item_id}__{xid}")
     except HTTPException:
         url, path = payload.image_data_url, ""
-    extra = {"id": xid, "url": url, "storage_path": path, "content_type": content_type}
+    extra = {"id": xid, "url": url, "storage_path": path, "content_type": content_type, **versions}
     await db.portfolio.update_one({"id": item_id}, {"$push": {"extra_images": extra},
                                                    "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}})
     return {"ok": True, "image": {"id": xid, "url": url}}
@@ -5167,6 +5215,49 @@ async def admin_remove_portfolio_image(item_id: str, xid: str):
     if not res.matched_count:
         raise HTTPException(404, "Portfolio item not found")
     return {"ok": True}
+
+
+async def _backfill_portfolio_web_versions() -> None:
+    """Make web-ready copies for photos uploaded before they existed. Runs in
+    the background after startup; only touches photos without copies, so it's
+    safe to run on every boot."""
+    done = 0
+    try:
+        async for d in db.portfolio.find({}, {"id": 1, "storage_path": 1, "thumb_url": 1, "extra_images": 1}):
+            upd: Dict = {}
+            if d.get("storage_path") and not d.get("thumb_url"):
+                try:
+                    raw, _ = await asyncio.to_thread(_storage_get, d["storage_path"])
+                    v = await _pf_versions_async(raw, f"{_OBJ_APP_NAME}/portfolio-web/{d['id']}-{uuid.uuid4().hex[:6]}")
+                    if v:
+                        upd.update(v)
+                        done += 1
+                except Exception as e:
+                    logging.warning(f"portfolio backfill {d['id']}: {e}")
+            extras = list(d.get("extra_images") or [])
+            changed = False
+            for x in extras:
+                if x.get("storage_path") and not x.get("thumb_url"):
+                    try:
+                        raw, _ = await asyncio.to_thread(_storage_get, x["storage_path"])
+                        v = await _pf_versions_async(raw, f"{_OBJ_APP_NAME}/portfolio-web/{d['id']}__{x['id']}")
+                        if v:
+                            x.update(v); changed = True; done += 1
+                    except Exception as e:
+                        logging.warning(f"portfolio backfill {d['id']}/{x.get('id')}: {e}")
+            if changed:
+                upd["extra_images"] = extras
+            if upd:
+                await db.portfolio.update_one({"id": d["id"]}, {"$set": upd})
+    except Exception as e:
+        logging.warning(f"portfolio backfill stopped: {e}")
+    if done:
+        logging.info(f"portfolio: made web-ready copies for {done} photo(s)")
+
+
+@app.on_event("startup")
+async def _start_portfolio_backfill():
+    asyncio.create_task(_backfill_portfolio_web_versions())
 
 
 @api_router.get("/portfolio/file/{filename}")
@@ -5186,7 +5277,8 @@ async def portfolio_file(filename: str):
     if not p:
         raise HTTPException(404, "File not found")
     data, ct = _storage_get(p["storage_path"])
-    return Response(content=data, media_type=p.get("content_type") or ct)
+    return Response(content=data, media_type=p.get("content_type") or ct,
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 # ---------- Public artwork upload (for configurator design uploads) ----------

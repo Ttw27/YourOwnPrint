@@ -158,7 +158,7 @@ export default function AdminPortfolio() {
             {items.map((it) => (
               <div key={it.id} className={`bg-white border-2 rounded-3xl overflow-hidden ${it.is_hidden ? "opacity-50 border-[#fee2e2]" : "border-[#dcfce7]"}`} data-testid={`admin-portfolio-row-${it.id}`}>
                 <div className="aspect-square bg-[#f0fdf4] relative overflow-hidden">
-                  <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover" style={photoStyle(it.focus)} />
+                  <img src={mediaUrl(it.thumb_url || it.image_url)} alt={it.alt_text || it.title} loading="lazy" className="w-full h-full object-cover" style={photoStyle(it.focus)} />
                   <button onClick={() => setPositioning({ item: it, imageId: null, url: it.image_url, focus: it.focus })} className="absolute bottom-2 right-2 text-[11px] font-extrabold bg-white/95 hover:bg-white rounded-full px-3 py-1.5 shadow" data-testid={`admin-portfolio-position-${it.id}`}>✥ Move photo</button>
                   {it.featured && <span className="absolute top-2 left-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#1a1a1a]">Featured</span>}
                 </div>
@@ -324,7 +324,7 @@ function TrustedLogosCard() {
 function PhotosRow({ item, onChange, onPosition, onReload }) {
   const [busy, setBusy] = useState(false);
   const extra = item.extra_images || [];
-  const photos = [{ id: "main", url: item.image_url, focus: item.focus }, ...extra];
+  const photos = [{ id: "main", url: item.image_url, thumb: item.thumb_url, focus: item.focus }, ...extra];
   const add = async (files) => {
     setBusy(true);
     try {
@@ -359,7 +359,7 @@ function PhotosRow({ item, onChange, onPosition, onReload }) {
         {photos.map((p, i) => (
           <div key={p.id} className="w-16">
             <div className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 ${i === 0 ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}>
-              <img src={mediaUrl(p.url)} alt="" className="w-full h-full object-cover cursor-pointer" style={photoStyle(p.focus)} onClick={() => onPosition(p)} title="Click to move it in its square" />
+              <img src={mediaUrl(p.thumb || p.url)} alt="" loading="lazy" className="w-full h-full object-cover cursor-pointer" style={photoStyle(p.focus)} onClick={() => onPosition(p)} title="Click to move it in its square" />
               {i === 0 && <span className="absolute bottom-0 inset-x-0 text-center text-[9px] font-black bg-[#7bc67e] text-[#1a1a1a]">MAIN</span>}
               {i > 0 && <button onClick={() => remove(p.id)} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-white/90 text-rose-600 text-xs font-black grid place-items-center" title="Remove">×</button>}
             </div>

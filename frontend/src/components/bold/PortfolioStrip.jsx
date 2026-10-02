@@ -78,7 +78,7 @@ export default function PortfolioStrip() {
             className="group relative flex-shrink-0 w-[46%] sm:w-[30%] md:w-[23%] aspect-square overflow-hidden rounded-3xl bg-[#f0fdf4] border-2 border-[#dcfce7] hover:border-[#7bc67e] transition snap-start"
             data-testid={`portfolio-strip-item-${it.id}`}
           >
-            <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} style={photoStyle((it.image_meta || [])[0])} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+            <img src={mediaUrl(((it.image_meta || [])[0] || {}).thumb || it.image_url)} decoding="async" alt={it.alt_text || it.title} style={photoStyle((it.image_meta || [])[0])} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
             {(it.images || []).length > 1 && <span className="absolute top-2 right-2 text-[10px] font-extrabold bg-black/60 text-white rounded-full px-2 py-0.5">{it.images.length} photos</span>}
             <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 via-black/20 to-transparent text-white text-xs font-extrabold">
               {it.title}

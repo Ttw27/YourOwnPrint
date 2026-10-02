@@ -54,13 +54,14 @@ def _bucket() -> str:
     return os.environ.get("R2_BUCKET_NAME", "")
 
 
-def storage_put(path: str, data: bytes, content_type: str) -> dict:
+def storage_put(path: str, data: bytes, content_type: str, cache_control: Optional[str] = None) -> dict:
     """Synchronous - call via asyncio.to_thread from async endpoints (see storage_put_async)."""
     client = _get_client()
     bucket = _bucket()
     if not client or not bucket:
         raise HTTPException(500, "Object storage not configured (R2 env vars missing)")
-    client.put_object(Bucket=bucket, Key=path, Body=data, ContentType=content_type)
+    extra = {"CacheControl": cache_control} if cache_control else {}
+    client.put_object(Bucket=bucket, Key=path, Body=data, ContentType=content_type, **extra)
     return {"path": path, "bucket": bucket}
 
 

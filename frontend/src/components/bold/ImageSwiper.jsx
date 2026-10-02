@@ -18,12 +18,14 @@ export function photoStyle(meta) {
   return { objectFit: "cover", objectPosition: pos, ...(z > 1 ? { transform: `scale(${z})`, transformOrigin: pos } : {}) };
 }
 
-export default function ImageSwiper({ images = [], meta = [], alt = "", imgClassName = "w-full h-full object-cover", className = "" }) {
-  const list = images.filter(Boolean);
+// size: "thumb" (cards) or "web" (full-size view) - the web-ready copies made
+// on upload; falls back to the original photo when a copy doesn't exist yet.
+export default function ImageSwiper({ images = [], meta = [], alt = "", imgClassName = "w-full h-full object-cover", className = "", size }) {
+  const list = images.filter(Boolean).map((u, i) => (size && meta[i] && meta[i][size]) || u);
   const ref = useRef(null);
   const [idx, setIdx] = useState(0);
   if (list.length <= 1) {
-    return <img src={mediaUrl(list[0])} alt={alt} className={imgClassName} style={photoStyle(meta[0])} loading="lazy" draggable="false" />;
+    return <img src={mediaUrl(list[0])} alt={alt} className={imgClassName} style={photoStyle(meta[0])} loading="lazy" decoding="async" draggable="false" />;
   }
   const go = (e, dir) => {
     e.stopPropagation(); e.preventDefault();
@@ -41,7 +43,7 @@ export default function ImageSwiper({ images = [], meta = [], alt = "", imgClass
       >
         {list.map((src, i) => (
           <div key={i} className="w-full h-full flex-shrink-0 snap-center overflow-hidden">
-            <img src={mediaUrl(src)} alt={`${alt}${list.length > 1 ? ` - photo ${i + 1}` : ""}`} className={imgClassName} style={photoStyle(meta[i])} loading="lazy" draggable="false" />
+            <img src={mediaUrl(src)} alt={`${alt}${list.length > 1 ? ` - photo ${i + 1}` : ""}`} className={imgClassName} style={photoStyle(meta[i])} loading="lazy" decoding="async" draggable="false" />
           </div>
         ))}
       </div>
