@@ -4950,6 +4950,9 @@ async def list_portfolio(category: Optional[str] = None, featured_only: bool = F
             "image_url": d.get("image_url"),
             # all photos for this job: main first, then extras (front/back/close-ups)
             "images": [d.get("image_url")] + [x.get("url") for x in (d.get("extra_images") or []) if x.get("url")],
+            # how each photo sits in the square frame (focus point / show whole photo)
+            "image_meta": [{"url": d.get("image_url"), **_focus(d.get("focus"))}] +
+                          [{"url": x.get("url"), **_focus(x.get("focus"))} for x in (d.get("extra_images") or []) if x.get("url")],
             "display_order": d.get("display_order", 0),
             "featured": bool(d.get("featured", False)),
             "created_at": d.get("created_at"),
@@ -5057,7 +5060,8 @@ async def admin_list_portfolio():
             "caption": d.get("caption", ""),
             "alt_text": d.get("alt_text", ""),
             "image_url": d.get("image_url"),
-            "extra_images": [{"id": x.get("id"), "url": x.get("url")} for x in (d.get("extra_images") or [])],
+            "extra_images": [{"id": x.get("id"), "url": x.get("url"), "focus": _focus(x.get("focus"))} for x in (d.get("extra_images") or [])],
+            "focus": _focus(d.get("focus")),
             "display_order": d.get("display_order", 0),
             "featured": bool(d.get("featured", False)),
             "is_hidden": bool(d.get("is_hidden", False)),
@@ -5069,6 +5073,40 @@ async def admin_list_portfolio():
 
 class PortfolioImageIn(BaseModel):
     image_data_url: str
+
+
+def _focus(f) -> Dict:
+    """Where a photo sits in its square frame: focus point x/y (0-100, % of the
+    photo) and fit 'cover' (fill + crop around the focus) or 'contain' (whole
+    photo, no crop). Default = centred cover."""
+    f = f or {}
+    try:
+        x = max(0.0, min(100.0, float(f.get("x", 50))))
+        y = max(0.0, min(100.0, float(f.get("y", 50))))
+    except (TypeError, ValueError):
+        x, y = 50.0, 50.0
+    return {"x": round(x, 1), "y": round(y, 1), "fit": "contain" if f.get("fit") == "contain" else "cover"}
+
+
+class FocusIn(BaseModel):
+    x: float = 50
+    y: float = 50
+    fit: str = "cover"
+
+
+@api_router.put("/admin/portfolio/{item_id}/focus", dependencies=[Depends(require_admin)])
+async def admin_set_portfolio_focus(item_id: str, payload: FocusIn, image_id: Optional[str] = None):
+    """Position a photo in its square frame - the main photo, or an extra photo
+    when image_id is given."""
+    f = _focus(payload.model_dump())
+    if image_id:
+        res = await db.portfolio.update_one({"id": item_id, "extra_images.id": image_id},
+                                            {"$set": {"extra_images.$.focus": f}})
+    else:
+        res = await db.portfolio.update_one({"id": item_id}, {"$set": {"focus": f}})
+    if not res.matched_count:
+        raise HTTPException(404, "Photo not found")
+    return {"ok": True, "focus": f}
 
 
 @api_router.post("/admin/portfolio/{item_id}/images", dependencies=[Depends(require_admin)])

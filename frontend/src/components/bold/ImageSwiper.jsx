@@ -8,12 +8,19 @@ import { mediaUrl } from "../../lib/api";
  * dots for mouse users. With one photo it's just the image.
  * Arrow clicks don't bubble, so a card can still open the full-size view.
  */
-export default function ImageSwiper({ images = [], alt = "", imgClassName = "w-full h-full object-cover", className = "" }) {
+// How a photo sits in its frame (set in Admin > Photo gallery > Position):
+// focus point x/y in % + fit "cover" (fill, crop around the focus) or "contain".
+export function photoStyle(meta) {
+  if (!meta) return undefined;
+  return { objectPosition: `${meta.x ?? 50}% ${meta.y ?? 50}%`, objectFit: meta.fit === "contain" ? "contain" : "cover" };
+}
+
+export default function ImageSwiper({ images = [], meta = [], alt = "", imgClassName = "w-full h-full object-cover", className = "" }) {
   const list = images.filter(Boolean);
   const ref = useRef(null);
   const [idx, setIdx] = useState(0);
   if (list.length <= 1) {
-    return <img src={mediaUrl(list[0])} alt={alt} className={imgClassName} loading="lazy" draggable="false" />;
+    return <img src={mediaUrl(list[0])} alt={alt} className={imgClassName} style={photoStyle(meta[0])} loading="lazy" draggable="false" />;
   }
   const go = (e, dir) => {
     e.stopPropagation(); e.preventDefault();
@@ -31,7 +38,7 @@ export default function ImageSwiper({ images = [], alt = "", imgClassName = "w-f
       >
         {list.map((src, i) => (
           <div key={i} className="w-full h-full flex-shrink-0 snap-center">
-            <img src={mediaUrl(src)} alt={`${alt}${list.length > 1 ? ` - photo ${i + 1}` : ""}`} className={imgClassName} loading="lazy" draggable="false" />
+            <img src={mediaUrl(src)} alt={`${alt}${list.length > 1 ? ` - photo ${i + 1}` : ""}`} className={imgClassName} style={photoStyle(meta[i])} loading="lazy" draggable="false" />
           </div>
         ))}
       </div>

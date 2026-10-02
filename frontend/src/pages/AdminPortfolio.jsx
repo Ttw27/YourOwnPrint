@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl, fetchTrustedLogos, adminSaveTrustedLogos, uploadAdminImage, adminAddPortfolioImage, adminRemovePortfolioImage } from "../lib/api";
+import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl, fetchTrustedLogos, adminSaveTrustedLogos, uploadAdminImage, adminAddPortfolioImage, adminRemovePortfolioImage, adminSetPortfolioFocus } from "../lib/api";
+import { photoStyle } from "../components/bold/ImageSwiper";
 import { Upload, Trash2, Star, Eye, EyeOff, Loader2, Save, Image as ImageIcon, ArrowLeft, ArrowRight } from "lucide-react";
 
 function fileToDataUrl(file) {
@@ -14,6 +15,7 @@ function fileToDataUrl(file) {
 }
 
 export default function AdminPortfolio() {
+  const [positioning, setPositioning] = useState(null);   // {item, imageId, url, focus} - photo being positioned
   const [items, setItems] = useState([]);
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -156,10 +158,11 @@ export default function AdminPortfolio() {
             {items.map((it) => (
               <div key={it.id} className={`bg-white border-2 rounded-3xl overflow-hidden ${it.is_hidden ? "opacity-50 border-[#fee2e2]" : "border-[#dcfce7]"}`} data-testid={`admin-portfolio-row-${it.id}`}>
                 <div className="aspect-square bg-[#f0fdf4] relative">
-                  <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover" />
+                  <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover" style={photoStyle(it.focus)} />
+                  <button onClick={() => setPositioning({ item: it, imageId: null, url: it.image_url, focus: it.focus })} className="absolute bottom-2 right-2 text-[11px] font-extrabold bg-white/95 hover:bg-white rounded-full px-3 py-1.5 shadow" data-testid={`admin-portfolio-position-${it.id}`}>✥ Position</button>
                   {it.featured && <span className="absolute top-2 left-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#1a1a1a]">Featured</span>}
                 </div>
-                <MorePhotos item={it} onChange={(extra) => setItems((arr) => arr.map((x) => (x.id === it.id ? { ...x, extra_images: extra } : x)))} />
+                <MorePhotos item={it} onPosition={(x) => setPositioning({ item: it, imageId: x.id, url: x.url, focus: x.focus })} onChange={(extra) => setItems((arr) => arr.map((x) => (x.id === it.id ? { ...x, extra_images: extra } : x)))} />
                 <div className="p-4 space-y-2">
                   <input
                     value={it.title}
@@ -199,6 +202,19 @@ export default function AdminPortfolio() {
           </div>
         )}
       </div>
+      {positioning && (
+        <PositionPhoto
+          target={positioning}
+          onClose={() => setPositioning(null)}
+          onSaved={(focus) => {
+            const { item, imageId } = positioning;
+            setItems((arr) => arr.map((x) => (x.id !== item.id ? x : imageId
+              ? { ...x, extra_images: (x.extra_images || []).map((e) => (e.id === imageId ? { ...e, focus } : e)) }
+              : { ...x, focus })));
+            setPositioning(null);
+          }}
+        />
+      )}
       <style>{`
         .input { width: 100%; padding: 0.5rem 0.75rem; border-radius: 0.75rem; border: 2px solid #dcfce7; background: white; font-size: 0.875rem; }
         .input:focus { outline: none; border-color: #7bc67e; }
@@ -304,7 +320,7 @@ function TrustedLogosCard() {
  * More photos for one job - e.g. the back, a close-up of the print. On the site
  * the card and the full-size view let people swipe between them.
  */
-function MorePhotos({ item, onChange }) {
+function MorePhotos({ item, onChange, onPosition }) {
   const [busy, setBusy] = useState(false);
   const extra = item.extra_images || [];
   const add = async (files) => {
@@ -328,11 +344,11 @@ function MorePhotos({ item, onChange }) {
   };
   return (
     <div className="px-4 pt-3" data-testid={`admin-portfolio-more-${item.id}`}>
-      <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">More photos ({extra.length}) - e.g. the back, a close-up</div>
+      <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">More photos ({extra.length}) - e.g. the back, a close-up · click one to position it</div>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         {extra.map((x) => (
           <div key={x.id} className="relative w-14 h-14 rounded-lg overflow-hidden border border-[#e5e7eb]">
-            <img src={mediaUrl(x.url)} alt="" className="w-full h-full object-cover" />
+            <img src={mediaUrl(x.url)} alt="" className="w-full h-full object-cover cursor-pointer" style={photoStyle(x.focus)} onClick={() => onPosition(x)} title="Click to position this photo" />
             <button onClick={() => remove(x.id)} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-white/90 text-rose-600 text-xs font-black grid place-items-center" title="Remove">×</button>
           </div>
         ))}
@@ -342,6 +358,64 @@ function MorePhotos({ item, onChange }) {
             <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files?.length && add([...e.target.files])} />
           </label>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+/**
+ * Position a photo in its square frame on the site: click the important part
+ * (the logo, the face...) and the square centres on it - or show the whole
+ * photo uncropped. Live preview of exactly what visitors see.
+ */
+function PositionPhoto({ target, onClose, onSaved }) {
+  const [f, setF] = useState({ x: 50, y: 50, fit: "cover", ...(target.focus || {}) });
+  const [saving, setSaving] = useState(false);
+  const pick = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setF((v) => ({ ...v, fit: "cover",
+      x: Math.round(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100))),
+      y: Math.round(Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100))) }));
+  };
+  const save = async () => {
+    setSaving(true);
+    try { onSaved(await adminSetPortfolioFocus(target.item.id, f, target.imageId)); toast.success("Photo position saved"); }
+    catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); setSaving(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-auto p-6" data-testid="portfolio-position-modal">
+        <h2 className="font-black text-2xl">Position this photo</h2>
+        <p className="text-sm text-[#4b5563] mt-1">Click the most important part of the photo (e.g. the logo). The square on the site centres on that spot. Or show the whole photo with no cropping.</p>
+        <div className="mt-5 grid md:grid-cols-[1.3fr_1fr] gap-6 items-start">
+          <div>
+            <div className="text-xs font-extrabold mb-1">Whole photo - click to set the focus</div>
+            <div className="relative inline-block cursor-crosshair select-none" onClick={pick}>
+              <img src={mediaUrl(target.url)} alt="" className="max-h-[52vh] w-auto max-w-full rounded-xl block" draggable="false" />
+              {f.fit !== "contain" && (
+                <span className="absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border-[3px] border-white shadow-[0_0_0_2px_#7bc67e] bg-[#7bc67e]/40 pointer-events-none" style={{ left: `${f.x}%`, top: `${f.y}%` }} />
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs font-extrabold mb-1">How it looks on the site</div>
+            <div className="aspect-square w-full max-w-[320px] rounded-3xl overflow-hidden bg-[#f0fdf4] border-2 border-[#dcfce7]">
+              <img src={mediaUrl(target.url)} alt="" className="w-full h-full" style={photoStyle(f)} />
+            </div>
+            <label className="mt-4 flex items-center gap-2 text-sm font-bold">
+              <input type="checkbox" checked={f.fit === "contain"} onChange={(e) => setF((v) => ({ ...v, fit: e.target.checked ? "contain" : "cover" }))} />
+              Show the whole photo (no cropping)
+            </label>
+            <button onClick={() => setF({ x: 50, y: 50, fit: "cover" })} className="mt-2 text-xs font-bold text-[#166534] hover:underline">Back to centred</button>
+            <div className="mt-5 flex gap-2">
+              <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 bg-[#7bc67e] text-[#1a1a1a] font-extrabold rounded-full px-5 py-2.5 text-sm disabled:opacity-50" data-testid="portfolio-position-save">
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save position
+              </button>
+              <button onClick={onClose} className="px-4 py-2.5 text-sm font-bold text-[#4b5563]">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

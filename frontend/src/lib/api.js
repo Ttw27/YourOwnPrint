@@ -1038,3 +1038,7 @@ export async function adminRemovePortfolioImage(id, imageId) {
   const { data } = await api.delete(`/admin/portfolio/${id}/images/${imageId}`);
   return data;
 }
+export async function adminSetPortfolioFocus(id, focus, imageId) {
+  const { data } = await api.put(`/admin/portfolio/${id}/focus`, focus, { params: imageId ? { image_id: imageId } : {} });
+  return data.focus;
+}
