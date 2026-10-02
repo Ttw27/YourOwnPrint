@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchAllPortfolio, mediaUrl } from "../lib/api";
 import { Loader2, Image as ImageIcon, ArrowRight } from "lucide-react";
+import ImageSwiper from "../components/bold/ImageSwiper";
 import usePageCopy from "../hooks/usePageCopy";
 import usePageTitle from "../hooks/usePageTitle";
 
@@ -111,13 +112,16 @@ export default function Portfolio() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" data-testid="portfolio-grid">
             {filtered.map((it) => (
-              <button
+              <div
                 key={it.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setLightbox(it)}
-                className="group relative aspect-square overflow-hidden rounded-3xl bg-[#f0fdf4] border-2 border-[#dcfce7] hover:border-[#7bc67e] transition"
+                onKeyDown={(e) => { if (e.key === "Enter") setLightbox(it); }}
+                className="group relative aspect-square overflow-hidden rounded-3xl bg-[#f0fdf4] border-2 border-[#dcfce7] hover:border-[#7bc67e] transition cursor-pointer"
                 data-testid={`portfolio-item-${it.id}`}
               >
-                <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                <ImageSwiper images={it.images || [it.image_url]} alt={it.alt_text || it.title} imgClassName="w-full h-full object-cover" />
                 <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 via-black/20 to-transparent text-left">
                   <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#7bc67e]">{PRETTY[it.category] || it.category}</div>
                   <div className="text-white text-sm font-extrabold leading-tight line-clamp-2">{it.title}</div>
@@ -125,7 +129,7 @@ export default function Portfolio() {
                 {it.featured && (
                   <span className="absolute top-2 left-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#1a1a1a]">Featured</span>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         )}
@@ -151,7 +155,10 @@ export default function Portfolio() {
       {lightbox && (
         <div className="fixed inset-0 z-50 bg-black/80 grid place-items-center p-4" onClick={() => setLightbox(null)} data-testid="portfolio-lightbox">
           <div className="max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-            <img src={mediaUrl(lightbox.image_url)} alt={lightbox.alt_text || lightbox.title} className="w-full max-h-[80vh] object-contain rounded-2xl bg-white" />
+            <div className="w-full h-[70vh] rounded-2xl bg-white overflow-hidden">
+              <ImageSwiper images={lightbox.images || [lightbox.image_url]} alt={lightbox.alt_text || lightbox.title} imgClassName="w-full h-full object-contain" />
+            </div>
+            {(lightbox.images || []).length > 1 && <div className="text-zinc-400 text-xs mt-2">Swipe or use the arrows to see all {lightbox.images.length} photos</div>}
             <div className="text-white mt-3">
               <div className="text-[#7bc67e] text-xs uppercase tracking-wider font-extrabold">{PRETTY[lightbox.category] || lightbox.category}</div>
               <div className="font-black text-xl">{lightbox.title}</div>

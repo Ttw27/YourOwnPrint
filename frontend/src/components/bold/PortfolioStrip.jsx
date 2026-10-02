@@ -78,6 +78,7 @@ export default function PortfolioStrip() {
             data-testid={`portfolio-strip-item-${it.id}`}
           >
             <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+            {(it.images || []).length > 1 && <span className="absolute top-2 right-2 text-[10px] font-extrabold bg-black/60 text-white rounded-full px-2 py-0.5">{it.images.length} photos</span>}
             <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 via-black/20 to-transparent text-white text-xs font-extrabold">
               {it.title}
             </div>

@@ -4948,6 +4948,8 @@ async def list_portfolio(category: Optional[str] = None, featured_only: bool = F
             "caption": d.get("caption", ""),
             "alt_text": d.get("alt_text", ""),
             "image_url": d.get("image_url"),
+            # all photos for this job: main first, then extras (front/back/close-ups)
+            "images": [d.get("image_url")] + [x.get("url") for x in (d.get("extra_images") or []) if x.get("url")],
             "display_order": d.get("display_order", 0),
             "featured": bool(d.get("featured", False)),
             "created_at": d.get("created_at"),
@@ -5055,6 +5057,7 @@ async def admin_list_portfolio():
             "caption": d.get("caption", ""),
             "alt_text": d.get("alt_text", ""),
             "image_url": d.get("image_url"),
+            "extra_images": [{"id": x.get("id"), "url": x.get("url")} for x in (d.get("extra_images") or [])],
             "display_order": d.get("display_order", 0),
             "featured": bool(d.get("featured", False)),
             "is_hidden": bool(d.get("is_hidden", False)),
@@ -5064,12 +5067,56 @@ async def admin_list_portfolio():
     return items
 
 
+class PortfolioImageIn(BaseModel):
+    image_data_url: str
+
+
+@api_router.post("/admin/portfolio/{item_id}/images", dependencies=[Depends(require_admin)])
+async def admin_add_portfolio_image(item_id: str, payload: PortfolioImageIn):
+    """Add another photo to a portfolio job (e.g. the back, a close-up) - the
+    card and full-size view let people swipe between them."""
+    doc = await db.portfolio.find_one({"id": item_id})
+    if not doc:
+        raise HTTPException(404, "Portfolio item not found")
+    if len(doc.get("extra_images") or []) >= 9:
+        raise HTTPException(400, "Up to 10 photos per item")
+    raw, content_type, ext = _parse_data_url(payload.image_data_url)
+    xid = uuid.uuid4().hex[:10]
+    path = f"{_OBJ_APP_NAME}/portfolio/{item_id}__{xid}.{ext}"
+    try:
+        _storage_put(path, raw, content_type)
+        url = f"/api/portfolio/file/{item_id}__{xid}.{ext}"
+    except HTTPException:
+        url, path = payload.image_data_url, ""
+    extra = {"id": xid, "url": url, "storage_path": path, "content_type": content_type}
+    await db.portfolio.update_one({"id": item_id}, {"$push": {"extra_images": extra},
+                                                   "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}})
+    return {"ok": True, "image": {"id": xid, "url": url}}
+
+
+@api_router.delete("/admin/portfolio/{item_id}/images/{xid}", dependencies=[Depends(require_admin)])
+async def admin_remove_portfolio_image(item_id: str, xid: str):
+    res = await db.portfolio.update_one({"id": item_id}, {"$pull": {"extra_images": {"id": xid}}})
+    if not res.matched_count:
+        raise HTTPException(404, "Portfolio item not found")
+    return {"ok": True}
+
+
 @api_router.get("/portfolio/file/{filename}")
 async def portfolio_file(filename: str):
-    # filename = "{uuid}.{ext}"
-    item_id = filename.rsplit(".", 1)[0]
+    # filename = "{uuid}.{ext}" (main photo) or "{uuid}__{xid}.{ext}" (extra photo)
+    stem = filename.rsplit(".", 1)[0]
+    item_id, _, xid = stem.partition("__")
     doc = await db.portfolio.find_one({"id": item_id, "is_hidden": {"$ne": True}})
-    if not doc or not doc.get("storage_path"):
+    if not doc:
+        raise HTTPException(404, "File not found")
+    if xid:
+        x = next((e for e in (doc.get("extra_images") or []) if e.get("id") == xid), None)
+        if not x or not x.get("storage_path"):
+            raise HTTPException(404, "File not found")
+        data, ct = _storage_get(x["storage_path"])
+        return Response(content=data, media_type=x.get("content_type") or ct)
+    if not doc.get("storage_path"):
         raise HTTPException(404, "File not found")
     data, ct = _storage_get(doc["storage_path"])
     return Response(content=data, media_type=doc.get("content_type") or ct)

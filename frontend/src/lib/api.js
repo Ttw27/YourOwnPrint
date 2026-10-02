@@ -1028,3 +1028,13 @@ export async function adminSaveTrustedLogos(logos) {
   const { data } = await api.put("/admin/trusted-logos", { logos });
   return data.logos || [];
 }
+
+// ---- Portfolio: extra photos per job (front/back/close-ups) ----
+export async function adminAddPortfolioImage(id, image_data_url) {
+  const { data } = await api.post(`/admin/portfolio/${id}/images`, { image_data_url });
+  return data.image;
+}
+export async function adminRemovePortfolioImage(id, imageId) {
+  const { data } = await api.delete(`/admin/portfolio/${id}/images/${imageId}`);
+  return data;
+}

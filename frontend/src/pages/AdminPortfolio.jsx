@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl, fetchTrustedLogos, adminSaveTrustedLogos, uploadAdminImage } from "../lib/api";
+import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl, fetchTrustedLogos, adminSaveTrustedLogos, uploadAdminImage, adminAddPortfolioImage, adminRemovePortfolioImage } from "../lib/api";
 import { Upload, Trash2, Star, Eye, EyeOff, Loader2, Save, Image as ImageIcon, ArrowLeft, ArrowRight } from "lucide-react";
 
 function fileToDataUrl(file) {
@@ -159,6 +159,7 @@ export default function AdminPortfolio() {
                   <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover" />
                   {it.featured && <span className="absolute top-2 left-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#1a1a1a]">Featured</span>}
                 </div>
+                <MorePhotos item={it} onChange={(extra) => setItems((arr) => arr.map((x) => (x.id === it.id ? { ...x, extra_images: extra } : x)))} />
                 <div className="p-4 space-y-2">
                   <input
                     value={it.title}
@@ -294,6 +295,54 @@ function TrustedLogosCard() {
       <button onClick={save} disabled={!dirty || busy} className="mt-4 inline-flex items-center gap-2 bg-[#1a1a1a] text-white font-extrabold rounded-full px-5 py-2 text-sm disabled:opacity-40" data-testid="trusted-logos-save">
         <Save size={14} /> Save logos
       </button>
+    </div>
+  );
+}
+
+
+/**
+ * More photos for one job - e.g. the back, a close-up of the print. On the site
+ * the card and the full-size view let people swipe between them.
+ */
+function MorePhotos({ item, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const extra = item.extra_images || [];
+  const add = async (files) => {
+    setBusy(true);
+    try {
+      let list = [...extra];
+      for (const f of files) {
+        if (f.size > 8_000_000) { toast.error(`${f.name} is over 8MB - please use a smaller photo`); continue; }
+        const img = await adminAddPortfolioImage(item.id, await fileToDataUrl(f));
+        list = [...list, img];
+      }
+      onChange(list);
+      toast.success("Photo added - people can swipe through them on the site");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Upload failed"); }
+    finally { setBusy(false); }
+  };
+  const remove = async (xid) => {
+    if (!window.confirm("Remove this photo from the job?")) return;
+    try { await adminRemovePortfolioImage(item.id, xid); onChange(extra.filter((x) => x.id !== xid)); }
+    catch (e) { toast.error(e?.response?.data?.detail || "Couldn't remove it"); }
+  };
+  return (
+    <div className="px-4 pt-3" data-testid={`admin-portfolio-more-${item.id}`}>
+      <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">More photos ({extra.length}) - e.g. the back, a close-up</div>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {extra.map((x) => (
+          <div key={x.id} className="relative w-14 h-14 rounded-lg overflow-hidden border border-[#e5e7eb]">
+            <img src={mediaUrl(x.url)} alt="" className="w-full h-full object-cover" />
+            <button onClick={() => remove(x.id)} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-white/90 text-rose-600 text-xs font-black grid place-items-center" title="Remove">×</button>
+          </div>
+        ))}
+        {extra.length < 9 && (
+          <label className="w-14 h-14 rounded-lg border-2 border-dashed border-[#7bc67e] grid place-items-center cursor-pointer text-[#166534] text-[10px] font-extrabold text-center hover:bg-[#f0fdf4]">
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <span>+ Add</span>}
+            <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files?.length && add([...e.target.files])} />
+          </label>
+        )}
+      </div>
     </div>
   );
 }

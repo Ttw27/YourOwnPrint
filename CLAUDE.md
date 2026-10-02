@@ -287,6 +287,7 @@ frontend/src/
 
 ### Known gaps not yet built (backlog):
 - Per-product social share images (parked due to prior deploy risk)
+- Portfolio items can have extra photos (`extra_images`, served at /api/portfolio/file/{id}__{xid}.ext); cards + lightbox use `ImageSwiper`
 - Plain-English rewording of the remaining admin screens
 - (Optional) serve portfolio images directly from the R2 public URL instead of proxying through
   the backend — would remove the need for `mediaUrl()` on portfolio, but existing items are saved
