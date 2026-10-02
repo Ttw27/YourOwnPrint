@@ -12,7 +12,10 @@ import { mediaUrl } from "../../lib/api";
 // focus point x/y in % + fit "cover" (fill, crop around the focus) or "contain".
 export function photoStyle(meta) {
   if (!meta) return undefined;
-  return { objectPosition: `${meta.x ?? 50}% ${meta.y ?? 50}%`, objectFit: meta.fit === "contain" ? "contain" : "cover" };
+  if (meta.fit === "contain") return { objectFit: "contain" };
+  const pos = `${meta.x ?? 50}% ${meta.y ?? 50}%`;
+  const z = Number(meta.zoom) || 1;
+  return { objectFit: "cover", objectPosition: pos, ...(z > 1 ? { transform: `scale(${z})`, transformOrigin: pos } : {}) };
 }
 
 export default function ImageSwiper({ images = [], meta = [], alt = "", imgClassName = "w-full h-full object-cover", className = "" }) {
@@ -37,7 +40,7 @@ export default function ImageSwiper({ images = [], meta = [], alt = "", imgClass
         className="w-full h-full flex overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {list.map((src, i) => (
-          <div key={i} className="w-full h-full flex-shrink-0 snap-center">
+          <div key={i} className="w-full h-full flex-shrink-0 snap-center overflow-hidden">
             <img src={mediaUrl(src)} alt={`${alt}${list.length > 1 ? ` - photo ${i + 1}` : ""}`} className={imgClassName} style={photoStyle(meta[i])} loading="lazy" draggable="false" />
           </div>
         ))}

@@ -287,7 +287,7 @@ frontend/src/
 
 ### Known gaps not yet built (backlog):
 - Per-product social share images (parked due to prior deploy risk)
-- Portfolio items can have extra photos (`extra_images`, served at /api/portfolio/file/{id}__{xid}.ext); cards + lightbox use `ImageSwiper`; each photo has a `focus` {x,y,fit} set via Admin > Photo gallery > Position (`photoStyle()` -> object-position/fit)
+- Portfolio items can have extra photos (`extra_images`, served at /api/portfolio/file/{id}__{xid}.ext); cards + lightbox use `ImageSwiper`; each photo has a `focus` {x,y,zoom,fit} set by dragging/zooming in Admin > Photo gallery > Move photo (`photoStyle()`); `PUT /admin/portfolio/{id}/photo-order` reorders (first = main); file lookup is by URL so photos can move
 - Plain-English rewording of the remaining admin screens
 - (Optional) serve portfolio images directly from the R2 public URL instead of proxying through
   the backend — would remove the need for `mediaUrl()` on portfolio, but existing items are saved

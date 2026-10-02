@@ -5083,15 +5083,44 @@ def _focus(f) -> Dict:
     try:
         x = max(0.0, min(100.0, float(f.get("x", 50))))
         y = max(0.0, min(100.0, float(f.get("y", 50))))
+        zoom = max(1.0, min(3.0, float(f.get("zoom", 1) or 1)))
     except (TypeError, ValueError):
-        x, y = 50.0, 50.0
-    return {"x": round(x, 1), "y": round(y, 1), "fit": "contain" if f.get("fit") == "contain" else "cover"}
+        x, y, zoom = 50.0, 50.0, 1.0
+    return {"x": round(x, 1), "y": round(y, 1), "zoom": round(zoom, 2),
+            "fit": "contain" if f.get("fit") == "contain" else "cover"}
 
 
 class FocusIn(BaseModel):
     x: float = 50
     y: float = 50
+    zoom: float = 1
     fit: str = "cover"
+
+
+class PhotoOrderIn(BaseModel):
+    order: List[str]   # photo ids in the new order; the main photo's id is "main"
+
+
+@api_router.put("/admin/portfolio/{item_id}/photo-order", dependencies=[Depends(require_admin)])
+async def admin_reorder_portfolio_photos(item_id: str, payload: PhotoOrderIn):
+    """Reorder a job's photos - whichever is first becomes the main photo
+    (the one shown on the card)."""
+    doc = await db.portfolio.find_one({"id": item_id})
+    if not doc:
+        raise HTTPException(404, "Portfolio item not found")
+    photos = {"main": {"id": uuid.uuid4().hex[:10], "url": doc.get("image_url"), "storage_path": doc.get("storage_path", ""),
+                       "content_type": doc.get("content_type"), "focus": doc.get("focus")}}
+    for x in doc.get("extra_images") or []:
+        photos[x["id"]] = x
+    if sorted(payload.order) != sorted(photos):
+        raise HTTPException(400, "The order must list every photo once")
+    ordered = [photos[k] for k in payload.order]
+    first, rest = ordered[0], ordered[1:]
+    await db.portfolio.update_one({"id": item_id}, {"$set": {
+        "image_url": first.get("url"), "storage_path": first.get("storage_path", ""),
+        "content_type": first.get("content_type"), "focus": first.get("focus"),
+        "extra_images": rest, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    return {"ok": True}
 
 
 @api_router.put("/admin/portfolio/{item_id}/focus", dependencies=[Depends(require_admin)])
@@ -5143,21 +5172,21 @@ async def admin_remove_portfolio_image(item_id: str, xid: str):
 @api_router.get("/portfolio/file/{filename}")
 async def portfolio_file(filename: str):
     # filename = "{uuid}.{ext}" (main photo) or "{uuid}__{xid}.{ext}" (extra photo)
+    # Photos can be reordered (any photo can become the main one), so look the
+    # file up by its URL wherever it now sits.
     stem = filename.rsplit(".", 1)[0]
-    item_id, _, xid = stem.partition("__")
+    item_id = stem.partition("__")[0]
     doc = await db.portfolio.find_one({"id": item_id, "is_hidden": {"$ne": True}})
     if not doc:
         raise HTTPException(404, "File not found")
-    if xid:
-        x = next((e for e in (doc.get("extra_images") or []) if e.get("id") == xid), None)
-        if not x or not x.get("storage_path"):
-            raise HTTPException(404, "File not found")
-        data, ct = _storage_get(x["storage_path"])
-        return Response(content=data, media_type=x.get("content_type") or ct)
-    if not doc.get("storage_path"):
+    want = f"/api/portfolio/file/{filename}"
+    photos = [{"url": doc.get("image_url"), "storage_path": doc.get("storage_path"), "content_type": doc.get("content_type")}] + \
+             list(doc.get("extra_images") or [])
+    p = next((x for x in photos if x.get("url") == want and x.get("storage_path")), None)
+    if not p:
         raise HTTPException(404, "File not found")
-    data, ct = _storage_get(doc["storage_path"])
-    return Response(content=data, media_type=doc.get("content_type") or ct)
+    data, ct = _storage_get(p["storage_path"])
+    return Response(content=data, media_type=p.get("content_type") or ct)
 
 
 # ---------- Public artwork upload (for configurator design uploads) ----------

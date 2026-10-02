@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl, fetchTrustedLogos, adminSaveTrustedLogos, uploadAdminImage, adminAddPortfolioImage, adminRemovePortfolioImage, adminSetPortfolioFocus } from "../lib/api";
+import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDeletePortfolio, fetchPortfolioCategories, mediaUrl, fetchTrustedLogos, adminSaveTrustedLogos, uploadAdminImage, adminAddPortfolioImage, adminRemovePortfolioImage, adminSetPortfolioFocus, adminReorderPortfolioPhotos } from "../lib/api";
 import { photoStyle } from "../components/bold/ImageSwiper";
 import { Upload, Trash2, Star, Eye, EyeOff, Loader2, Save, Image as ImageIcon, ArrowLeft, ArrowRight } from "lucide-react";
 
@@ -157,12 +157,12 @@ export default function AdminPortfolio() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="admin-portfolio-list">
             {items.map((it) => (
               <div key={it.id} className={`bg-white border-2 rounded-3xl overflow-hidden ${it.is_hidden ? "opacity-50 border-[#fee2e2]" : "border-[#dcfce7]"}`} data-testid={`admin-portfolio-row-${it.id}`}>
-                <div className="aspect-square bg-[#f0fdf4] relative">
+                <div className="aspect-square bg-[#f0fdf4] relative overflow-hidden">
                   <img src={mediaUrl(it.image_url)} alt={it.alt_text || it.title} className="w-full h-full object-cover" style={photoStyle(it.focus)} />
-                  <button onClick={() => setPositioning({ item: it, imageId: null, url: it.image_url, focus: it.focus })} className="absolute bottom-2 right-2 text-[11px] font-extrabold bg-white/95 hover:bg-white rounded-full px-3 py-1.5 shadow" data-testid={`admin-portfolio-position-${it.id}`}>✥ Position</button>
+                  <button onClick={() => setPositioning({ item: it, imageId: null, url: it.image_url, focus: it.focus })} className="absolute bottom-2 right-2 text-[11px] font-extrabold bg-white/95 hover:bg-white rounded-full px-3 py-1.5 shadow" data-testid={`admin-portfolio-position-${it.id}`}>✥ Move photo</button>
                   {it.featured && <span className="absolute top-2 left-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fde68a] text-[#1a1a1a]">Featured</span>}
                 </div>
-                <MorePhotos item={it} onPosition={(x) => setPositioning({ item: it, imageId: x.id, url: x.url, focus: x.focus })} onChange={(extra) => setItems((arr) => arr.map((x) => (x.id === it.id ? { ...x, extra_images: extra } : x)))} />
+                <PhotosRow item={it} onPosition={(p) => setPositioning({ item: it, imageId: p.id === "main" ? null : p.id, url: p.url, focus: p.focus })} onReload={refresh} onChange={(extra) => setItems((arr) => arr.map((x) => (x.id === it.id ? { ...x, extra_images: extra } : x)))} />
                 <div className="p-4 space-y-2">
                   <input
                     value={it.title}
@@ -317,12 +317,14 @@ function TrustedLogosCard() {
 
 
 /**
- * More photos for one job - e.g. the back, a close-up of the print. On the site
- * the card and the full-size view let people swipe between them.
+ * All the photos for one job, in order - the FIRST is the main photo shown on
+ * the card. Arrows reorder (so any photo can become the main one), click a
+ * photo to position it in its square, + Add for more (e.g. the back).
  */
-function MorePhotos({ item, onChange, onPosition }) {
+function PhotosRow({ item, onChange, onPosition, onReload }) {
   const [busy, setBusy] = useState(false);
   const extra = item.extra_images || [];
+  const photos = [{ id: "main", url: item.image_url, focus: item.focus }, ...extra];
   const add = async (files) => {
     setBusy(true);
     try {
@@ -333,8 +335,16 @@ function MorePhotos({ item, onChange, onPosition }) {
         list = [...list, img];
       }
       onChange(list);
-      toast.success("Photo added - people can swipe through them on the site");
+      toast.success("Photo added");
     } catch (e) { toast.error(e?.response?.data?.detail || "Upload failed"); }
+    finally { setBusy(false); }
+  };
+  const move = async (i, d) => {
+    const j = i + d; if (j < 0 || j >= photos.length) return;
+    const order = photos.map((p) => p.id); [order[i], order[j]] = [order[j], order[i]];
+    setBusy(true);
+    try { await adminReorderPortfolioPhotos(item.id, order); await onReload(); if (j === 0 || i === 0) toast.success("Main photo changed"); }
+    catch (e) { toast.error(e?.response?.data?.detail || "Couldn't reorder"); }
     finally { setBusy(false); }
   };
   const remove = async (xid) => {
@@ -343,17 +353,26 @@ function MorePhotos({ item, onChange, onPosition }) {
     catch (e) { toast.error(e?.response?.data?.detail || "Couldn't remove it"); }
   };
   return (
-    <div className="px-4 pt-3" data-testid={`admin-portfolio-more-${item.id}`}>
-      <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">More photos ({extra.length}) - e.g. the back, a close-up · click one to position it</div>
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {extra.map((x) => (
-          <div key={x.id} className="relative w-14 h-14 rounded-lg overflow-hidden border border-[#e5e7eb]">
-            <img src={mediaUrl(x.url)} alt="" className="w-full h-full object-cover cursor-pointer" style={photoStyle(x.focus)} onClick={() => onPosition(x)} title="Click to position this photo" />
-            <button onClick={() => remove(x.id)} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-white/90 text-rose-600 text-xs font-black grid place-items-center" title="Remove">×</button>
+    <div className="px-4 pt-3" data-testid={`admin-portfolio-photos-${item.id}`}>
+      <div className="text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">Photos ({photos.length}) - first one shows on the card · click a photo to move it in its square</div>
+      <div className="mt-1.5 flex flex-wrap gap-2">
+        {photos.map((p, i) => (
+          <div key={p.id} className="w-16">
+            <div className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 ${i === 0 ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`}>
+              <img src={mediaUrl(p.url)} alt="" className="w-full h-full object-cover cursor-pointer" style={photoStyle(p.focus)} onClick={() => onPosition(p)} title="Click to move it in its square" />
+              {i === 0 && <span className="absolute bottom-0 inset-x-0 text-center text-[9px] font-black bg-[#7bc67e] text-[#1a1a1a]">MAIN</span>}
+              {i > 0 && <button onClick={() => remove(p.id)} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-white/90 text-rose-600 text-xs font-black grid place-items-center" title="Remove">×</button>}
+            </div>
+            {photos.length > 1 && (
+              <div className="flex justify-between mt-0.5">
+                <button onClick={() => move(i, -1)} disabled={busy || i === 0} className="p-0.5 rounded hover:bg-[#f0fdf4] disabled:opacity-25" title={i === 1 ? "Make this the main photo" : "Move left"}><ArrowLeft size={12} /></button>
+                <button onClick={() => move(i, 1)} disabled={busy || i === photos.length - 1} className="p-0.5 rounded hover:bg-[#f0fdf4] disabled:opacity-25" title="Move right"><ArrowRight size={12} /></button>
+              </div>
+            )}
           </div>
         ))}
         {extra.length < 9 && (
-          <label className="w-14 h-14 rounded-lg border-2 border-dashed border-[#7bc67e] grid place-items-center cursor-pointer text-[#166534] text-[10px] font-extrabold text-center hover:bg-[#f0fdf4]">
+          <label className="w-16 h-16 rounded-lg border-2 border-dashed border-[#7bc67e] grid place-items-center cursor-pointer text-[#166534] text-[10px] font-extrabold text-center hover:bg-[#f0fdf4]">
             {busy ? <Loader2 size={14} className="animate-spin" /> : <span>+ Add</span>}
             <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files?.length && add([...e.target.files])} />
           </label>
@@ -363,21 +382,29 @@ function MorePhotos({ item, onChange, onPosition }) {
   );
 }
 
-
 /**
- * Position a photo in its square frame on the site: click the important part
- * (the logo, the face...) and the square centres on it - or show the whole
- * photo uncropped. Live preview of exactly what visitors see.
+ * Move a photo inside its square frame: drag it around, zoom in or out, or
+ * show the whole photo. What you see in the square is what the site shows.
  */
 function PositionPhoto({ target, onClose, onSaved }) {
-  const [f, setF] = useState({ x: 50, y: 50, fit: "cover", ...(target.focus || {}) });
+  const [f, setF] = useState({ x: 50, y: 50, zoom: 1, fit: "cover", ...(target.focus || {}) });
   const [saving, setSaving] = useState(false);
-  const pick = (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    setF((v) => ({ ...v, fit: "cover",
-      x: Math.round(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100))),
-      y: Math.round(Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100))) }));
+  const drag = React.useRef(null);
+  const box = React.useRef(null);
+  const down = (e) => {
+    if (f.fit === "contain") return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { x: e.clientX, y: e.clientY, fx: f.x, fy: f.y };
   };
+  const moveP = (e) => {
+    if (!drag.current) return;
+    const size = box.current ? box.current.clientWidth : 360;
+    const z = Number(f.zoom) || 1;
+    const nx = drag.current.fx - ((e.clientX - drag.current.x) / size) * 100 / z;
+    const ny = drag.current.fy - ((e.clientY - drag.current.y) / size) * 100 / z;
+    setF((v) => ({ ...v, x: Math.max(0, Math.min(100, Math.round(nx))), y: Math.max(0, Math.min(100, Math.round(ny))) }));
+  };
+  const up = () => { drag.current = null; };
   const save = async () => {
     setSaving(true);
     try { onSaved(await adminSetPortfolioFocus(target.item.id, f, target.imageId)); toast.success("Photo position saved"); }
@@ -385,36 +412,31 @@ function PositionPhoto({ target, onClose, onSaved }) {
   };
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-auto p-6" data-testid="portfolio-position-modal">
-        <h2 className="font-black text-2xl">Position this photo</h2>
-        <p className="text-sm text-[#4b5563] mt-1">Click the most important part of the photo (e.g. the logo). The square on the site centres on that spot. Or show the whole photo with no cropping.</p>
-        <div className="mt-5 grid md:grid-cols-[1.3fr_1fr] gap-6 items-start">
-          <div>
-            <div className="text-xs font-extrabold mb-1">Whole photo - click to set the focus</div>
-            <div className="relative inline-block cursor-crosshair select-none" onClick={pick}>
-              <img src={mediaUrl(target.url)} alt="" className="max-h-[52vh] w-auto max-w-full rounded-xl block" draggable="false" />
-              {f.fit !== "contain" && (
-                <span className="absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border-[3px] border-white shadow-[0_0_0_2px_#7bc67e] bg-[#7bc67e]/40 pointer-events-none" style={{ left: `${f.x}%`, top: `${f.y}%` }} />
-              )}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-extrabold mb-1">How it looks on the site</div>
-            <div className="aspect-square w-full max-w-[320px] rounded-3xl overflow-hidden bg-[#f0fdf4] border-2 border-[#dcfce7]">
-              <img src={mediaUrl(target.url)} alt="" className="w-full h-full" style={photoStyle(f)} />
-            </div>
-            <label className="mt-4 flex items-center gap-2 text-sm font-bold">
-              <input type="checkbox" checked={f.fit === "contain"} onChange={(e) => setF((v) => ({ ...v, fit: e.target.checked ? "contain" : "cover" }))} />
-              Show the whole photo (no cropping)
-            </label>
-            <button onClick={() => setF({ x: 50, y: 50, fit: "cover" })} className="mt-2 text-xs font-bold text-[#166534] hover:underline">Back to centred</button>
-            <div className="mt-5 flex gap-2">
-              <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 bg-[#7bc67e] text-[#1a1a1a] font-extrabold rounded-full px-5 py-2.5 text-sm disabled:opacity-50" data-testid="portfolio-position-save">
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save position
-              </button>
-              <button onClick={onClose} className="px-4 py-2.5 text-sm font-bold text-[#4b5563]">Cancel</button>
-            </div>
-          </div>
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-md w-full max-h-[94vh] overflow-auto p-6" data-testid="portfolio-position-modal">
+        <h2 className="font-black text-2xl">Move this photo</h2>
+        <p className="text-sm text-[#4b5563] mt-1">Drag the photo to move it inside the square. Zoom in if it needs room to move. This square is exactly what shows on the site.</p>
+        <div
+          ref={box}
+          onPointerDown={down} onPointerMove={moveP} onPointerUp={up} onPointerCancel={up}
+          className={`mt-4 aspect-square w-full rounded-3xl overflow-hidden bg-[#f0fdf4] border-2 border-[#dcfce7] select-none touch-none ${f.fit === "contain" ? "" : "cursor-grab active:cursor-grabbing"}`}
+          data-testid="portfolio-position-square"
+        >
+          <img src={mediaUrl(target.url)} alt="" className="w-full h-full pointer-events-none" style={photoStyle(f)} draggable="false" />
+        </div>
+        <label className={`mt-4 block text-sm font-extrabold ${f.fit === "contain" ? "opacity-40" : ""}`}>Zoom
+          <input type="range" min="1" max="3" step="0.05" value={f.zoom || 1} disabled={f.fit === "contain"}
+            onChange={(e) => setF((v) => ({ ...v, zoom: Number(e.target.value) }))} className="w-full accent-[#7bc67e]" data-testid="portfolio-position-zoom" />
+        </label>
+        <label className="mt-2 flex items-center gap-2 text-sm font-bold">
+          <input type="checkbox" checked={f.fit === "contain"} onChange={(e) => setF((v) => ({ ...v, fit: e.target.checked ? "contain" : "cover" }))} />
+          Show the whole photo (no cropping)
+        </label>
+        <button onClick={() => setF({ x: 50, y: 50, zoom: 1, fit: "cover" })} className="mt-2 text-xs font-bold text-[#166534] hover:underline">Reset</button>
+        <div className="mt-5 flex gap-2">
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 bg-[#7bc67e] text-[#1a1a1a] font-extrabold rounded-full px-5 py-2.5 text-sm disabled:opacity-50" data-testid="portfolio-position-save">
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
+          </button>
+          <button onClick={onClose} className="px-4 py-2.5 text-sm font-bold text-[#4b5563]">Cancel</button>
         </div>
       </div>
     </div>

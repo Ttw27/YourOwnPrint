@@ -1042,3 +1042,7 @@ export async function adminSetPortfolioFocus(id, focus, imageId) {
   const { data } = await api.put(`/admin/portfolio/${id}/focus`, focus, { params: imageId ? { image_id: imageId } : {} });
   return data.focus;
 }
+export async function adminReorderPortfolioPhotos(id, order) {
+  const { data } = await api.put(`/admin/portfolio/${id}/photo-order`, { order });
+  return data;
+}
