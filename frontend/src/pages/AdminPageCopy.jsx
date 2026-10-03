@@ -36,6 +36,12 @@ const PAGE_COPY_SLUGS = [
   { slug: "full-squad-configurator", label: "Full Squad Configurator" },
   { slug: "sports-outfit-configurator", label: "Sports Outfit Configurator" },
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
+  ...[
+    ["healthcare", "Healthcare"], ["construction-trades", "Construction & Trades"], ["retail", "Retail"],
+    ["security", "Security"], ["corporate", "Corporate"], ["sports-fitness", "Sports & Fitness"],
+    ["industrial", "Industrial"], ["beauty-wellness", "Beauty & Wellness"], ["cleaning", "Cleaning & Maintenance"],
+    ["hospitality-catering", "Hospitality & Catering"], ["education-schools", "Education & Schools"],
+  ].map(([slug, name]) => ({ slug, label: `Industry: ${name}` })),
   { slug: "site-images", label: "Pictures used across the whole site" },
   { slug: "site-footer", label: "Footer - social media links" },
 ];
@@ -273,6 +279,58 @@ function ImageField({ label, hint, value, onChange, testid, compact }) {
   );
 }
 
+// Garment-type tabs at the top of an industry page. Saved in extras.tabs;
+// "Use the suggested tabs" removes it so the built-in list applies again.
+function IndustryTabsCard({ slug, value, onChange }) {
+  const [info, setInfo] = useState(null);
+  useEffect(() => {
+    setInfo(null);
+    api.get(`/industries/${slug}`, { params: { limit: 1 } }).then(({ data }) => setInfo(data)).catch(() => setInfo({}));
+  }, [slug]);
+  if (!info) return <div className="py-3"><Loader2 size={14} className="animate-spin text-[#7bc67e]" /></div>;
+  const types = (info.facets?.category || []).map((c) => c.value);
+  const label = (v) => ({ "t-shirts": "T-shirts", "hi-vis": "Hi-vis", bottoms: "Trousers & joggers", hats: "Caps & hats", "kids-baby": "Kids & baby" }[v]
+    || v.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase()));
+  const custom = Array.isArray(value);
+  const current = custom ? value : (info.default_tabs || []);
+  const set = (list) => onChange(list);
+  const move = (i, d) => { const l = [...current]; const j = i + d; if (j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; set(l); };
+  return (
+    <div className="border-2 border-[#dcfce7] rounded-2xl p-4 bg-[#f9fafb]" data-testid="apc-industry-tabs">
+      <div className="text-sm font-extrabold">Tabs at the top of this page</div>
+      <p className="text-[11px] text-[#4b5563] mb-3">
+        The garment types shown as buttons above the products (after &ldquo;All products&rdquo;). They&rsquo;re also shown first, mixed together, when a customer is on &ldquo;All products&rdquo;.
+        The filter list on the left is not affected. {custom ? "" : "Showing the suggested tabs."}
+      </p>
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {current.length === 0 && <span className="text-[11px] text-[#4b5563]">No tabs - the page shows only the filter list.</span>}
+        {current.map((t, i) => (
+          <span key={t} className="inline-flex items-center gap-1 bg-[#7bc67e] rounded-full pl-3 pr-1 py-1 text-xs font-extrabold" data-testid={`apc-tab-${t}`}>
+            {label(t)}
+            <button type="button" onClick={() => move(i, -1)} title="Move left" className="w-5 h-5 rounded-full hover:bg-white/50">&lsaquo;</button>
+            <button type="button" onClick={() => move(i, 1)} title="Move right" className="w-5 h-5 rounded-full hover:bg-white/50">&rsaquo;</button>
+            <button type="button" onClick={() => set(current.filter((x) => x !== t))} title="Remove" className="w-5 h-5 grid place-items-center rounded-full hover:bg-white/50"><X size={11} /></button>
+          </span>
+        ))}
+      </div>
+      <div className="text-[11px] font-extrabold mb-1">Add a tab</div>
+      <div className="flex flex-wrap gap-1.5">
+        {types.filter((t) => !current.includes(t)).map((t) => (
+          <button key={t} type="button" onClick={() => set([...current, t])} className="inline-flex items-center gap-1 bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-full px-3 py-1 text-xs font-bold" data-testid={`apc-addtab-${t}`}>
+            <Plus size={11} /> {label(t)}
+          </button>
+        ))}
+      </div>
+      {custom && (
+        <button type="button" onClick={() => onChange(undefined)} className="mt-3 text-[11px] font-extrabold text-[#166534] hover:underline inline-flex items-center gap-1">
+          <RotateCcw size={11} /> Use the suggested tabs
+        </button>
+      )}
+      <p className="text-[10px] text-[#4b5563] mt-2">Remember to press Save.</p>
+    </div>
+  );
+}
+
 export default function AdminPageCopy() {
   const [slug, setSlug] = useState(PAGE_COPY_SLUGS[0].slug);
   const [copy, setCopy] = useState(EMPTY);
@@ -419,6 +477,10 @@ export default function AdminPageCopy() {
                   <input value={copy.cta_link} onChange={(e) => setCopy({ ...copy, cta_link: e.target.value })} className="input" placeholder="e.g. /contact" />
                 </label>
               </div>
+              )}
+
+              {SITE_INDUSTRIES.some((it) => it.slug === slug) && (
+                <IndustryTabsCard slug={slug} value={(copy.extras || {}).tabs} onChange={(v) => setExtra("tabs", v)} />
               )}
 
               {/* ---- Images (stored in the DB, so they survive every deploy) ---- */}

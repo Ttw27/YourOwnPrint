@@ -3900,6 +3900,32 @@ async def admin_get_collection_seo(slug: str):
     return await _collection_seo_copy(slug)
 
 
+# Garment-type tabs across the top of each industry page ("Popular for this
+# sector"). Values are product `category` slugs. Admin can change them per
+# industry (Admin > Pages > the industry > extras.tabs); these are the defaults.
+INDUSTRY_TAB_DEFAULTS: Dict[str, List[str]] = {
+    "hospitality-catering": ["aprons", "polos", "t-shirts", "shirts", "hats"],
+    "construction-trades": ["hi-vis", "t-shirts", "hoodies", "jackets", "bottoms"],
+    "healthcare": ["polos", "t-shirts", "shirts", "sweatshirts", "hoodies"],
+    "retail": ["polos", "t-shirts", "hoodies", "sweatshirts", "jackets"],
+    "security": ["polos", "jackets", "hi-vis", "sweatshirts", "t-shirts"],
+    "corporate": ["polos", "shirts", "jackets", "sweatshirts", "hoodies"],
+    "sports-fitness": ["t-shirts", "hoodies", "shorts", "bottoms", "bags"],
+    "industrial": ["hi-vis", "t-shirts", "polos", "jackets", "bottoms"],
+    "beauty-wellness": ["aprons", "t-shirts", "polos", "hoodies"],
+    "cleaning": ["polos", "t-shirts", "sweatshirts", "aprons", "hi-vis"],
+    "education-schools": ["polos", "sweatshirts", "hoodies", "t-shirts", "jackets"],
+}
+INDUSTRY_TAB_LABELS = {
+    "t-shirts": "T-shirts", "hi-vis": "Hi-vis", "bottoms": "Trousers & joggers",
+    "hats": "Caps & hats", "kids-baby": "Kids & baby",
+}
+
+
+def _industry_tab_label(cat: str) -> str:
+    return INDUSTRY_TAB_LABELS.get(cat) or cat.replace("-", " ").capitalize()
+
+
 @api_router.get("/industries/{slug}")
 async def get_industry(
     slug: str,
@@ -3967,14 +3993,44 @@ async def get_industry(
             "gender_fit": p.get("gender_fit") or "unisex",
             "colors": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("colors") or [])][:40],
         })
-    items.sort(key=lambda x: x["price"])
+    # Tabs: admin's list if saved, else the default. Only types this industry
+    # actually has are shown.
+    saved = await db.settings.find_one({"key": f"page_copy:{canonical_slug}"}, {"extras": 1})
+    tab_cats = ((saved or {}).get("extras") or {}).get("tabs")
+    if not isinstance(tab_cats, list):
+        tab_cats = INDUSTRY_TAB_DEFAULTS.get(canonical_slug, [])
+    tab_cats = [c for c in tab_cats if isinstance(c, str) and category_counts.get(c)]
+    tabs = [{"value": c, "label": _industry_tab_label(c)} for c in tab_cats]
+
+    if category:
+        items.sort(key=lambda x: x["price"])
+    else:
+        # "All products": the sector's own garment types first, taking turns
+        # (apron, polo, tee, ...) so the first rows show the range. Within a type,
+        # core styles (lots of colours) before one-off cheap lines, then price.
+        groups: Dict[str, List[Dict]] = {c: [] for c in tab_cats}
+        rest: List[Dict] = []
+        for it in items:
+            (groups[it["category"]] if it["category"] in groups else rest).append(it)
+        core = lambda x: (-min(len(x.get("colors") or []), 12), x["price"])
+        for g in groups.values():
+            g.sort(key=core)
+        rest.sort(key=lambda x: x["price"])
+        mixed: List[Dict] = []
+        i = 0
+        while any(i < len(g) for g in groups.values()):
+            mixed.extend(g[i] for g in groups.values() if i < len(g))
+            i += 1
+        items = mixed + rest
     matched_total = len(items)
     limit = min(limit, 200)
     page_items = items[offset:offset + limit]
 
     # Strip the alias_of marker from the response
     out = {k: v for k, v in canonical.items() if k != "alias_of"}
-    return {**out, "products": page_items, "facets": facets, "total": len(all_prods), "matched_total": matched_total, "offset": offset, "returned": len(page_items)}
+    return {**out, "products": page_items, "facets": facets, "tabs": tabs,
+            "default_tabs": INDUSTRY_TAB_DEFAULTS.get(canonical_slug, []),
+            "total": len(all_prods), "matched_total": matched_total, "offset": offset, "returned": len(page_items)}
 
 
 # ---------- Sports & Fitness Teams (SEO landings) ----------

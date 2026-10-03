@@ -95,7 +95,7 @@ export default function IndustryDetail() {
   if (loading && !data) return <div className="min-h-screen grid place-items-center bg-white" data-testid="industry-loading"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   if (!data) return null;
 
-  const { hero_image, products, facets = {}, total, matched_total } = data;
+  const { hero_image, products, facets = {}, total, matched_total, tabs = [] } = data;
   // Backend supplies sensible defaults for every industry; admin page-copy
   // (Admin → Page Copy → the industry's entry) overrides them where set, so you
   // can write a bespoke heading/intro per industry for SEO and conversion
@@ -130,6 +130,31 @@ export default function IndustryDetail() {
           </div>
         </div>
       </header>
+
+      {/* Garment types this sector buys most - a shortcut to the same
+          "Product type" filter the sidebar has (they stay in sync via the URL). */}
+      {tabs.length > 0 && (
+        <nav className="max-w-7xl mx-auto px-4 lg:px-6 pt-6" aria-label="Popular for this sector" data-testid="industry-tabs">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-[#4b5563] font-extrabold mb-2">Popular for this sector</div>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 lg:flex-wrap" style={{ scrollbarWidth: "none" }}>
+            {[{ value: "", label: "All products" }, ...tabs].map((t) => {
+              const on = (filters.category || "") === t.value;
+              return (
+                <button
+                  key={t.value || "all"}
+                  type="button"
+                  onClick={() => patch({ category: t.value })}
+                  className={`flex-shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-extrabold border-2 transition-colors ${on ? "bg-[#7bc67e] border-[#7bc67e] text-[#1a1a1a]" : "bg-white border-[#dcfce7] hover:border-[#7bc67e]"}`}
+                  aria-pressed={on}
+                  data-testid={`industry-tab-${t.value || "all"}`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
 
       <section className="max-w-7xl mx-auto px-4 lg:px-6 py-8 grid lg:grid-cols-12 gap-6">
         <button

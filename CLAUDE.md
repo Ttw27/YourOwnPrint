@@ -213,6 +213,11 @@ frontend/src/
   `_ralawise_size_chart()`. Charts the admin types are never
   replaced. One-size / non-apparel products get no chart (`_is_one_size_or_non_apparel`).
 
+- **Industry page tabs** (`/industries/:slug`): "Popular for this sector" garment-type buttons above the
+  products = shortcuts to the sidebar's Product type filter (`category` URL param; sidebar unchanged).
+  Defaults in `INDUSTRY_TAB_DEFAULTS` (server.py); admin overrides in Admin > Pages > "Industry: ..."
+  (page copy `extras.tabs`). On "All products" the tab types are shown first, interleaved, core styles
+  (many colours) before one-off cheap lines; tabs for types the sector has none of are hidden.
 - **Nav default version:** bumping `DEFAULT_NAV_CONFIG["version"]` REPLACES Tim's saved menu
   (stored `default_version` < new version). Ask Tim before bumping it.
 
