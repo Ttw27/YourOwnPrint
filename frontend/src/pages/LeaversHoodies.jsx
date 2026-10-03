@@ -8,6 +8,7 @@ import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { Sparkles, GraduationCap, Users, CalendarDays, Mail, Truck, ShieldCheck, Star, Package, ArrowRight, ChevronLeft, ChevronRight, Brush } from "lucide-react";
 import { toast } from "sonner";
+import { DEFAULT_HERO_IMAGES } from "../lib/defaultImages";
 
 export default function LeaversHoodies() {
   const [products, setProducts] = useState([]);
@@ -27,7 +28,7 @@ export default function LeaversHoodies() {
     title: "",
     subtitle: "Pullover hoodies, zip hoodies, varsity jackets - printed in the UK in 7–10 days. Fill in your details, pick your garment and design, choose sizes, and we'll get cracking. Free proof before we print a thing.",
     // Swap in /admin/page-copy → Leavers Hoodies → Pictures & video.
-    hero_image: "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    hero_image: DEFAULT_HERO_IMAGES["leavers-hoodies"],
   });
 
   return (

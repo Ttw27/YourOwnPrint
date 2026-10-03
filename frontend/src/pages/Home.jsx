@@ -15,6 +15,7 @@ import SiteImage from "../components/bold/SiteImage";
 import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera, MessageCircle } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
 import usePageTitle from "../hooks/usePageTitle";
+import { DEFAULT_HERO_IMAGES } from "../lib/defaultImages";
 
 export default function Home() {
   usePageTitle("Custom Print & Workwear", { description: "Personalised clothing, workwear and team kit - printed and embroidered in the UK." });
@@ -34,7 +35,7 @@ export default function Home() {
     // Images now come from the CMS when set, falling back to these code
     // defaults when they haven't been changed in admin. Anything set in
     // /admin/page-copy lives in the database and survives every deploy.
-    hero_image: "https://images.pexels.com/photos/8926904/pexels-photo-8926904.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    hero_image: DEFAULT_HERO_IMAGES.home,
     images: {},
   });
   // Sector tile images: admin override by name, else the code default.

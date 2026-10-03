@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BadgeCheck, HandshakeIcon, ArrowRight } from "lucide-react";
 import { useSiteImages } from "../../hooks/usePageCopy";
 import SiteImage from "./SiteImage";
+import { DEFAULT_PRICE_PROMISE_PHOTO } from "../../lib/defaultImages";
 
 /**
  * PricePromise - confident, warm price-match band.
@@ -16,7 +17,7 @@ import SiteImage from "./SiteImage";
  * lives under /admin/page-copy → "Pictures used across the whole site" rather
  * than on any one page's record.
  */
-const DEFAULT_PHOTO = "https://images.pexels.com/photos/8553861/pexels-photo-8553861.jpeg?auto=compress&cs=tinysrgb&w=900";
+const DEFAULT_PHOTO = DEFAULT_PRICE_PROMISE_PHOTO;
 
 export default function PricePromise({ variant = "hero" }) {
   // Called before the early returns below - React requires every hook to run on

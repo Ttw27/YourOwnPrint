@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { api, adminUpdatePageCopy, adminDeletePageCopy, uploadAdminImage, uploadAdminMedia } from "../lib/api";
 import { Loader2, Save, Plus, Trash2, RotateCcw, Upload, Image as ImageIcon, X, Film } from "lucide-react";
 import { MEDIA_RATIOS } from "../components/bold/MediaBlock";
+import { DEFAULT_HERO_IMAGES, DEFAULT_PRICE_PROMISE_PHOTO } from "../lib/defaultImages";
+import { SECTORS, TOOLS_SHOWCASE } from "../lib/data";
 
 /**
  * /admin/page-copy - Editable hero copy / bullets / body / FAQ / CTA for every
@@ -64,34 +66,41 @@ const EMPTY = { title: "", subtitle: "", body: "", bullets: [], faq: [], cta_lab
 const PAGE_MEDIA_SLOTS = {
   home: [
     { key: "hero_image", kind: "image", field: "hero_image",
-      label: "Main photo at the top of the homepage",
+      label: "Main photo at the top of the homepage", fallback: DEFAULT_HERO_IMAGES.home,
       hint: "The large photo beside 'Your Brand. Your Clothing. Your Own Print.'" },
     { key: "designer:1", kind: "image",
       label: "'Design your tee in 60 seconds' - left photo",
-      hint: "First of the two photos beside 'Launch Designer'. Clicking it opens the designer. Leave empty to show a best-selling product instead." },
+      hint: "First of the two photos beside 'Launch Designer'. Clicking it opens the designer. Leave empty to show a best-selling product instead.",
+      emptyNote: "a best-selling product's photo is shown instead" },
     { key: "designer:2", kind: "image",
       label: "'Design your tee in 60 seconds' - right photo",
-      hint: "Second of the two photos beside 'Launch Designer'. Leave empty to show a best-selling product instead." },
+      hint: "Second of the two photos beside 'Launch Designer'. Leave empty to show a best-selling product instead.",
+      emptyNote: "a best-selling product's photo is shown instead" },
+    { key: "designer:banner", kind: "image", fallback: "/banners/designer-screenshot.jpg",
+      label: "'Design your own' banner picture",
+      hint: "The wide picture of the designer in the 'Design your own' banner on the homepage." },
     { key: "promo:find-my-kit", kind: "image",
       label: "Find My Kit banner photo",
-      hint: "The photo in the 'Find My Kit' banner partway down the homepage." },
+      hint: "The photo in the 'Find My Kit' banner partway down the homepage.",
+      emptyNote: "the banner shows a plain light-green panel" },
     { key: "promo:design-shop", kind: "image",
       label: "The Design Shop banner photo",
-      hint: "The background photo in 'The Design Shop' banner on the homepage." },
+      hint: "The background photo in 'The Design Shop' banner on the homepage.",
+      emptyNote: "the banner shows a plain purple panel" },
   ],
   sports: [
     { key: "hero_image", kind: "image", field: "hero_image",
-      label: "Main photo at the top of the Sports & Fitness page",
+      label: "Main photo at the top of the Sports & Fitness page", fallback: DEFAULT_HERO_IMAGES.sports,
       hint: "The large photo beside 'Kit out your crew.'" },
   ],
   "leavers-hoodies": [
     { key: "hero_image", kind: "image", field: "hero_image",
-      label: "Main photo at the top of the Leavers Hoodies page",
+      label: "Main photo at the top of the Leavers Hoodies page", fallback: DEFAULT_HERO_IMAGES["leavers-hoodies"],
       hint: "The large photo to the right of the heading." },
   ],
   "team-kits": [
     { key: "hero_image", kind: "image", field: "hero_image",
-      label: "Main photo at the top of the Team Kits page",
+      label: "Main photo at the top of the Team Kits page", fallback: DEFAULT_HERO_IMAGES["team-kits"],
       hint: "The large tilted photo beside 'Team Kits. Sorted.'" },
   ],
   "festival-tees-brands": [
@@ -109,7 +118,7 @@ const PAGE_MEDIA_SLOTS = {
   ],
   "site-images": [
     { key: "pricepromise", kind: "image",
-      label: "Price Promise photo",
+      label: "Price Promise photo", fallback: DEFAULT_PRICE_PROMISE_PHOTO,
       hint: "The square photo in the dark 'Looking professional shouldn't cost a fortune' band - shows on the homepage, product pages, Specials, Team Kits and Kit Your Workforce." },
     { key: "tool:design", kind: "image", label: "Tool tile - Design Your Own",
       hint: "One of the five tool tiles. They appear on the homepage, shop pages, industry pages, sports pages and the portfolio." },
@@ -239,7 +248,9 @@ function MediaField({ label, hint, value, onChange }) {
 }
 
 /** One image slot - paste a URL or upload a file. Blank = use code default. */
-function ImageField({ label, hint, value, onChange, testid, compact }) {
+// value = what's saved in admin. fallback = the built-in photo the site shows
+// while nothing is saved (so an empty box isn't mistaken for "no photo").
+function ImageField({ label, hint, value, onChange, testid, compact, fallback = "", emptyNote = "" }) {
   const [busy, setBusy] = useState(false);
   const onFile = async (file) => {
     if (!file) return;
@@ -256,9 +267,15 @@ function ImageField({ label, hint, value, onChange, testid, compact }) {
       <div className="text-[11px] font-extrabold">{label}</div>
       {hint && <div className="text-[10px] text-[#4b5563] mb-1.5">{hint}</div>}
       <div className="flex items-center gap-2 mt-1">
-        <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#e5e7eb] bg-white flex-shrink-0 grid place-items-center">
-          {value ? <img src={value} alt="" className="w-full h-full object-cover" /> : <ImageIcon size={13} className="text-[#d1d5db]" />}
-        </div>
+        {(value || fallback) ? (
+          <a href={value || fallback} target="_blank" rel="noreferrer" title="Open full size" className="w-16 h-16 rounded-lg overflow-hidden border border-[#e5e7eb] bg-white flex-shrink-0 block">
+            <img src={value || fallback} alt="" className="w-full h-full object-cover" />
+          </a>
+        ) : (
+          <div className="w-16 h-16 rounded-lg border border-dashed border-[#d1d5db] bg-white flex-shrink-0 grid place-items-center text-center text-[9px] font-bold text-[#9ca3af] leading-tight">
+            <span><ImageIcon size={14} className="mx-auto mb-0.5" />No photo</span>
+          </div>
+        )}
         <input
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
@@ -274,6 +291,13 @@ function ImageField({ label, hint, value, onChange, testid, compact }) {
           {busy ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Upload
           <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
         </label>
+      </div>
+      <div className="text-[10px] mt-1 font-bold" data-testid={testid ? `${testid}-status` : undefined}>
+        {value
+          ? <span className="text-[#166534]">Showing your photo. Press the &times; to go back to the built-in one.</span>
+          : fallback
+            ? <span className="text-[#4b5563]">Showing the built-in photo. Upload or paste a link to replace it.</span>
+            : <span className="text-[#b45309]">No photo set{emptyNote ? ` - ${emptyNote}` : ""}.</span>}
       </div>
     </div>
   );
@@ -339,6 +363,14 @@ export default function AdminPageCopy() {
   // If the saved text can't be loaded, the editor would show blanks - and saving
   // them would wipe the page. So Save is blocked until it loads properly.
   const [loadFailed, setLoadFailed] = useState(false);
+  // Built-in header photos for industry + sports pages (they come from the
+  // backend catalogue), shown in the editor while no photo is saved.
+  const [builtIn, setBuiltIn] = useState({ industries: {}, sports: {} });
+  useEffect(() => {
+    const toMap = (list) => Object.fromEntries((Array.isArray(list) ? list : []).map((x) => [x.slug, x.hero_image]));
+    Promise.all([api.get("/industries").catch(() => ({})), api.get("/sports-teams").catch(() => ({}))])
+      .then(([a, b]) => setBuiltIn({ industries: toMap(a.data), sports: toMap(b.data) }));
+  }, []);
 
   const load = async (s) => {
     setLoading(true);
@@ -521,6 +553,8 @@ export default function AdminPageCopy() {
                             ? setCopy({ ...copy, hero_image: v })
                             : setCopy({ ...copy, images: { ...(copy.images || {}), [slot.key]: v } })}
                           testid={`apc-slot-${slot.key}`}
+                          fallback={slot.fallback || (slot.key.startsWith("tool:") ? (TOOLS_SHOWCASE.find((t) => `tool:${t.key}` === slot.key) || {}).image : "")}
+                          emptyNote={slot.emptyNote}
                         />
                       )
                     ))}
@@ -564,6 +598,7 @@ export default function AdminPageCopy() {
                             value={(copy.images || {})[`industry:${it.slug}`] || ""}
                             onChange={(v) => setImage(`industry:${it.slug}`, v)}
                             testid={`apc-industry-${it.slug}`}
+                            fallback={builtIn.industries[it.slug] || ""}
                             compact
                           />
                         ))}
@@ -583,6 +618,7 @@ export default function AdminPageCopy() {
                             value={(copy.images || {})[`sportsteam:${it.slug}`] || ""}
                             onChange={(v) => setImage(`sportsteam:${it.slug}`, v)}
                             testid={`apc-sportsteam-${it.slug}`}
+                            fallback={builtIn.sports[it.slug] || ""}
                             compact
                           />
                         ))}
@@ -606,6 +642,7 @@ export default function AdminPageCopy() {
                             images: { ...(copy.images || {}), [`sector:${name}`]: v },
                           })}
                           testid={`apc-sector-${name}`}
+                          fallback={(SECTORS.find((s) => s.name === name) || {}).image || ""}
                           compact
                         />
                       ))}

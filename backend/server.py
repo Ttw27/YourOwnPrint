@@ -187,7 +187,7 @@ PRODUCTS: Dict[str, Dict] = {
         "name": "Boxing Fight Night Sponsor Tee",
         "price": 11.99,
         "category": "sports",
-        "image": "https://images.pexels.com/photos/9311461/pexels-photo-9311461.jpeg",
+        "image": "https://images.pexels.com/photos/6296030/pexels-photo-6296030.jpeg",
         "description": "Walk-out tee for fight night - main sponsor + multiple supporting logos. Free proof included.",
     },
     "muay-thai-shorts": {
@@ -313,7 +313,7 @@ PRODUCTS: Dict[str, Dict] = {
     # ----- Leavers' hoodies & varsity jackets -----
     "leavers-pullover-hoodie": {
         "id": "leavers-pullover-hoodie", "name": "Leavers' Pullover Hoodie", "price": 24.99, "category": "leavers",
-        "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg",
+        "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg",
         "description": "Classic 320 GSM pullover. Names list, nicknames, year, school crest - printed UK in 7-10 days.",
     },
     "leavers-zip-hoodie": {
@@ -323,12 +323,12 @@ PRODUCTS: Dict[str, Dict] = {
     },
     "varsity-jacket": {
         "id": "varsity-jacket", "name": "Varsity Jacket", "price": 39.99, "category": "leavers",
-        "image": "https://images.pexels.com/photos/16429777/pexels-photo-16429777.jpeg",
+        "image": "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg",
         "description": "American varsity-style jacket. Letter on chest, year on back, names on sleeves.",
     },
     "leavers-sweatshirt": {
         "id": "leavers-sweatshirt", "name": "Leavers' Crew Sweatshirt", "price": 22.99, "category": "leavers",
-        "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg",
+        "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg",
         "description": "Crew-neck sweatshirt - lighter than the hoodie, same print options.",
     },
     "leavers-drawstring-bag": {
@@ -385,7 +385,7 @@ PRODUCTS: Dict[str, Dict] = {
     },
     "denim-apron": {
         "id": "denim-apron", "name": "Denim Workshop Apron", "price": 18.99, "category": "workwear",
-        "image": "https://images.pexels.com/photos/8430335/pexels-photo-8430335.jpeg",
+        "image": "https://images.pexels.com/photos/4252136/pexels-photo-4252136.jpeg",
         "description": "Heavyweight denim workshop apron with cross-back straps. Barbers, baristas, makers and trade workshops.",
     },
 
@@ -397,7 +397,7 @@ PRODUCTS: Dict[str, Dict] = {
     },
     "workwear-trousers": {
         "id": "workwear-trousers", "name": "Workwear Cargo Trousers", "price": 27.99, "category": "workwear",
-        "image": "https://images.pexels.com/photos/7681056/pexels-photo-7681056.jpeg",
+        "image": "https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg",
         "description": "Knee-pad ready cargo trousers. Reinforced seams, multiple pockets. Branded with your logo on the thigh.",
     },
     "performance-leggings": {
@@ -2140,7 +2140,7 @@ INDUSTRIES_CATALOGUE = [
     {"slug": "construction", "title": "Construction", "subtitle": "Site crews, foremen, contractors", "hero_image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg", "blurb": "Hi-vis vests, workwear tees and jackets that survive site life. EN ISO 20471 compliant options ready to print.", "alias_of": "construction-trades"},
     {"slug": "logistics", "title": "Logistics & Couriers", "subtitle": "Delivery, warehouse, fleets", "hero_image": "https://images.pexels.com/photos/4391483/pexels-photo-4391483.jpeg", "blurb": "Comfortable polos, softshells and hi-vis tops branded with your fleet name. Reorder in any quantity.", "alias_of": "industrial"},
     {"slug": "fitness", "title": "Fitness & Coaching", "subtitle": "PT studios, gyms, sports coaches", "hero_image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg", "blurb": "Performance tees, hoodies and joggers fit for the gym floor. Crisp prints, full-range movement.", "alias_of": "sports-fitness"},
-    {"slug": "hair-beauty", "title": "Hair & Barbering", "subtitle": "Barbers, hairdressers, mobile stylists", "hero_image": "https://images.pexels.com/photos/3998365/pexels-photo-3998365.jpeg", "blurb": "Statement tees, polos and aprons that bring the salon brand to life. Style as sharp as the cuts.", "alias_of": "beauty-wellness"},
+    {"slug": "hair-beauty", "title": "Hair & Barbering", "subtitle": "Barbers, hairdressers, mobile stylists", "hero_image": "https://images.pexels.com/photos/3997991/pexels-photo-3997991.jpeg", "blurb": "Statement tees, polos and aprons that bring the salon brand to life. Style as sharp as the cuts.", "alias_of": "beauty-wellness"},
 ]
 
 
@@ -2285,7 +2285,7 @@ SPORTS_TEAMS_CATALOGUE = [
     },
     {"slug": "boxing-gyms", "title": "Boxing Gym Kit", "h1": "Boxing Gym Kit - Walk-out Tees, Hoodies & More",
      "subtitle": "Fight night tees, gym hoodies, sponsor shirts",
-     "hero_image": "https://images.pexels.com/photos/9311461/pexels-photo-9311461.jpeg",
+     "hero_image": "https://images.pexels.com/photos/6296030/pexels-photo-6296030.jpeg",
      "intro": "Branded kit for boxing gyms, white-collar nights and amateur clubs. Fight night sponsor tees, gym hoodies, training kit - printed in the UK and ready quickly.",
      "seo_paragraph": "Boxing gyms run on identity. Our Fight Night Sponsor Tees carry your main sponsor plus multiple supporting logos at the back, while branded hoodies, walk-out tees and gym staples cover the day-to-day. Low minimums and quick turnaround.",
      "faqs": [
@@ -3205,11 +3205,11 @@ async def list_leavers_products():
 # ---------- Leavers' design templates (admin-editable) ----------
 DEFAULT_LEAVERS_TEMPLATES = [
     {"id": "year-nicknames", "title": "Year + nicknames", "description": "Big year on the front, nicknames list on the back. The classic.",
-     "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg", "active": True, "sort_order": 1},
+     "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg", "active": True, "sort_order": 1},
     {"id": "class-list", "title": "Class list", "description": "Every leaver's name printed on the back. One hoodie, the whole year.",
      "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg", "active": True, "sort_order": 2},
     {"id": "varsity", "title": "Varsity letter", "description": "Letter on chest, year on the back, your name on the left sleeve.",
-     "image": "https://images.pexels.com/photos/16429777/pexels-photo-16429777.jpeg", "active": True, "sort_order": 3},
+     "image": "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg", "active": True, "sort_order": 3},
 ]
 
 
@@ -3585,11 +3585,11 @@ async def list_industries():
 # ---------- Shop by garment type ----------
 GARMENT_TYPE_CATALOGUE = [
     {"slug": "t-shirts",    "title": "T-shirts",     "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg"},
-    {"slug": "hoodies",     "title": "Hoodies",      "image": "https://images.pexels.com/photos/8839894/pexels-photo-8839894.jpeg"},
+    {"slug": "hoodies",     "title": "Hoodies",      "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg"},
     {"slug": "polos",       "title": "Polos",        "image": "https://images.pexels.com/photos/8217544/pexels-photo-8217544.jpeg"},
     {"slug": "shirts",      "title": "Shirts & Blouses", "image": "https://images.pexels.com/photos/6764028/pexels-photo-6764028.jpeg"},
     {"slug": "sweatshirts", "title": "Sweatshirts",  "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg"},
-    {"slug": "jackets",     "title": "Jackets",      "image": "https://images.pexels.com/photos/16429777/pexels-photo-16429777.jpeg"},
+    {"slug": "jackets",     "title": "Jackets",      "image": "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg"},
     {"slug": "hi-vis",      "title": "Hi-Vis",       "image": "https://images.pexels.com/photos/8961331/pexels-photo-8961331.jpeg"},
     {"slug": "shorts",      "title": "Shorts",       "image": "https://images.pexels.com/photos/2261477/pexels-photo-2261477.jpeg"},
     {"slug": "bottoms",     "title": "Joggers & Trousers", "image": "https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg"},

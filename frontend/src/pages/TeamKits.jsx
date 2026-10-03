@@ -8,6 +8,7 @@ import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { ArrowRight, Trophy, Users, MessageCircle, Sparkles, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
+import { DEFAULT_HERO_IMAGES } from "../lib/defaultImages";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
@@ -39,7 +40,7 @@ export default function TeamKits() {
   // declaration line still compiles, then throws at runtime and blanks the page.
   const copy = usePageCopy("team-kits", {
     // Swap in /admin/page-copy → Team Kits → Pictures & video.
-    hero_image: "https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    hero_image: DEFAULT_HERO_IMAGES["team-kits"],
   });
 
   return (

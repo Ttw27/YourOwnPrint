@@ -8,6 +8,7 @@ import SiteImage from "../components/bold/SiteImage";
 import { Trophy, Users, Zap, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
 import usePageTitle from "../hooks/usePageTitle";
+import { DEFAULT_HERO_IMAGES } from "../lib/defaultImages";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
@@ -56,7 +57,7 @@ export default function Sports() {
     title: "Kit out your crew.",
     subtitle: "Match-day jerseys, fight-night sponsor tees, training tracksuits - names, numbers, sponsors, badges. Big team or solo athlete, we've got you.",
     // Swap in /admin/page-copy → Sports & Fitness index → Pictures & video.
-    hero_image: "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    hero_image: DEFAULT_HERO_IMAGES.sports,
   });
 
   return (
