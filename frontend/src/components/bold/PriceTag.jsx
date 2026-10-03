@@ -55,14 +55,21 @@ export default function PriceTag({
   const hasDisc = gross < fullGross;
   const factor = fullGross ? gross / fullGross : 1;
   const net = hasVatFields(product) ? Math.round(Number(product.price_ex_vat) * factor * 100) / 100 : null;
+  // Admin "Was price" offer (Product settings > Name, price & main photo).
+  const wasOffer = Number(product.was_price || 0) > fullGross ? Number(product.was_price) : 0;
   const Was = () => hasDisc ? (
     <span className="block text-[11px] font-nunito font-bold text-[#4b5563] mt-0.5" data-testid="price-account-discount">
-      <span className="line-through mr-1">{money(fullGross)}</span>
+      <span className="line-through mr-1">{money(wasOffer || fullGross)}</span>
       <span className="text-[#166534]">Your {pct}% discount</span>
     </span>
+  ) : wasOffer ? (
+    <span className="block text-[11px] font-nunito font-bold text-[#4b5563] mt-0.5" data-testid="price-offer">
+      <span className="line-through mr-1">{money(wasOffer)}</span>
+      <span className="bg-[#f07c74] text-white rounded-full px-1.5 py-px text-[10px] font-extrabold">Offer</span>
+    </span>
   ) : null;
-  const WasInline = () => hasDisc ? (
-    <span className={`text-[10px] text-[#4b5563] ml-1.5 line-through`}>{money(fullGross)}</span>
+  const WasInline = () => (hasDisc || wasOffer) ? (
+    <span className={`text-[10px] text-[#4b5563] ml-1.5 line-through`}>{money(wasOffer || fullGross)}</span>
   ) : null;
   const zeroRated = Boolean(product.vat_zero_rated);
 

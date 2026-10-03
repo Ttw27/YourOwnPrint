@@ -517,7 +517,7 @@ export default function DesignYourOwn() {
     <>
             <Panel title="Product">
               <select data-testid="designer-product" value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm">
-                {products.map(p => <option key={p.id} value={p.id}>{p.name} - £{p.price.toFixed(2)}{p.review_count ? `  ★ ${p.rating} (${p.review_count})` : ""}</option>)}
+                {products.map(p => <option key={p.id} value={p.id}>{p.name} - £{p.price.toFixed(2)}{p.was_price ? ` (offer, was £${Number(p.was_price).toFixed(2)})` : ""}{p.review_count ? `  ★ ${p.rating} (${p.review_count})` : ""}</option>)}
               </select>
               {product && product.review_count > 0 && (
                 <Link to={`/product/${product.id}#reviews`} className="mt-2 inline-flex items-center gap-2 text-xs hover:underline group" data-testid="designer-rating" title={`Read all ${product.review_count} reviews for ${product.name}`}>
@@ -849,7 +849,14 @@ export default function DesignYourOwn() {
 
             <Panel title="Total">
               <div className="flex items-baseline justify-between">
-                <span className="text-xs font-nunito font-bold text-[#4b5563]">{totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}{neckEnabled && <> + £{neckLabelPrice.toFixed(2)} neck</>}</span>
+                <span className="text-xs font-nunito font-bold text-[#4b5563]">
+                  {product?.was_price > unitPrice && (
+                    <span className="block mb-0.5" data-testid="designer-offer">
+                      <span className="bg-[#f07c74] text-white rounded-full px-2 py-0.5 text-[10px] font-extrabold mr-1.5">Offer</span>
+                      <span className="line-through">£{Number(product.was_price).toFixed(2)}</span> now £{unitPrice.toFixed(2)}
+                    </span>
+                  )}
+                  {totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}{neckEnabled && <> + £{neckLabelPrice.toFixed(2)} neck</>}</span>
                 <div className="text-right">
                   <span data-testid="designer-total" className="text-[#7bc67e] font-nunito font-black text-3xl">£{subtotal.toFixed(2)}</span>
                   <ExVat amount={subtotal} zeroRated={!!product?.vat_zero_rated} testid="designer-total-ex-vat" />

@@ -88,7 +88,10 @@ export default function CartDrawer() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-black text-sm truncate">{name}</p>
+                          <p className="font-black text-sm truncate">
+                            {pi?.on_offer && <span className="bg-[#f07c74] text-white rounded-full px-1.5 py-px text-[10px] font-extrabold mr-1.5 align-middle" data-testid={`cart-line-offer-${line.product_id}`}>Offer</span>}
+                            {name}
+                          </p>
                           <p className="text-[11px] text-[#4b5563]">
                             {garmentName ? `${garmentName} · ` : ""}
                             {line.color ? `${line.color} · ` : ""}

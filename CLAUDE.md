@@ -213,6 +213,10 @@ frontend/src/
   `_ralawise_size_chart()`. Charts the admin types are never
   replaced. One-size / non-apparel products get no chart (`_is_one_size_or_non_apparel`).
 
+- **Offers ("Was" price):** `was_price` in `product_overrides` (Product settings > Name, price & main
+  photo > "Offer - 'Was' price"). Shown only while above `price` (`offer_was_price()`): crossed out +
+  "Offer" pill in PriceTag (cards), designer Total panel + product dropdown, basket (`on_offer` from
+  /cart/price). Display only - checkout charges `price` as normal. Empty it to end the offer.
 - **Industry page tabs** (`/industries/:slug`): "Popular for this sector" garment-type buttons above the
   products = shortcuts to the sidebar's Product type filter (`category` URL param; sidebar unchanged).
   Defaults in `INDUSTRY_TAB_DEFAULTS` (server.py); admin overrides in Admin > Pages > "Industry: ..."

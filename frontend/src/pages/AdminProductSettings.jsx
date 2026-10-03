@@ -953,14 +953,18 @@ function ProductOverridePanel({ product, onSaved, onReverted, registerSaver }) {
     image: product.image || "",
     category: product.category || "",
     active: !product.hidden,
+    was_price: "",
   });
   const [override, setOverride] = React.useState(null);
+  // "Was price" lives only in the override record, so it fills in once that loads.
+  const savedWas = override?.was_price ? String(override.was_price) : "";
   const [busy, setBusy] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
 
   React.useEffect(() => {
     fetchProductOverride(product.id).then((d) => {
       setOverride(d?.override || null);
+      setDraft((dr) => ({ ...dr, was_price: d?.override?.was_price ? String(d.override.was_price) : "" }));
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, [product.id]);
@@ -971,7 +975,8 @@ function ProductOverridePanel({ product, onSaved, onReverted, registerSaver }) {
     draft.description !== (product.description || "") ||
     draft.image !== (product.image || "") ||
     draft.category !== (product.category || "") ||
-    draft.active !== !product.hidden
+    draft.active !== !product.hidden ||
+    (loaded && String(draft.was_price || "") !== savedWas)
   );
 
   // quiet: called from the main Save button, which shows its own message and
@@ -996,10 +1001,22 @@ function ProductOverridePanel({ product, onSaved, onReverted, registerSaver }) {
     if ((draft.image || "").trim() !== (product.image || "")) changes.image = (draft.image || "").trim();
     if ((draft.category || "") !== (product.category || "")) changes.category = draft.category || "";
     if (draft.active !== !product.hidden) changes.active = draft.active;
+    if (loaded && String(draft.was_price || "") !== savedWas) {
+      const was = Number(draft.was_price || 0);
+      const now = Number(changes.price ?? product.price);
+      if (was && (!Number.isFinite(was) || was <= now)) {
+        const err = { response: { data: { detail: "The 'Was' price must be higher than the price (or leave it empty for no offer)" } } };
+        if (quiet) throw err;
+        toast.error(err.response.data.detail);
+        return null;
+      }
+      changes.was_price = was || null;
+    }
     if (!Object.keys(changes).length) return null;
     setBusy(true);
     try {
       await patchProductOverride(product.id, changes);
+      if ("was_price" in changes) setOverride((o) => ({ ...(o || {}), was_price: changes.was_price }));
       const cleared = ["name", "description", "image", "category"].some((k) => k in changes && !String(changes[k]).trim());
       if (cleared) {
         onReverted && onReverted();  // server went back to the original - fetch it
@@ -1032,6 +1049,8 @@ function ProductOverridePanel({ product, onSaved, onReverted, registerSaver }) {
     try {
       await clearProductOverride(product.id);
       toast.success("Back to the original");
+      setOverride(null);
+      setDraft((dr) => ({ ...dr, was_price: "" }));
       onReverted && onReverted();
     } catch (e) { toast.error(e?.response?.data?.detail || "Revert failed"); }
     finally { setBusy(false); }
@@ -1058,6 +1077,13 @@ function ProductOverridePanel({ product, onSaved, onReverted, registerSaver }) {
           <input type="number" step="0.01" min="0" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} className={ic} data-testid={`aps-override-price-${product.id}`} />
         </Lab>
       </div>
+      <Lab label="Offer - 'Was' price (£)">
+        <input type="number" step="0.01" min="0" value={draft.was_price} onChange={(e) => setDraft({ ...draft, was_price: e.target.value })} className={ic} placeholder="Leave empty for no offer" data-testid={`aps-override-was-${product.id}`} />
+        <div className="text-[10px] text-[#4b5563] mt-1">
+          Put the normal price here (e.g. 7.99) and the lower price above, and the site shows it crossed out with an &ldquo;Offer&rdquo; label.
+          Empty this box to end the offer (then set the price back).
+        </div>
+      </Lab>
       <Lab label="Category (which shop collection this appears in)">
         <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className={ic} data-testid={`aps-override-category-${product.id}`}>
           <option value="">Work it out from the product name</option>

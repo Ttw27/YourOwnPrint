@@ -1833,6 +1833,7 @@ async def price_cart(payload: CartCheckoutRequest, request: Request):
                 "line_total": p["line_total"],
                 "breakdown": p["breakdown"],
                 "unit_hint": round(p["line_total"] / p["total_qty"], 2) if p["total_qty"] else 0.0,
+                "on_offer": bool(offer_was_price(p["product"])),
             }
             for p in priced
         ],
@@ -2175,11 +2176,26 @@ def _vat_fields(p: Dict) -> Dict:
         gross = 0.0
     zero = is_zero_rated(p)
     net = gross if zero else round(gross / (1 + UK_VAT_RATE), 2)
-    return {
+    out = {
         "price_inc_vat": round(gross, 2),
         "price_ex_vat": net,
         "vat_zero_rated": zero,
     }
+    was = offer_was_price(p)
+    if was:
+        out["was_price"] = was
+    return out
+
+
+def offer_was_price(p: Dict) -> Optional[float]:
+    """Admin's "Was price" (Product settings > Name, price & main photo) - only
+    shown as an offer while it's above the current price."""
+    try:
+        was = float(p.get("was_price") or 0)
+        price = float(p.get("price") or 0)
+    except (TypeError, ValueError):
+        return None
+    return round(was, 2) if was > price > 0 else None
 
 
 # ---------- Industry vocabulary ----------
@@ -2535,6 +2551,7 @@ async def list_designer_products():
                 "sizes": p.get("sizes", []),
                 "size_upcharges": p.get("size_upcharges", {}),
                 "back_print_price": designer_back_print_price(float(p["price"])),
+                "was_price": offer_was_price(p),
                 "vat_zero_rated": is_zero_rated(p),
                 "neck_label_price": NECK_LABEL_PRICE,
                 # Product settings > Printing - the designer only offers Back /
@@ -6656,6 +6673,7 @@ async def _seed_leavers_templates():
 class ProductOverride(BaseModel):
     name: Optional[str] = None
     price: Optional[float] = None
+    was_price: Optional[float] = None  # "Was £X" offer label; empty/0 removes it
     description: Optional[str] = None
     image: Optional[str] = None
     additional_images: Optional[List[str]] = None
@@ -6671,7 +6689,7 @@ def _apply_product_override(pid: str, ov: Dict) -> None:
     """Apply an override doc onto the in-memory PRODUCTS entry (skips None values)."""
     if pid not in PRODUCTS or not ov:
         return
-    for field in ("name", "price", "description", "image", "additional_images",
+    for field in ("name", "price", "was_price", "description", "image", "additional_images",
                   "category", "gender_fit", "industry_tags", "colors", "sizes"):
         val = ov.get(field)
         if val is not None:
@@ -6835,7 +6853,8 @@ async def upsert_product_override(pid: str, patch: ProductOverride):
     to_set: Dict = {}
     to_unset: List[str] = []
     for k, v in raw.items():
-        if v is None or (k in ("name", "description", "image", "category") and isinstance(v, str) and not v.strip()):
+        if v is None or (k in ("name", "description", "image", "category") and isinstance(v, str) and not v.strip()) \
+                or (k == "was_price" and not v):
             to_unset.append(k)
         elif v == PRODUCTS[pid].get(k):
             continue  # not actually a change - storing it would freeze the value
@@ -6864,7 +6883,7 @@ async def upsert_product_override(pid: str, patch: ProductOverride):
 async def clear_product_override(pid: str):
     # Undo only the name/price/photo edits. The same record also holds the
     # hidden/visible state for built-in products, which must survive an undo.
-    fields = ("name", "price", "description", "image", "additional_images",
+    fields = ("name", "price", "was_price", "description", "image", "additional_images",
               "category", "gender_fit", "industry_tags", "colors", "sizes")
     r = await db.product_overrides.update_one(
         {"product_id": pid}, {"$unset": {f: "" for f in fields}})
