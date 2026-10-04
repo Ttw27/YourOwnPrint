@@ -69,14 +69,6 @@ const PAGE_MEDIA_SLOTS = {
     { key: "hero_image", kind: "image", field: "hero_image",
       label: "Main photo at the top of the homepage", fallback: DEFAULT_HERO_IMAGES.home,
       hint: "The large photo beside 'Your Brand. Your Clothing. Your Own Print.'" },
-    { key: "designer:1", kind: "image",
-      label: "'Design your tee in 60 seconds' - left photo",
-      hint: "First of the two photos beside 'Launch Designer'. Clicking it opens the designer. Leave empty to show a best-selling product instead.",
-      emptyNote: "a best-selling product's photo is shown instead" },
-    { key: "designer:2", kind: "image",
-      label: "'Design your tee in 60 seconds' - right photo",
-      hint: "Second of the two photos beside 'Launch Designer'. Leave empty to show a best-selling product instead.",
-      emptyNote: "a best-selling product's photo is shown instead" },
     { key: "designer:banner", kind: "image", fallback: "/banners/designer-screenshot.jpg",
       label: "'Design your own' banner picture",
       hint: "The wide picture of the designer in the 'Design your own' banner on the homepage." },
@@ -154,6 +146,19 @@ const SITE_INDUSTRIES = [
   { slug: "cleaning", label: "Cleaning & Maintenance" },
   { slug: "hospitality-catering", label: "Hospitality & Catering" },
   { slug: "education-schools", label: "Education & Schools" },
+];
+
+// Photo tiles on the School Trips page (SchoolTrips.jsx, "school-trip:<key>") and the
+// Teams, Schools & Clubs hub (TeamsSchools.jsx, "ts-tile:<id>"). No built-in photo:
+// an empty one shows a plain light-green box.
+const SITE_SCHOOL_TRIP_TILES = [
+  { key: "t-shirt", label: "Trip T-Shirts" }, { key: "hoodie", label: "Hoodies" },
+  { key: "polo", label: "Polo Shirts" }, { key: "cap", label: "Caps & Hats" },
+];
+const SITE_TS_TILES = [
+  { key: "leavers", label: "Leavers hoodies" }, { key: "full-squad", label: "Sports club - full squad" },
+  { key: "sports-outfit", label: "Gym, PT, boxing & class" }, { key: "group-hoodies", label: "Group hoodies & tees" },
+  { key: "dance", label: "Dance & theatre" }, { key: "bespoke", label: "Bespoke enquiry" },
 ];
 
 // Header photo on each sports landing page. Slugs match SPORTS_TEAMS_CATALOGUE.
@@ -311,6 +316,8 @@ const SHARED_FOR = (slug) => {
   if (slug === "home") return ["pricepromise", "tools", "howweprint", "trusted", "recentwork"];
   if (["specials", "team-kits", "kit-your-workforce"].includes(slug)) return ["pricepromise"];
   if (slug === "portfolio") return ["tools"];
+  if (slug === "school-trips") return ["schooltiles"];
+  if (slug === "teams-schools") return ["tstiles"];
   if (slug === "how-we-print") return ["howweprint-self"];
   if (SITE_INDUSTRIES.some((i) => i.slug === slug)) return ["industryheader", "tools"];
   return [];
@@ -334,6 +341,12 @@ function SharedSections({ slug, siteImages, builtIn, onOpen }) {
       where: "This section appears on the homepage and on every product page, so changes here show in all of those places." },
     trusted: { label: "'Trusted by' logos", where: "Edited in Admin > Portfolio.", href: "/admin/portfolio" },
     recentwork: { label: "Recent work photos", where: "Your portfolio jobs - edited in Admin > Portfolio.", href: "/admin/portfolio" },
+    schooltiles: { label: "The 4 garment photo tiles ('Pick your garment')",
+      where: "Set with the other site-wide pictures.",
+      thumbs: SITE_SCHOOL_TRIP_TILES.map((t) => img(`school-trip:${t.key}`, "")).filter(Boolean), go: "site-images" },
+    tstiles: { label: "The 6 group photo tiles ('Which group are you kitting out?')",
+      where: "Set with the other site-wide pictures.",
+      thumbs: SITE_TS_TILES.map((t) => img(`ts-tile:${t.key}`, "")).filter(Boolean), go: "site-images" },
     industryheader: { label: "Header photo at the top of this page",
       where: "Also used on this industry's tile in the Shop by Industry list.",
       thumbs: [img(`industry:${slug}`, builtIn.industries[slug] || "")].filter(Boolean), go: "site-images" },
@@ -682,6 +695,29 @@ export default function AdminPageCopy() {
                         ))}
                       </div>
                     </div>
+
+                    {[
+                      { title: "School Trips page - garment tiles", hint: "The 4 photo tiles under 'Pick your garment' on the School Trips page.", prefix: "school-trip", list: SITE_SCHOOL_TRIP_TILES },
+                      { title: "Teams, Schools & Clubs page - group tiles", hint: "The photo at the top of each 'Which group are you kitting out?' tile.", prefix: "ts-tile", list: SITE_TS_TILES },
+                    ].map((g) => (
+                      <div key={g.prefix}>
+                        <div className="text-xs font-extrabold mb-1">{g.title}</div>
+                        <p className="text-[10px] text-[#4b5563] mb-2">{g.hint}</p>
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          {g.list.map((it) => (
+                            <ImageField
+                              key={it.key}
+                              label={it.label}
+                              value={(copy.images || {})[`${g.prefix}:${it.key}`] || ""}
+                              onChange={(v) => setImage(`${g.prefix}:${it.key}`, v)}
+                              testid={`apc-${g.prefix}-${it.key}`}
+                              emptyNote="the tile shows a plain light-green box"
+                              compact
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
 
                     <div>
                       <div className="text-xs font-extrabold mb-1">Sports &amp; fitness landing pages</div>

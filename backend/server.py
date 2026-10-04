@@ -5040,6 +5040,12 @@ PORTFOLIO_CATEGORIES = [
 ]
 
 
+# Page galleries (Fight Night "See the tee in action", Festival page). A job shows
+# in one if its category IS that gallery, or if it's ticked to also show there
+# (`show_on`) - so a normal portfolio job can appear in a gallery too.
+PORTFOLIO_GALLERIES = ["fight-night-action", "festival-tees-and-brands"]
+
+
 class PortfolioCreate(BaseModel):
     title: str
     category: str = "other"
@@ -5059,6 +5065,7 @@ class PortfolioPatch(BaseModel):
     display_order: Optional[int] = None
     featured: Optional[bool] = None
     is_hidden: Optional[bool] = None
+    show_on: Optional[List[str]] = None      # page galleries it also appears in
 
 
 def _parse_data_url(data_url: str, max_bytes: int = 8_000_000) -> Tuple[bytes, str, str]:
@@ -5083,7 +5090,9 @@ def _parse_data_url(data_url: str, max_bytes: int = 8_000_000) -> Tuple[bytes, s
 async def list_portfolio(category: Optional[str] = None, featured_only: bool = False,
                          featured: bool = False, limit: int = 200, offset: int = 0):
     q: Dict = {"is_hidden": {"$ne": True}}
-    if category and category != "all":
+    if category and category in PORTFOLIO_GALLERIES:
+        q["$or"] = [{"category": category}, {"show_on": category}]
+    elif category and category != "all":
         q["category"] = category
     # `featured` is accepted as well as `featured_only` because a caller passing
     # the shorter name got no error and no filtering - the request just quietly
@@ -5115,6 +5124,7 @@ async def list_portfolio(category: Optional[str] = None, featured_only: bool = F
                            for x in (d.get("extra_images") or []) if x.get("url")],
             "display_order": d.get("display_order", 0),
             "featured": bool(d.get("featured", False)),
+            "show_on": d.get("show_on") or [],
             "created_at": d.get("created_at"),
         })
     # Re-sorted here too: documents saved before display_order existed have no
@@ -5188,6 +5198,8 @@ async def admin_update_portfolio(item_id: str, payload: PortfolioPatch):
             if k == "category" and v not in PORTFOLIO_CATEGORIES:
                 raise HTTPException(400, f"unknown category. Allowed: {PORTFOLIO_CATEGORIES}")
             patch[k] = v
+    if payload.show_on is not None:
+        patch["show_on"] = [g for g in payload.show_on if g in PORTFOLIO_GALLERIES]
     if payload.image_data_url:
         raw, content_type, ext = _parse_data_url(payload.image_data_url)
         storage_path = f"{_OBJ_APP_NAME}/portfolio/{item_id}.{ext}"
@@ -5232,6 +5244,7 @@ async def admin_list_portfolio():
             "display_order": d.get("display_order", 0),
             "featured": bool(d.get("featured", False)),
             "is_hidden": bool(d.get("is_hidden", False)),
+            "show_on": d.get("show_on") or [],
             "created_at": d.get("created_at"),
             "size_bytes": d.get("size_bytes", 0),
         })

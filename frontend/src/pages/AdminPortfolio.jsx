@@ -198,6 +198,21 @@ export default function AdminPortfolio() {
                       <Star size={12} /> {it.featured ? "Featured" : "Feature"}
                     </button>
                   </div>
+                  {/* Also show this job in a page gallery (as well as the Portfolio page) */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px]" data-testid={`admin-portfolio-galleries-${it.id}`}>
+                    <span className="text-[#4b5563] font-bold">Also show in:</span>
+                    {[["fight-night-action", "Fight Night page"], ["festival-tees-and-brands", "Festival page"]].map(([g, label]) => {
+                      if (it.category === g) return <span key={g} className="px-2 py-0.5 rounded-full bg-[#7bc67e] font-extrabold">{label} (its page)</span>;
+                      const on = (it.show_on || []).includes(g);
+                      return (
+                        <button key={g} type="button" onClick={() => patchItem(it.id, { show_on: on ? (it.show_on || []).filter((x) => x !== g) : [...(it.show_on || []), g] })}
+                          className={`px-2 py-0.5 rounded-full font-extrabold border ${on ? "bg-[#7bc67e] border-[#7bc67e]" : "bg-white border-[#dcfce7] hover:border-[#7bc67e]"}`}
+                          data-testid={`admin-portfolio-show-${g}-${it.id}`}>
+                          {on ? "✓ " : "+ "}{label}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <div className="flex gap-2 pt-2 border-t border-[#f0fdf4]">
                     <label className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-[#f0fdf4] hover:bg-[#dcfce7] text-xs rounded-full font-extrabold cursor-pointer">
                       <Upload size={12} /> Replace

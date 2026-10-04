@@ -204,6 +204,10 @@ frontend/src/
   the `X-Customer-Token` header the api.js interceptor sends). Frontend mirrors it via
   `useAccountDiscount()` / `discounted()` (CustomerAuthContext) in PriceTag, PDP, designer, cart.
 
+- **Portfolio page galleries.** Fight Night ("See the tee in action") and Festival page galleries
+  (`PortfolioCarousel`, swipes all photos) show jobs whose category IS that gallery or whose `show_on` list includes
+  it (Admin > Portfolio > "Also show in:"). Gallery jobs also show on the Portfolio page (leavers design-template
+  categories don't). Admin > Page copy image boxes must match what pages read (`site.image(...)` / `copy.images[...]`).
 - **Full colour ranges.** The old bulk import cut every product to its first 24 colours (cap removed).
   `_restore_cut_colours_v1` (marker `pencarrie_full_colours_v1`) adds the missing ones back from
   `backend/data/pencarrie_colours.json` (PenCarrie export, styles with >24 colours, not discontinued) - add-only,
