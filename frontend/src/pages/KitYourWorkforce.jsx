@@ -21,7 +21,7 @@ export default function KitYourWorkforce() {
 
   const copy = usePageCopy("kit-your-workforce", {
     title: "",
-    subtitle: "One breast-logo print across every garment, optional back print on whichever items you choose, and bulk pricing that drops the more you buy - mix and match T-shirts, sweats, jackets and hi-vis.",
+    subtitle: "Your logo on every garment, optional back print on whichever items you choose, and bulk pricing that drops the more you buy - mix and match T-shirts, sweats, jackets and hi-vis.",
   });
 
   useEffect(() => {
@@ -321,8 +321,8 @@ export default function KitYourWorkforce() {
             <h2 className="font-black text-2xl mb-3">2. Upload your prints</h2>
             <div className="grid sm:grid-cols-2 gap-3">
               <ArtworkUploader
-                label="Breast logo"
-                helper="Printed on every garment (£3.50 each, already in the prices shown)."
+                label="Your logo"
+                helper="Printed on every garment: left chest on tops and jackets, the front of caps, beanies and aprons, and by the pocket on trousers and shorts. £3.50 each, already in the prices shown."
                 required
                 dataUrl={breastLogo}
                 onChange={setBreastLogo}
@@ -359,7 +359,7 @@ export default function KitYourWorkforce() {
                       <div className="flex-1 min-w-[140px]">
                         <div className="font-extrabold text-sm">{p.name}</div>
                         {r.color && <div className="text-xs font-bold text-[#1a1a1a]" data-testid={`workforce-row-colour-${r.uid}`}>{r.color}{colourUp(p, r.color) > 0 ? ` (+£${colourUp(p, r.color).toFixed(2)})` : ""}</div>}
-                        <div className="text-[11px] text-[#4b5563]">Logo £3.50 per garment - already in the prices shown</div>
+                        <div className="text-[11px] text-[#4b5563]" data-testid={`workforce-row-logo-${r.uid}`}>Logo {logoSpot(p)} · £3.50, already in the price</div>
                       </div>
                       <select
                         value={r.size}
@@ -445,7 +445,7 @@ export default function KitYourWorkforce() {
               {totalQty >= 1 && !overThreshold && !artworkOk && (
                 <div className="text-[11px] text-amber-300 bg-amber-900/40 border border-amber-700 rounded-lg p-2" data-testid="workforce-artwork-warning">
                   {!breastLogo
-                    ? "Upload your breast-logo artwork above to enable checkout."
+                    ? "Upload your logo above to enable checkout."
                     : "Upload your back-print artwork - some garments are set to receive a back print."}
                 </div>
               )}
@@ -484,6 +484,16 @@ const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm
 // two halves, using the garment's own solid colours or common hi-vis shades.
 const NAMED = { yellow: "#f5e400", orange: "#ff7a00", navy: "#1a2a4a", black: "#111111", white: "#ffffff", red: "#d62828",
   pink: "#ec4899", purple: "#6b21a8", "royal blue": "#1d4ed8", "lime green": "#84cc16", "paramedic green": "#0a7a3a", grey: "#9ca3af" };
+// Where the one included logo goes on this kind of garment.
+function logoSpot(p) {
+  const t = `${p.category || ""} ${p.name || ""}`.toLowerCase();
+  if (/\b(hats?|caps?|beanies?|headwear)\b/.test(t)) return "on the front";
+  if (/\baprons?\b/.test(t)) return "on the front";
+  if (/\b(bags?|totes?)\b/.test(t)) return "on the front";
+  if (/\b(bottoms|trousers?|shorts|joggers?)\b/.test(t)) return "by the pocket";
+  return "on the left chest";
+}
+
 function swatchBg(c, p) {
   const name = String(c.name || "");
   if (!name.includes("/")) return c.hex || "#ccc";
