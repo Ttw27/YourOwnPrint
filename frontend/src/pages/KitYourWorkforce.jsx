@@ -34,25 +34,31 @@ export default function KitYourWorkforce() {
   }, []);
 
   const productById = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
+  // Colour being picked for each garment (sizes/qtys are entered per colour).
+  const [pickColour, setPickColour] = useState({});
+  const colourOf = (p) => pickColour[p.id] || (p.colors && p.colors[0] && p.colors[0].name) || "";
+  const colourImage = (p, name) => ((p.colors || []).find((c) => c.name === name) || {}).image || p.image;
+  const colourUp = (p, name) => Number(p.colour_upcharges?.[name] || 0);
 
   const addRow = (product_id) => {
     const p = productById[product_id];
     if (!p) return;
     const defaultSize = (p.sizes && p.sizes[0]) || "M";
-    setRows((r) => [...r, { uid: `${product_id}-${defaultSize}-${Date.now()}`, product_id, size: defaultSize, qty: 5, back_print: false }]);
+    setRows((r) => [...r, { uid: `${product_id}-${defaultSize}-${Date.now()}`, product_id, color: colourOf(p), size: defaultSize, qty: 5, back_print: false }]);
   };
   const updateRow = (uid, patch) => setRows((r) => r.map(x => x.uid === uid ? { ...x, ...patch } : x));
   const removeRow = (uid) => setRows((r) => r.filter(x => x.uid !== uid));
 
   // Per-product-per-size quantity helpers used by the expandable picker.
-  const qtyFor = (product_id, size) =>
-    rows.filter(r => r.product_id === product_id && r.size === size).reduce((s, r) => s + (Number(r.qty) || 0), 0);
-  const bumpSize = (product_id, size, delta) => {
+  const same = (r, product_id, color, size) => r.product_id === product_id && (r.color || "") === (color || "") && r.size === size;
+  const qtyFor = (product_id, color, size) =>
+    rows.filter(r => same(r, product_id, color, size)).reduce((s, r) => s + (Number(r.qty) || 0), 0);
+  const bumpSize = (product_id, color, size, delta) => {
     setRows((prev) => {
-      const idx = prev.findIndex(r => r.product_id === product_id && r.size === size);
+      const idx = prev.findIndex(r => same(r, product_id, color, size));
       if (idx === -1) {
         if (delta <= 0) return prev;
-        return [...prev, { uid: `${product_id}-${size}-${Date.now()}`, product_id, size, qty: delta, back_print: false }];
+        return [...prev, { uid: `${product_id}-${color}-${size}-${Date.now()}`, product_id, color, size, qty: delta, back_print: false }];
       }
       const next = [...prev];
       const nq = Math.max(0, Math.min(5000, (Number(next[idx].qty) || 0) + delta));
@@ -61,13 +67,13 @@ export default function KitYourWorkforce() {
       return next;
     });
   };
-  const setSizeQty = (product_id, size, qty) => {
+  const setSizeQty = (product_id, color, size, qty) => {
     const n = Math.max(0, Math.min(5000, Number(qty) || 0));
     setRows((prev) => {
-      const idx = prev.findIndex(r => r.product_id === product_id && r.size === size);
+      const idx = prev.findIndex(r => same(r, product_id, color, size));
       if (idx === -1) {
         if (n === 0) return prev;
-        return [...prev, { uid: `${product_id}-${size}-${Date.now()}`, product_id, size, qty: n, back_print: false }];
+        return [...prev, { uid: `${product_id}-${color}-${size}-${Date.now()}`, product_id, color, size, qty: n, back_print: false }];
       }
       const next = [...prev];
       if (n === 0) { next.splice(idx, 1); return next; }
@@ -94,7 +100,7 @@ export default function KitYourWorkforce() {
     const garment = currentTierPct > 0 ? snap99(p.price * factor) : p.price;
     // + the logo on every garment, never below the matching Specials price (server does the same)
     const base = Math.max(garment + Number(p.logo_price ?? tiers.logo_price ?? 3.5), Number(p.min_unit || 0));
-    const upcharge = Number(p.size_upcharges?.[r.size] || 0);
+    const upcharge = Number(p.size_upcharges?.[r.size] || 0) + colourUp(p, r.color);
     const back = r.back_print ? (tiers.back_print_price || 3.5) : 0;
     return (base + upcharge + back) * Number(r.qty || 0);
   };
@@ -118,7 +124,7 @@ export default function KitYourWorkforce() {
         contact_phone: contact.phone,
         breast_logo_data_url: breastLogo,
         back_print_data_url: anyBackPrint ? backPrint : null,
-        lines: rows.map(r => ({ product_id: r.product_id, size: r.size, qty: Number(r.qty), back_print: !!r.back_print })),
+        lines: rows.map(r => ({ product_id: r.product_id, color: r.color || "", size: r.size, qty: Number(r.qty), back_print: !!r.back_print })),
       });
       window.location.href = res.url;
     } catch (e) {
@@ -140,7 +146,7 @@ export default function KitYourWorkforce() {
         contact_name: contact.name,
         contact_email: contact.email,
         contact_phone: contact.phone,
-        lines: rows.map(r => ({ product_id: r.product_id, size: r.size, qty: Number(r.qty), back_print: !!r.back_print })),
+        lines: rows.map(r => ({ product_id: r.product_id, color: r.color || "", size: r.size, qty: Number(r.qty), back_print: !!r.back_print })),
       });
       toast.success("Quote request sent - we'll be in touch soon.");
       setRows([]);
@@ -202,10 +208,10 @@ export default function KitYourWorkforce() {
                         data-testid={`workforce-add-${p.id}`}
                         aria-expanded={isOpen}
                       >
-                        <img src={p.image} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" />
+                        <img src={colourImage(p, colourOf(p))} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" data-testid={`workforce-thumb-${p.id}`} />
                         <div className="flex-1 min-w-0">
                           <div className="font-extrabold text-sm truncate">{p.name}</div>
-                          <div className="text-xs text-[#4b5563]">£{Number(p.unit_with_logo ?? p.price).toFixed(2)} with your logo · {p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
+                          <div className="text-xs text-[#4b5563]">£{Number(p.unit_with_logo ?? p.price).toFixed(2)} with your logo · {p.colors?.length > 1 ? `${p.colors.length} colours · ` : ""}{p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
                         </div>
                         <div className={`w-8 h-8 grid place-items-center rounded-full transition-transform ${isOpen ? "bg-[#fbbf24] text-[#1a1a1a] rotate-180" : "bg-[#fef3c7] text-[#1a1a1a]"}`}>
                           {isOpen ? <ChevronDown size={16} /> : <Plus size={16} />}
@@ -217,11 +223,34 @@ export default function KitYourWorkforce() {
                           {p.description && (
                             <p className="text-xs text-[#4b5563] leading-relaxed" data-testid={`workforce-description-${p.id}`}>{p.description}</p>
                           )}
+                          {(p.colors || []).length > 0 && (
+                            <div data-testid={`workforce-colours-${p.id}`}>
+                              <div className="text-[10px] uppercase tracking-[0.2em] text-[#fbbf24] font-extrabold mb-2">
+                                Colour: <span className="text-[#1a1a1a] normal-case tracking-normal" data-testid={`workforce-colour-name-${p.id}`}>{colourOf(p)}{colourUp(p, colourOf(p)) > 0 ? ` (+£${colourUp(p, colourOf(p)).toFixed(2)})` : ""}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {p.colors.map((c) => {
+                                  const on = colourOf(p) === c.name;
+                                  const has = rows.some((r) => r.product_id === p.id && r.color === c.name);
+                                  return (
+                                    <button key={c.name} type="button" title={c.name} onClick={() => setPickColour((m) => ({ ...m, [p.id]: c.name }))}
+                                      className={`relative w-7 h-7 rounded-full border-2 ${on ? "border-[#fbbf24] ring-2 ring-[#fbbf24]/40" : "border-[#e5e7eb]"}`}
+                                      style={{ background: c.hex || "#ccc" }} data-testid={`workforce-colour-${p.id}-${c.name}`}>
+                                      {has && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#7bc67e] border border-white" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {rows.some((r) => r.product_id === p.id && r.color && r.color !== colourOf(p)) && (
+                                <div className="text-[10px] text-[#4b5563] mt-1.5">Green dot = colours already in your kit. Pick another colour to add more.</div>
+                              )}
+                            </div>
+                          )}
                           <div>
-                            <div className="text-[10px] uppercase tracking-[0.2em] text-[#fbbf24] font-extrabold mb-2">Pick sizes &amp; quantities</div>
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-[#fbbf24] font-extrabold mb-2">Pick sizes &amp; quantities{p.colors?.length > 1 ? ` in ${colourOf(p)}` : ""}</div>
                             <div className="grid grid-cols-3 gap-2" data-testid={`workforce-sizes-${p.id}`}>
                               {(p.sizes || []).map((sz) => {
-                                const q = qtyFor(p.id, sz);
+                                const q = qtyFor(p.id, colourOf(p), sz);
                                 const up = p.size_upcharges?.[sz] || 0;
                                 return (
                                   <div
@@ -236,7 +265,7 @@ export default function KitYourWorkforce() {
                                     <div className="flex items-center gap-1 mt-1">
                                       <button
                                         type="button"
-                                        onClick={() => bumpSize(p.id, sz, -1)}
+                                        onClick={() => bumpSize(p.id, colourOf(p), sz, -1)}
                                         disabled={q === 0}
                                         className="w-6 h-6 grid place-items-center rounded-full bg-white border border-[#e5e7eb] disabled:opacity-40"
                                         data-testid={`workforce-size-minus-${p.id}-${sz}`}
@@ -245,13 +274,13 @@ export default function KitYourWorkforce() {
                                         type="number"
                                         min={0}
                                         value={q}
-                                        onChange={(e) => setSizeQty(p.id, sz, e.target.value)}
+                                        onChange={(e) => setSizeQty(p.id, colourOf(p), sz, e.target.value)}
                                         className="w-full text-center bg-transparent text-xs font-bold focus:outline-none"
                                         data-testid={`workforce-size-qty-${p.id}-${sz}`}
                                       />
                                       <button
                                         type="button"
-                                        onClick={() => bumpSize(p.id, sz, 1)}
+                                        onClick={() => bumpSize(p.id, colourOf(p), sz, 1)}
                                         className="w-6 h-6 grid place-items-center rounded-full bg-[#fbbf24] text-[#1a1a1a] font-extrabold"
                                         data-testid={`workforce-size-plus-${p.id}-${sz}`}
                                       ><Plus size={10} /></button>
@@ -318,9 +347,10 @@ export default function KitYourWorkforce() {
                   if (!p) return null;
                   const canBack = (p.allowed_placements || []).includes("back-print");
                   return (
-                    <div key={r.uid} className="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 flex flex-wrap items-center gap-3" data-testid={`workforce-row-${r.uid}`}>                      <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-contain bg-white" />
+                    <div key={r.uid} className="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 flex flex-wrap items-center gap-3" data-testid={`workforce-row-${r.uid}`}>                      <img src={colourImage(p, r.color)} alt="" className="w-12 h-12 rounded-lg object-contain bg-white" />
                       <div className="flex-1 min-w-[140px]">
                         <div className="font-extrabold text-sm">{p.name}</div>
+                        {r.color && <div className="text-xs font-bold text-[#1a1a1a]" data-testid={`workforce-row-colour-${r.uid}`}>{r.color}{colourUp(p, r.color) > 0 ? ` (+£${colourUp(p, r.color).toFixed(2)})` : ""}</div>}
                         <div className="text-[11px] text-[#4b5563]">Logo £3.50 per garment - already in the prices shown</div>
                       </div>
                       <select

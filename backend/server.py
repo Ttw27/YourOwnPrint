@@ -3648,6 +3648,9 @@ async def list_workforce_products():
                 "brand": p.get("brand") or "",
                 "allowed_placements": p.get("allowed_placements") if p.get("allowed_placements") is not None else list(ALLOWED_PLACEMENT_OPTIONS),
                 # what one costs with the logo (before bulk discounts), and the floor
+                "colors": [{"name": c.get("name"), "hex": c.get("hex"), "image": c.get("image") or ""}
+                           for c in (p.get("colors") or []) if isinstance(c, dict)],
+                "colour_upcharges": p.get("colour_upcharges") or {},
                 "logo_price": WORKFORCE_LOGO_PRICE,
                 "min_unit": workforce_min_unit(p),
                 "unit_with_logo": workforce_unit(float(p["price"]), 1.0, p),
@@ -4364,6 +4367,7 @@ class WorkforceLine(BaseModel):
     size: str
     qty: int
     back_print: bool = False  # +£3.50/garment
+    color: Optional[str] = ""  # chosen colour (+ any colour_upcharges)
 
 
 class WorkforceCheckoutRequest(BaseModel):
@@ -4400,7 +4404,8 @@ async def workforce_quote(payload: WorkforceCheckoutRequest):
             continue
         items.append({
             "product_id": ln.product_id,
-            "product_name": PRODUCTS[ln.product_id]["name"],
+            "product_name": PRODUCTS[ln.product_id]["name"] + (f" - {ln.color}" if ln.color else ""),
+            "color": ln.color or "",
             "size": ln.size, "qty": int(ln.qty), "back_print": bool(ln.back_print),
         })
     doc = {
@@ -4441,9 +4446,16 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         if ln.back_print and "back-print" not in ap:
             raise HTTPException(400, f"Back print not available on {p['name']}")
         size_upcharge = float((p.get("size_upcharges") or {}).get(ln.size, 0.0))
+        colour = (ln.color or "").strip()
+        colour_names = [(c.get("name") if isinstance(c, dict) else c) for c in (p.get("colors") or [])]
+        if colour and colour_names and colour not in colour_names:
+            raise HTTPException(400, f"{p['name']} doesn't come in {colour}")
+        colour_upcharge = float((p.get("colour_upcharges") or {}).get(colour, 0.0)) if colour else 0.0
         valid_lines.append({
             "product_id": ln.product_id,
-            "product_name": p["name"],
+            "product_name": p["name"] + (f" - {colour}" if colour else ""),
+            "color": colour,
+            "colour_upcharge": colour_upcharge,
             "size": ln.size, "qty": int(ln.qty),
             "back_print": bool(ln.back_print),
             "base_price": float(p["price"]),
@@ -4483,12 +4495,12 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         # tier discount applies only to the garment base (not size upcharges or back-print)
         # logo £3.50 on every garment; never below the matching Specials price
         unit_garment = workforce_unit(ln["base_price"], factor, PRODUCTS[ln["product_id"]])
-        unit = round(unit_garment + ln["size_upcharge"] + (WORKFORCE_BACK_PRINT_PRICE if ln["back_print"] else 0.0), 2)
+        unit = round(unit_garment + ln["size_upcharge"] + ln.get("colour_upcharge", 0.0) + (WORKFORCE_BACK_PRINT_PRICE if ln["back_print"] else 0.0), 2)
         line_total = round(unit * ln["qty"], 2)
         ln["unit_price"] = unit
         ln["line_total"] = line_total
         total_amount += line_total
-        breakdown_strs.append(f"{ln['product_id']}·{ln['size']}×{ln['qty']}@£{unit:.2f}")
+        breakdown_strs.append(f"{ln['product_id']}{('·' + ln['color']) if ln.get('color') else ''}·{ln['size']}×{ln['qty']}@£{unit:.2f}")
     total_amount = round(total_amount, 2)
 
     if total_amount < 0.5:
