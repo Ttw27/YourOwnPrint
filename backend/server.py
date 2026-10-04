@@ -5717,6 +5717,53 @@ async def _designer_tee_bulk_v1():
     await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
 
 
+_HIVIS_VEST_RE = re.compile(r"\b(vest|waistcoat|tabard|gilet)\b", re.I)
+_HIVIS_RE = re.compile(r"hi-?vis|high[ -]vis|visibility|reflect|safety", re.I)
+
+
+def _is_hivis_vest(p: Dict) -> bool:
+    name = p.get("name") or ""
+    return bool(_HIVIS_VEST_RE.search(name) and _HIVIS_RE.search(f"{name} {p.get('category') or ''}")
+                and "bag" not in name.lower() and not p.get("bundle_items"))
+
+
+async def _hivis_vest_prints_v1():
+    """One-off (marker-guarded, Tim, Oct 2026): hi-vis vests / waistcoats /
+    tabards / gilets can't take a full-front print (opening down the middle,
+    reflective tape across it) and have no sleeves - chest logo + back print
+    only (long-sleeve waistcoats keep sleeves). Hand-set products are skipped.
+    Bundles made from them get the same positions, so their included logo is
+    the chest."""
+    marker = "hivis_vest_prints_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    done = 0
+    vest_ids = set()
+    for pid, p in list(PRODUCTS.items()):
+        if not _is_hivis_vest(p):
+            continue
+        vest_ids.add(pid)
+        meta = await db.product_meta.find_one({"product_id": pid}, {"allowed_placements": 1})
+        if meta and meta.get("allowed_placements") is not None:
+            continue
+        allowed = ["left-breast", "right-breast", "back-print"] + (["left-sleeve", "right-sleeve"] if "long sleeve" in (p.get("name") or "").lower() else [])
+        await db.product_meta.update_one({"product_id": pid}, {"$set": {"product_id": pid, "allowed_placements": allowed}}, upsert=True)
+        p["allowed_placements"] = allowed
+        done += 1
+    bundles = 0
+    for pid, p in list(PRODUCTS.items()):
+        items = [i.get("product_id") for i in (p.get("bundle_items") or [])]
+        if items and any(i in vest_ids for i in items):
+            allowed = [x for x in ["left-breast", "right-breast", "back-print"]
+                       if all(x in (PRODUCTS.get(i, {}).get("allowed_placements") or [x]) for i in items)] or ["left-breast"]
+            await db.imported_products.update_one({"id": pid}, {"$set": {"allowed_placements": allowed}})
+            p["allowed_placements"] = allowed
+            bundles += 1
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "products": done, "bundles": bundles,
+                                  "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"{marker}: {done} hi-vis vest(s) + {bundles} bundle(s) set to chest + back prints")
+
+
 async def _micro_fleece_prints_v1():
     """One-off (marker-guarded, Tim approved Oct 2026): micro fleece garments get
     small prints only - chest and sleeves (no full front / back), because DTF
@@ -7863,6 +7910,10 @@ async def _load_imported_products():
             await _fill_pencarrie_size_charts_v1("sols_leading_zero_size_charts_v1")
         except Exception as e:
             logging.warning(f"supplier size charts skipped: {e}")
+        try:
+            await _hivis_vest_prints_v1()
+        except Exception as e:
+            logging.warning(f"hi-vis vest prints skipped: {e}")
         try:
             await _micro_fleece_prints_v1()
         except Exception as e:

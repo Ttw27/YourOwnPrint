@@ -195,6 +195,9 @@ frontend/src/
   `_reprice_2026_10_v1` applied backend/data/reprice_2026_10.json once: raised underpriced base prices, added
   `colour_upcharges` on dearer colours and `size_upcharges` for 3XL+ (supplier products had none). Designer tee bulk
   = one tier only (£6.99 at 10+, `_designer_tee_bulk_v1`); the designer page now shows/applies bulk tiers like checkout.
+- **Hi-vis vests/waistcoats/tabards/gilets = chest + back only** (no full front - opening + tape; no sleeves except
+  long-sleeve waistcoats): `_hivis_vest_prints_v1`, also applied to bundles made from them. Bundles' included logo
+  value = chest logo, or the cheapest allowed position where a garment has no chest (`bundle_included_value`).
 - **Micro fleece = small prints only** (DTF flattens/shines pile): `_micro_fleece_prints_v1` set
   allowed_placements to chest + sleeves (gilets/bodywarmers chest only) on micro fleece garments without hand-set
   positions; skips balaclava/Morf/bob hat and fleece-LINED shell jackets.
