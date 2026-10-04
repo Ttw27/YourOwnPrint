@@ -223,7 +223,15 @@ export default function ProductDetail() {
   const isPack = product?.bundle_kind === "pack";
   // Bundles include ONE print position on every item; anything beyond that is
   // charged per item in the set/pack (matches the backend's _resolve_line_pricing).
-  const includedPrint = Number(product?.bundle_included_print?.value || 0);
+  // Normally a chest logo; on garments with no chest position (hi-vis vests,
+  // caps) the cheapest position the garment has - same as the server.
+  const includedPrint = useMemo(() => {
+    const v = Number(product?.bundle_included_print?.value || 0);
+    const pos = product?.bundle_included_print?.position || "left-breast";
+    if (!Array.isArray(allowedPlacements) || !allowedPlacements.length || allowedPlacements.includes(pos)) return v;
+    const prices = placements.filter((x) => allowedPlacements.includes(x.id)).map((x) => Number(x.price || 0));
+    return prices.length ? Math.max(v, Math.min(...prices)) : v;
+  }, [product, allowedPlacements, placements]);
   const printCostPerGarment = useMemo(
     () => {
       if (blank) return 0;

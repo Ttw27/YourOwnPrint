@@ -1687,7 +1687,7 @@ async def _resolve_line_pricing(
         # (matches ProductDetail). Sets from before logo-included have no
         # bundle_included_print, so all positions are charged per item.
         if product.get("bundle_items"):
-            included = float((product.get("bundle_included_print") or {}).get("value") or 0)
+            included = bundle_included_value(product)
             per_item = max(0.0, print_cost - included) if placements_clean else 0.0
             print_cost = round(per_item * max(1, int(product.get("bundle_item_count") or 1)), 2)
 
@@ -2427,6 +2427,19 @@ class DesignerArtwork(BaseModel):
     width: Optional[int] = None
     height: Optional[int] = None
     session_id: Optional[str] = None
+
+
+def bundle_included_value(product: Dict) -> float:
+    """What the bundle's one included logo is worth. Normally a chest logo; on a
+    garment with no chest position (hi-vis vests, caps, beanies) it's the
+    cheapest position the garment has - so its only logo really is included."""
+    inc = float((product.get("bundle_included_print") or {}).get("value") or 0)
+    allowed = product.get("allowed_placements")
+    if isinstance(allowed, list) and allowed and (product.get("bundle_included_print") or {}).get("position", "left-breast") not in allowed:
+        prices = [float(PLACEMENT_BY_ID[x]["price"]) for x in allowed if x in PLACEMENT_BY_ID]
+        if prices:
+            inc = max(inc, min(prices))
+    return inc
 
 
 def designer_back_print_price(unit_price: float) -> float:
