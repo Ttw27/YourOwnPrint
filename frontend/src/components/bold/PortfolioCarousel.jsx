@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchPortfolio, mediaUrl } from "../../lib/api";
 import { ChevronLeft, ChevronRight, Loader2, Image as ImageIcon } from "lucide-react";
 import { WhatsAppInline } from "./WhatsAppFAB";
+import ImageSwiper from "./ImageSwiper";
 
 /**
  * Horizontally scrollable carousel of portfolio images filtered by category.
@@ -98,22 +99,24 @@ export default function PortfolioCarousel({
         data-testid={`${testid}-scroller`}
       >
         {items.map((it) => (
-          <button
+          <div
             key={it.id}
+            role="button"
+            tabIndex={0}
             onClick={() => setLightbox(it)}
-            className="group relative flex-shrink-0 w-64 md:w-72 aspect-square overflow-hidden rounded-2xl bg-[#f0fdf4] border border-[#dcfce7] hover:border-[#7bc67e] snap-start"
+            onKeyDown={(e) => { if (e.key === "Enter") setLightbox(it); }}
+            className="group relative cursor-pointer flex-shrink-0 w-64 md:w-72 aspect-square overflow-hidden rounded-2xl bg-[#f0fdf4] border border-[#dcfce7] hover:border-[#7bc67e] snap-start"
             data-testid={`${testid}-item-${it.id}`}
           >
-            <img
-              src={mediaUrl(it.image_url)}
-              alt={it.alt_text || it.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              loading="lazy"
-            />
-            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 via-black/20 to-transparent text-left">
+            {/* Every photo of the job (swipe / arrows), web-ready copies, positioned as set in admin */}
+            <ImageSwiper images={it.images || [it.image_url]} meta={it.image_meta || []} size="thumb" alt={it.alt_text || it.title} imgClassName="w-full h-full object-cover" />
+            {(it.images || []).length > 1 && (
+              <span className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-extrabold rounded-full px-2 py-0.5 pointer-events-none">{it.images.length} photos</span>
+            )}
+            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 via-black/20 to-transparent text-left pointer-events-none">
               <div className="text-white text-xs font-extrabold leading-tight line-clamp-2">{it.title}</div>
             </div>
-          </button>
+          </div>
         ))}
       </div>
 
@@ -124,7 +127,10 @@ export default function PortfolioCarousel({
           data-testid={`${testid}-lightbox`}
         >
           <div className="max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
-            <img src={mediaUrl(lightbox.image_url)} alt={lightbox.alt_text || lightbox.title} className="w-full max-h-[80vh] object-contain rounded-2xl bg-white" />
+            <div className="w-full h-[70vh] rounded-2xl bg-white overflow-hidden">
+              <ImageSwiper images={lightbox.images || [lightbox.image_url]} meta={(lightbox.image_meta || []).map((m) => ({ ...m, fit: "contain", zoom: 1 }))} size="web" alt={lightbox.alt_text || lightbox.title} imgClassName="w-full h-full object-contain" />
+            </div>
+            {(lightbox.images || []).length > 1 && <div className="text-zinc-400 text-xs mt-2">Swipe or use the arrows to see all {lightbox.images.length} photos</div>}
             {lightbox.title && (
               <div className="text-white mt-3">
                 <div className="font-black text-lg">{lightbox.title}</div>
