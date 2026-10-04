@@ -5591,6 +5591,39 @@ DEFAULT_NAV_CONFIG = {
     ],
 }
 
+# Starter range for Kit Your Workforce (chosen with Tim, Oct 2026).
+WORKFORCE_STARTER_RANGE = [
+    "rx101", "rx101f", "rx105", "rx151", "gd05", "h510", "h511",      # tops
+    "rx301", "rx305", "rx350", "rx401",                                # warm layers
+    "rx500", "rx500f", "rx550",                                        # jackets
+    "rx700", "rx710",                                                  # hi-vis
+    "rx601", "rx605",                                                  # bottoms
+    "pr150", "pr155", "bb15", "bb45",                                  # aprons + headwear
+]
+
+
+async def _workforce_starter_range_v1():
+    """One-off (marker-guarded): tick 'Workforce eligible' on the starter range.
+    Only sets the tick where the admin hasn't set it either way - nothing else
+    on the product is touched (partial save into product_meta, like the admin)."""
+    marker = "workforce_starter_range_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    done = 0
+    for pid in WORKFORCE_STARTER_RANGE:
+        if pid not in PRODUCTS:
+            continue
+        meta = await db.product_meta.find_one({"product_id": pid}, {"workforce_eligible": 1})
+        if meta and meta.get("workforce_eligible") is not None:
+            continue
+        await db.product_meta.update_one({"product_id": pid}, {"$set": {"product_id": pid, "workforce_eligible": True}}, upsert=True)
+        PRODUCTS[pid]["workforce_eligible"] = True
+        done += 1
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "ticked": done,
+                                  "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"{marker}: {done} product(s) made workforce eligible")
+
+
 @app.on_event("startup")
 async def _nav_add_bundles_v1():
     """One-off (marker-guarded): add "Bulk bundles & team packs" to the admin's
@@ -7686,6 +7719,10 @@ async def _load_imported_products():
             await _fill_pencarrie_size_charts_v1("sols_leading_zero_size_charts_v1")
         except Exception as e:
             logging.warning(f"supplier size charts skipped: {e}")
+        try:
+            await _workforce_starter_range_v1()
+        except Exception as e:
+            logging.warning(f"workforce starter range skipped: {e}")
         try:
             await _restore_cut_colours_v1()
             asyncio.create_task(_mirror_restored_colour_photos())
