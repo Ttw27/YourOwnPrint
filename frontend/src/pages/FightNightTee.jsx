@@ -14,7 +14,7 @@ import { ExVat } from "../components/bold/PriceTag";
 // Two tee types on one page. Each is its own product (own price + sizes);
 // sponsor/back/sleeve prints and the bulk discounts work the same for both.
 const TEE_TYPES = [
-  { key: "standard", id: "boxing-fight-tee", label: "Standard T-shirt", sub: "Gildan cotton tee - the classic walk-out tee" },
+  { key: "standard", id: "boxing-fight-tee", label: "Standard T-shirt", sub: "Gildan SoftStyle cotton tee - the classic walk-out tee" },
   { key: "performance", id: "boxing-fight-performance", label: "Sports performance", sub: "AWDis Cool T - light, breathable, quick-dry" },
 ];
 const isKidsSize = (sz) => /\d+-\d+/.test(sz);
@@ -71,7 +71,11 @@ export default function FightNightTee() {
     const next = teeProducts[key]; if (!next) return;
     setTeeType(key);
     setSizeQtys((prev) => Object.fromEntries(Object.entries(prev).filter(([sz]) => (next.sizes || []).includes(sz))));
-    if (!(next.colors || []).some((c) => c.name === color)) setColor(next.colors[0]?.name || "Black");
+    if (!(next.colors || []).some((c) => c.name === color)) {
+      const word = (color || "").toLowerCase().split(" ").pop();  // "Jet Black" -> "black"
+      const similar = (next.colors || []).find((c) => c.name.toLowerCase().split(" ").pop() === word);
+      setColor((similar || next.colors[0] || {}).name || "Black");
+    }
   };
 
   // Bulk tiers: £ off this tee's own price (so both types drop the same way).
@@ -408,8 +412,11 @@ export default function FightNightTee() {
               </div>
             </>
           )}
-          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Colour</div>
-          <div className="flex gap-2 mb-4">
+          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">
+            Colour: <span className="font-extrabold" data-testid="fn-colour-name">{color}</span>
+            <span className="text-[#4b5563] font-normal"> · {tee.colors.length} colours, all in adult and kids sizes</span>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-4" data-testid="fn-colours">
             {tee.colors.map((c) => (
               <button key={c.name} data-testid={`fn-color-${c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} onClick={() => setColor(c.name)} title={c.name} className={`w-9 h-9 rounded-full border-2 ${color === c.name ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-[#e5e7eb]"}`} style={{ background: c.hex }} />
             ))}

@@ -217,7 +217,8 @@ frontend/src/
   `boxing-fight-performance` (AWDis Cool T JC001, £13.99), both in `FIGHT_NIGHT_IDS` (sponsor/back/sleeve add-on
   prices + bulk tiers = £1 off at 10+, £2 off at 25+ of each tee's own price, `fight_night_tiers()`). Kids sizes
   live on the same product with a -£2 size upcharge (adults + kids count together for tiers). Their /product/:id
-  pages redirect to the Fight Night page.
+  pages redirect to the Fight Night page. Colours = every colour the KIDS version is made in (GD01B / JC001B,
+  all also in adult), from PenCarrie's export: `FIGHT_NIGHT_COLOURS_STANDARD` / `_PERFORMANCE`.
 - **Offers ("Was" price):** `was_price` in `product_overrides` (Product settings > Name, price & main
   photo > "Offer - 'Was' price"). Shown only while above `price` (`offer_was_price()`): crossed out +
   "Offer" pill in PriceTag (cards), designer Total panel + product dropdown, basket (`on_offer` from
