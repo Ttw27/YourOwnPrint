@@ -19,6 +19,19 @@ import usePageTitle from "../hooks/usePageTitle";
 import PriceTag from "../components/bold/PriceTag";
 import { useAccountDiscount, discounted } from "../context/CustomerAuthContext";
 
+// Supplier size lists can arrive jumbled ("2X3X, 4X5X, L/XL, S/M") - put them smallest first.
+const SIZE_RANK = ["XXS", "XS", "S", "S/M", "M", "M/L", "L", "L/XL", "XL", "XL/2XL", "XXL", "2XL", "2X3X", "XXL/3XL", "3XL", "4XL", "4X5X", "5XL", "6XL", "7XL", "8XL"];
+function sortSizes(list) {
+  const rank = (s) => {
+    const k = String(s).toUpperCase().replace(/\s+/g, "");
+    const i = SIZE_RANK.indexOf(k);
+    if (i >= 0) return i;
+    const n = parseFloat(k);  // ages / waist sizes: numeric order after letter sizes
+    return Number.isFinite(n) ? 100 + n : 1000;
+  };
+  return [...list].map((s, i) => [s, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map((x) => x[0]);
+}
+
 // Common garment colour names → hex, so a swatch still shows a colour when the
 // supplier data didn't include a hex value.
 const COLOUR_NAME_HEX = {
@@ -138,6 +151,19 @@ export default function ProductDetail() {
   const notPrintable = !isSpecial && Array.isArray(allowedPlacements) && visiblePlacements.length === 0 && placements.length > 0;
   useEffect(() => { if (notPrintable) setPrintMode("blank"); }, [notPrintable]);
 
+  // Bundles include one logo: pre-tick it (left chest where allowed, else the
+  // garment's cheapest position) so nobody checks out without their logo.
+  const isBundleProduct = Array.isArray(product?.bundle_items) && product.bundle_items.length > 0;
+  useEffect(() => {
+    if (!isBundleProduct || !product?.bundle_included_print || !visiblePlacements.length) return;
+    setSelectedPlacements((prev) => {
+      if (prev.length) return prev;
+      const lb = visiblePlacements.find((x) => x.id === "left-breast");
+      const pick = lb || [...visiblePlacements].sort((x, y) => (x.price || 0) - (y.price || 0))[0];
+      return pick ? [pick.id] : prev;
+    });
+  }, [isBundleProduct, product, visiblePlacements]);
+
   const togglePlacement = (pid) => {
     if (blank) return;
     setSelectedPlacements((prev) => {
@@ -209,6 +235,15 @@ export default function ProductDetail() {
     },
     [blank, selectedPlacements, placementById, isSpecial, setItemCount, isBundle, includedPrint, product]
   );
+  // Bundles include one logo (worth `includedPrint`): show what each position
+  // ACTUALLY adds given what's already ticked - "Included", or the extra.
+  const placementLabel = (pl) => {
+    if (!isBundle || !product?.bundle_included_print) return `+£${pl.price.toFixed(2)} / garment`;
+    // positions this one replaces (e.g. full front replaces the chest logo) don't count
+    const others = selectedPlacements.filter((x) => x !== pl.id && !(pl.excludes || []).includes(x)).reduce((s, x) => s + (placementById[x]?.price || 0), 0);
+    const extra = Math.max(0, others + pl.price - includedPrint) - Math.max(0, others - includedPrint);
+    return extra <= 0.001 ? "Included" : `+£${extra.toFixed(2)} / garment`;
+  };
   const packsOrdered = isPack ? (Number(sizeQtys.PACK) || 0) : 0;
   const packProgress = isPack ? (product.bundle_items || []).map((bi) => {
     const need = (bi.qty || 1) * packsOrdered;
@@ -439,7 +474,7 @@ export default function ProductDetail() {
                               </span>
                             </div>
                             <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 mt-2">
-                              {(bi.sizes && bi.sizes.length ? bi.sizes : ["ONE"]).map((sz) => {
+                              {sortSizes(bi.sizes && bi.sizes.length ? bi.sizes : ["ONE"]).map((sz) => {
                                 const q = (packSizes[bi.product_id] || {})[sz] || 0;
                                 return (
                                   <label key={sz} className={`rounded-lg border px-2 py-1 text-center ${q > 0 ? "border-[#7bc67e] bg-white" : "border-[#e5e7eb] bg-white"}`}>
@@ -551,7 +586,7 @@ export default function ProductDetail() {
                                 <input type="checkbox" checked={checked} disabled={disabled} onChange={() => togglePlacement(p.id)} className="w-4 h-4 accent-[#7bc67e]" data-testid={`placement-${p.id}-checkbox`} />
                                 <div className="flex-1">
                                   <div className="font-nunito font-extrabold text-sm">{p.label}</div>
-                                  <div className="text-xs text-[#4b5563]">+£{p.price.toFixed(2)} / garment</div>
+                                  <div className={`text-xs ${placementLabel(p) === "Included" ? "text-[#166534] font-extrabold" : "text-[#4b5563]"}`} data-testid={`placement-${p.id}-price`}>{placementLabel(p)}</div>
                                 </div>
                                 <Shirt size={16} className="text-[#7bc67e]" />
                               </label>
@@ -560,7 +595,9 @@ export default function ProductDetail() {
                         </div>
                         <div className="mt-3 text-xs text-[#4b5563] flex items-start gap-1.5">
                           <Info size={12} className="mt-0.5 flex-shrink-0" />
-                          <span><strong>Full front replaces left/right breast.</strong> Pick any combination of front, back & sleeves.</span>
+                          <span>{isBundle && product?.bundle_included_print
+                            ? <><strong>One logo is included</strong> on every garment. A bigger print or extra positions cost the difference shown.</>
+                            : <><strong>Full front replaces left/right breast.</strong> Pick any combination of front, back & sleeves.</>}</span>
                         </div>
                       </>
                     )}
