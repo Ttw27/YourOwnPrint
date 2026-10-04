@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Package, Plus, Search, Trash2, Sparkles, RefreshCw, ExternalLink } from "lucide-react";
-import { fetchAllProductsAdmin, fetchBundleTemplates, createTemplateBundles, createCustomBundle, rebuildBundleImage, previewBundlePrice, fetchMyBundles } from "../lib/api";
+import { fetchAllProductsAdmin, fetchBundleTemplates, createTemplateBundles, createCustomBundle, rebuildBundleImage, previewBundlePrice, fetchMyBundles, patchProductOverride } from "../lib/api";
 
 /**
  * Bundle builder - bulk packs (fixed quantities, e.g. 20 x tees or a team pack)
@@ -61,6 +61,17 @@ export default function AdminBundles() {
     setBusy(names ? `Creating ${names[0]}…` : "Creating bundles - building the pictures can take a minute…");
     try { report(await createTemplateBundles(names, cutout)); await load(); }
     catch (e) { toast.error(e?.response?.data?.detail || "Couldn't create bundles"); }
+    finally { setBusy(""); }
+  };
+
+  // Show / hide a bundle on the site straight from here (same as Product settings' visible tick).
+  const setLive = async (b, live) => {
+    setBusy(live ? "Putting it on the site…" : "Hiding it…");
+    try {
+      await patchProductOverride(b.id, { active: live });
+      setMine((list) => list.map((x) => (x.id === b.id ? { ...x, live } : x)));
+      toast.success(live ? `${b.name} is now on the site` : `${b.name} hidden from the site`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't change it"); }
     finally { setBusy(""); }
   };
 
@@ -127,7 +138,7 @@ export default function AdminBundles() {
         {mine.length > 0 && (
           <div className="mt-8" data-testid="bundle-mine">
             <h2 className="font-nunito font-black text-2xl">Your bundles <span className="text-base text-[#4b5563] font-bold">({mine.length})</span></h2>
-            <p className="text-sm text-[#4b5563]">Click a picture to see it full size. Hidden ones aren&rsquo;t on the site yet - show them from Product settings.</p>
+            <p className="text-sm text-[#4b5563]">Click a picture to see it full size. Hidden ones aren&rsquo;t on the site yet - press <strong>Show on site</strong> when you&rsquo;re happy with one.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
               {mine.map((b) => (
                 <div key={b.id} className="border-2 border-[#eef2f7] rounded-2xl overflow-hidden bg-white" data-testid={`bundle-mine-${b.id}`}>
@@ -140,6 +151,12 @@ export default function AdminBundles() {
                       <span className="text-sm font-black">£{b.price.toFixed(2)}</span>
                       <span className={`text-[9px] font-extrabold rounded-full px-2 py-0.5 ${b.live ? "bg-[#dcfce7] text-[#166534]" : "bg-[#e5e7eb] text-[#4b5563]"}`}>{b.live ? "LIVE" : "HIDDEN"}</span>
                     </div>
+                    <button
+                      onClick={() => setLive(b, !b.live)}
+                      disabled={!!busy}
+                      className={`mt-2 w-full text-[11px] font-extrabold rounded-full py-1.5 disabled:opacity-40 ${b.live ? "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb]" : "bg-[#7bc67e] text-[#1a1a1a] hover:bg-[#5eb062]"}`}
+                      data-testid={`bundle-live-${b.id}`}
+                    >{b.live ? "Hide from site" : "Show on site"}</button>
                     <div className="flex items-center gap-2 mt-1.5 text-[11px] font-bold whitespace-nowrap">
                       <a href={`/admin/product-settings?q=${encodeURIComponent(b.name)}`} className="text-[#166534] hover:underline" title="Edit it, or show / hide it on the site">Edit</a>
                       {b.live && <a href={`/product/${b.id}`} target="_blank" rel="noopener noreferrer" className="text-[#166534] hover:underline">View</a>}

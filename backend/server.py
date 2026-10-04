@@ -5591,6 +5591,35 @@ DEFAULT_NAV_CONFIG = {
     ],
 }
 
+@app.on_event("startup")
+async def _nav_add_bundles_v1():
+    """One-off (marker-guarded): add "Bulk bundles & team packs" to the admin's
+    SAVED menu (Shop > Featured, after Fight Night Tees) without replacing the
+    rest of it - menus saved before the link existed never got it. Skipped if
+    the menu already links /bundles anywhere."""
+    marker = "nav_add_bundles_v1"
+    try:
+        if await db.settings.find_one({"key": marker}):
+            return
+        doc = await db.settings.find_one({"key": "navigation_config"})
+        cfg = (doc or {}).get("config") or {}
+        added = False
+        if cfg.get("menu") and "/bundles" not in __import__("json").dumps(cfg["menu"]):
+            link = {"label": "Bulk bundles & team packs", "to": "/bundles", "badge": "Save"}
+            shop = next((m for m in cfg["menu"] if m.get("key") == "shop" and m.get("columns")), None)
+            if shop:
+                col = next((c for c in shop["columns"] if (c.get("heading") or "").lower() == "featured"), shop["columns"][-1])
+                links = col.setdefault("links", [])
+                at = next((i + 1 for i, l in enumerate(links) if l.get("to") == "/fight-night-tee"), len(links))
+                links.insert(at, link)
+                await db.settings.update_one({"key": "navigation_config"}, {"$set": {"config": cfg}})
+                added = True
+        await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "added": added,
+                                      "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    except Exception as e:
+        logging.warning(f"nav bundles link skipped: {e}")
+
+
 @api_router.get("/navigation")
 async def get_navigation():
     doc = await db.settings.find_one({"key": "navigation_config"})
