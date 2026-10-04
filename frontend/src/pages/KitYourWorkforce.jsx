@@ -36,7 +36,15 @@ export default function KitYourWorkforce() {
   const productById = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
   // Colour being picked for each garment (sizes/qtys are entered per colour).
   const [pickColour, setPickColour] = useState({});
-  const colourOf = (p) => pickColour[p.id] || (p.colors && p.colors[0] && p.colors[0].name) || "";
+  // Two-tone colours ("Yellow/Navy") have no single swatch colour and showed as
+  // blank circles - hidden here unless they're all the garment comes in, in
+  // which case they're drawn half-and-half. (They stay everywhere else.)
+  const pickable = (p) => {
+    const all = p.colors || [];
+    const solid = all.filter((c) => !String(c.name || "").includes("/"));
+    return solid.length ? solid : all;
+  };
+  const colourOf = (p) => pickColour[p.id] || (pickable(p)[0] || {}).name || "";
   const colourImage = (p, name) => ((p.colors || []).find((c) => c.name === name) || {}).image || p.image;
   const colourUp = (p, name) => Number(p.colour_upcharges?.[name] || 0);
 
@@ -211,7 +219,7 @@ export default function KitYourWorkforce() {
                         <img src={colourImage(p, colourOf(p))} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" data-testid={`workforce-thumb-${p.id}`} />
                         <div className="flex-1 min-w-0">
                           <div className="font-extrabold text-sm truncate">{p.name}</div>
-                          <div className="text-xs text-[#4b5563]">£{Number(p.unit_with_logo ?? p.price).toFixed(2)} with your logo · {p.colors?.length > 1 ? `${p.colors.length} colours · ` : ""}{p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
+                          <div className="text-xs text-[#4b5563]">£{Number(p.unit_with_logo ?? p.price).toFixed(2)} with your logo · {pickable(p).length > 1 ? `${pickable(p).length} colours · ` : ""}{p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
                         </div>
                         <div className={`w-8 h-8 grid place-items-center rounded-full transition-transform ${isOpen ? "bg-[#fbbf24] text-[#1a1a1a] rotate-180" : "bg-[#fef3c7] text-[#1a1a1a]"}`}>
                           {isOpen ? <ChevronDown size={16} /> : <Plus size={16} />}
@@ -223,19 +231,19 @@ export default function KitYourWorkforce() {
                           {p.description && (
                             <p className="text-xs text-[#4b5563] leading-relaxed" data-testid={`workforce-description-${p.id}`}>{p.description}</p>
                           )}
-                          {(p.colors || []).length > 0 && (
+                          {pickable(p).length > 0 && (
                             <div data-testid={`workforce-colours-${p.id}`}>
                               <div className="text-[10px] uppercase tracking-[0.2em] text-[#fbbf24] font-extrabold mb-2">
                                 Colour: <span className="text-[#1a1a1a] normal-case tracking-normal" data-testid={`workforce-colour-name-${p.id}`}>{colourOf(p)}{colourUp(p, colourOf(p)) > 0 ? ` (+£${colourUp(p, colourOf(p)).toFixed(2)})` : ""}</span>
                               </div>
                               <div className="flex flex-wrap gap-1.5">
-                                {p.colors.map((c) => {
+                                {pickable(p).map((c) => {
                                   const on = colourOf(p) === c.name;
                                   const has = rows.some((r) => r.product_id === p.id && r.color === c.name);
                                   return (
                                     <button key={c.name} type="button" title={c.name} onClick={() => setPickColour((m) => ({ ...m, [p.id]: c.name }))}
                                       className={`relative w-7 h-7 rounded-full border-2 ${on ? "border-[#fbbf24] ring-2 ring-[#fbbf24]/40" : "border-[#e5e7eb]"}`}
-                                      style={{ background: c.hex || "#ccc" }} data-testid={`workforce-colour-${p.id}-${c.name}`}>
+                                      style={{ background: swatchBg(c, p) }} data-testid={`workforce-colour-${p.id}-${c.name}`}>
                                       {has && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#7bc67e] border border-white" />}
                                     </button>
                                   );
@@ -247,7 +255,7 @@ export default function KitYourWorkforce() {
                             </div>
                           )}
                           <div>
-                            <div className="text-[10px] uppercase tracking-[0.2em] text-[#fbbf24] font-extrabold mb-2">Pick sizes &amp; quantities{p.colors?.length > 1 ? ` in ${colourOf(p)}` : ""}</div>
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-[#fbbf24] font-extrabold mb-2">Pick sizes &amp; quantities{pickable(p).length > 1 ? ` in ${colourOf(p)}` : ""}</div>
                             <div className="grid grid-cols-3 gap-2" data-testid={`workforce-sizes-${p.id}`}>
                               {(p.sizes || []).map((sz) => {
                                 const q = qtyFor(p.id, colourOf(p), sz);
@@ -471,6 +479,21 @@ export default function KitYourWorkforce() {
 }
 
 const ic = "w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#fbbf24]";
+
+// Swatch fill: the colour's own hex, or for a two-tone name ("Yellow/Navy") the
+// two halves, using the garment's own solid colours or common hi-vis shades.
+const NAMED = { yellow: "#f5e400", orange: "#ff7a00", navy: "#1a2a4a", black: "#111111", white: "#ffffff", red: "#d62828",
+  pink: "#ec4899", purple: "#6b21a8", "royal blue": "#1d4ed8", "lime green": "#84cc16", "paramedic green": "#0a7a3a", grey: "#9ca3af" };
+function swatchBg(c, p) {
+  const name = String(c.name || "");
+  if (!name.includes("/")) return c.hex || "#ccc";
+  const hexOf = (n) => {
+    const own = (p.colors || []).find((x) => String(x.name).toLowerCase() === n.toLowerCase());
+    return (own && own.hex) || NAMED[n.toLowerCase()] || "#ccc";
+  };
+  const [a, b] = name.split("/").map((s) => s.trim());
+  return `linear-gradient(135deg, ${hexOf(a)} 50%, ${hexOf(b)} 50%)`;
+}
 
 function snap99(price) {
   return Math.max(0.99, Math.round(price) - 0.01);
