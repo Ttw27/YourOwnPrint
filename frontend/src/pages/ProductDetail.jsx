@@ -938,16 +938,22 @@ function BulkTierLadder({ productId, currentQty = 0 }) {
 // ---- Product image gallery with thumbnails ----
 function ProductGallery({ product, color }) {
   const main = product.image;
-  const gallery = Array.isArray(product.image_gallery) ? product.image_gallery : [];
+  // Bundles: pack picture first, then the garment in the picked colour.
+  const bundlePhoto = product.bundle_colour_photos && color ? product.bundle_colour_photos[color] : null;
+  const gallery = product.bundle_colour_photos ? (bundlePhoto ? [bundlePhoto] : [])
+    : (Array.isArray(product.image_gallery) ? product.image_gallery : []);
   const images = [main, ...gallery.filter((u) => u && u !== main)];
-  const colorImage = color ? product.colors?.find((c) => c.name === color)?.image : null;
+  const colorImage = color && !product.bundle_colour_photos ? product.colors?.find((c) => c.name === color)?.image : null;
 
   // null = "following the selected colour automatically"; a number = the user
   // has manually clicked a thumbnail and wants to browse away from that.
   const [manualIndex, setManualIndex] = useState(null);
   useEffect(() => { setManualIndex(null); }, [color]); // new colour picked -> go back to auto-following it
 
-  const current = manualIndex !== null ? images[manualIndex] : (colorImage || images[0] || main);
+  // Bundles open on the pack picture; once a colour is picked, show that colour.
+  const firstColour = useRef(color);
+  const pickedNew = !!product.bundle_colour_photos && color !== firstColour.current && !!bundlePhoto;
+  const current = manualIndex !== null ? images[manualIndex] : (pickedNew ? bundlePhoto : (colorImage || images[0] || main));
   const showingColorPhoto = manualIndex === null && !!colorImage;
 
   return (
@@ -969,7 +975,7 @@ function ProductGallery({ product, color }) {
             <button
               key={src + i}
               onClick={() => setManualIndex(i)}
-              className={`w-[19%] min-w-[64px] flex-shrink-0 aspect-square overflow-hidden rounded-lg border-2 transition snap-start ${!showingColorPhoto && (manualIndex === i || (manualIndex === null && i === 0)) ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-transparent hover:border-[#dcfce7]"}`}
+              className={`w-[19%] min-w-[64px] flex-shrink-0 aspect-square overflow-hidden rounded-lg border-2 transition snap-start ${!showingColorPhoto && (manualIndex === i || (manualIndex === null && (pickedNew ? src === bundlePhoto : i === 0))) ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-transparent hover:border-[#dcfce7]"}`}
               data-testid={`product-thumb-${i}`}
               aria-label={`View image ${i + 1}`}
             >

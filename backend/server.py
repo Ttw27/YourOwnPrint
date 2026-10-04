@@ -978,6 +978,15 @@ async def get_product(product_id: str):
     # already get, so the product page's price and total show ex VAT correctly.
     p = {k: v for k, v in PRODUCTS[product_id].items()
          if k not in ("_all_colors", "_all_sizes", "_shown_colors", "_shown_sizes")}
+    if p.get("bundle_items"):
+        # Bundles: the pack picture leads; the second photo is the main garment
+        # in the colour the customer picks (not the garment's default photo,
+        # which showed e.g. a sky-blue polo whatever colour was chosen).
+        first = PRODUCTS.get((p["bundle_items"][0] or {}).get("product_id")) or {}
+        p["bundle_colour_photos"] = {c.get("name"): c.get("image") for c in (first.get("colors") or [])
+                                     if isinstance(c, dict) and c.get("name") and c.get("image")}
+        p["image_gallery"] = []
+        p["additional_images"] = []
     return {**p, **_vat_fields(PRODUCTS[product_id])}
 
 
