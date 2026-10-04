@@ -190,6 +190,11 @@ frontend/src/
 - **Design Your Own products** (`designer_enabled`) are sold ONLY through the designer: `/product/:id`
   redirects to `/design?product=:id`. For a garment that should also be sold normally, duplicate it first.
 
+- **Margins (Oct 2026 check).** Supplier prices are ex-VAT trade (VAT reclaimed); selling prices include 20% VAT
+  (kids zero-rated). Target: ~55% on supplier cost after VAT + Stripe (1.5% + ~10p/item), for EVERY colour and size.
+  `_reprice_2026_10_v1` applied backend/data/reprice_2026_10.json once: raised underpriced base prices, added
+  `colour_upcharges` on dearer colours and `size_upcharges` for 3XL+ (supplier products had none). Designer tee bulk
+  = one tier only (£6.99 at 10+, `_designer_tee_bulk_v1`); the designer page now shows/applies bulk tiers like checkout.
 - **Kit Your Workforce pricing:** per garment = garment price (after workforce bulk %, snapped to .99) + £3.50 logo
   (`WORKFORCE_LOGO_PRICE`), floored at the Specials price (`workforce_min_unit`: matching `special-<id>`, else the
   cheapest live Special of the same category) so it never undercuts Specials; + size upcharge + £3.50 back print.

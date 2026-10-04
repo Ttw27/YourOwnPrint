@@ -5627,6 +5627,71 @@ WORKFORCE_STARTER_RANGE = [
 ]
 
 
+async def _reprice_2026_10_v1():
+    """One-off (marker-guarded) margin fix, Oct 2026 (Tim approved): every
+    colour + size must make ~55% on supplier cost after VAT and Stripe fees.
+    From backend/data/reprice_2026_10.json (built from PenCarrie's export +
+    the Ralawise sheet): a higher base price where the product was underpriced,
+    "+£" on colours that cost more (colour_upcharges), and big-size extras
+    (size_upcharges - supplier products had none, so 3XL-5XL sold at the M price).
+    Never lowers anything. Skips a product whose price has changed since the
+    check, or that has a hand-set price / size extras in Product settings."""
+    marker = "reprice_2026_10_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    try:
+        with open(ROOT_DIR / "data" / "reprice_2026_10.json") as fh:
+            plan = __import__("json").load(fh)
+    except Exception as e:
+        logging.warning(f"{marker}: plan unavailable: {e}")
+        return
+    manual = {d["product_id"]: d async for d in db.product_overrides.find(
+        {"$or": [{"price": {"$exists": True}}, {"size_upcharges": {"$exists": True}}]}, {"product_id": 1, "price": 1, "size_upcharges": 1})}
+    changed, skipped = [], []
+    for ch in plan:
+        pid = ch["id"]
+        doc = await db.imported_products.find_one({"id": pid}, {"price": 1, "size_upcharges": 1, "colour_upcharges": 1})
+        if not doc or abs(float(doc.get("price") or 0) - float(ch["old_price"])) > 0.005:
+            skipped.append(pid)
+            continue
+        ov = manual.get(pid) or {}
+        upd: Dict = {}
+        if ch.get("price") and "price" not in ov and float(ch["price"]) > float(doc.get("price") or 0):
+            upd["price"] = float(ch["price"])
+        if ch.get("size_upcharges") and "size_upcharges" not in ov:
+            cur = {k: float(v) for k, v in (doc.get("size_upcharges") or {}).items()}
+            upd["size_upcharges"] = {**cur, **{k: max(float(v), cur.get(k, 0.0)) for k, v in ch["size_upcharges"].items()}}
+        if ch.get("colour_upcharges"):
+            cur = {k: float(v) for k, v in (doc.get("colour_upcharges") or {}).items()}
+            upd["colour_upcharges"] = {**cur, **{k: max(float(v), cur.get(k, 0.0)) for k, v in ch["colour_upcharges"].items()}}
+        if upd:
+            await db.imported_products.update_one({"id": pid}, {"$set": upd})
+            changed.append(pid)
+    async for d in db.imported_products.find({"id": {"$in": changed}}):
+        _apply_imported_product(d)
+    if changed:
+        await reapply_saved_settings(changed)
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "changed": len(changed), "skipped": skipped[:200],
+                                  "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"{marker}: {len(changed)} product(s) re-priced, {len(skipped)} skipped (price changed since the check)")
+
+
+async def _designer_tee_bulk_v1():
+    """One-off (marker-guarded, Tim approved Oct 2026): the designer tee gets ONE
+    bulk price - £6.99 at 10+ - and nothing lower (100+/200+ lost money). 6.5%
+    snaps £7.99 to £6.99 and leaves a £6.99 offer price at £6.99."""
+    marker = "designer_tee_bulk_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    tiers = [{"min_qty": 10, "pct": 6.5}]
+    await db.product_meta.update_one({"product_id": "personalised-tee"},
+                                     {"$set": {"product_id": "personalised-tee", "bulk_pricing_enabled": True, "bulk_pricing_overrides": tiers}}, upsert=True)
+    if "personalised-tee" in PRODUCTS:
+        PRODUCTS["personalised-tee"]["bulk_pricing_enabled"] = True
+        PRODUCTS["personalised-tee"]["bulk_pricing_overrides"] = tiers
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+
+
 async def _workforce_starter_range_v1():
     """One-off (marker-guarded): tick 'Workforce eligible' on the starter range.
     Only sets the tick where the admin hasn't set it either way - nothing else
@@ -7744,6 +7809,14 @@ async def _load_imported_products():
             await _fill_pencarrie_size_charts_v1("sols_leading_zero_size_charts_v1")
         except Exception as e:
             logging.warning(f"supplier size charts skipped: {e}")
+        try:
+            await _reprice_2026_10_v1()
+        except Exception as e:
+            logging.warning(f"re-price skipped: {e}")
+        try:
+            await _designer_tee_bulk_v1()
+        except Exception as e:
+            logging.warning(f"designer tee bulk skipped: {e}")
         try:
             await _workforce_starter_range_v1()
         except Exception as e:

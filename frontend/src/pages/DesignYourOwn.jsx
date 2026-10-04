@@ -4,7 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import FontPicker from "../components/bold/FontPicker";
-import { fetchDesignerProducts, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
+import { fetchDesignerProducts, fetchProductBulkTiers, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { useCustomerAuth, useAccountDiscount, discounted } from "../context/CustomerAuthContext";
 import { toast } from "sonner";
@@ -156,10 +156,21 @@ export default function DesignYourOwn() {
           ? (product?.print_area_back ? garmentPrintAreaBack : FLAT_COLOUR_PRINT_AREA_BACK)
           : (product?.print_area ? garmentPrintArea : FLAT_COLOUR_PRINT_AREA))
       : rawPrintArea;
-  const unitPrice = product?.price ?? 0;
+  const listPrice = product?.price ?? 0;
+  // Bulk price for this garment (Product settings > Bulk pricing) - the server
+  // applies it at checkout, so the total shown here must too.
+  const [bulkTiers, setBulkTiers] = useState([]);
+  useEffect(() => {
+    setBulkTiers([]);
+    if (!product?.id) return;
+    fetchProductBulkTiers(product.id).then((d) => setBulkTiers((d && d.tiers) || [])).catch(() => {});
+  }, [product?.id]);
   const backPrintPrice = product?.back_print_price ?? 0;
   const neckLabelPrice = product?.neck_label_price ?? 1.5;
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
+  const activeTier = [...bulkTiers].sort((a, b) => b.min_qty - a.min_qty).find((t) => totalQty >= t.min_qty && t.unit_price < listPrice) || null;
+  const nextBulkTier = [...bulkTiers].sort((a, b) => a.min_qty - b.min_qty).find((t) => totalQty < t.min_qty && t.unit_price < listPrice) || null;
+  const unitPrice = activeTier ? activeTier.unit_price : listPrice;
   const subtotal = useMemo(() => {
     if (!product) return 0;
     const u = product.size_upcharges || {};
@@ -850,10 +861,16 @@ export default function DesignYourOwn() {
             <Panel title="Total">
               <div className="flex items-baseline justify-between">
                 <span className="text-xs font-nunito font-bold text-[#4b5563]">
-                  {product?.was_price > unitPrice && (
+                  {activeTier && (
+                    <span className="block mb-0.5 text-[#166534]" data-testid="designer-bulk-active">Bulk price: £{activeTier.unit_price.toFixed(2)} each for {activeTier.min_qty}+</span>
+                  )}
+                  {!activeTier && nextBulkTier && (
+                    <span className="block mb-0.5" data-testid="designer-bulk-next">Order {nextBulkTier.min_qty}+ and pay £{nextBulkTier.unit_price.toFixed(2)} each</span>
+                  )}
+                  {product?.was_price > listPrice && (
                     <span className="block mb-0.5" data-testid="designer-offer">
                       <span className="bg-[#f07c74] text-white rounded-full px-2 py-0.5 text-[10px] font-extrabold mr-1.5">Offer</span>
-                      <span className="line-through">£{Number(product.was_price).toFixed(2)}</span> now £{unitPrice.toFixed(2)}
+                      <span className="line-through">£{Number(product.was_price).toFixed(2)}</span> now £{listPrice.toFixed(2)}
                     </span>
                   )}
                   {totalQty} × from £{unitPrice.toFixed(2)}{backEnabled && <> + £{backPrintPrice.toFixed(2)} back</>}{neckEnabled && <> + £{neckLabelPrice.toFixed(2)} neck</>}</span>
