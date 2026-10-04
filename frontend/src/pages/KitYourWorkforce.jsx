@@ -529,7 +529,7 @@ function ArtworkUploader({ label, helper, required, dataUrl, onChange, testid, a
         <div>
           <div className="font-extrabold text-sm flex items-center gap-2">
             {label}
-            {required && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold" style={{ background: accent, color: "#1a1a1a" }}>Required</span>}
+            {required && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#fbbf24] text-[#1a1a1a]" data-testid={`${testid}-required`}>Required</span>}
           </div>
           <div className="text-[11px] text-[#4b5563] mt-0.5">{helper}</div>
         </div>
