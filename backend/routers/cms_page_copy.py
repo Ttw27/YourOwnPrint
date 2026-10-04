@@ -22,6 +22,7 @@ PAGE_COPY_SLUGS = [
     "for-business",
     "easy-ordering",
     "dtf-printing",
+    "how-we-print",  # the shared "How we print" block (homepage + product pages)
     "website-services",
     "free-logo-design",
     "business-enquiry",

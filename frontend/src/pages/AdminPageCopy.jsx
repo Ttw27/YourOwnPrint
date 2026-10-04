@@ -5,6 +5,7 @@ import { Loader2, Save, Plus, Trash2, RotateCcw, Upload, Image as ImageIcon, X, 
 import { MEDIA_RATIOS } from "../components/bold/MediaBlock";
 import { DEFAULT_HERO_IMAGES, DEFAULT_PRICE_PROMISE_PHOTO } from "../lib/defaultImages";
 import { SECTORS, TOOLS_SHOWCASE } from "../lib/data";
+import { Link } from "react-router-dom";
 
 /**
  * /admin/page-copy - Editable hero copy / bullets / body / FAQ / CTA for every
@@ -303,6 +304,76 @@ function ImageField({ label, hint, value, onChange, testid, compact, fallback = 
   );
 }
 
+// Sections that appear on a page but are edited somewhere else (they're shared
+// by several pages). Listed on each page's editor with where else they show and
+// a button to where they're changed, so nothing on a page is "hidden" from it.
+const SHARED_FOR = (slug) => {
+  if (slug === "home") return ["pricepromise", "tools", "howweprint", "trusted", "recentwork"];
+  if (["specials", "team-kits", "kit-your-workforce"].includes(slug)) return ["pricepromise"];
+  if (slug === "portfolio") return ["tools"];
+  if (slug === "how-we-print") return ["howweprint-self"];
+  if (SITE_INDUSTRIES.some((i) => i.slug === slug)) return ["industryheader", "tools"];
+  return [];
+};
+
+function SharedSections({ slug, siteImages, builtIn, onOpen }) {
+  const keys = SHARED_FOR(slug);
+  if (!keys.length) return null;
+  const img = (k, fb) => (siteImages.images || {})[k] || fb;
+  const tools = TOOLS_SHOWCASE.map((t) => img(`tool:${t.key}`, t.image));
+  const ITEMS = {
+    pricepromise: { label: "Price Promise photo ('Looking professional shouldn't cost a fortune')",
+      where: "Shows on the homepage, every product page, Specials, Team Kits and Kit Your Workforce - one photo for all of them.",
+      thumbs: [img("pricepromise", DEFAULT_PRICE_PROMISE_PHOTO)], go: "site-images" },
+    tools: { label: "The 5 tool tiles (Design Your Own, Specials, Kit Your Workforce, Team Kits, Fight Night)",
+      where: "Shows on the homepage, shop pages, industry pages, sports pages and Portfolio.",
+      thumbs: tools, go: "site-images" },
+    howweprint: { label: "'How we print' section (DTF)",
+      where: "Shows on the homepage and every product page. Its wording is edited in its own entry.", go: "how-we-print" },
+    "howweprint-self": { label: "Where this block shows",
+      where: "This section appears on the homepage and on every product page, so changes here show in all of those places." },
+    trusted: { label: "'Trusted by' logos", where: "Edited in Admin > Portfolio.", href: "/admin/portfolio" },
+    recentwork: { label: "Recent work photos", where: "Your portfolio jobs - edited in Admin > Portfolio.", href: "/admin/portfolio" },
+    industryheader: { label: "Header photo at the top of this page",
+      where: "Also used on this industry's tile in the Shop by Industry list.",
+      thumbs: [img(`industry:${slug}`, builtIn.industries[slug] || "")].filter(Boolean), go: "site-images" },
+  };
+  return (
+    <div className="border-2 border-[#dcfce7] rounded-2xl p-4 bg-white mb-4" data-testid="apc-shared">
+      <div className="text-sm font-extrabold">Shared sections on this page</div>
+      <p className="text-[11px] text-[#4b5563] mb-3">These appear on this page too, but they&rsquo;re shared with other pages, so they&rsquo;re changed in one place.</p>
+      <div className="space-y-2">
+        {keys.map((k) => {
+          const it = ITEMS[k];
+          return (
+            <div key={k} className="flex items-center gap-3 border border-[#e5e7eb] rounded-xl p-2.5" data-testid={`apc-shared-${k}`}>
+              {it.thumbs?.length > 0 && (
+                <div className="flex -space-x-3 flex-shrink-0">
+                  {it.thumbs.slice(0, 5).map((u, i) => (
+                    <img key={i} src={u} alt="" className="w-12 h-12 rounded-lg object-cover border-2 border-white" />
+                  ))}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-extrabold">{it.label}</div>
+                <div className="text-[10px] text-[#4b5563]">{it.where}</div>
+              </div>
+              {it.go && (
+                <button type="button" onClick={() => onOpen(it.go)} className="text-[11px] font-extrabold text-[#166534] border-2 border-[#7bc67e] rounded-full px-3 py-1.5 hover:bg-[#f0fdf4] whitespace-nowrap" data-testid={`apc-shared-open-${k}`}>
+                  Change it &rarr;
+                </button>
+              )}
+              {it.href && (
+                <Link to={it.href} className="text-[11px] font-extrabold text-[#166534] border-2 border-[#7bc67e] rounded-full px-3 py-1.5 hover:bg-[#f0fdf4] whitespace-nowrap">Open &rarr;</Link>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // Garment-type tabs at the top of an industry page. Saved in extras.tabs;
 // "Use the suggested tabs" removes it so the built-in list applies again.
 function IndustryTabsCard({ slug, value, onChange }) {
@@ -366,6 +437,11 @@ export default function AdminPageCopy() {
   // Built-in header photos for industry + sports pages (they come from the
   // backend catalogue), shown in the editor while no photo is saved.
   const [builtIn, setBuiltIn] = useState({ industries: {}, sports: {} });
+  // Site-wide pictures, for the "Shared sections on this page" thumbnails.
+  const [siteImages, setSiteImages] = useState({});
+  useEffect(() => {
+    api.get("/page-copy/site-images").then(({ data }) => setSiteImages(data || {})).catch(() => {});
+  }, [slug]);
   useEffect(() => {
     const toMap = (list) => Object.fromEntries((Array.isArray(list) ? list : []).map((x) => [x.slug, x.hero_image]));
     Promise.all([api.get("/industries").catch(() => ({})), api.get("/sports-teams").catch(() => ({}))])
@@ -514,6 +590,8 @@ export default function AdminPageCopy() {
               {SITE_INDUSTRIES.some((it) => it.slug === slug) && (
                 <IndustryTabsCard slug={slug} value={(copy.extras || {}).tabs} onChange={(v) => setExtra("tabs", v)} />
               )}
+
+              <SharedSections slug={slug} siteImages={siteImages} builtIn={builtIn} onOpen={(s) => { setSlug(s); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 
               {/* ---- Images (stored in the DB, so they survive every deploy) ---- */}
               <div className="border-2 border-[#dcfce7] rounded-2xl p-4 bg-[#f9fafb]" data-testid="apc-images">
