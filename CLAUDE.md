@@ -195,6 +195,9 @@ frontend/src/
   `_reprice_2026_10_v1` applied backend/data/reprice_2026_10.json once: raised underpriced base prices, added
   `colour_upcharges` on dearer colours and `size_upcharges` for 3XL+ (supplier products had none). Designer tee bulk
   = one tier only (£6.99 at 10+, `_designer_tee_bulk_v1`); the designer page now shows/applies bulk tiers like checkout.
+- **Micro fleece = small prints only** (DTF flattens/shines pile): `_micro_fleece_prints_v1` set
+  allowed_placements to chest + sleeves (gilets/bodywarmers chest only) on micro fleece garments without hand-set
+  positions; skips balaclava/Morf/bob hat and fleece-LINED shell jackets.
 - **Kit Your Workforce pricing:** per garment = garment price (after workforce bulk %, snapped to .99) + £3.50 logo
   (`WORKFORCE_LOGO_PRICE`), floored at the Specials price (`workforce_min_unit`: matching `special-<id>`, else the
   cheapest live Special of the same category) so it never undercuts Specials; + size upcharge + £3.50 back print.

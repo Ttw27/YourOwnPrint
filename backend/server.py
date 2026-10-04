@@ -5704,6 +5704,35 @@ async def _designer_tee_bulk_v1():
     await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
 
 
+async def _micro_fleece_prints_v1():
+    """One-off (marker-guarded, Tim approved Oct 2026): micro fleece garments get
+    small prints only - chest and sleeves (no full front / back), because DTF
+    flattens and shines fleece pile over a big area. Gilets/bodywarmers have no
+    sleeves, so chest only. Skips products whose print positions were set by hand
+    (product_meta.allowed_placements), and non-garments / fleece-LINED shells."""
+    marker = "micro_fleece_prints_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    skip_words = ("balaclava", "morf", "bob hat", "lined")
+    done = 0
+    for pid, p in list(PRODUCTS.items()):
+        name = (p.get("name") or "").lower()
+        if not re.search(r"micro ?-?fleece", name) or any(w in name for w in skip_words):
+            continue
+        meta = await db.product_meta.find_one({"product_id": pid}, {"allowed_placements": 1})
+        if meta and meta.get("allowed_placements") is not None:
+            continue
+        small = ["left-breast", "right-breast"] + ([] if re.search(r"gilet|bodywarmer|body warmer|vest\b", name) else ["left-sleeve", "right-sleeve"])
+        current = p.get("allowed_placements")
+        allowed = [x for x in small if current is None or x in current]
+        await db.product_meta.update_one({"product_id": pid}, {"$set": {"product_id": pid, "allowed_placements": allowed}}, upsert=True)
+        p["allowed_placements"] = allowed
+        done += 1
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "set": done,
+                                  "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"{marker}: {done} micro fleece product(s) limited to chest/sleeve prints")
+
+
 async def _workforce_starter_range_v1():
     """One-off (marker-guarded): tick 'Workforce eligible' on the starter range.
     Only sets the tick where the admin hasn't set it either way - nothing else
@@ -7821,6 +7850,10 @@ async def _load_imported_products():
             await _fill_pencarrie_size_charts_v1("sols_leading_zero_size_charts_v1")
         except Exception as e:
             logging.warning(f"supplier size charts skipped: {e}")
+        try:
+            await _micro_fleece_prints_v1()
+        except Exception as e:
+            logging.warning(f"micro fleece prints skipped: {e}")
         try:
             await _reprice_2026_10_v1()
         except Exception as e:
