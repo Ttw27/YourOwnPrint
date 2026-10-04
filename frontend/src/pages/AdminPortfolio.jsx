@@ -5,6 +5,20 @@ import { adminListPortfolio, adminCreatePortfolio, adminUpdatePortfolio, adminDe
 import { photoStyle } from "../components/bold/ImageSwiper";
 import { Upload, Trash2, Star, Eye, EyeOff, Loader2, Save, Image as ImageIcon, ArrowLeft, ArrowRight } from "lucide-react";
 
+// Plain-English names for "Which page it shows on" (the value saved stays the same).
+const CAT_LABELS = {
+  workwear: "Portfolio - Workwear", "team-kits": "Portfolio - Team kits", leavers: "Portfolio - Leavers",
+  sports: "Portfolio - Sports", fitness: "Portfolio - Fitness", hospitality: "Portfolio - Hospitality",
+  schools: "Portfolio - Schools", events: "Portfolio - Events", beauty: "Portfolio - Beauty",
+  barbering: "Portfolio - Barbering", other: "Portfolio - Other",
+  "fight-night-action": "Fight Night tee page - 'See the tee in action' gallery",
+  "festival-tees-and-brands": "Festival Tees & Start Your Brand page - gallery",
+  "leavers-front-designs": "Leavers designer - front design choices",
+  "leavers-back-designs": "Leavers designer - back design choices",
+  "leavers-full-front-designs": "Leavers designer - full-front design choices",
+};
+const catLabel = (c) => CAT_LABELS[c] || c;
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -109,7 +123,7 @@ export default function AdminPortfolio() {
               </Field>
               <Field label="Which page it shows on" testid="admin-portfolio-cat">
                 <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className="input">
-                  {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {cats.map((c) => <option key={c} value={c}>{catLabel(c)}</option>)}
                 </select>
               </Field>
               <Field label="Caption shown under the photo (optional)" testid="admin-portfolio-caption">
@@ -172,7 +186,7 @@ export default function AdminPortfolio() {
                     className="input font-extrabold text-sm"
                   />
                   <select value={it.category} onChange={(e) => patchItem(it.id, { category: e.target.value })} className="input text-xs">
-                    {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {cats.map((c) => <option key={c} value={c}>{catLabel(c)}</option>)}
                   </select>
                   <textarea defaultValue={it.caption} onBlur={(e) => e.target.value !== (it.caption || "") && patchItem(it.id, { caption: e.target.value })} className="input text-xs min-h-[40px]" placeholder="Caption" />
                   <div className="flex items-center justify-between text-xs">

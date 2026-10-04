@@ -20,7 +20,11 @@ const PRETTY = {
   beauty: "Beauty",
   barbering: "Barbering",
   other: "Other",
+  "fight-night-action": "Fight Night",
+  "festival-tees-and-brands": "Festival & Brands",
 };
+// Design-template libraries for the leavers designer - not past jobs, so not shown here.
+const NOT_PORTFOLIO = new Set(["leavers-front-designs", "leavers-back-designs", "leavers-full-front-designs"]);
 
 export default function Portfolio() {
   usePageTitle("Our Work", { description: "Recent custom print and embroidery projects." });
@@ -40,6 +44,7 @@ export default function Portfolio() {
     setLoading(true);
     fetchAllPortfolio()
       .then((d) => {
+        d = { ...d, items: (d.items || []).filter((i) => !NOT_PORTFOLIO.has(i.category)) };
         setData(d);
         // /portfolio?item=<id> (e.g. from the homepage strip) opens that job full size.
         const want = searchParams.get("item");
