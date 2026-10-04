@@ -204,6 +204,11 @@ frontend/src/
   the `X-Customer-Token` header the api.js interceptor sends). Frontend mirrors it via
   `useAccountDiscount()` / `discounted()` (CustomerAuthContext) in PriceTag, PDP, designer, cart.
 
+- **Full colour ranges.** The old bulk import cut every product to its first 24 colours (cap removed).
+  `_restore_cut_colours_v1` (marker `pencarrie_full_colours_v1`) adds the missing ones back from
+  `backend/data/pencarrie_colours.json` (PenCarrie export, styles with >24 colours, not discontinued) - add-only,
+  never Ralawise/bundles; hidden colours + hand-set colours still win via reapply_saved_settings. Photos are copied
+  to R2 in the background by `_mirror_restored_colour_photos` (marker `pencarrie_full_colours_photos_v1`).
 - **Size guides: real measurements only.** The old generic chart template (made-up XS-4XL numbers)
   was removed site-wide (never bring it back). Automatic charts come only from
   `backend/data/pencarrie_size_charts.json` (built from PenCarrie's product export "Size

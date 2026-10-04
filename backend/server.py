@@ -7473,6 +7473,105 @@ async def _fill_pencarrie_size_charts_v1(marker: str = "pencarrie_size_charts_v1
     logging.info(f"{marker}: {len(writes)} product(s) given their real size chart")
 
 
+_PC_FULL_COLOURS: Optional[Dict[str, List[Dict]]] = None
+
+
+def _pencarrie_full_colours() -> Dict[str, List[Dict]]:
+    """Every colour PenCarrie makes, for styles with more than 24 (the ones the
+    old import cap cut short). backend/data/pencarrie_colours.json, built from
+    PenCarrie's product export: style -> [{name, hex, image}] (not discontinued)."""
+    global _PC_FULL_COLOURS
+    if _PC_FULL_COLOURS is None:
+        try:
+            with open(ROOT_DIR / "data" / "pencarrie_colours.json") as fh:
+                _PC_FULL_COLOURS = __import__("json").load(fh)
+            for k in list(_PC_FULL_COLOURS):  # SOL'S "04770" is "4770" on the site
+                if k.startswith("0") and k.lstrip("0") and k.lstrip("0") not in _PC_FULL_COLOURS:
+                    _PC_FULL_COLOURS[k.lstrip("0")] = _PC_FULL_COLOURS[k]
+        except Exception as e:
+            logging.warning(f"PenCarrie colour list unavailable: {e}")
+            _PC_FULL_COLOURS = {}
+    return _PC_FULL_COLOURS
+
+
+def _full_colours_for(doc: Dict) -> List[Dict]:
+    if doc.get("source") in ("ralawise", "bundle"):
+        return []
+    return _pencarrie_full_colours().get(str(doc.get("source_sku") or doc.get("id") or "").upper()) or []
+
+
+async def _restore_cut_colours_v1(marker: str = "pencarrie_full_colours_v1") -> None:
+    """One-off (marker-guarded): the old bulk import kept only the first 24
+    colours of each product. Add back the missing ones from PenCarrie's file.
+    Only ADDS colours (existing ones, their order and photos are kept), so
+    nothing is removed. Colours switched off in Product settings stay off, and
+    hand-set colours (overrides / designer colours) still win - both are
+    re-applied on top by reapply_saved_settings. Photos are copied to R2 in the
+    background by _mirror_restored_colour_photos."""
+    if await db.settings.find_one({"key": marker}):
+        return
+    changed: List[str] = []
+    added_total = 0
+    async for doc in db.imported_products.find({}, {"id": 1, "colors": 1, "source": 1, "source_sku": 1}):
+        cols = doc.get("colors") or []
+        if len(cols) < 24:
+            continue  # never hit the cap - nothing was cut
+        full = _full_colours_for(doc)
+        have = {str(c.get("name") if isinstance(c, dict) else c).strip().lower() for c in cols}
+        add = [{"name": c["name"], "hex": c.get("hex") or "#cccccc", "image": ""}
+               for c in full if c["name"].strip().lower() not in have]
+        if not add:
+            continue
+        await db.imported_products.update_one({"id": doc["id"]}, {"$set": {"colors": cols + add}})
+        changed.append(doc["id"])
+        added_total += len(add)
+    async for d in db.imported_products.find({"id": {"$in": changed}}):
+        _apply_imported_product(d)
+    if changed:
+        await reapply_saved_settings(changed)
+    await db.settings.update_one({"key": marker}, {"$set": {
+        "key": marker, "products": len(changed), "colours_added": added_total,
+        "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"{marker}: {added_total} missing colour(s) added back to {len(changed)} product(s)")
+
+
+async def _mirror_restored_colour_photos(marker: str = "pencarrie_full_colours_photos_v1") -> None:
+    """Background: give the colours added back by _restore_cut_colours_v1 their
+    photo (PenCarrie's front shot, copied to R2). Resumable - each colour is saved
+    as soon as its photo is copied, and it runs again after a restart until done."""
+    if await db.settings.find_one({"key": marker}):
+        return
+    from services.r2_storage import mirror_external_image
+    sem = asyncio.Semaphore(6)
+    done = failed = 0
+    async for doc in db.imported_products.find({"colors.image": ""}, {"id": 1, "colors": 1, "source": 1, "source_sku": 1}):
+        src = {c["name"].strip().lower(): c.get("image") for c in _full_colours_for(doc) if c.get("image")}
+        todo = [c for c in (doc.get("colors") or []) if isinstance(c, dict) and not c.get("image")
+                and src.get(str(c.get("name") or "").strip().lower())]
+        if not todo:
+            continue
+
+        async def one(c):
+            nonlocal done, failed
+            async with sem:
+                url = await mirror_external_image(src[str(c["name"]).strip().lower()])
+            if not url:
+                failed += 1
+                return
+            await db.imported_products.update_one({"id": doc["id"], "colors.name": c["name"]}, {"$set": {"colors.$.image": url}})
+            done += 1
+
+        await asyncio.gather(*(one(c) for c in todo))
+        fresh = await db.imported_products.find_one({"id": doc["id"]})
+        if fresh:
+            _apply_imported_product(fresh)
+            await reapply_saved_settings([doc["id"]])
+    await db.settings.update_one({"key": marker}, {"$set": {
+        "key": marker, "copied": done, "failed": failed,
+        "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"{marker}: {done} colour photo(s) copied, {failed} failed")
+
+
 async def _mark_not_printable_v1() -> None:
     """One-off (marker-guarded): set 'no print positions' on existing products
     that can't be printed (see is_not_printable) - unless the admin has set
@@ -7545,6 +7644,11 @@ async def _load_imported_products():
             await _fill_pencarrie_size_charts_v1("sols_leading_zero_size_charts_v1")
         except Exception as e:
             logging.warning(f"supplier size charts skipped: {e}")
+        try:
+            await _restore_cut_colours_v1()
+            asyncio.create_task(_mirror_restored_colour_photos())
+        except Exception as e:
+            logging.warning(f"colour restore skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:
@@ -8085,7 +8189,7 @@ async def bulk_import_products(payload: BulkImportPayload):
                      "hex":  str((c.get("hex") if isinstance(c, dict) else "#cccccc") or "#cccccc"),
                      "image": str(c.get("image") or "").strip() if isinstance(c, dict) else ""}
                     for c in (raw.get("colors") or [])
-                ][:24],
+                ],  # every colour (an old [:24] cap here cut PenCarrie ranges short - see _restore_cut_colours_v1)
                 "sizes": [str(s) for s in (raw.get("sizes") or [])],
                 "size_upcharges": raw.get("size_upcharges") or {},
                 "source": raw.get("source") or payload.default_source or "manual",
