@@ -91,7 +91,9 @@ export default function KitYourWorkforce() {
     const p = productById[r.product_id];
     if (!p) return 0;
     const factor = 1 - (currentTierPct / 100);
-    const base = currentTierPct > 0 ? snap99(p.price * factor) : p.price;
+    const garment = currentTierPct > 0 ? snap99(p.price * factor) : p.price;
+    // + the logo on every garment, never below the matching Specials price (server does the same)
+    const base = Math.max(garment + Number(p.logo_price ?? tiers.logo_price ?? 3.5), Number(p.min_unit || 0));
     const upcharge = Number(p.size_upcharges?.[r.size] || 0);
     const back = r.back_print ? (tiers.back_print_price || 3.5) : 0;
     return (base + upcharge + back) * Number(r.qty || 0);
@@ -140,7 +142,7 @@ export default function KitYourWorkforce() {
         contact_phone: contact.phone,
         lines: rows.map(r => ({ product_id: r.product_id, size: r.size, qty: Number(r.qty), back_print: !!r.back_print })),
       });
-      toast.success("Quote request sent - we'll be in touch within 24 hours.");
+      toast.success("Quote request sent - we'll be in touch soon.");
       setRows([]);
     } catch (e) {
       const d = e?.response?.data?.detail;
@@ -203,7 +205,7 @@ export default function KitYourWorkforce() {
                         <img src={p.image} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="font-extrabold text-sm truncate">{p.name}</div>
-                          <div className="text-xs text-[#4b5563]">From £{p.price.toFixed(2)} · {p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
+                          <div className="text-xs text-[#4b5563]">£{Number(p.unit_with_logo ?? p.price).toFixed(2)} with your logo · {p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
                         </div>
                         <div className={`w-8 h-8 grid place-items-center rounded-full transition-transform ${isOpen ? "bg-[#fbbf24] text-[#1a1a1a] rotate-180" : "bg-[#fef3c7] text-[#1a1a1a]"}`}>
                           {isOpen ? <ChevronDown size={16} /> : <Plus size={16} />}
@@ -283,7 +285,7 @@ export default function KitYourWorkforce() {
             <div className="grid sm:grid-cols-2 gap-3">
               <ArtworkUploader
                 label="Breast logo"
-                helper="Printed on every garment (no charge)."
+                helper="Printed on every garment (£3.50 each, already in the prices shown)."
                 required
                 dataUrl={breastLogo}
                 onChange={setBreastLogo}
@@ -319,7 +321,7 @@ export default function KitYourWorkforce() {
                     <div key={r.uid} className="bg-white border-2 border-[#e5e7eb] rounded-2xl p-3 flex flex-wrap items-center gap-3" data-testid={`workforce-row-${r.uid}`}>                      <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-contain bg-white" />
                       <div className="flex-1 min-w-[140px]">
                         <div className="font-extrabold text-sm">{p.name}</div>
-                        <div className="text-[11px] text-[#4b5563]">Breast logo included free</div>
+                        <div className="text-[11px] text-[#4b5563]">Logo £3.50 per garment - already in the prices shown</div>
                       </div>
                       <select
                         value={r.size}
@@ -389,7 +391,7 @@ export default function KitYourWorkforce() {
             )}
             {overThreshold && (
               <div className="mt-3 bg-amber-900/40 border border-amber-700 rounded-xl p-3 text-xs" data-testid="workforce-quote-banner">
-                <strong>Over {tiers.quote_threshold} garments</strong> - please request a quote and we&apos;ll come back within 24 hours with our best price.
+                <strong>Over {tiers.quote_threshold} garments</strong> - please request a quote and we&apos;ll come back to you with our best price.
               </div>
             )}
 
@@ -424,7 +426,7 @@ export default function KitYourWorkforce() {
           </div>
 
           <div className="mt-4 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-4 text-xs space-y-2">
-            <div className="flex items-start gap-2"><Sparkles size={14} className="text-[#fbbf24] mt-0.5"/> <span><strong>Breast logo print</strong> included on every garment (no charge).</span></div>
+            <div className="flex items-start gap-2"><Sparkles size={14} className="text-[#fbbf24] mt-0.5"/> <span><strong>Your logo</strong> printed on every garment - £3.50 each, already included in the prices shown.</span></div>
             <div className="flex items-start gap-2"><Truck size={14} className="text-[#fbbf24] mt-0.5"/> <span>Free UK delivery on orders over £150. 7–10 working days for most kits.</span></div>
           </div>
         </aside>

@@ -190,6 +190,10 @@ frontend/src/
 - **Design Your Own products** (`designer_enabled`) are sold ONLY through the designer: `/product/:id`
   redirects to `/design?product=:id`. For a garment that should also be sold normally, duplicate it first.
 
+- **Kit Your Workforce pricing:** per garment = garment price (after workforce bulk %, snapped to .99) + £3.50 logo
+  (`WORKFORCE_LOGO_PRICE`), floored at the Specials price (`workforce_min_unit`: matching `special-<id>`, else the
+  cheapest live Special of the same category) so it never undercuts Specials; + size upcharge + £3.50 back print.
+  Frontend (KitYourWorkforce.jsx) mirrors it using `logo_price` / `min_unit` from /workforce/products.
 - **Delivery** (`routers/delivery.py`, Admin > Configurator prices > Delivery): chosen on Stripe's
   checkout page via `shipping_options` passed by ALL 4 checkout paths (`_delivery_options_for`):
   free collection, free local (LE1-LE5, checked after payment -> warning on the order), UK by

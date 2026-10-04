@@ -3593,6 +3593,25 @@ SETTINGS_KEY_WORKFORCE_TIERS = "workforce_tiers_pct"
 SETTINGS_KEY_WORKFORCE_QUOTE_THRESHOLD = "workforce_quote_threshold"
 WORKFORCE_QUOTE_THRESHOLD_DEFAULT = 100  # > 100 garments → quote-only
 WORKFORCE_BACK_PRINT_PRICE = 3.50  # per-garment add-on
+WORKFORCE_LOGO_PRICE = 3.50        # the breast/front logo on every garment
+
+
+def workforce_min_unit(p: Dict) -> float:
+    """Kit Your Workforce must never undercut Your Own Print Specials: the lowest
+    a garment (with its logo) can go is the matching Special's price (same
+    garment, id "special-<id>"), else the cheapest live Special of the same type."""
+    sp = PRODUCTS.get(f"special-{p.get('id')}")
+    if sp and is_live(sp):
+        return float(sp["price"])
+    same = [float(s["price"]) for s in live_products()
+            if s.get("specials_eligible") and not s.get("designer_enabled") and s.get("category") == p.get("category")]
+    return min(same) if same else 0.0
+
+
+def workforce_unit(base_price: float, factor: float, p: Dict) -> float:
+    """Garment (after the bulk discount) + logo, floored at the Specials price."""
+    garment = snap_to_99(base_price * factor) if factor < 1 else base_price
+    return round(max(garment + WORKFORCE_LOGO_PRICE, workforce_min_unit(p)), 2)
 
 
 async def _get_workforce_tiers() -> List[Tuple[int, float]]:
@@ -3628,6 +3647,10 @@ async def list_workforce_products():
                 "category": p["category"],
                 "brand": p.get("brand") or "",
                 "allowed_placements": p.get("allowed_placements") if p.get("allowed_placements") is not None else list(ALLOWED_PLACEMENT_OPTIONS),
+                # what one costs with the logo (before bulk discounts), and the floor
+                "logo_price": WORKFORCE_LOGO_PRICE,
+                "min_unit": workforce_min_unit(p),
+                "unit_with_logo": workforce_unit(float(p["price"]), 1.0, p),
             })
     out.sort(key=lambda x: x["price"])
     return out
@@ -4294,6 +4317,7 @@ async def get_workforce_tiers():
         "tiers": [{"min_qty": q, "pct": p} for q, p in sorted(tiers, key=lambda x: x[0])],
         "quote_threshold": await _get_workforce_threshold(),
         "back_print_price": WORKFORCE_BACK_PRINT_PRICE,
+        "logo_price": WORKFORCE_LOGO_PRICE,
     }
 
 
@@ -4457,8 +4481,9 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     breakdown_strs: List[str] = []
     for ln in valid_lines:
         # tier discount applies only to the garment base (not size upcharges or back-print)
-        unit_garment = snap_to_99(ln["base_price"] * factor) if discount_pct > 0 else ln["base_price"]
-        unit = unit_garment + ln["size_upcharge"] + (WORKFORCE_BACK_PRINT_PRICE if ln["back_print"] else 0.0)
+        # logo £3.50 on every garment; never below the matching Specials price
+        unit_garment = workforce_unit(ln["base_price"], factor, PRODUCTS[ln["product_id"]])
+        unit = round(unit_garment + ln["size_upcharge"] + (WORKFORCE_BACK_PRINT_PRICE if ln["back_print"] else 0.0), 2)
         line_total = round(unit * ln["qty"], 2)
         ln["unit_price"] = unit
         ln["line_total"] = line_total
