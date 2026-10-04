@@ -195,6 +195,10 @@ frontend/src/
   `_reprice_2026_10_v1` applied backend/data/reprice_2026_10.json once: raised underpriced base prices, added
   `colour_upcharges` on dearer colours and `size_upcharges` for 3XL+ (supplier products had none). Designer tee bulk
   = one tier only (£6.99 at 10+, `_designer_tee_bulk_v1`); the designer page now shows/applies bulk tiers like checkout.
+- **Bundles are LOGO-ONLY** (Tim, Oct 2026): one logo, included, at `bundle_logo_position()` (left chest, else the
+  garment's cheapest position e.g. cap front). Server forces it for any bundle with `bundle_included_print` (never
+  blank, no extra positions); the PDP shows a fixed "3. Your logo" step + upload, linking to Kit Your Workforce /
+  quote for more prints.
 - **Hi-vis vests/waistcoats/tabards/gilets = chest + back only** (no full front - opening + tape; no sleeves except
   long-sleeve waistcoats): `_hivis_vest_prints_v1`, also applied to bundles made from them. Bundles' included logo
   value = chest logo, or the cheapest allowed position where a garment has no chest (`bundle_included_value`).

@@ -1642,7 +1642,13 @@ async def _resolve_line_pricing(
         placements = [p for p in placements if "back" not in (p or "").lower()]
 
     # Resolve print cost using the same rules across every flow
-    if blank:
+    if product.get("bundle_items") and product.get("bundle_included_print"):
+        # Bundles are logo-only (Tim, Oct 2026): exactly ONE logo, included in
+        # the price, in the garment's logo spot - nothing else, never blank.
+        pos = bundle_logo_position(product)
+        placements_clean = [pos] if pos else []
+        print_cost = 0.0
+    elif blank:
         placements_clean: List[str] = []
         print_cost = 0.0
     elif product_id in FIGHT_NIGHT_IDS:
@@ -2427,6 +2433,20 @@ class DesignerArtwork(BaseModel):
     width: Optional[int] = None
     height: Optional[int] = None
     session_id: Optional[str] = None
+
+
+def bundle_logo_position(product: Dict) -> Optional[str]:
+    """Where a bundle's included logo goes: left chest where the garment allows
+    it, else its smallest/cheapest position (e.g. the front of a cap)."""
+    allowed = product.get("allowed_placements")
+    if not isinstance(allowed, list):
+        allowed = _auto_allowed_placements(product.get("name") or "", product.get("category") or "")
+    allowed = [x for x in allowed if x in PLACEMENT_BY_ID]
+    if not allowed:
+        return None
+    if "left-breast" in allowed:
+        return "left-breast"
+    return sorted(allowed, key=lambda x: (float(PLACEMENT_BY_ID[x]["price"]), allowed.index(x)))[0]
 
 
 def bundle_included_value(product: Dict) -> float:

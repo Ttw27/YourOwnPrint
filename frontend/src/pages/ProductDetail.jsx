@@ -154,15 +154,19 @@ export default function ProductDetail() {
   // Bundles include one logo: pre-tick it (left chest where allowed, else the
   // garment's cheapest position) so nobody checks out without their logo.
   const isBundleProduct = Array.isArray(product?.bundle_items) && product.bundle_items.length > 0;
+  // Bundles are logo-only: ONE logo, included, in the garment's logo spot (left
+  // chest, or e.g. the front of a cap) - same rule as the server.
+  const isLogoOnlyBundle = isBundleProduct && !!product?.bundle_included_print;
+  const bundleLogoPos = useMemo(() => {
+    if (!isLogoOnlyBundle || !visiblePlacements.length) return null;
+    const lb = visiblePlacements.find((x) => x.id === "left-breast");
+    return (lb || [...visiblePlacements].sort((x, y) => (x.price || 0) - (y.price || 0))[0]).id;
+  }, [isLogoOnlyBundle, visiblePlacements]);
   useEffect(() => {
-    if (!isBundleProduct || !product?.bundle_included_print || !visiblePlacements.length) return;
-    setSelectedPlacements((prev) => {
-      if (prev.length) return prev;
-      const lb = visiblePlacements.find((x) => x.id === "left-breast");
-      const pick = lb || [...visiblePlacements].sort((x, y) => (x.price || 0) - (y.price || 0))[0];
-      return pick ? [pick.id] : prev;
-    });
-  }, [isBundleProduct, product, visiblePlacements]);
+    if (!bundleLogoPos) return;
+    setPrintMode("custom");
+    setSelectedPlacements([bundleLogoPos]);
+  }, [bundleLogoPos]);
 
   const togglePlacement = (pid) => {
     if (blank) return;
@@ -528,7 +532,23 @@ export default function ProductDetail() {
                 )}
 
                 {/* PRINT MODE - prominent segmented choice (hidden for Specials, they include a breast print in the price) */}
-                {isSpecial ? (
+                {isLogoOnlyBundle ? (
+                  <Section title="3. Your logo">
+                    <div className="bg-[#f0fdf4] border-2 border-[#7bc67e] rounded-2xl p-4 flex items-start gap-3" data-testid="bundle-logo-included">
+                      <Check size={18} className="text-[#166534] mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <div className="font-nunito font-extrabold">
+                          Your logo, printed {bundleLogoPos === "left-breast" ? "on the left chest" : "on the front"} of every garment - included in the price
+                        </div>
+                        <div className="text-xs text-[#4b5563] mt-1">Upload it below - we&rsquo;ll send a free proof before we print.</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-xs text-[#4b5563] flex items-start gap-1.5" data-testid="bundle-more-prints">
+                      <Info size={12} className="mt-0.5 flex-shrink-0" />
+                      <span>Need a back print or more print positions? Use <Link to="/workforce" className="font-extrabold text-[#166534] hover:underline">Kit Your Workforce</Link> or <Link to="/contact" className="font-extrabold text-[#166534] hover:underline">get a quote</Link>.</span>
+                    </div>
+                  </Section>
+                ) : isSpecial ? (
                   <>
                     <Section title="3. Your breast logo">
                       <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4 flex items-start gap-3" data-testid="specials-included-note">
@@ -621,7 +641,7 @@ export default function ProductDetail() {
                 {/* UPLOAD ARTWORK - visible only when custom + at least 1 placement */}
                 {!blank && selectedPlacements.length > 0 && (
                   <Section
-                    title={isSpecial ? "4. Upload your logo" : "4. Upload your prints"}
+                    title={isSpecial || isLogoOnlyBundle ? "4. Upload your logo" : "4. Upload your prints"}
                     right={
                       allArtworkUploaded
                         ? <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e]"><Check size={14} /> {isSpecial ? "Logo uploaded" : "All artwork uploaded"}</span>
