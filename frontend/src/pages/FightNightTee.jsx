@@ -11,10 +11,20 @@ import MediaBlock from "../components/bold/MediaBlock";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { ExVat } from "../components/bold/PriceTag";
 
-const SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
+// Two tee types on one page. Each is its own product (own price + sizes);
+// sponsor/back/sleeve prints and the bulk discounts work the same for both.
+const TEE_TYPES = [
+  { key: "standard", id: "boxing-fight-tee", label: "Standard T-shirt", sub: "Gildan cotton tee - the classic walk-out tee" },
+  { key: "performance", id: "boxing-fight-performance", label: "Sports performance", sub: "AWDis Cool T - light, breathable, quick-dry" },
+];
+const isKidsSize = (sz) => /\d+-\d+/.test(sz);
 
 export default function FightNightTee() {
-  const [tee, setTee] = useState(null);
+  const [teeProducts, setTeeProducts] = useState({});
+  const [teeType, setTeeType] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("tee") === "performance" ? "performance" : "standard"; } catch { return "standard"; }
+  });
+  const tee = teeProducts[teeType] || teeProducts.standard || null;
   const [loadError, setLoadError] = useState(false);
   const fnCopy = usePageCopy("fight-night", {
     title: "",
@@ -23,7 +33,7 @@ export default function FightNightTee() {
     media: {},
   });
   const [addons, setAddons] = useState([]);
-  const [tiers, setTiers] = useState([]);
+  const [tierInfo, setTierInfo] = useState({ tiers: [], discounts: [] });
   const [color, setColor] = useState("Black");
   const [sizeQtys, setSizeQtys] = useState({});
   const [sponsors, setSponsors] = useState([]);
@@ -42,10 +52,37 @@ export default function FightNightTee() {
   const rightRef = useRef(null);
 
   useEffect(() => {
-    Promise.all([api.get("/products/boxing-fight-tee").then(r => r.data), fetchFightNightAddons(), fetchFightNightTiers()])
-      .then(([p, a, t]) => { setTee(p); setAddons(a); setTiers(t.tiers || []); setColor(p.colors[0]?.name || "Black"); })
+    Promise.all([
+      api.get("/products/boxing-fight-tee").then(r => r.data),
+      api.get("/products/boxing-fight-performance").then(r => r.data).catch(() => null),
+      fetchFightNightAddons(), fetchFightNightTiers(),
+    ])
+      .then(([std, perf, a, t]) => {
+        setTeeProducts(perf ? { standard: std, performance: perf } : { standard: std });
+        if (!perf) setTeeType("standard");
+        setAddons(a); setTierInfo({ tiers: t.tiers || [], discounts: t.discounts || [] });
+        setColor(std.colors[0]?.name || "Black");
+      })
       .catch(() => { toast.error("Couldn't load this page - please refresh"); setLoadError(true); });
   }, []);
+
+  // Switching tee type keeps the colour and any sizes the new tee also has.
+  const pickTeeType = (key) => {
+    const next = teeProducts[key]; if (!next) return;
+    setTeeType(key);
+    setSizeQtys((prev) => Object.fromEntries(Object.entries(prev).filter(([sz]) => (next.sizes || []).includes(sz))));
+    if (!(next.colors || []).some((c) => c.name === color)) setColor(next.colors[0]?.name || "Black");
+  };
+
+  // Bulk tiers: £ off this tee's own price (so both types drop the same way).
+  const tiers = useMemo(() => {
+    if (!tee) return [];
+    if (tierInfo.discounts.length) return tierInfo.discounts.map((d) => ({ min_qty: d.min_qty, unit_price: Math.round((tee.price - d.off) * 100) / 100 }));
+    return tierInfo.tiers;
+  }, [tee, tierInfo]);
+  const adultSizes = (tee?.sizes || []).filter((s) => !isKidsSize(s));
+  const kidsSizes = (tee?.sizes || []).filter(isKidsSize);
+  const kidsOff = kidsSizes.length ? -Math.min(0, Number(tee?.size_upcharges?.[kidsSizes[0]] || 0)) : 0;
 
   const totalQty = useMemo(() => Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0), [sizeQtys]);
 
@@ -148,6 +185,7 @@ export default function FightNightTee() {
         company: contact.company,
         event_date: eventDate,
         color,
+        tee_type: (TEE_TYPES.find((t) => t.key === teeType) || TEE_TYPES[0]).label,
         sponsors_count: String(sponsors.length),
         back_print: backPrint ? "full" : "no",
         left_sleeve: leftSleeve ? "yes" : "no",
@@ -157,7 +195,7 @@ export default function FightNightTee() {
       // Pass sponsor data URLs via design_meta (split if necessary). For Stripe metadata size limits we store only count + send full artwork to a quote_requests doc shadow record so the team has the actual files.
       // Actually we'll persist sponsors in a quote_requests doc keyed by session_id reference (best-effort) for the team to access - backend will tie it via metadata.session_id after checkout.
       const { url, session_id } = await createCheckout({
-        product_id: "boxing-fight-tee",
+        product_id: tee.id,
         size_qtys: sizeQtys,
         color,
         placements: selectedAddons,
@@ -179,7 +217,7 @@ export default function FightNightTee() {
           deadline: eventDate,
           message: `PAID fight-night order. Sponsors: ${sponsors.length}. Back print: ${backPrint ? "full" : "no"}${backPrint && backArt ? " (art uploaded)" : ""}. Sleeves: ${leftSleeve ? "L" : ""}${rightSleeve ? "R" : ""}${(leftSleeve && leftArt) || (rightSleeve && rightArt) ? " (art uploaded)" : ""}. Stripe session: ${session_id}. Proof before print.`,
           artwork: [...sponsors, backArt, leftArt, rightArt].filter(Boolean),
-          product_id: "boxing-fight-tee",
+          product_id: tee.id,
         });
       } catch { /* non-blocking quote sync */ }
       window.location.href = url;
@@ -349,29 +387,71 @@ export default function FightNightTee() {
           </div>
         </Block>
 
-        <Block n={5} title="Tee colour & sizes">
+        <Block n={5} title="Tee type, colour & sizes">
+          {Object.keys(teeProducts).length > 1 && (
+            <>
+              <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Tee type</div>
+              <div className="grid sm:grid-cols-2 gap-2 mb-4" data-testid="fn-tee-types">
+                {TEE_TYPES.filter((t) => teeProducts[t.key]).map((t) => {
+                  const on = teeType === t.key;
+                  return (
+                    <button key={t.key} type="button" onClick={() => pickTeeType(t.key)} data-testid={`fn-tee-${t.key}`}
+                      className={`text-left rounded-xl border-2 p-3 transition-colors ${on ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white hover:border-[#dcfce7]"}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-nunito font-extrabold text-sm">{t.label}</span>
+                        <span className="font-nunito font-black text-sm">£{Number(teeProducts[t.key].price).toFixed(2)}</span>
+                      </div>
+                      <div className="text-xs text-[#4b5563] mt-0.5">{t.sub}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
           <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Colour</div>
           <div className="flex gap-2 mb-4">
             {tee.colors.map((c) => (
               <button key={c.name} data-testid={`fn-color-${c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} onClick={() => setColor(c.name)} title={c.name} className={`w-9 h-9 rounded-full border-2 ${color === c.name ? "border-[#7bc67e] ring-2 ring-[#7bc67e]/40" : "border-[#e5e7eb]"}`} style={{ background: c.hex }} />
             ))}
           </div>
-          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Sizes (total <span data-testid="fn-total-qty" className="font-extrabold text-[#1a1a1a]">{totalQty}</span>)</div>
+          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Adult sizes <span className="text-[#4b5563] font-normal">· <span data-testid="fn-total-qty" className="font-extrabold text-[#1a1a1a]">{totalQty}</span> tees in total</span></div>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {SIZES.map((sz) => {
+            {adultSizes.map((sz) => {
               const qty = sizeQtys[sz] || 0; const active = qty > 0;
               return (
                 <div key={sz} data-testid={`fn-size-${sz}`} className={`rounded-xl border-2 p-2 ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
                   <div className="text-center font-nunito font-extrabold text-sm">{sz}</div>
                   <div className="flex items-center gap-1 mt-1">
                     <button data-testid={`fn-size-${sz}-minus`} onClick={() => bump(sz, -1)} className="w-6 h-6 grid place-items-center rounded-full bg-white border disabled:opacity-40" disabled={qty === 0}><Minus size={10} /></button>
-                    <input data-testid={`fn-size-${sz}-qty`} type="number" min={0} value={qty} onChange={(e) => setSizeQty(sz, e.target.value)} className="w-full text-center bg-transparent text-xs font-bold focus:outline-none" />
+                    <input data-testid={`fn-size-${sz}-qty`} type="number" min={0} value={qty} onChange={(e) => setSizeQty(sz, e.target.value)} className="w-full min-w-0 text-center bg-transparent text-xs font-bold focus:outline-none" />
                     <button data-testid={`fn-size-${sz}-plus`} onClick={() => bump(sz, 1)} className="w-6 h-6 grid place-items-center rounded-full bg-white border"><Plus size={10} /></button>
                   </div>
                 </div>
               );
             })}
           </div>
+          {kidsSizes.length > 0 && (
+            <>
+              <div className="text-xs font-nunito font-bold text-[#1a1a1a] mt-4 mb-2" data-testid="fn-kids-heading">
+                Kids sizes (age){kidsOff > 0 && <span className="ml-2 bg-[#fde68a] text-[#1a1a1a] rounded-full px-2 py-0.5 text-[10px] font-extrabold">£{kidsOff.toFixed(2)} less per tee</span>}
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {kidsSizes.map((sz) => {
+                  const qty = sizeQtys[sz] || 0; const active = qty > 0;
+              return (
+                <div key={sz} data-testid={`fn-size-${sz}`} className={`rounded-xl border-2 p-2 ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
+                  <div className="text-center font-nunito font-extrabold text-sm">{sz}</div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <button data-testid={`fn-size-${sz}-minus`} onClick={() => bump(sz, -1)} className="w-6 h-6 grid place-items-center rounded-full bg-white border disabled:opacity-40" disabled={qty === 0}><Minus size={10} /></button>
+                    <input data-testid={`fn-size-${sz}-qty`} type="number" min={0} value={qty} onChange={(e) => setSizeQty(sz, e.target.value)} className="w-full min-w-0 text-center bg-transparent text-xs font-bold focus:outline-none" />
+                    <button data-testid={`fn-size-${sz}-plus`} onClick={() => bump(sz, 1)} className="w-6 h-6 grid place-items-center rounded-full bg-white border"><Plus size={10} /></button>
+                  </div>
+                </div>
+              );
+                })}
+              </div>
+            </>
+          )}
         </Block>
 
         {/* Bulk tier ladder */}
@@ -401,6 +481,7 @@ export default function FightNightTee() {
                 Add <strong className="text-[#1a1a1a]">{nextTier.min_qty - totalQty}</strong> more to drop to <strong className="text-[#7bc67e]">£{nextTier.unit_price.toFixed(2)}/tee</strong>.
               </div>
             )}
+            {kidsOff > 0 && <div className="text-[11px] text-[#4b5563] mt-1">Adults and kids count together. Kids sizes are £{kidsOff.toFixed(2)} less at every level.</div>}
           </div>
         )}
 
@@ -408,9 +489,19 @@ export default function FightNightTee() {
         <div className="bg-[#1a1a1a] text-white rounded-3xl p-6">
           <div className="space-y-1 text-sm">
             <div className="flex justify-between"><span>Tee base ({totalQty} × £{basePrice.toFixed(2)})</span><span>£{(basePrice * totalQty).toFixed(2)}</span></div>
-            {Object.entries(tee.size_upcharges || {}).some(([sz]) => (sizeQtys[sz] || 0) > 0) && (
-              <div className="flex justify-between text-neutral-300"><span>Size upcharges</span><span>£{Object.entries(sizeQtys).reduce((s, [sz, q]) => s + ((tee.size_upcharges?.[sz] || 0) * (Number(q) || 0)), 0).toFixed(2)}</span></div>
-            )}
+            {(() => {
+              const sum = (pos) => Object.entries(sizeQtys).reduce((s, [sz, q]) => {
+                const u = Number(tee.size_upcharges?.[sz] || 0);
+                return s + ((pos ? u > 0 : u < 0) ? u * (Number(q) || 0) : 0);
+              }, 0);
+              const up = sum(true), down = sum(false);
+              return (
+                <>
+                  {up > 0 && <div className="flex justify-between text-neutral-300"><span>Larger sizes</span><span>£{up.toFixed(2)}</span></div>}
+                  {down < 0 && <div className="flex justify-between text-neutral-300" data-testid="fn-kids-saving"><span>Kids sizes</span><span>-£{Math.abs(down).toFixed(2)}</span></div>}
+                </>
+              );
+            })()}
             {addonCostPerTee > 0 && (
               <div className="flex justify-between text-neutral-300"><span>Prints ({selectedAddons.length} extra × £{addonCostPerTee.toFixed(2)} × {totalQty})</span><span>£{(addonCostPerTee * totalQty).toFixed(2)}</span></div>
             )}

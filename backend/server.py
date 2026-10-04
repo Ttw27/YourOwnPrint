@@ -190,6 +190,15 @@ PRODUCTS: Dict[str, Dict] = {
         "image": "https://images.pexels.com/photos/6296030/pexels-photo-6296030.jpeg",
         "description": "Walk-out tee for fight night - main sponsor + multiple supporting logos. Free proof included.",
     },
+    # Same Fight Night page, "Sports performance" option: AWDis Cool T (JC001 / kids JC001J).
+    "boxing-fight-performance": {
+        "id": "boxing-fight-performance",
+        "name": "Fight Night Sponsor Tee - Sports Performance",
+        "price": 13.99,
+        "category": "sports",
+        "image": "https://pub-b995388ef13c4c14a498c874668ad48e.r2.dev/imported-products/d944459287f27bc78f9fb7f1.jpg",
+        "description": "Lightweight, breathable AWDis Cool T performance tee for fight night - main sponsor + multiple supporting logos. Free proof included.",
+    },
     "muay-thai-shorts": {
         "id": "muay-thai-shorts",
         "name": "Muay Thai / Kickboxing Shorts",
@@ -417,6 +426,11 @@ PRODUCTS: Dict[str, Dict] = {
 DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"]
 DEFAULT_SIZE_UPCHARGES = {"3XL": 1.50, "4XL": 3.00}
 KIDS_SIZES = ["3-4", "5-6", "7-8", "9-11", "12-13"]
+# Fight Night tees: Standard = Gildan (kids to 12-14), Performance = AWDis Cool T (kids to 12-13).
+# Kids sizes are £2 less than adults (negative size upcharge).
+FIGHT_NIGHT_KIDS_STANDARD = ["3-4", "5-6", "7-8", "9-11", "12-14"]
+FIGHT_NIGHT_KIDS_PERFORMANCE = ["3-4", "5-6", "7-8", "9-11", "12-13"]
+FIGHT_NIGHT_KIDS_DISCOUNT = 2.00
 
 COLOURS_GARMENT = [
     {"name": "White", "hex": "#ffffff"},
@@ -461,7 +475,10 @@ _VARIANT_MAP = {
     "rugby-shirt":         {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "training-tracksuit":  {"colors": COLOURS_HOODIE, "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "training-tee":        {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
-    "boxing-fight-tee":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "White", "hex": "#ffffff"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "boxing-fight-tee":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "White", "hex": "#ffffff"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}], "sizes": DEFAULT_SIZES + FIGHT_NIGHT_KIDS_STANDARD,
+                            "size_upcharges": {**DEFAULT_SIZE_UPCHARGES, **{s: -FIGHT_NIGHT_KIDS_DISCOUNT for s in FIGHT_NIGHT_KIDS_STANDARD}}},
+    "boxing-fight-performance": {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "White", "hex": "#ffffff"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}], "sizes": DEFAULT_SIZES + ["5XL"] + FIGHT_NIGHT_KIDS_PERFORMANCE,
+                            "size_upcharges": {**DEFAULT_SIZE_UPCHARGES, "5XL": 3.00, **{s: -FIGHT_NIGHT_KIDS_DISCOUNT for s in FIGHT_NIGHT_KIDS_PERFORMANCE}}},
     "muay-thai-shorts":    {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Red", "hex": "#b91c1c"}, {"name": "Royal", "hex": "#1d4ed8"}, {"name": "Gold", "hex": "#d4a017"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "fight-shorts":        {"colors": [{"name": "Black", "hex": "#0d0d0d"}, {"name": "Navy", "hex": "#1a2a4a"}, {"name": "Red", "hex": "#b91c1c"}], "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     # Team kit bundles - full size range incl. kids
@@ -567,7 +584,8 @@ def _apply_print_prices(prices: Optional[Dict]) -> None:
             except (TypeError, ValueError):
                 pass
 
-# Fight-night tee specific addon prices (overrides PLACEMENT_BY_ID for product_id='boxing-fight-tee')
+# Fight-night tee specific addon prices (overrides PLACEMENT_BY_ID for the Fight Night tees)
+FIGHT_NIGHT_IDS = {"boxing-fight-tee", "boxing-fight-performance"}
 FIGHT_NIGHT_ADDONS: Dict[str, Dict] = {
     "back-print":   {"label": "Back print",   "price": 3.50},
     "left-sleeve":  {"label": "Left sleeve",  "price": 3.00},
@@ -1566,7 +1584,7 @@ async def _resolve_line_pricing(
     if blank:
         placements_clean: List[str] = []
         print_cost = 0.0
-    elif product_id == "boxing-fight-tee":
+    elif product_id in FIGHT_NIGHT_IDS:
         placements_clean = [p for p in placements if p in FIGHT_NIGHT_ADDONS]
         print_cost = round(sum(FIGHT_NIGHT_ADDONS[p]["price"] for p in placements_clean), 2)
     elif product.get("category") == "team-kits":
@@ -1636,8 +1654,8 @@ async def _resolve_line_pricing(
     # Bulk-tier pricing
     if is_design:
         pass  # Design Shop: flat retail price per garment
-    elif product_id == "boxing-fight-tee":
-        base_price = tier_unit_price(FIGHT_NIGHT_BULK_TIERS, base_price, total_qty)
+    elif product_id in FIGHT_NIGHT_IDS:
+        base_price = tier_unit_price(fight_night_tiers(base_price), base_price, total_qty)
     elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
         base_price = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base_price, total_qty)
     elif product.get("bulk_pricing_enabled"):
@@ -2362,6 +2380,11 @@ USE_CASE_OPTIONS = ["workwear", "branded-to-sell", "daily-use", "sports", "kids"
 # ----- Per-flow bulk pricing tiers (ascending threshold, descending unit price) -----
 # Applied when product_id matches and total qty meets the threshold.
 FIGHT_NIGHT_BULK_TIERS = [(25, 9.99), (10, 10.99)]   # tee base £11.99 → £10.99 @ 10+, £9.99 @ 25+
+FIGHT_NIGHT_TIER_DISCOUNTS = [(25, 2.00), (10, 1.00)]  # £ off each tee's own price (Standard + Performance)
+
+
+def fight_night_tiers(base_price: float) -> List[Tuple[int, float]]:
+    return [(q, round(base_price - off, 2)) for q, off in FIGHT_NIGHT_TIER_DISCOUNTS]
 LEAVERS_BULK_TIERS_DEFAULT = [(100, 15.99), (60, 16.99), (30, 17.99), (20, 19.99)]
 
 LEAVERS_BAG_PRICE = 3.99  # printed drawstring carry-all addon, per garment
@@ -2865,7 +2888,9 @@ async def get_designer_artwork(artwork_id: str):
 async def get_fight_night_tiers():
     return {
         "base_price": float(PRODUCTS["boxing-fight-tee"]["price"]),
-        "tiers": [{"min_qty": t, "unit_price": p} for t, p in FIGHT_NIGHT_BULK_TIERS],
+        "tiers": [{"min_qty": t, "unit_price": p} for t, p in fight_night_tiers(float(PRODUCTS["boxing-fight-tee"]["price"]))],
+        # £ off per tee at each quantity - applies to both tee types (and kids sizes)
+        "discounts": [{"min_qty": q, "off": off} for q, off in FIGHT_NIGHT_TIER_DISCOUNTS],
     }
 
 
@@ -2914,9 +2939,9 @@ async def get_product_bulk_tiers(product_id: str):
         raise HTTPException(404, "Product not found")
     base_price = float(p["price"])
     # Fight Night & Leavers use absolute tiers (not % based)
-    if product_id == "boxing-fight-tee":
+    if product_id in FIGHT_NIGHT_IDS:
         return {"mode": "absolute", "base_price": base_price,
-                "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in FIGHT_NIGHT_BULK_TIERS]}
+                "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in fight_night_tiers(base_price)]}
     if p.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
         return {"mode": "absolute", "base_price": base_price,
                 "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in LEAVERS_BULK_TIERS_DEFAULT]}

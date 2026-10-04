@@ -103,6 +103,10 @@ export default function ProductDetail() {
         // Design Your Own products are only sold through the designer - wherever
         // they're clicked (collections, search...), open them there.
         if (p && p.designer_enabled) { navigate(`/design?product=${encodeURIComponent(p.id)}`, { replace: true }); return; }
+        // Fight Night tees are ordered on their own page (sponsor logos + proof).
+        if (p && (p.id === "boxing-fight-tee" || p.id === "boxing-fight-performance")) {
+          navigate(`/fight-night-tee${p.id === "boxing-fight-performance" ? "?tee=performance" : ""}`, { replace: true }); return;
+        }
         setProduct(p); setPlacements(pl); setAggregates(ag);
         setAllowedPlacements(ap);
         setQA(qaList || []);

@@ -213,6 +213,11 @@ frontend/src/
   `_ralawise_size_chart()`. Charts the admin types are never
   replaced. One-size / non-apparel products get no chart (`_is_one_size_or_non_apparel`).
 
+- **Fight Night tees** (`/fight-night-tee`): two products, `boxing-fight-tee` (Standard, Gildan, £11.99) and
+  `boxing-fight-performance` (AWDis Cool T JC001, £13.99), both in `FIGHT_NIGHT_IDS` (sponsor/back/sleeve add-on
+  prices + bulk tiers = £1 off at 10+, £2 off at 25+ of each tee's own price, `fight_night_tiers()`). Kids sizes
+  live on the same product with a -£2 size upcharge (adults + kids count together for tiers). Their /product/:id
+  pages redirect to the Fight Night page.
 - **Offers ("Was" price):** `was_price` in `product_overrides` (Product settings > Name, price & main
   photo > "Offer - 'Was' price"). Shown only while above `price` (`offer_was_price()`): crossed out +
   "Offer" pill in PriceTag (cards), designer Total panel + product dropdown, basket (`on_offer` from
