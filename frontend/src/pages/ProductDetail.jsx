@@ -102,6 +102,13 @@ export default function ProductDetail() {
   const [checkingOut, setCheckingOut] = useState(false);
 
   useEffect(() => {
+    // Old prototype kits (now hidden) -> the real kits that replaced them.
+    const KIT_MOVED = {
+      "football-kit-bundle": "kit-classic", "football-kit-front-only": "kit-classic", "full-squad-pack": "kit-classic",
+      "football-premium-bundle": "kit-contrast", "football-premium-front-only": "kit-contrast",
+      "training-pack-bundle": "kit-training", "training-pack-front-only": "kit-training",
+    };
+    if (KIT_MOVED[id]) { navigate(`/product/${KIT_MOVED[id]}`, { replace: true }); return; }
     setLoading(true);
     Promise.all([
       api.get(`/products/${id}`).then(r => r.data),

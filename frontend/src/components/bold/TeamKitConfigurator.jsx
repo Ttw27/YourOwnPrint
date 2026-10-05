@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { createCheckout, submitQuoteRequest, fetchTeamKitBrands, fetchTeamKitAddons } from "../../lib/api";
+import { createCheckout, submitQuoteRequest, fetchTeamKitBrands, fetchTeamKitAddons, fetchKitDetails } from "../../lib/api";
 import { WhatsAppInline } from "./WhatsAppFAB";
 import { Upload, Plus, Trash2, Loader2, ShoppingCart, Send, Info, Camera, Sparkles, Check, X } from "lucide-react";
 import { ExVat } from "./PriceTag";
@@ -21,7 +21,21 @@ const DEFAULT_SIZE = "M";
  */
 export default function TeamKitConfigurator({ product }) {
   const navigate = useNavigate();
-  const isFrontOnly = product.id.endsWith("-front-only");
+  // Kits built from real garments (kit-*): colour per part, live preview, price table.
+  const [kit, setKit] = useState(null);
+  const [kitOpts, setKitOpts] = useState({ socks: true, names: true });
+  const [kitCols, setKitCols] = useState({});
+  useEffect(() => {
+    setKit(null);
+    if (!product.id.startsWith("kit-")) return;
+    fetchKitDetails(product.id).then((k) => {
+      setKit(k);
+      setKitOpts({ socks: !!k.defaults?.socks, names: !!k.defaults?.names });
+      const pick = (cols) => (cols.find((c) => /^(jet |deep )?black$/i.test(c.name)) || cols[0] || {}).name;
+      setKitCols(Object.fromEntries(k.parts.map((pt) => [pt.key, pick(pt.colours)])));
+    }).catch(() => {});
+  }, [product.id]);
+  const isFrontOnly = kit ? !kitOpts.names : product.id.endsWith("-front-only");
   const [brands, setBrands] = useState([]);
   const [brand, setBrand] = useState(null);
   const [addons, setAddons] = useState({});  // {left-sleeve: {price}, right-sleeve: {price}, back-print: {price}}
@@ -45,6 +59,19 @@ export default function TeamKitConfigurator({ product }) {
   const quoteOnly = totalKits > QUOTE_THRESHOLD;
 
   const upcharges = useMemo(() => product.size_upcharges || {}, [product.size_upcharges]);
+  // Kit price per player for a size (kids sizes cheaper; socks / names optional)
+  const kitUnit = (size) => {
+    if (!kit) return null;
+    const pr = kit.prices || {};
+    if (pr.adult && pr.adult.fixed != null) return pr.adult.fixed;
+    const group = (kit.kids_sizes || []).includes(size) ? "kids" : "adult";
+    return pr[group]?.[`${kitOpts.socks ? "socks" : "nosocks"}_${kitOpts.names ? "names" : "badge"}`] ?? product.price;
+  };
+  const kitParts = kit ? kit.parts.filter((pt) => pt.key !== "socks" || kitOpts.socks) : [];
+  const hasKids = kit ? roster.some((r) => (kit.kids_sizes || []).includes(r.size) && Number(r.qty) > 0) : false;
+  const kidsColourProblem = kit && hasKids
+    ? kitParts.map((pt) => { const c = pt.colours.find((x) => x.name === kitCols[pt.key]); return c && c.kids === false ? `${pt.label} in ${c.name}` : null; }).filter(Boolean)
+    : [];
   const addonCostPerKit = useMemo(() => {
     let c = 0;
     if (leftSleeve.on)  c += addons["left-sleeve"]?.price  ?? 3.00;
@@ -66,10 +93,11 @@ export default function TeamKitConfigurator({ product }) {
     roster.forEach((r) => {
       const qty = Number(r.qty) || 0;
       if (qty <= 0) return;
-      total += (effectivePrice + (upcharges[r.size] || 0) + addonCostPerKit) * qty;
+      const unit = kit ? kitUnit(r.size) : effectivePrice + (upcharges[r.size] || 0);
+      total += (unit + addonCostPerKit) * qty;
     });
     return total;
-  }, [roster, effectivePrice, upcharges, addonCostPerKit]);
+  }, [roster, effectivePrice, upcharges, addonCostPerKit, kit, kitOpts]);
 
   const updateRoster = (i, patch) => setRoster((prev) => prev.map((r, j) => j === i ? { ...r, ...patch } : r));
   const addRow = () => setRoster((prev) => [...prev, blankRow()]);
@@ -89,6 +117,8 @@ export default function TeamKitConfigurator({ product }) {
     if (!team.contact_email.trim()) return "Add a contact email";
     if (!team.badge) return "Upload your club badge";
     if (totalKits < 1) return "Add at least 1 player to the roster";
+    if (kitParts.some((pt) => !kitCols[pt.key])) return "Pick a colour for each part of the kit";
+    if (kidsColourProblem.length) return `${kidsColourProblem.join(", ")} isn't made in kids sizes - pick another colour`;
     if (roster.some((r) => !r.size)) return "Each player needs a size";
     if (leftSleeve.on  && !leftSleeve.art)  return "Upload artwork for the left sleeve (or untick it)";
     if (rightSleeve.on && !rightSleeve.art) return "Upload artwork for the right sleeve (or untick it)";
@@ -110,12 +140,14 @@ export default function TeamKitConfigurator({ product }) {
       ].filter(Boolean).join(", ") || "badge only";
       const message = [
         `Product: ${product.name}${brand ? ` - Brand: ${brand.brand} ${brand.name} (£${brand.price.toFixed(2)})` : ` (£${product.price.toFixed(2)})`}`,
+        kit ? `Colours: ${kitParts.map((pt) => `${pt.label} ${kitCols[pt.key]}`).join(", ")}` : null,
+        kit ? `Options: ${kitOpts.socks ? "with socks" : "no socks"}, ${kitOpts.names ? "names & numbers" : "badge only"}` : null,
         `Total kits: ${totalKits}`,
         `Prints: ${placementsHuman}`,
         `Per-kit addon cost: £${addonCostPerKit.toFixed(2)}`,
         `Indicative total: £${lineTotal.toFixed(2)}`,
         isFrontOnly ? "FRONT-PRINT-ONLY variant - no names/numbers on backs." : "Includes badge, names & numbers.",
-      ].join("\n");
+      ].filter(Boolean).join("\n");
       const cleanRoster = roster.map(r => ({ name: r.name, number: r.number, size: r.size, qty: Number(r.qty) || 1 }));
       await submitQuoteRequest({
         kind: "team_kit",
@@ -148,7 +180,7 @@ export default function TeamKitConfigurator({ product }) {
       const { url } = await createCheckout({
         product_id: product.id,
         size_qtys,
-        color: brand ? `${brand.brand} ${brand.name}` : "Default",
+        color: kit ? kitParts.map((pt) => `${pt.label}: ${kitCols[pt.key]}`).join(" / ") : (brand ? `${brand.brand} ${brand.name}` : "Default"),
         placements: selectedAddons,
         blank: false,
         origin_url: window.location.origin,
@@ -162,6 +194,12 @@ export default function TeamKitConfigurator({ product }) {
           right_sleeve: rightSleeve.on ? "yes" : "no",
           back_print: backPrint.on ? "yes" : "no",
           roster: rosterLines,
+          ...(kit ? {
+            kit_socks: kitOpts.socks ? "yes" : "no",
+            kit_names: kitOpts.names ? "yes" : "no",
+            ...Object.fromEntries(kitParts.map((pt) => [`${pt.key}_colour`, kitCols[pt.key]])),
+            garments: kit.garments,
+          } : {}),
         },
       });
       window.location.href = url;
@@ -171,13 +209,17 @@ export default function TeamKitConfigurator({ product }) {
     }
   };
 
-  const brandRequiresQuote = !!brand && Math.abs(brand.price - product.price) > 0.001;
+  const brandRequiresQuote = !kit && !!brand && Math.abs(brand.price - product.price) > 0.001;
   const finalQuoteOnly = quoteOnly || brandRequiresQuote;
-  const stepBase = brands.length > 0 ? 1 : 0;
+  const stepBase = kit || brands.length > 0 ? 1 : 0;
 
   return (
     <div className="space-y-5" data-testid="team-kit-configurator">
-      {brands.length > 0 && (
+      {kit && (
+        <KitPicker kit={kit} opts={kitOpts} setOpts={setKitOpts} cols={kitCols} setCols={setKitCols} parts={kitParts} kitUnit={kitUnit} kidsProblem={kidsColourProblem} />
+      )}
+
+      {!kit && brands.length > 0 && (
         <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-5" data-testid="brand-picker">
           <h3 className="font-nunito font-extrabold text-[#1a1a1a] mb-3 flex items-center gap-2"><Sparkles size={16} className="text-[#7bc67e]" /> 1. Pick your kit</h3>
           <div className="grid sm:grid-cols-2 gap-2">
@@ -316,15 +358,15 @@ export default function TeamKitConfigurator({ product }) {
             <div className="font-nunito font-black text-4xl mt-1" data-testid="kit-total-price">£{lineTotal.toFixed(2)}</div>
             <ExVat amount={lineTotal} zeroRated={!!product?.vat_zero_rated} className="text-[11px] text-neutral-400 mt-0.5" />
             <div className="text-xs text-neutral-400 mt-1">
-              {totalKits} kits · £{effectivePrice.toFixed(2)}/player
+              {totalKits} kits · {kit ? `£${kitUnit("M").toFixed(2)}/player${(kit.kids_sizes || []).length ? ` (kids £${kitUnit(kit.kids_sizes[0]).toFixed(2)})` : ""}` : `£${effectivePrice.toFixed(2)}/player`}
               {addonCostPerKit > 0 && <> + £{addonCostPerKit.toFixed(2)} extras</>}
-              {isFrontOnly ? " · front print only" : " · badge + names + numbers included"}
+              {kit && !kit.options ? " · badge on both pieces" : isFrontOnly ? " · badge only" : " · badge + names + numbers included"}
             </div>
             {brand && brandRequiresQuote && <div className="text-xs text-[#7bc67e] mt-1">Premium brand {brand.brand} - confirmed in your quote</div>}
           </div>
           <div className="max-w-sm text-sm text-neutral-300">
             {finalQuoteOnly
-              ? <>{quoteOnly ? "15+ kits - " : "Premium kit - "}we&apos;ll send a <strong className="text-[#7bc67e]">free proof</strong> and tailored quote within 1 working day.</>
+              ? <>{quoteOnly ? "15+ kits - " : "Premium kit - "}we&apos;ll send a <strong className="text-[#7bc67e]">free proof</strong> and a tailored quote.</>
               : <>Under 15 kits - pay securely with Stripe. We&apos;ll send a proof for sign-off before printing.</>}
           </div>
         </div>
@@ -344,6 +386,69 @@ export default function TeamKitConfigurator({ product }) {
           <WhatsAppInline preset={`Hi! Team kit for ${team.name} (~${totalKits} kits${brand ? `, ${brand.brand}` : ""}).`} label="WhatsApp" />
         </div>
         <div className="mt-3 text-xs text-neutral-400"><Info size={10} className="inline mr-1" />Front sponsor is included free. Sleeves & back add extra cost per kit.</div>
+      </div>
+    </div>
+  );
+}
+
+// Colour of each part + options, with a live preview laid out like the kit
+// photos (shirt left, shorts right, socks below). Supplier photos have white
+// backgrounds, so they're multiplied onto white to sit together cleanly.
+function KitPicker({ kit, opts, setOpts, cols, setCols, parts, kitUnit, kidsProblem }) {
+  const img = (pt) => (pt.colours.find((c) => c.name === cols[pt.key]) || {}).image;
+  const layout = parts.length >= 3
+    ? [{ l: "0%", t: "2%", w: "60%", h: "60%" }, { l: "58%", t: "8%", w: "42%", h: "52%" }, { l: "30%", t: "50%", w: "40%", h: "48%" }]
+    : [{ l: "2%", t: "6%", w: "56%", h: "80%" }, { l: "56%", t: "14%", w: "42%", h: "72%" }];
+  return (
+    <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-5" data-testid="kit-picker">
+      <h3 className="font-nunito font-extrabold text-[#1a1a1a] mb-1 flex items-center gap-2"><Sparkles size={16} className="text-[#7bc67e]" /> 1. Your kit</h3>
+      <div className="text-xs text-[#4b5563] mb-3">{kit.garments}</div>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="relative aspect-square rounded-2xl bg-white border border-[#eef2f7] overflow-hidden" data-testid="kit-preview">
+          {parts.map((pt, i) => img(pt) && (
+            <img key={pt.key} src={img(pt)} alt={`${pt.label} - ${cols[pt.key]}`} className="absolute object-contain"
+              style={{ left: layout[i].l, top: layout[i].t, width: layout[i].w, height: layout[i].h, mixBlendMode: "multiply" }} />
+          ))}
+        </div>
+        <div className="space-y-3">
+          {kit.options && (
+            <div className="grid grid-cols-2 gap-2" data-testid="kit-options">
+              <label className={`rounded-xl border-2 p-2.5 cursor-pointer text-xs ${opts.socks ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb]"}`}>
+                <input type="checkbox" checked={opts.socks} onChange={(e) => setOpts({ ...opts, socks: e.target.checked })} className="mr-1.5 accent-[#7bc67e]" data-testid="kit-opt-socks" />
+                <strong>Include socks</strong>
+              </label>
+              <label className={`rounded-xl border-2 p-2.5 cursor-pointer text-xs ${opts.names ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb]"}`}>
+                <input type="checkbox" checked={opts.names} onChange={(e) => setOpts({ ...opts, names: e.target.checked })} className="mr-1.5 accent-[#7bc67e]" data-testid="kit-opt-names" />
+                <strong>Names &amp; numbers</strong>
+              </label>
+            </div>
+          )}
+          {parts.map((pt) => (
+            <div key={pt.key} data-testid={`kit-part-${pt.key}`}>
+              <div className="text-xs font-nunito font-bold mb-1.5">{pt.label}: <span className="font-extrabold" data-testid={`kit-colour-${pt.key}`}>{cols[pt.key]}</span></div>
+              <div className="flex flex-wrap gap-1.5">
+                {pt.colours.map((c) => {
+                  const on = cols[pt.key] === c.name;
+                  const two = String(c.name).includes("/");
+                  return (
+                    <button key={c.name} type="button" title={`${c.name}${c.kids === false ? " (adults only)" : ""}`} onClick={() => setCols({ ...cols, [pt.key]: c.name })}
+                      className={`w-7 h-7 rounded-full border-2 ${on ? "border-[#1a1a1a] ring-2 ring-[#7bc67e]/50" : "border-[#e5e7eb]"} ${c.kids === false ? "opacity-70" : ""}`}
+                      style={{ background: two && c.hexes ? `linear-gradient(135deg, ${c.hexes[0]} 50%, ${c.hexes[1]} 50%)` : c.hex }}
+                      data-testid={`kit-swatch-${pt.key}-${c.name}`} />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {kidsProblem.length > 0 && (
+            <div className="text-xs text-rose-600 font-bold" data-testid="kit-kids-problem">{kidsProblem.join(", ")} isn&rsquo;t made in kids sizes - pick another colour.</div>
+          )}
+          <div className="text-xs text-[#4b5563] bg-[#f0fdf4] rounded-xl p-2.5" data-testid="kit-unit-price">
+            <strong className="text-[#1a1a1a]">£{kitUnit("M").toFixed(2)}</strong> per adult kit
+            {(kit.kids_sizes || []).length > 0 && <> · <strong className="text-[#1a1a1a]">£{kitUnit(kit.kids_sizes[0]).toFixed(2)}</strong> per kids kit (3-13 yrs)</>}
+            {opts.socks && kit.options && <div className="mt-1">Socks sizes go by shirt size - tell us if anyone needs different.</div>}
+          </div>
+        </div>
       </div>
     </div>
   );

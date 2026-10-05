@@ -19,6 +19,14 @@ const FEATURES = [
   { icon: BadgeCheck, label: "Price-match promise" },
 ];
 
+// What the Team Kits page shows, in order. Other "team-kits" products (the
+// configurators' set slots, gym items, old placeholder kits) aren't listed here.
+const KIT_SECTIONS = [
+  { key: "football", title: "Football & team kits", sub: "Real kits in the colours you pick - badge, names and numbers included. Adults and kids.", ids: ["kit-classic", "kit-contrast", "kit-training", "kit-tracksuit"] },
+  { key: "rugby", title: "Rugby", ids: ["rugby-kit-bundle", "rugby-kit-front-only"] },
+  { key: "other", title: "Other sports", sub: "Tell us your club colours and we'll send a free proof.", small: true, ids: ["basketball-vest", "cricket-polo", "hockey-shirt", "athletics-vest", "cycling-jersey"] },
+];
+
 export default function TeamKits() {
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
@@ -29,12 +37,13 @@ export default function TeamKits() {
 
   const load = () => {
     setLoading(true); setErr(false);
-    Promise.all([fetchProducts("team-kits", PAGE_SIZE, page * PAGE_SIZE), fetchReviewsAggregate()])
+    Promise.all([fetchProducts("team-kits", 100, 0), fetchReviewsAggregate()])
       .then(([p, a]) => { setProducts(p.items || []); setTotal(p.total || 0); setAggs(a); })
       .catch(() => setErr(true))
       .finally(() => setLoading(false));
   };
   useEffect(load, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  const byId = Object.fromEntries(products.map((x) => [x.id, x]));
 
   // Declared before the JSX below uses it - a const referenced above its own
   // declaration line still compiles, then throws at runtime and blanks the page.
@@ -111,8 +120,15 @@ export default function TeamKits() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mt-10" data-testid="team-kit-gallery">
-              {products.map((p, i) => {
+            {KIT_SECTIONS.map((sec) => {
+              const list = sec.ids.map((id) => byId[id]).filter(Boolean);
+              if (!list.length) return null;
+              return (
+                <div key={sec.key} className="mt-10" data-testid={`team-kit-section-${sec.key}`}>
+                  <h3 className="font-nunito font-black text-2xl">{sec.title}</h3>
+                  {sec.sub && <p className="text-sm text-[#4b5563] mt-1">{sec.sub}</p>}
+                  <div className={`grid grid-cols-2 ${sec.small ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-3 sm:gap-5 mt-4`} data-testid={sec.key === "football" ? "team-kit-gallery" : undefined}>
+                    {list.map((p, i) => {
                 const agg = aggs[p.id];
                 return (
                   <Link key={p.id} to={`/product/${p.id}`} data-testid={`team-kit-card-${p.id}`} className="group relative bg-white rounded-3xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-xl transition-all overflow-hidden flex flex-col">
@@ -136,19 +152,12 @@ export default function TeamKits() {
                     </div>
                   </Link>
                 );
-              })}
-            </div>
-            {total > PAGE_SIZE && (
-              <div className="flex items-center justify-center gap-4 mt-10" data-testid="team-kits-pagination">
-                <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="team-kits-page-prev">
-                  <ChevronLeft size={14} /> Prev
-                </button>
-                <span className="text-xs text-[#4b5563]">Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}</span>
-                <button onClick={() => setPage((p) => (p + 1) * PAGE_SIZE < total ? p + 1 : p)} disabled={(page + 1) * PAGE_SIZE >= total} className="inline-flex items-center gap-1 text-sm font-extrabold text-[#166534] disabled:opacity-30 disabled:cursor-not-allowed hover:underline" data-testid="team-kits-page-next">
-                  Next <ChevronRight size={14} />
-                </button>
-              </div>
-            )}
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
           </>
         )}
       </div>

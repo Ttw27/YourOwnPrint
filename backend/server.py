@@ -233,6 +233,29 @@ PRODUCTS: Dict[str, Dict] = {
         "image": "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg",
         "description": "Jersey + shorts + socks per player. Match-day ready. Badge + names/numbers included.",
     },
+    # ----- Team kits built from real garments (routers/team_kits.py) -----
+    "kit-classic": {
+        "id": "kit-classic", "name": "Classic Football Kit", "price": 28.99, "category": "team-kits",
+        "image": "https://www.yourownprint.co.uk/kits/classic-black.jpg",
+        "image_gallery": ["https://www.yourownprint.co.uk/kits/classic-white.jpg"],
+        "description": "Shirt, shorts and socks per player in the colours you pick. Club badge on the front, names and numbers on the back - all included. Adults and kids.",
+    },
+    "kit-contrast": {
+        "id": "kit-contrast", "name": "Contrast Football Kit", "price": 30.99, "category": "team-kits",
+        "image": "https://www.yourownprint.co.uk/kits/contrast-red.jpg",
+        "image_gallery": ["https://www.yourownprint.co.uk/kits/contrast-black.jpg", "https://www.yourownprint.co.uk/kits/contrast-white-black.jpg", "https://www.yourownprint.co.uk/kits/contrast-red-white.jpg", "https://www.yourownprint.co.uk/kits/contrast-white.jpg"],
+        "description": "Two-tone shirt with contrast shoulders, plus shorts and socks per player. Badge, names and numbers included. Adults and kids.",
+    },
+    "kit-training": {
+        "id": "kit-training", "name": "Training Kit", "price": 20.99, "category": "team-kits",
+        "image": "https://www.yourownprint.co.uk/kits/training-black.jpg",
+        "description": "Breathable training top and shorts per player with your club badge. Add socks or names and numbers if you want them. Adults and kids.",
+    },
+    "kit-tracksuit": {
+        "id": "kit-tracksuit", "name": "Club Tracksuit", "price": 38.99, "category": "team-kits",
+        "image": "https://www.yourownprint.co.uk/kits/tracksuit-black.jpg",
+        "description": "College hoodie and cuffed joggers with your club badge on both - for warm-ups, travel and match days.",
+    },
     "rugby-kit-bundle": {
         "id": "rugby-kit-bundle",
         "name": "Rugby Kit Bundle",
@@ -545,6 +568,10 @@ _VARIANT_MAP = {
     # Team kit bundles - full size range incl. kids
     "football-kit-bundle":    {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "football-premium-bundle":{"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "kit-classic":            {"colors": [], "sizes": ["XS", "S", "M", "L", "XL", "XXL", "3-4", "5-6", "7-8", "9-11", "12-13"], "size_upcharges": {}},
+    "kit-contrast":           {"colors": [], "sizes": ["XS", "S", "M", "L", "XL", "XXL", "3-4", "5-6", "7-8", "9-11", "12-13"], "size_upcharges": {}},
+    "kit-training":           {"colors": [], "sizes": ["XS", "S", "M", "L", "XL", "XXL", "3-4", "5-6", "7-8", "9-11", "12-13"], "size_upcharges": {}},
+    "kit-tracksuit":          {"colors": [], "sizes": ["XS", "S", "M", "L", "XL", "XXL"], "size_upcharges": {}},
     "rugby-kit-bundle":       {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "training-pack-bundle":   {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES + KIDS_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "full-squad-pack":        {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
@@ -1644,6 +1671,14 @@ async def _resolve_line_pricing(
                        "garment_product_id": dg["base"]["id"],
                        "design_image": product.get("design_image") or product.get("image") or ""}
         placements, blank = [], True
+    # Team kits built from real garments: price from the kit's table (kids
+    # sizes cheaper, socks / names optional), colours checked per part.
+    from routers.team_kits import is_kit, team_kit_pricing
+    if is_kit(product_id):
+        kp = team_kit_pricing(product_id, design_meta or {}, [k for k, v in (size_qtys or {}).items() if int(v or 0) > 0])
+        base_price = kp["base_price"]
+        size_upcharges = kp["size_upcharges"]
+        allowed_sizes = kp["allowed_sizes"]
 
     # Strip back-print for bottoms / shorts / joggers etc.
     placements = list(placements or [])
@@ -2339,7 +2374,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "How long until match day?", "a": "Most full football kits ship in 7–10 working days from artwork approval. Rush options available on request."},
        {"q": "Can I add a sponsor on the back?", "a": "Yes - front sponsor, sleeve sponsors and a small back-of-shorts logo are all supported."},
      ],
-     "product_ids": ["football-jersey", "football-shorts", "football-kit-bundle", "football-premium-bundle", "football-kit-front-only", "football-premium-front-only", "training-tee", "training-tracksuit"],
+     "product_ids": ["kit-classic", "kit-contrast", "kit-training", "kit-tracksuit", "football-jersey", "football-shorts", "football-kit-bundle", "football-premium-bundle", "football-kit-front-only", "football-premium-front-only", "training-tee", "training-tracksuit"],
     },
     {"slug": "rugby", "title": "Rugby Kits", "h1": "Custom Rugby Kits - Heavy-Grade Match Shirts",
      "subtitle": "Match shirts, training tops, club tracksuits",
@@ -5793,6 +5828,23 @@ async def _hivis_vest_prints_v1():
     logging.info(f"{marker}: {done} hi-vis vest(s) + {bundles} bundle(s) set to chest + back prints")
 
 
+OLD_PLACEHOLDER_KITS = ["football-kit-bundle", "football-premium-bundle", "football-kit-front-only",
+                        "football-premium-front-only", "training-pack-bundle", "training-pack-front-only", "full-squad-pack"]
+
+
+async def _hide_placeholder_kits_v1():
+    """One-off (Tim, Oct 2026): the prototype football/training kit placeholders
+    (stock photos, no real garments) are replaced by kit-classic / kit-contrast /
+    kit-training / kit-tracksuit. Hidden, not deleted; their pages redirect."""
+    marker = "hide_placeholder_kits_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    for pid in OLD_PLACEHOLDER_KITS:
+        if pid in PRODUCTS:
+            await _set_product_active(pid, False)
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+
+
 async def _micro_fleece_prints_v1():
     """One-off (marker-guarded, Tim approved Oct 2026): micro fleece garments get
     small prints only - chest and sleeves (no full front / back), because DTF
@@ -7940,6 +7992,10 @@ async def _load_imported_products():
         except Exception as e:
             logging.warning(f"supplier size charts skipped: {e}")
         try:
+            await _hide_placeholder_kits_v1()
+        except Exception as e:
+            logging.warning(f"placeholder kits skipped: {e}")
+        try:
             await _hivis_vest_prints_v1()
         except Exception as e:
             logging.warning(f"hi-vis vest prints skipped: {e}")
@@ -8757,6 +8813,7 @@ import routers.bundles  # noqa: F401 - registers /admin/bundles/* (bundle set bu
 import routers.supplier_status  # noqa: F401 - registers /admin/clearance/* (PenCarrie clearance check)
 import routers.delivery  # noqa: F401 - registers /delivery/info + /admin/delivery-settings
 import routers.trusted_logos  # noqa: F401 - registers /trusted-logos (homepage "Trusted by")
+import routers.team_kits  # noqa: F401 - registers /team-kits/kit/{id} (kits built from real garments)
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move

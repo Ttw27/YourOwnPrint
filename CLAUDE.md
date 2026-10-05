@@ -195,6 +195,13 @@ frontend/src/
   `_reprice_2026_10_v1` applied backend/data/reprice_2026_10.json once: raised underpriced base prices, added
   `colour_upcharges` on dearer colours and `size_upcharges` for 3XL+ (supplier products had none). Designer tee bulk
   = one tier only (£6.99 at 10+, `_designer_tee_bulk_v1`); the designer page now shows/applies bulk tiers like checkout.
+- **Team kits from real garments** (`routers/team_kits.py`, Oct 2026): kit-classic (JC001+JC080+PA016),
+  kit-contrast (JC003+JC080+PA016), kit-training (classic, socks/names off by default), kit-tracksuit (JH001+JH072,
+  adults only). Price table per player (adult/kids x socks x names, ~55% after VAT+Stripe) -> `team_kit_pricing()`
+  in `_resolve_line_pricing` (kids sizes via negative size upcharges; per-part colours validated, incl. kids colour
+  availability). PDP = TeamKitConfigurator kit mode (KitPicker: colour per part + live preview, roster). Team Kits
+  page lists KIT_SECTIONS only; old placeholder kits hidden (`_hide_placeholder_kits_v1`) + redirected in
+  ProductDetail. Card photos in frontend/public/kits/.
 - **Bundles are LOGO-ONLY** (Tim, Oct 2026): one logo, included, at `bundle_logo_position()` (left chest, else the
   garment's cheapest position e.g. cap front). Server forces it for any bundle with `bundle_included_print` (never
   blank, no extra positions); the PDP shows a fixed "3. Your logo" step + upload, linking to Kit Your Workforce /
