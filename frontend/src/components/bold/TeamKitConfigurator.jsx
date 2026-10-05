@@ -405,10 +405,20 @@ function KitPicker({ kit, opts, setOpts, cols, setCols, parts, kitUnit, kidsProb
       <div className="text-xs text-[#4b5563] mb-3">{kit.garments}</div>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="relative aspect-square rounded-2xl bg-white border border-[#eef2f7] overflow-hidden" data-testid="kit-preview">
-          {parts.map((pt, i) => img(pt) && (
-            <img key={pt.key} src={img(pt)} alt={`${pt.label} - ${cols[pt.key]}`} className="absolute object-contain"
-              style={{ left: layout[i].l, top: layout[i].t, width: layout[i].w, height: layout[i].h, mixBlendMode: "multiply" }} />
-          ))}
+          {parts.map((pt, i) => {
+            if (!img(pt)) return null;
+            const box = { left: layout[i].l, top: layout[i].t, width: layout[i].w, height: layout[i].h, mixBlendMode: "multiply" };
+            // supplier sock photos are a single sock - show the pair, like the kit photos
+            if (pt.key === "socks") {
+              return (
+                <React.Fragment key={pt.key}>
+                  <img src={img(pt)} alt="" aria-hidden="true" className="absolute object-contain" style={{ ...box, left: `calc(${layout[i].l} + 9%)`, top: `calc(${layout[i].t} - 3%)` }} />
+                  <img src={img(pt)} alt={`${pt.label} - ${cols[pt.key]}`} className="absolute object-contain" style={{ ...box, left: `calc(${layout[i].l} - 6%)` }} />
+                </React.Fragment>
+              );
+            }
+            return <img key={pt.key} src={img(pt)} alt={`${pt.label} - ${cols[pt.key]}`} className="absolute object-contain" style={box} />;
+          })}
         </div>
         <div className="space-y-3">
           {kit.options && (

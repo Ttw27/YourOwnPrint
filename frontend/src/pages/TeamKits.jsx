@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import { WhatsAppInline } from "../components/bold/WhatsAppFAB";
 import PricePromise from "../components/bold/PricePromise";
-import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
+import { api, fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { ArrowRight, Trophy, Users, MessageCircle, Sparkles, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
@@ -24,7 +24,8 @@ const FEATURES = [
 const KIT_SECTIONS = [
   { key: "football", title: "Football & team kits", sub: "Real kits in the colours you pick - badge, names and numbers included. Adults and kids.", ids: ["kit-classic", "kit-contrast", "kit-training", "kit-tracksuit"] },
   { key: "rugby", title: "Rugby", ids: ["rugby-kit-bundle", "rugby-kit-front-only"] },
-  { key: "other", title: "Other sports", sub: "Tell us your club colours and we'll send a free proof.", small: true, ids: ["basketball-vest", "cricket-polo", "hockey-shirt", "athletics-vest", "cycling-jersey"] },
+  { key: "other", title: "Other sports", sub: "Real sportswear from our range with your club badge or logo. Hockey, netball and touch rugby teams: the Contrast Football Kit works brilliantly.", shop: true,
+    ids: ["sr278m", "sr279m", "cn155", "cn156", "jc007", "jc015"], labels: { sr278m: "Basketball", sr279m: "Basketball", cn155: "Cricket", cn156: "Cricket", jc007: "Athletics & running", jc015: "Athletics & running" } },
 ];
 
 export default function TeamKits() {
@@ -37,8 +38,11 @@ export default function TeamKits() {
 
   const load = () => {
     setLoading(true); setErr(false);
-    Promise.all([fetchProducts("team-kits", 100, 0), fetchReviewsAggregate()])
-      .then(([p, a]) => { setProducts(p.items || []); setTotal(p.total || 0); setAggs(a); })
+    // Kits come from the team-kits collection; "Other sports" are normal products picked by id.
+    const extra = KIT_SECTIONS.filter((s) => s.shop).flatMap((s) => s.ids);
+    Promise.all([fetchProducts("team-kits", 100, 0), fetchReviewsAggregate(),
+      Promise.all(extra.map((id) => api.get(`/products/${id}`).then((r) => r.data).catch(() => null)))])
+      .then(([p, a, more]) => { setProducts([...(p.items || []), ...more.filter(Boolean)]); setTotal(p.total || 0); setAggs(a); })
       .catch(() => setErr(true))
       .finally(() => setLoading(false));
   };
@@ -127,27 +131,27 @@ export default function TeamKits() {
                 <div key={sec.key} className="mt-10" data-testid={`team-kit-section-${sec.key}`}>
                   <h3 className="font-nunito font-black text-2xl">{sec.title}</h3>
                   {sec.sub && <p className="text-sm text-[#4b5563] mt-1">{sec.sub}</p>}
-                  <div className={`grid grid-cols-2 ${sec.small ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-3 sm:gap-5 mt-4`} data-testid={sec.key === "football" ? "team-kit-gallery" : undefined}>
+                  <div className={`grid grid-cols-2 ${sec.shop ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-3 sm:gap-5 mt-4`} data-testid={sec.key === "football" ? "team-kit-gallery" : undefined}>
                     {list.map((p, i) => {
                 const agg = aggs[p.id];
                 return (
                   <Link key={p.id} to={`/product/${p.id}`} data-testid={`team-kit-card-${p.id}`} className="group relative bg-white rounded-3xl border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-xl transition-all overflow-hidden flex flex-col">
                     <div className="aspect-[5/4] overflow-hidden bg-[#f0fdf4] relative">
                       <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" />
-                      <span className="absolute top-3 left-3 bg-[#7bc67e] text-[#1a1a1a] text-[10px] font-nunito font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full">Kit Bundle</span>
+                      <span className="absolute top-3 left-3 bg-[#7bc67e] text-[#1a1a1a] text-[10px] font-nunito font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full">{sec.shop ? (sec.labels?.[p.id] || "Sportswear") : "Kit Bundle"}</span>
                     </div>
                     <div className="p-5 flex-1 flex flex-col">
                       <h3 className="font-nunito font-extrabold text-xl">{p.name}</h3>
-                      <p className="text-sm text-[#4b5563] mt-1 flex-1">{p.description}</p>
+                      <p className="text-sm text-[#4b5563] mt-1 flex-1 line-clamp-3">{p.description}</p>
                       <div className="mt-4 flex items-baseline justify-between">
                         <div>
                           <div className="text-xs font-nunito font-bold text-[#4b5563]">from</div>
-                          <PriceTag product={p} size="lg" tone="brand" suffix=" /player" testid={`price-${p.id}`} />
+                          <PriceTag product={p} size="lg" tone="brand" suffix={sec.shop ? "" : " /player"} testid={`price-${p.id}`} />
                         </div>
                         {agg && <StarRating value={agg.average} size={12} />}
                       </div>
                       <div className="mt-3 inline-flex items-center gap-1 text-sm font-nunito font-extrabold text-[#1a1a1a] group-hover:text-[#7bc67e] transition-colors">
-                        Configure your team <ArrowRight size={14} />
+                        {sec.shop ? "Add your logo" : "Configure your team"} <ArrowRight size={14} />
                       </div>
                     </div>
                   </Link>
