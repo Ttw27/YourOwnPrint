@@ -35,7 +35,6 @@ const PAGE_COPY_SLUGS = [
   { slug: "kit-your-workforce", label: "Kit Your Workforce" },
   { slug: "design-your-own", label: "Design Your Own" },
   { slug: "team-kits", label: "Team Kits" },
-  { slug: "team-kit-builder", label: "Team Kit Builder" },
   { slug: "full-squad-configurator", label: "Full Squad Configurator" },
   { slug: "sports-outfit-configurator", label: "Sports Outfit Configurator" },
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },

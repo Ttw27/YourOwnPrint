@@ -15,6 +15,11 @@
   ],
   "redirects": [
     {
+      "source": "/team-kit-builder",
+      "destination": "/full-squad-configurator",
+      "permanent": true
+    },
+    {
       "source": "/pages/contact",
       "destination": "/contact",
       "permanent": true

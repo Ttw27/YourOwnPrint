@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { initWhatsAppNumber } from "@/lib/data";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/NotFound";
@@ -50,7 +50,6 @@ import AdminLeaversTemplates from "@/pages/AdminLeaversTemplates";
 import Sports from "@/pages/Sports";
 import SportsTeamDetail from "@/pages/SportsTeamDetail";
 import TeamKits from "@/pages/TeamKits";
-import TeamKitBuilder from "@/pages/TeamKitBuilder";
 import FightNightTee from "@/pages/FightNightTee";
 import LeaversHoodies from "@/pages/LeaversHoodies";
 import SchoolTrips from "@/pages/SchoolTrips";
@@ -121,7 +120,8 @@ function App() {
           <Route path="/sports" element={<Sports />} />
           <Route path="/sports-teams/:slug" element={<SportsTeamDetail />} />
           <Route path="/team-kits" element={<TeamKits />} />
-          <Route path="/team-kit-builder" element={<TeamKitBuilder />} />
+          {/* Retired Oct 2026 (flat made-up prices, placeholder jersey) - the Full Squad builder replaces it */}
+          <Route path="/team-kit-builder" element={<Navigate to="/full-squad-configurator" replace />} />
           <Route path="/fight-night-tee" element={<FightNightTee />} />
           <Route path="/leavers-hoodies" element={<LeaversHoodies />} />
           <Route path="/school-trips" element={<SchoolTrips />} />
