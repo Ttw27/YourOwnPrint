@@ -1,0 +1,135 @@
+{
+ "fr100": {
+  "id": "fr100",
+  "name": "Front Row Classic Rugby Shirt",
+  "brand": "Front Row",
+  "source": "pencarrie",
+  "source_sku": "FR100",
+  "price": 23.99,
+  "source_price": 12.25,
+  "category": "polos",
+  "gender_fit": "unisex",
+  "industry_tags": [
+   "sports-fitness"
+  ],
+  "description": "Traditional woven rugby collar with cotton webbing. Taped shoulders and side vents. Elastane ribbed cuffs. Twin needle hem. Tag free. Club, supporters and social wear (not for playing contact rugby).",
+  "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR100/ProductCarouselMain/FR100%20BK%252fWH%20FRONT.jpg",
+  "additional_images": [],
+  "colors": [
+   {
+    "name": "Black/White",
+    "hex": "#000000;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR100/ProductCarouselMain/FR100%20BK%252fWH%20FRONT.jpg"
+   },
+   {
+    "name": "White/White",
+    "hex": "#ffffff;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR100/ProductCarouselMain/FR100%20WH%252fWH%20FRONT.jpg"
+   },
+   {
+    "name": "Surf Blue/White",
+    "hex": "#54faff;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR100/ProductCarouselMain/FR100%20SB%252fWH%20FRONT.jpg"
+   },
+   {
+    "name": "Navy/White",
+    "hex": "#000a1a;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR100/ProductCarouselMain/FR100%20NV%252fWH%20FRONT.jpg"
+   },
+   {
+    "name": "Royal Blue/White",
+    "hex": "#005ce6;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR100/ProductCarouselMain/FR100%20RY%252fWH%20FRONT.jpg"
+   },
+   {
+    "name": "Bright Green/White",
+    "hex": "#02b900;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR100/ProductCarouselMain/FR100%20BG%252fWH%20FRONT.jpg"
+   },
+   {
+    "name": "Red/White",
+    "hex": "#cc003d;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR100/ProductCarouselMain/FR100%20RD%252fWH%20FRONT.jpg"
+   }
+  ],
+  "sizes": [
+   "XS",
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL"
+  ],
+  "size_upcharges": {
+   "XXL": 1.0,
+   "3XL": 1.5,
+   "4XL": 1.5,
+   "5XL": 1.5
+  },
+  "allowed_placements": [
+   "left-breast",
+   "right-breast",
+   "back-print",
+   "left-sleeve",
+   "right-sleeve"
+  ],
+  "active": true
+ },
+ "fr7": {
+  "id": "fr7",
+  "name": "Front Row Panelled Rugby Shirt",
+  "brand": "Front Row",
+  "source": "pencarrie",
+  "source_sku": "FR7",
+  "price": 25.99,
+  "source_price": 13.25,
+  "category": "polos",
+  "gender_fit": "unisex",
+  "industry_tags": [
+   "sports-fitness"
+  ],
+  "description": "Heavyweight. Traditional white woven collar and inner placket. Herringbone taped neck and shoulders. Concealed two rubber button placket. Sewn-in contrast stripe around the body and sleeves. Elastane ribbed cuffs. Contrast herringbone taped side vents. Twin needle hem. Tag free. Club, supporters and social wear (not for playing contact rugby).",
+  "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR7/ProductCarouselMain/FR7%20NV%252fBU%20FRONT.jpg",
+  "additional_images": [
+   "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR7/ProductCarouselMain/FR7%20NV%252fBU%20BACK.jpg"
+  ],
+  "colors": [
+   {
+    "name": "Navy/Burgundy",
+    "hex": "#000a1a;#7c0829",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR7/ProductCarouselMain/FR7%20NV%252fBU%20FRONT.jpg"
+   },
+   {
+    "name": "Navy/White",
+    "hex": "#000a1a;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR7/ProductCarouselMain/FR7%20NV%252fWH%20FRONT.jpg"
+   },
+   {
+    "name": "Bottle Green/White",
+    "hex": "#0e4e1a;#ffffff",
+    "image": "https://www.fullcollection.com/storage/phoenix/2026/Phoenix%20All%20Images/Front%20Row/Product%20Images/FR7/ProductCarouselMain/FR7%20BO%252fWH%20FRONT.jpg"
+   }
+  ],
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL"
+  ],
+  "size_upcharges": {
+   "XXL": 0.5
+  },
+  "allowed_placements": [
+   "left-breast",
+   "right-breast",
+   "back-print",
+   "left-sleeve",
+   "right-sleeve"
+  ],
+  "active": true
+ }
+}

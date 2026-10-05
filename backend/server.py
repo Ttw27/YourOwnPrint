@@ -5832,6 +5832,56 @@ OLD_PLACEHOLDER_KITS = ["football-kit-bundle", "football-premium-bundle", "footb
                         "football-premium-front-only", "training-pack-bundle", "training-pack-front-only", "full-squad-pack"]
 
 
+async def _add_front_row_rugby_v1():
+    """One-off (Tim, Oct 2026): add Front Row Classic (FR100) + Panelled (FR7)
+    rugby-style shirts from PenCarrie's file (backend/data/front_row_rugby.json,
+    priced at ~55% after VAT + Stripe) for club / supporters / social wear -
+    PenCarrie lists them "for leisure use only", so they're NOT match kits.
+    Also hides the old rugby kit placeholders. Photos are copied to R2 in the
+    background (supplier links work meanwhile)."""
+    marker = "front_row_rugby_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    import json as _json
+    with open(ROOT_DIR / "data" / "front_row_rugby.json") as fh:
+        docs = _json.load(fh)
+    now = datetime.now(timezone.utc).isoformat()
+    added = []
+    for pid, d in docs.items():
+        if await db.imported_products.find_one({"id": pid}, {"_id": 1}):
+            continue
+        await db.imported_products.insert_one({**d, "imported_at": now, "created_at": now})
+        added.append(pid)
+    async for d in db.imported_products.find({"id": {"$in": added}}):
+        _apply_imported_product(d)
+    if added:
+        await reapply_saved_settings(added)
+    for pid in ("rugby-kit-bundle", "rugby-kit-front-only"):
+        if pid in PRODUCTS:
+            await _set_product_active(pid, False)
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "added": added, "ran_at": now}}, upsert=True)
+
+    async def _mirror():
+        from services.r2_storage import mirror_external_image
+        for pid in added:
+            doc = await db.imported_products.find_one({"id": pid})
+            if not doc:
+                continue
+            upd = {}
+            for c in doc.get("colors") or []:
+                if c.get("image") and "r2.dev" not in c["image"]:
+                    c["image"] = await mirror_external_image(c["image"]) or c["image"]
+            upd["colors"] = doc.get("colors") or []
+            if doc.get("image") and "r2.dev" not in doc["image"]:
+                upd["image"] = await mirror_external_image(doc["image"]) or doc["image"]
+            upd["additional_images"] = [await mirror_external_image(u) or u for u in (doc.get("additional_images") or [])]
+            await db.imported_products.update_one({"id": pid}, {"$set": upd})
+            fresh = await db.imported_products.find_one({"id": pid})
+            _apply_imported_product(fresh)
+            await reapply_saved_settings([pid])
+    asyncio.create_task(_mirror())
+
+
 async def _hide_placeholder_kits_v1():
     """One-off (Tim, Oct 2026): the prototype football/training kit placeholders
     (stock photos, no real garments) are replaced by kit-classic / kit-contrast /
@@ -7991,6 +8041,10 @@ async def _load_imported_products():
             await _fill_pencarrie_size_charts_v1("sols_leading_zero_size_charts_v1")
         except Exception as e:
             logging.warning(f"supplier size charts skipped: {e}")
+        try:
+            await _add_front_row_rugby_v1()
+        except Exception as e:
+            logging.warning(f"front row rugby skipped: {e}")
         try:
             await _hide_placeholder_kits_v1()
         except Exception as e:

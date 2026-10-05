@@ -109,6 +109,7 @@ export default function ProductDetail() {
       "training-pack-bundle": "kit-training", "training-pack-front-only": "kit-training",
     };
     if (KIT_MOVED[id]) { navigate(`/product/${KIT_MOVED[id]}`, { replace: true }); return; }
+    if (id === "rugby-kit-bundle" || id === "rugby-kit-front-only") { navigate("/team-kits#bundles", { replace: true }); return; }
     setLoading(true);
     Promise.all([
       api.get(`/products/${id}`).then(r => r.data),

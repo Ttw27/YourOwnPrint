@@ -202,6 +202,9 @@ frontend/src/
   availability). PDP = TeamKitConfigurator kit mode (KitPicker: colour per part + live preview, roster). Team Kits
   page lists KIT_SECTIONS only; old placeholder kits hidden (`_hide_placeholder_kits_v1`) + redirected in
   ProductDetail. Card photos in frontend/public/kits/.
+  Rugby: no match rugby shirts at PenCarrie/Ralawise (Front Row = "for leisure use only"), so the Rugby section =
+  Contrast kit (training/touch) + Front Row FR100/FR7 club & supporters shirts (`_add_front_row_rugby_v1`, data
+  backend/data/front_row_rugby.json) + a match-kit quote card; old rugby-kit-* placeholders hidden + redirected.
 - **Bundles are LOGO-ONLY** (Tim, Oct 2026): one logo, included, at `bundle_logo_position()` (left chest, else the
   garment's cheapest position e.g. cap front). Server forces it for any bundle with `bundle_included_print` (never
   blank, no extra positions); the PDP shows a fixed "3. Your logo" step + upload, linking to Kit Your Workforce /
