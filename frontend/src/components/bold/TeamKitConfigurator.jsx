@@ -402,14 +402,14 @@ export default function TeamKitConfigurator({ product }) {
 // Colour of each part + options, with a live preview laid out like the kit
 // photos (shirt left, shorts right, socks below). Supplier photos have white
 // backgrounds, so they're multiplied onto white to sit together cleanly.
-function KitPicker({ kit, opts, setOpts, cols, setCols, parts, kitUnit, kidsProblem }) {
+export function KitPicker({ kit, opts, setOpts, cols, setCols, parts, kitUnit, kidsProblem, title = "1. Your kit" }) {
   const img = (pt) => (pt.colours.find((c) => c.name === cols[pt.key]) || {}).image;
   const layout = parts.length >= 3
     ? [{ l: "0%", t: "2%", w: "60%", h: "60%" }, { l: "58%", t: "8%", w: "42%", h: "52%" }, { l: "30%", t: "50%", w: "40%", h: "48%" }]
     : [{ l: "2%", t: "6%", w: "56%", h: "80%" }, { l: "56%", t: "14%", w: "42%", h: "72%" }];
   return (
     <div className="bg-white rounded-3xl border-2 border-[#dcfce7] p-5" data-testid="kit-picker">
-      <h3 className="font-nunito font-extrabold text-[#1a1a1a] mb-1 flex items-center gap-2"><Sparkles size={16} className="text-[#7bc67e]" /> 1. Your kit</h3>
+      <h3 className="font-nunito font-extrabold text-[#1a1a1a] mb-1 flex items-center gap-2"><Sparkles size={16} className="text-[#7bc67e]" /> {title}</h3>
       <div className="text-xs text-[#4b5563] mb-3">{kit.garments}</div>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="relative aspect-square rounded-2xl bg-white border border-[#eef2f7] overflow-hidden" data-testid="kit-preview">

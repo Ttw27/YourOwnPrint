@@ -202,6 +202,9 @@ frontend/src/
   availability). PDP = TeamKitConfigurator kit mode (KitPicker: colour per part + live preview, roster). Team Kits
   page lists KIT_SECTIONS only; old placeholder kits hidden (`_hide_placeholder_kits_v1`) + redirected in
   ProductDetail. Card photos in frontend/public/kits/.
+  Full Squad Configurator (/full-squad-configurator) is built on the same kits: Match Day (Classic|Contrast),
+  optional Training + Tracksuit, ONE roster (name/number/size, tracksuit size) -> basket checkout of kit lines
+  (createCartCheckout, server re-prices) or a quote over 25 players. Old admin "bundle variants" no longer used there.
   Rugby: no match rugby shirts at PenCarrie/Ralawise (Front Row = "for leisure use only"), so the Rugby section =
   Contrast kit (training/touch) + Front Row FR100/FR7 club & supporters shirts (`_add_front_row_rugby_v1`, data
   backend/data/front_row_rugby.json) + a match-kit quote card; old rugby-kit-* placeholders hidden + redirected.
