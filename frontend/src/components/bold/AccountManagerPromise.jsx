@@ -35,7 +35,7 @@ export default function AccountManagerPromise({ variant = "band", preset = DEFAU
         </div>
         <p className="text-sm text-[#1a1a1a] mt-2 leading-relaxed">
           No bots, no auto-replies. You get a <strong>named person on WhatsApp and email</strong> who can check
-          where your order is, chase it, and answer anything - the same day.
+          where your order is, chase it, and answer anything.
         </p>
         <a
           href={waLink}

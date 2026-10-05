@@ -125,7 +125,7 @@ export default function SportsOutfitConfigurator() {
         roster: [],
         attachments,
       });
-      toast.success("Quote sent - we'll be in touch within 1 working day with a proof and price.");
+      toast.success("Quote sent - we'll be in touch with a proof and price.");
     } catch (e) {
       const d = e?.response?.data?.detail;
       const msg = typeof d === "string"
@@ -208,7 +208,7 @@ export default function SportsOutfitConfigurator() {
               {busy ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />} Get a proof &amp; final quote
             </button>
             <div className="mt-3 space-y-1 text-[11px] text-zinc-300">
-              <div className="inline-flex items-start gap-1.5"><ShieldCheck size={11} className="mt-0.5 text-[#7bc67e]" /><span>We&apos;ll send a full proof within {proof_days} working days.</span></div>
+              <div className="inline-flex items-start gap-1.5"><ShieldCheck size={11} className="mt-0.5 text-[#7bc67e]" /><span>We&apos;ll send a full proof before anything is printed.</span></div>
               <div className="inline-flex items-start gap-1.5"><Truck size={11} className="mt-0.5 text-[#7bc67e]" /><span>UK printed · low minimums · one point of contact.</span></div>
             </div>
           </div>

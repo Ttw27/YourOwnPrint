@@ -190,7 +190,7 @@ export default function TeamKits() {
             </div>
             <h2 className="font-nunito font-black text-3xl lg:text-4xl mt-3">Whole club? Academy? Multi-team setup?</h2>
             <p className="text-neutral-300 mt-3 text-lg">15+ kits or more than one squad and we'll take you out of the auto-checkout flow.
-              Send us your rosters, badges and sponsors - we'll build a <strong className="text-[#7bc67e]">free artwork proof</strong> and email a tailored quote within 1 working day.</p>
+              Send us your rosters, badges and sponsors - we'll build a <strong className="text-[#7bc67e]">free artwork proof</strong> and email a tailored quote.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link to="/contact" data-testid="big-order-contact" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-6 py-3 rounded-full transition-colors">
                 Send a quote request <ArrowRight size={16} />
@@ -205,7 +205,7 @@ export default function TeamKits() {
               <li>Upload your club badge - optionally sponsor logos</li>
               <li>Drop in your roster (Name · Number · Size · Qty)</li>
               <li>Under 15 kits, single team → Stripe checkout straight away</li>
-              <li>15+ or multi-team → free proof & tailored quote within 1 working day</li>
+              <li>15+ or multi-team → free proof & tailored quote</li>
             </ol>
           </div>
         </div>

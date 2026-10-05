@@ -26,7 +26,7 @@ const TILES = [
     accentText: "text-[#78350f]",
     title: "Leavers hoodies",
     tagline: "Class of 2026 - primary, secondary or uni",
-    bullets: ["Full back-print of names included", "Group order per pupil, no fuss for staff", "Proof in 2 working days"],
+    bullets: ["Full back-print of names included", "Group order per pupil, no fuss for staff", "Free proof before printing"],
     cta: "Start a leavers order",
   },
   {
@@ -92,7 +92,7 @@ const TILES = [
 ];
 
 const TRUST = [
-  { Icon: ShieldCheck, label: "Proofs in 2 working days" },
+  { Icon: ShieldCheck, label: "Free proof before printing" },
   { Icon: Truck, label: "UK printed & delivered" },
   { Icon: MessageCircle, label: "One human, from proof to delivery" },
   { Icon: Sparkles, label: "Low minimums, no set-up fees" },
@@ -109,7 +109,7 @@ const FAQ = [
   },
   {
     q: "How long does a typical order take?",
-    a: "Proof within 2 working days, printed & dispatched within 7–10 working days from proof approval. Rush service available on request - ask for it in the notes.",
+    a: "We send a free proof first, then print and dispatch within 7–10 working days of you approving it. Rush service available on request - ask for it in the notes.",
   },
   {
     q: "Can we pay per pupil / per player instead of one lump sum?",

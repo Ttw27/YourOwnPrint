@@ -425,7 +425,7 @@ export default function LeaversStart() {
             <div className="mt-4 space-y-2 text-[11px] text-zinc-300" data-testid="ls-proof-block">
               <div className="flex items-start gap-2">
                 <ShieldCheck size={12} className="mt-0.5 flex-shrink-0 text-[#7bc67e]" />
-                <span><strong className="text-white">We&apos;ll send a proof</strong> - mock-up of the design (and names) within {config.proof_days || 2} working days. Nothing prints until you say yes.</span>
+                <span><strong className="text-white">We&apos;ll send a proof</strong> - mock-up of the design (and names). Nothing prints until you say yes.</span>
               </div>
               {printPosition === "full_front" && (
                 <div className="flex items-start gap-2" data-testid="ls-summary-full-front-note">
@@ -574,7 +574,7 @@ function CustomDesignDrop({ dataUrl, onChange, slot = "" }) {
           <img src={dataUrl} alt="Your design" className="w-20 h-20 object-contain bg-[#fff7ed] rounded-lg border border-[#fed7aa] p-1" data-testid={`ls-custom-design-preview${suffix}`} />
           <div className="text-xs flex-1">
             <div className="font-extrabold">Design uploaded</div>
-            <div className="text-[#4b5563]">We&apos;ll proof and reply within 1 working day.</div>
+            <div className="text-[#4b5563]">We&apos;ll send a proof and reply as soon as we can.</div>
           </div>
           <button type="button" onClick={() => inputRef.current?.click()} className="text-xs font-extrabold underline" data-testid={`ls-custom-design-replace${suffix}`}>Replace</button>
           <button type="button" onClick={() => onChange(null)} className="text-xs text-rose-500 hover:underline" data-testid={`ls-custom-design-remove${suffix}`}>Remove</button>

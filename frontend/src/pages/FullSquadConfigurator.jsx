@@ -90,7 +90,7 @@ export default function FullSquadConfigurator() {
         message: `Full Squad Configurator quote - estimated subtotal £${totals.subtotal.toFixed(2)}.\n${summaryLines.join("\n")}`,
         roster: mergedRoster,
       });
-      toast.success("Quote sent - we'll be in touch within 1 working day with a proof and price.");
+      toast.success("Quote sent - we'll be in touch with a proof and price.");
     } catch (e) {
       const d = e?.response?.data?.detail;
       const msg = typeof d === "string"
@@ -120,7 +120,7 @@ export default function FullSquadConfigurator() {
               <ShoppingBag size={12} className="text-[#fbbf24]" /> Add a printed gym bag with badge + name from £4
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 font-extrabold">
-              <ShieldCheck size={12} className="text-[#7bc67e]" /> UK printed · proof in 2 days
+              <ShieldCheck size={12} className="text-[#7bc67e]" /> UK printed · free proof
             </span>
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function FullSquadConfigurator() {
               {busy ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />} Get a proof &amp; final quote
             </button>
             <div className="mt-3 space-y-1 text-[11px] text-zinc-300">
-              <div className="inline-flex items-start gap-1.5"><ShieldCheck size={11} className="mt-0.5 text-[#7bc67e]" /><span>We&apos;ll send a full proof within {proof_days} working days.</span></div>
+              <div className="inline-flex items-start gap-1.5"><ShieldCheck size={11} className="mt-0.5 text-[#7bc67e]" /><span>We&apos;ll send a full proof before anything is printed.</span></div>
               <div className="inline-flex items-start gap-1.5"><Truck size={11} className="mt-0.5 text-[#7bc67e]" /><span>UK printed · low minimums · one point of contact.</span></div>
             </div>
           </div>

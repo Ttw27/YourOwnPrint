@@ -3654,7 +3654,7 @@ async def leavers_bespoke(payload: LeaversBespokeRequest):
         "Got it - we're on the case!",
         f"""
         <p>Hi {payload.contact_name.split(' ')[0]},</p>
-        <p>Thanks for your bespoke leavers' hoodies enquiry for <strong>{payload.school}</strong> ({payload.year_group}). A real human will be in touch within 1 working day with fabric options, a design proof and pricing.</p>
+        <p>Thanks for your bespoke leavers' hoodies enquiry for <strong>{payload.school}</strong> ({payload.year_group}). A real human will be in touch with fabric options, a design proof and pricing.</p>
         <p style="color:#4b5563">In the meantime, feel free to reply to this email with any extra details or mock-up ideas.</p>
         <p style="margin-top:16px">- The Your Own Print team</p>
         """,

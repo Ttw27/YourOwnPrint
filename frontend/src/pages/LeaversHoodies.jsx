@@ -242,7 +242,7 @@ function BespokeModal({ onClose }) {
     setBusy(true);
     try {
       await leaversBespoke({ ...form, estimated_qty: Number(form.estimated_qty) });
-      toast.success("Thanks! We'll be in touch within 24 hours with design ideas.");
+      toast.success("Thanks! We'll be in touch with design ideas.");
       onClose();
     } catch (e) {
       const d = e?.response?.data?.detail;

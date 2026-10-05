@@ -111,7 +111,7 @@ export default function TeamKitBuilder() {
         roster: cleanRoster,
         product_id: sport === "rugby" ? "rugby-shirt" : "football-jersey",
       });
-      toast.success("Quote request sent! We'll come back within 1 working day with a free artwork proof.");
+      toast.success("Quote request sent! We'll come back with a free artwork proof.");
       setStep(99);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Could not submit. Please try again.");
@@ -168,7 +168,7 @@ export default function TeamKitBuilder() {
           </h1>
           <p className="text-[#4b5563] mt-3 text-lg max-w-2xl">
             Upload your badge, sponsors and roster. Under 10 kits → straight to checkout.
-            10+ kits → we'll review, send a free artwork proof and email a tailored quote within 1 working day.
+            10+ kits → we'll review, send a free artwork proof and email a tailored quote.
           </p>
         </div>
       </div>
@@ -177,7 +177,7 @@ export default function TeamKitBuilder() {
         <div className="max-w-3xl mx-auto px-6 py-20 text-center">
           <div className="mx-auto w-20 h-20 bg-[#7bc67e] rounded-full grid place-items-center"><Sparkles className="text-[#1a1a1a]" size={36} /></div>
           <h2 className="mt-5 font-nunito font-black text-3xl">Quote request sent! 🎉</h2>
-          <p className="mt-3 text-[#4b5563]">We'll be in touch within 1 working day with a free proof and your tailored quote. Need anything urgent?</p>
+          <p className="mt-3 text-[#4b5563]">We'll be in touch with a free proof and your tailored quote. Need anything urgent?</p>
           <div className="mt-6 flex justify-center gap-3 flex-wrap">
             <WhatsAppInline preset={`Hi! I just submitted a Team Kit quote for ${club.name}. Anything I can prep?`} label="WhatsApp us" />
             <Link to="/" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white font-nunito font-extrabold px-6 py-3 rounded-full transition-colors">Back to home</Link>
@@ -296,7 +296,7 @@ export default function TeamKitBuilder() {
               </div>
               <div className="max-w-sm text-sm text-neutral-300">
                 {requiresQuote
-                  ? <>10+ kits - we'll review your roster, send a <strong className="text-[#7bc67e]">free proof</strong> and email a tailored quote within 1 working day.</>
+                  ? <>10+ kits - we'll review your roster, send a <strong className="text-[#7bc67e]">free proof</strong> and email a tailored quote.</>
                   : <>Under 10 kits - pay securely with Stripe and we'll start production after sending you a proof for sign-off.</>}
               </div>
             </div>

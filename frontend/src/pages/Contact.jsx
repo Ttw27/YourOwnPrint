@@ -116,7 +116,7 @@ export default function Contact() {
             <button data-testid="contact-submit" type="submit" disabled={submitting} className="mt-6 inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md hover:-translate-y-1 transition-transform">
               {submitting ? "Sending…" : <>Send Enquiry <Send size={16} /></>}
             </button>
-            <p className="text-xs text-[#4b5563] mt-3">We typically reply within 1 working day.</p>
+            
           </form>
         </div>
       </div>

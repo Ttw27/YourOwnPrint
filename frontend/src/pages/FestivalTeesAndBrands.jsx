@@ -73,7 +73,7 @@ export default function FestivalTeesAndBrands() {
     setSubmitting(true);
     try {
       await submitContact({ ...form, sector: "DJ / Festival / Own Clothing Brand" });
-      toast.success("Thanks! We'll be in touch within 1 working day. 🎧");
+      toast.success("Thanks! We'll be in touch soon. 🎧");
       setForm({ name: "", email: "", phone: "", company: "", message: "" });
     } catch {
       toast.error("Something went wrong - please try again or WhatsApp us.");
@@ -263,7 +263,7 @@ export default function FestivalTeesAndBrands() {
               data-testid="festival-form-submit">
               {submitting ? "Sending…" : <>Send Enquiry <Send size={16} /></>}
             </button>
-            <p className="text-xs text-[#4b5563]">We typically reply within 1 working day.</p>
+            
           </form>
         </div>
       </div>
