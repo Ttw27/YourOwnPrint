@@ -163,7 +163,7 @@ PRODUCTS: Dict[str, Dict] = {
         "name": "Rugby Match Shirt",
         "price": 24.99,
         "category": "sports",
-        "image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
+        "image": "https://images.pexels.com/photos/3413645/pexels-photo-3413645.jpeg",
         "description": "Heavy-grade rugby shirt. Reinforced collar. Crest, sponsor, names + numbers.",
     },
     "training-tracksuit": {
@@ -238,7 +238,7 @@ PRODUCTS: Dict[str, Dict] = {
         "name": "Rugby Kit Bundle",
         "price": 32.99,
         "category": "team-kits",
-        "image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
+        "image": "https://images.pexels.com/photos/3413645/pexels-photo-3413645.jpeg",
         "description": "Heavy-grade rugby shirt + shorts per player. Crest + names included.",
     },
     "training-pack-bundle": {
@@ -280,7 +280,7 @@ PRODUCTS: Dict[str, Dict] = {
         "name": "Rugby Kit - Front Print Only",
         "price": 25.99,
         "category": "team-kits",
-        "image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
+        "image": "https://images.pexels.com/photos/3413645/pexels-photo-3413645.jpeg",
         "description": "Heavy-grade rugby shirt + shorts. Crest + front sponsor only - names/numbers excluded.",
     },
     "training-pack-front-only": {
@@ -2343,7 +2343,7 @@ SPORTS_TEAMS_CATALOGUE = [
     },
     {"slug": "rugby", "title": "Rugby Kits", "h1": "Custom Rugby Kits - Heavy-Grade Match Shirts",
      "subtitle": "Match shirts, training tops, club tracksuits",
-     "hero_image": "https://images.pexels.com/photos/342361/pexels-photo-342361.jpeg",
+     "hero_image": "https://images.pexels.com/photos/3413645/pexels-photo-3413645.jpeg",
      "intro": "Reinforced rugby shirts built to take a battering. Club crest, sponsor, player names and squad numbers baked into the price. UK printed, ready in 7–10 days.",
      "seo_paragraph": "Our rugby shirts use heavy-grade fabric with a reinforced collar and twin-needle seams - designed to survive line-outs and laundry day. Add badges, sponsors and back numbers; we'll deliver match-ready kit for any age group, from U7s to seniors.",
      "faqs": [
