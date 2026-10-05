@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
-import { api, createCheckout, fetchFightNightAddons, fetchFightNightTiers } from "../lib/api";
+import { api, createCheckout, fetchFightNightAddons, fetchFightNightTiers, uploadOrderArtwork } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Plus, Minus, Loader2, Send, Zap, Sparkles, ShieldCheck, Info, Camera, Upload } from "lucide-react";
@@ -198,6 +198,13 @@ export default function FightNightTee() {
       };
       // Pass sponsor data URLs via design_meta (split if necessary). For Stripe metadata size limits we store only count + send full artwork to a quote_requests doc shadow record so the team has the actual files.
       // Actually we'll persist sponsors in a quote_requests doc keyed by session_id reference (best-effort) for the team to access - backend will tie it via metadata.session_id after checkout.
+      const art = await uploadOrderArtwork({
+        ...Object.fromEntries(sponsors.map((s, i) => [`sponsor-${i + 1}`, s])),
+        "back-print": backPrint ? backArt : null,
+        "left-sleeve": leftSleeve ? leftArt : null,
+        "right-sleeve": rightSleeve ? rightArt : null,
+      }, "fight-night");
+      Object.assign(designMeta, art);
       const { url, session_id } = await createCheckout({
         product_id: tee.id,
         size_qtys: sizeQtys,

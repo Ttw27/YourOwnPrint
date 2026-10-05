@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { adminListOrders } from "../lib/api";
+import { adminListOrders, mediaUrl } from "../lib/api";
 import { toast } from "sonner";
 
 const STATUS_TABS = [
@@ -111,6 +111,16 @@ function OrderDetails({ o }) {
             {l.dm && l.dm.pack_sizes_text && <div className="text-amber-300">Pack size split: {l.dm.pack_sizes_text}</div>}
             <div>Print: {(l.placements && l.placements.length) ? l.placements.join(", ") : "blank / none"}</div>
             {l.dm && (l.dm.mode || l.dm.flow) && <div className="text-zinc-500">Artwork: {l.dm.mode || l.dm.flow}</div>}
+            {l.dm && Object.keys(l.dm).some((k) => k.startsWith("art_") && l.dm[k]) && (
+              <div className="flex flex-wrap gap-2 pt-1" data-testid="admin-order-artwork">
+                {Object.entries(l.dm).filter(([k, v]) => k.startsWith("art_") && v).map(([k, v]) => (
+                  <a key={k} href={mediaUrl(v)} target="_blank" rel="noreferrer" className="block text-center" title="Open the customer's file">
+                    <img src={mediaUrl(v)} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-zinc-700" />
+                    <span className="block text-[10px] text-zinc-400 mt-0.5">{k.slice(4).replace(/[-_]/g, " ")}</span>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         {dl && (

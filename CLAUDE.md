@@ -277,6 +277,12 @@ frontend/src/
 
 ---
 
+- **Customer print files must reach the order.** Uploads on product pages / team kits / Fight Night are sent
+  with `uploadOrderArtwork()` (lib/api.js -> POST /uploads/artwork, stored in R2) and saved on the order line as
+  `design_meta.art_<position>` = "/api/uploads/artwork/<id>.png". Shown as thumbnails in Admin > Orders and as
+  links in the shop's order email; NOT copied into Stripe metadata (50-key cap). Before Oct 2026 the files never
+  left the browser - any new checkout flow must do the same.
+
 ## 6. Known gotchas / debugging lessons (all learned the hard way)
 
 - **Backend-served image paths need the backend prefix.** Portfolio (and some other) images are

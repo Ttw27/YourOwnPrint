@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { createCheckout, submitQuoteRequest, fetchTeamKitBrands, fetchTeamKitAddons, fetchKitDetails } from "../../lib/api";
+import { createCheckout, submitQuoteRequest, fetchTeamKitBrands, fetchTeamKitAddons, fetchKitDetails, uploadOrderArtwork } from "../../lib/api";
 import { WhatsAppInline } from "./WhatsAppFAB";
 import { Upload, Plus, Trash2, Loader2, ShoppingCart, Send, Info, Camera, Sparkles, Check, X } from "lucide-react";
 import { ExVat } from "./PriceTag";
@@ -177,6 +177,13 @@ export default function TeamKitConfigurator({ product }) {
       const size_qtys = {};
       roster.forEach((r) => { const q = Number(r.qty) || 0; if (q > 0) size_qtys[r.size] = (size_qtys[r.size] || 0) + q; });
       const rosterLines = roster.map(r => `${r.name || "-"}#${r.number || "-"}/${r.size}×${r.qty}`).join("|").slice(0, 380);
+      // the actual files (badge etc.) go with the order, not just yes/no flags
+      const art = await uploadOrderArtwork({
+        badge: team.badge, "front-sponsor": frontSponsor,
+        "left-sleeve": leftSleeve.on ? leftSleeve.art : null,
+        "right-sleeve": rightSleeve.on ? rightSleeve.art : null,
+        "back-print": backPrint.on ? backPrint.art : null,
+      }, `team-kit:${product.id}`);
       const { url } = await createCheckout({
         product_id: product.id,
         size_qtys,
@@ -194,6 +201,7 @@ export default function TeamKitConfigurator({ product }) {
           right_sleeve: rightSleeve.on ? "yes" : "no",
           back_print: backPrint.on ? "yes" : "no",
           roster: rosterLines,
+          ...art,
           ...(kit ? {
             kit_socks: kitOpts.socks ? "yes" : "no",
             kit_names: kitOpts.names ? "yes" : "no",

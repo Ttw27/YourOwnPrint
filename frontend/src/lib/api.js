@@ -769,6 +769,18 @@ export async function uploadArtwork({ dataUrl, filename, purpose }) {
   const backendBase = process.env.REACT_APP_BACKEND_URL || "";
   return { ...data, absolute_url: `${backendBase}${data.url}` };
 }
+// Customer print files -> stored on the server, returned as {art_<key>: url}
+// to put in the order line's design_meta, so the order carries the actual
+// logos (previously only the position names reached the order).
+export async function uploadOrderArtwork(files, purpose = "order") {
+  const out = {};
+  for (const [key, dataUrl] of Object.entries(files || {})) {
+    if (!dataUrl || !String(dataUrl).startsWith("data:")) continue;
+    const r = await uploadArtwork({ dataUrl, filename: `${key}.png`, purpose });
+    out[`art_${key}`] = r.url;
+  }
+  return out;
+}
 export async function fetchSockSizes() {
   const { data } = await api.get("/sock-sizes");
   return data;

@@ -11,7 +11,7 @@ import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
 import PlacementDesignerModal from "../components/bold/PlacementDesignerModal";
 import { DEFAULT_PLACEMENT_AREAS } from "../components/bold/SimplePrintCanvas";
-import { api, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
+import { api, uploadOrderArtwork, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
 import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, ShoppingBag, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
@@ -335,6 +335,7 @@ export default function ProductDetail() {
     }
     setCheckingOut(true);
     try {
+      const art = blank ? {} : await uploadOrderArtwork(artwork, `product:${product.id}`);
       const { url } = await createCheckout({
         product_id: product.id,
         size_qtys: sizeQtys,
@@ -346,6 +347,7 @@ export default function ProductDetail() {
           mode: "uploaded",
           placements_uploaded: Object.keys(artwork).join(","),
           ...packMeta,
+          ...art,
         },
       });
       window.location.href = url;
@@ -723,7 +725,7 @@ export default function ProductDetail() {
                   <div className="mt-5 grid sm:grid-cols-2 gap-2">
                     <button
                       data-testid="add-to-cart"
-                      onClick={() => {
+                      onClick={async () => {
                         if (checkoutBlocked) {
                           if (totalQty < 1) toast.error(isPack ? "Choose how many packs you'd like" : "Add at least 1 item to a size");
       else if (!packComplete) toast.error("Split the sizes for each garment in the pack - they need to add up");
@@ -731,6 +733,9 @@ export default function ProductDetail() {
                           else toast.error("Please upload artwork for every selected placement");
                           return;
                         }
+                        let art = {};
+                        try { art = blank ? {} : await uploadOrderArtwork(artwork, `product:${product.id}`); }
+                        catch { toast.error("Couldn't upload your artwork - please try again"); return; }
                         addLine({
                           product_id: product.id,
                           name: product.name,
@@ -742,6 +747,7 @@ export default function ProductDetail() {
                             mode: "uploaded",
                             placements_uploaded: Object.keys(artwork).join(","),
                             ...packMeta,
+                            ...art,
                           },
                         });
                       }}

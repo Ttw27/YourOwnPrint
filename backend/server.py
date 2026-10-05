@@ -1311,6 +1311,8 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         metadata["account_discount"] = f"{priced['account_discount_pct']:g}% off garments (-£{priced['account_saving']:.2f})"
     if payload.design_meta:
         for k, v in payload.design_meta.items():
+            if str(k).startswith("art_"):
+                continue  # customer file links live on the order (design_meta), not in Stripe (50-key cap)
             metadata[f"design_{k}"] = str(v)[:400]
 
     session = await create_checkout_session(
@@ -1350,6 +1352,15 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
     return CheckoutResponse(url=session.url, session_id=session.id)
 
 
+def _backend_public_url() -> str:
+    """Public https address of this API (links in emails to /api/... files)."""
+    explicit = os.environ.get("BACKEND_PUBLIC_URL", "").rstrip("/")
+    if explicit:
+        return explicit
+    dom = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    return f"https://{dom}" if dom else "https://yourownprint-production.up.railway.app"
+
+
 def _order_details_html(doc: dict) -> str:
     """What was actually ordered - product, colour, sizes, print positions and
     (for bulk packs) the size split per garment - for the shop's order email."""
@@ -1377,6 +1388,12 @@ def _order_details_html(doc: dict) -> str:
                 rows.append(f"Print size: {esc(ps.get('scale', 100))}% of the standard print area, {esc(pos)}")
         if dm.get("mode") or dm.get("flow"):
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
+        # the customer's actual print files (art_<position> -> /api/uploads/artwork/...)
+        arts = [(k[4:], v) for k, v in dm.items() if k.startswith("art_") and v]
+        if arts:
+            base = _backend_public_url()
+            rows.append("Customer files: " + " · ".join(
+                f"<a href='{esc(base + v if str(v).startswith('/') else v)}'>{esc(k.replace('-', ' '))}</a>" for k, v in arts))
         return "<li style='margin-bottom:8px'>" + "<br>".join(rows) + "</li>"
 
     items = []
