@@ -9118,6 +9118,10 @@ from services.email import email_wrap as _email_wrap
 
 app.include_router(api_router)
 
+# Old r2.dev photo URLs -> the image domain in R2_PUBLIC_URL (no-op until set).
+from services.image_host import ImageHostMiddleware  # noqa: E402
+app.add_middleware(ImageHostMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
