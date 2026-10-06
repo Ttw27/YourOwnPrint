@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, ShoppingBag, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import PriceTag from "../components/bold/PriceTag";
+import { trackViewProduct } from "../lib/tracking";
 import { useAccountDiscount, discounted } from "../context/CustomerAuthContext";
 
 // Supplier size lists can arrive jumbled ("2X3X, 4X5X, L/XL, S/M") - put them smallest first.
@@ -146,6 +147,7 @@ export default function ProductDetail() {
           navigate(`/fight-night-tee${p.id === "boxing-fight-performance" ? "?tee=performance" : ""}`, { replace: true }); return;
         }
         setProduct(p); setPlacements(pl); setAggregates(ag);
+        trackViewProduct(p);
         setAllowedPlacements(ap);
         setQA(qaList || []);
         // ?colour=Name (Google Shopping / ads links) opens that colour

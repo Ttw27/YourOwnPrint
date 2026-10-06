@@ -1,4 +1,5 @@
 import axios from "axios";
+import { trackBeginCheckout } from "./tracking";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -85,6 +86,7 @@ export async function selectTheme(theme_id, note = "") {
 
 export async function createCheckout(payload) {
   const { data } = await api.post("/checkout/session", payload);
+  trackBeginCheckout(0, "single");
   return data;
 }
 
@@ -489,6 +491,7 @@ export async function fetchWorkforceTiers() {
 }
 export async function workforceCheckout(payload) {
   const { data } = await api.post("/workforce/checkout", payload);
+  trackBeginCheckout(0, "workforce");
   return data;
 }
 export async function workforceQuote(payload) {
@@ -546,6 +549,7 @@ export async function fetchLeaversTemplates() {
 }
 export async function leaversCheckout(payload) {
   const { data } = await api.post("/leavers/checkout", payload);
+  trackBeginCheckout(0, "leavers");
   return data;
 }
 export async function leaversBespoke(payload) {
@@ -907,6 +911,7 @@ export async function priceCart(items) {
 }
 export async function createCartCheckout(items, customer_email, delivery_region = "uk") {
   const { data } = await api.post("/checkout/cart-session", { items, origin_url: window.location.origin, customer_email: customer_email || null, delivery_region });
+  trackBeginCheckout(0, "basket");
   return data;
 }
 

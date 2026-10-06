@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { priceCart, customerGetCart, customerPutCart, customerMergeCart } from "../lib/api";
+import { trackAddToCart } from "../lib/tracking";
 import { useCustomerAuth } from "./CustomerAuthContext";
 
 /**
@@ -108,6 +109,7 @@ export function CartProvider({ children }) {
   }, [items, token]);   // re-price on sign in/out: regulars get their account discount
 
   const addLine = useCallback((line) => {
+    trackAddToCart(line);
     // { product_id, size_qtys, color, placements, blank, design_meta, name?: display hint }
     const line_id = makeLineId(line.product_id, line.color, line.placements, line.design_meta);
     setItems((prev) => {

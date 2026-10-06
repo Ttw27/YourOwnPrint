@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchCheckoutStatus } from "../lib/api";
+import { trackPurchase } from "../lib/tracking";
 import { CheckCircle2, Loader2, XCircle, ArrowRight, PartyPopper } from "lucide-react";
 
 export default function CheckoutSuccess() {
@@ -20,6 +21,7 @@ export default function CheckoutSuccess() {
       try {
         const data = await fetchCheckoutStatus(sessionId);
         if (data.payment_status === "paid") {
+          trackPurchase(sessionId, Number(data.amount_total) || 0);
           setState({ loading: false, paid: true, expired: false, info: data, error: null });
           return;
         }

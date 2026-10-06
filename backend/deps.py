@@ -112,6 +112,10 @@ INTEGRATION_ENV_MAP: Dict[str, str] = {
     "judgeme_api_token": "JUDGEME_API_TOKEN",
     "whatsapp_number": "WHATSAPP_NUMBER",
     "contact_email": "CONTACT_EMAIL",
+    "meta_pixel_id": "META_PIXEL_ID",
+    "ga4_id": "GA4_ID",
+    "google_ads_id": "GOOGLE_ADS_ID",
+    "google_ads_purchase_label": "GOOGLE_ADS_PURCHASE_LABEL",
 }
 
 

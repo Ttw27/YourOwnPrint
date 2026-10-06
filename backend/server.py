@@ -6774,6 +6774,14 @@ INTEGRATION_KEYS = {
                        "help": "Where quote requests and bespoke leavers' enquiries are emailed."},
     "pencarrie_api_token": {"label": "PenCarrie API Token", "kind": "secret", "env": "PENCARRIE_API_TOKEN",
                              "help": "From PenCarrie: My Account > Account Settings > API Access Tokens. Used to pull the product catalogue automatically."},
+    "meta_pixel_id": {"label": "Meta (Facebook) Pixel ID", "kind": "text", "env": "META_PIXEL_ID",
+                      "help": "Meta Events Manager > Data sources > your pixel - the long number. Tracks visits, add to basket, checkout and purchases for your Facebook / Instagram ads."},
+    "ga4_id": {"label": "Google Analytics 4 Measurement ID", "kind": "text", "env": "GA4_ID",
+               "help": "Google Analytics > Admin > Data streams > your website - starts G-"},
+    "google_ads_id": {"label": "Google Ads tag ID", "kind": "text", "env": "GOOGLE_ADS_ID",
+                      "help": "Google Ads > Goals > Conversions > your purchase conversion > Tag setup - starts AW-"},
+    "google_ads_purchase_label": {"label": "Google Ads purchase conversion label", "kind": "text", "env": "GOOGLE_ADS_PURCHASE_LABEL",
+                                  "help": "Same place as the tag ID - the part after the slash in send_to (AW-123/abcDEF), just the abcDEF bit."},
     "anthropic_api_key": {"label": "Anthropic API Key", "kind": "secret", "env": "ANTHROPIC_API_KEY",
                            "help": "From https://console.anthropic.com (Settings > API Keys). Powers Smart Re-classify, which sorts products into the right collections and industries."},
 }
@@ -6858,6 +6866,17 @@ async def _load_saved_stripe_key():
     mode = "LIVE" if STRIPE_API_KEY.startswith(("sk_live_", "rk_live_")) else \
            "TEST" if STRIPE_API_KEY.startswith(("sk_test_", "rk_test_")) else "NOT SET"
     logging.info(f"Stripe: {mode} mode; webhook secret {'set' if STRIPE_WEBHOOK_SECRET else 'NOT set'}")
+
+
+@api_router.get("/site/tracking")
+async def get_site_tracking():
+    """Public - the ad / analytics tag IDs (not secrets). The site only loads
+    them after the visitor accepts cookies."""
+    out = {}
+    for k in ("meta_pixel_id", "ga4_id", "google_ads_id", "google_ads_purchase_label"):
+        v = (await _get_integration_value(k) or "").strip()
+        out[k] = v if re.fullmatch(r"[A-Za-z0-9_\-]{3,40}", v) else ""
+    return out
 
 
 @api_router.get("/site/whatsapp")

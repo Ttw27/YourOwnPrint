@@ -78,6 +78,7 @@ import { CartProvider } from "@/context/CartContext";
 import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import Account from "@/pages/Account";
 import ResetPassword from "@/pages/ResetPassword";
+import CookieConsent from "@/components/bold/CookieConsent";
 
 function App() {
   // Pull the admin-set WhatsApp number once on load so every WhatsApp link
@@ -90,6 +91,7 @@ function App() {
         <CustomerAuthProvider>
         <CartProvider>
         <ScrollToTop />
+        <CookieConsent />
         <Toaster position="top-center" richColors />
         <Routes>
           <Route path="/" element={<Home />} />

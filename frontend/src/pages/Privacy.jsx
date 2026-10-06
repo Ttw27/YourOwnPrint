@@ -74,9 +74,12 @@ export default function Privacy() {
 
       <LegalSection title="7. Cookies">
         <p>
-          We use only the essential cookies/local storage needed to make the site function - for
-          example, keeping you logged in and remembering your cart. We don't use third-party
-          advertising trackers.
+          We use essential cookies/local storage to make the site work - for example, keeping you
+          logged in and remembering your basket. Only if you choose &quot;Accept all&quot; in the cookie
+          message do we also use analytics and advertising cookies from Google (Analytics and Ads)
+          and Meta (Facebook / Instagram), to understand how the site is used and to measure and show
+          relevant ads. You can change your choice at any time by clearing this site&apos;s cookies in
+          your browser.
         </p>
       </LegalSection>
 
