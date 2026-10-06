@@ -79,6 +79,8 @@ import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import Account from "@/pages/Account";
 import ResetPassword from "@/pages/ResetPassword";
 import CookieConsent from "@/components/bold/CookieConsent";
+import SignupOffer from "@/components/bold/SignupOffer";
+import AdminSubscribers from "@/pages/AdminSubscribers";
 import ReviewOrder from "@/pages/ReviewOrder";
 import BasketRestore from "@/pages/BasketRestore";
 
@@ -94,6 +96,7 @@ function App() {
         <CartProvider>
         <ScrollToTop />
         <CookieConsent />
+        <SignupOffer />
         <Toaster position="top-center" richColors />
         <Routes>
           <Route path="/" element={<Home />} />
@@ -167,6 +170,7 @@ function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/import-reviews" element={<RequireAdmin><AdminLayout><AdminImport /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/reviews" element={<RequireAdmin><AdminLayout><AdminReviews /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/subscribers" element={<RequireAdmin><AdminLayout><AdminSubscribers /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/team-kits" element={<RequireAdmin><AdminLayout><AdminTeamKits /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/designer-products" element={<RequireAdmin><AdminLayout><AdminDesignerProducts /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/product-settings" element={<RequireAdmin><AdminLayout><AdminProductSettings /></AdminLayout></RequireAdmin>} />

@@ -9131,6 +9131,7 @@ import routers.trusted_logos  # noqa: F401 - registers /trusted-logos (homepage 
 import routers.team_kits  # noqa: F401 - registers /team-kits/kit/{id} (kits built from real garments)
 import routers.dance_kit  # noqa: F401 - registers /dance-kit/config (dance studio kit builder)
 import routers.google_feed  # noqa: F401 - registers /feeds/google.xml (Merchant Center feed)
+import routers.signup_offer  # noqa: F401 - registers /signup-offer, /admin/subscribers
 import routers.followups  # noqa: F401 - review request + abandoned basket emails, /review-request/*, /basket/restore/*
 
 

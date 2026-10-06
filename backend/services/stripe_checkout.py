@@ -55,6 +55,8 @@ async def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=metadata or {},
+        # sign-up codes (WELCOME-XXXXXX, routers/signup_offer.py) and any codes made in Stripe
+        allow_promotion_codes=True,
         # Delivery choice (collect / local / UK by weight) + address + phone on
         # Stripe's page - see routers/delivery.py.
         **({"shipping_options": shipping_options,
