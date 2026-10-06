@@ -418,6 +418,11 @@ export async function fetchTeamKitAddons() {
   return data;
 }
 // Team kits built from real garments: parts + their colours (with photos), price table, defaults.
+// Dance studio kit builder: sets -> garment options (women's + kids), colours, size prices, print prices.
+export async function fetchDanceKitConfig() {
+  const { data } = await api.get("/dance-kit/config");
+  return data;
+}
 export async function fetchKitDetails(product_id) {
   const { data } = await api.get(`/team-kits/kit/${product_id}`);
   return data;

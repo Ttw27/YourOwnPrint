@@ -163,8 +163,9 @@ export default function SportsTeamDetail() {
               // Football / Rugby (team sports) → Full Squad Configurator.
               // Gyms / PTs / Boxing / Thai / Kick / Dance → Sports Outfit Configurator (simpler).
               const teamSlugs = ["football", "rugby"];
-              const cfgTo = teamSlugs.includes(slug) ? "/full-squad-configurator" : "/sports-outfit-configurator";
-              const cfgLabel = teamSlugs.includes(slug) ? "Full Squad Configurator" : "Sports Outfit Configurator";
+              const dance = slug === "dance-studios";
+              const cfgTo = teamSlugs.includes(slug) ? "/full-squad-configurator" : dance ? "/dance-studio-kit" : "/sports-outfit-configurator";
+              const cfgLabel = teamSlugs.includes(slug) ? "Full Squad Configurator" : dance ? "Build your studio kit" : "Sports Outfit Configurator";
               return (
                 <Link to={cfgTo} className="px-5 py-3 bg-[#7bc67e] text-[#1a1a1a] rounded-full font-extrabold inline-flex items-center gap-2 hover:bg-white transition" data-testid="sports-team-cta-configure">
                   {cfgLabel} <ArrowRight size={16} />

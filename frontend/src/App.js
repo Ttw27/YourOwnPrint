@@ -57,6 +57,7 @@ import LeaversStart from "@/pages/LeaversFlow";
 import Portfolio from "@/pages/Portfolio";
 import FullSquadConfigurator from "@/pages/FullSquadConfigurator";
 import SportsOutfitConfigurator from "@/pages/SportsOutfitConfigurator";
+import DanceStudioKit from "@/pages/DanceStudioKit";
 import AdminPortfolio from "@/pages/AdminPortfolio";
 import AdminBundleVariants from "@/pages/AdminBundleVariants";
 import AdminCollectionSeo from "@/pages/AdminCollectionSeo";
@@ -129,6 +130,7 @@ function App() {
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/full-squad-configurator" element={<FullSquadConfigurator />} />
           <Route path="/sports-outfit-configurator" element={<SportsOutfitConfigurator />} />
+          <Route path="/dance-studio-kit" element={<DanceStudioKit />} />
           <Route path="/admin/portfolio" element={<RequireAdmin><AdminLayout><AdminPortfolio /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/bundle-variants" element={<RequireAdmin><AdminLayout><AdminBundleVariants /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/collection-seo" element={<RequireAdmin><AdminLayout><AdminCollectionSeo /></AdminLayout></RequireAdmin>} />

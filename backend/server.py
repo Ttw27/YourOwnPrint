@@ -1733,6 +1733,11 @@ async def _resolve_line_pricing(
         pos = bundle_logo_position(product)
         placements_clean = [pos] if pos else []
         print_cost = 0.0
+    elif (design_meta or {}).get("flow") == "dance":
+        # Dance studio kit builder (routers/dance_kit.py): logo / name / back
+        # logo at the dance prices, colour checked against the real garment.
+        from routers.dance_kit import dance_print
+        placements_clean, print_cost = dance_print(product_id, placements, color)
     elif blank:
         placements_clean: List[str] = []
         print_cost = 0.0
@@ -1806,6 +1811,8 @@ async def _resolve_line_pricing(
     # Bulk-tier pricing
     if is_design:
         pass  # Design Shop: flat retail price per garment
+    elif (design_meta or {}).get("flow") == "dance":
+        pass  # dance studio kit: each garment's own price, no bulk tiers
     elif product_id in FIGHT_NIGHT_IDS:
         base_price = tier_unit_price(fight_night_tiers(base_price), base_price, total_qty)
     elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
@@ -2496,10 +2503,10 @@ SPORTS_TEAMS_CATALOGUE = [
      "seo_paragraph": "From baby ballet to street dance crews - every studio needs branded kit. Our soft-drape tees, hoodies, joggers and leggings carry your studio's logo, dancer's name and crew slogans cleanly. Parents and dancers love them, and they make brilliant studio fundraisers too.",
      "faqs": [
        {"q": "Can I sell these to my parents?", "a": "Yes - pre-order forms work brilliantly. We offer bulk pricing for orders of 10+."},
-       {"q": "Do you do small sizes for kids?", "a": "Yes - junior sizes from 3–4 up to 12–13 across most styles."},
+       {"q": "Do you do small sizes for kids?", "a": "Yes - crop tops, leggings, cycling shorts, hoodies and joggers all come in kids sizes, from age 3-4 on most styles."},
        {"q": "Can dancers have their name on the back?", "a": "Yes - names, year groups, studio colours, crew names - your call."},
      ],
-     "product_ids": ["dance-tee", "personalised-hoodie", "jh072", "jc070", "personalised-tee", "kids-tee"],
+     "product_ids": ["sk236", "sm236", "jh016", "jh001", "sk64", "sm64", "sk427", "jh072", "bg145", "jc017"],
     },
 ]
 
@@ -9099,6 +9106,7 @@ import routers.supplier_status  # noqa: F401 - registers /admin/clearance/* (Pen
 import routers.delivery  # noqa: F401 - registers /delivery/info + /admin/delivery-settings
 import routers.trusted_logos  # noqa: F401 - registers /trusted-logos (homepage "Trusted by")
 import routers.team_kits  # noqa: F401 - registers /team-kits/kit/{id} (kits built from real garments)
+import routers.dance_kit  # noqa: F401 - registers /dance-kit/config (dance studio kit builder)
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move

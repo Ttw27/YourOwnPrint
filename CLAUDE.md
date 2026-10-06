@@ -267,6 +267,11 @@ frontend/src/
   useKit/OptionalSet/ImageSlot from FullSquadConfigurator): logo included, optional back logo on top/hoodie =
   team-kit "back-print" add-on, one people list, basket checkout (server re-prices) or quote over 25 people.
   The old SPORTS_OUTFIT_SECTIONS / sports_outfit_addons settings are no longer used by the page.
+- **Dance studio kit builder** (`/dance-studio-kit`, DanceStudioKit.jsx, `routers/dance_kit.py`, Oct 2026): real
+  women's + kids garments per set (top: SK236/SM236, JC017, BL1019, GD01/GD01B; bottoms: SK64/SM64, SK428/SM428,
+  SK427/SM427; hoodie: JH016, JH001/JH001B, JH050/JH050B; joggers JH072/JH072B; bag BG145 / W110). Garment = product's
+  own price; prints whole pounds (logo £3 incl., big front +£2, name £3, back logo £5) via `dance_print()` in
+  _resolve_line_pricing when design_meta.flow == "dance" (no bulk tiers). Basket checkout. Dance landing CTA points here.
 - **Leavers range** (`/leavers-hoodies/start`, LeaversFlow.jsx): own products (category "leavers", own photos/prices),
   linked to real garments in `LEAVERS_GARMENTS` (GD57, JH001, JH003, JH043, GD56, GD01; zip GD58 hidden; bag = W110).
   `_link_leavers_garments()` copies colours (+ `kids` flag), sizes, 3XL+ upcharges every startup, then reapply_saved_settings.
