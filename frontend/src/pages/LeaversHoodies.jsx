@@ -85,15 +85,15 @@ export default function LeaversHoodies() {
         <h2 className="font-nunito font-black text-3xl lg:text-4xl text-center">Bigger groups, better prices</h2>
         <p className="text-center text-[#4b5563] mt-2">The price drops as more classmates join.</p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-8 max-w-4xl mx-auto" data-testid="leavers-tier-ladder">
-          <Tier label="1–19" price="from £24.99" sub="Pullover hoodie list price" />
+          <Tier label={tiersAsc[0] ? `1–${tiersAsc[0].min_qty - 1}` : "Any"} price="List price" sub="each garment's own price" />
           {tiersAsc.map((t) => (
-            <Tier key={t.min_qty} testId={`tier-${t.min_qty}`} label={`${t.min_qty}+`} price={`£${t.unit_price.toFixed(2)}`} sub={`/ hoodie`} highlight={t.min_qty === 60} />
+            <Tier key={t.min_qty} testId={`tier-${t.min_qty}`} label={`${t.min_qty}+`} price={t.pct != null ? `${t.pct}% off` : `£${Number(t.unit_price).toFixed(2)}`} sub="every garment, adults and kids" highlight={t.min_qty === 60} />
           ))}
         </div>
         <div className="mt-8 text-center">
           <span className="inline-flex items-center gap-2 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-4 py-2 text-sm" data-testid="leavers-bag-callout">
             <Package size={14} className="text-[#7bc67e]" />
-            Add a matching <strong className="text-[#1a1a1a]">printed drawstring bag</strong> for just <strong className="text-[#7bc67e]">£{tiers.bag_price.toFixed(2)}</strong> per hoodie
+            Add a matching <strong className="text-[#1a1a1a]">printed drawstring bag</strong> for just <strong className="text-[#7bc67e]">£{Number(tiers.bag_price).toFixed(2)}</strong> each
           </span>
         </div>
       </div>
@@ -101,14 +101,14 @@ export default function LeaversHoodies() {
       {/* Garments - display-only carousel */}
       <div className="max-w-7xl mx-auto px-6 py-10">
         <h2 className="font-nunito font-black text-3xl lg:text-4xl">Pick your garment</h2>
-        <p className="text-[#4b5563] mt-2">Pullover, zip, varsity, or sweatshirt - you&apos;ll choose during the order.</p>
+        <p className="text-[#4b5563] mt-2">Hoodies, varsity jackets, sweatshirts and tees - adult sizes and kids from age 7-8. You&apos;ll choose the colour during the order.</p>
         <ImageCarousel
           testid="leavers-garments-carousel"
           items={products.filter((p) => p.id !== "leavers-drawstring-bag").map((p) => ({
             id: p.id,
             image: p.image,
             title: p.name,
-            sub: `From £${p.price.toFixed(2)}`,
+            sub: `From £${Math.min(p.price, ...Object.values(p.size_prices || {}).map((v) => v[0])).toFixed(2)}${(p.kids_sizes || []).length ? " (kids)" : ""}`,
           }))}
         />
       </div>

@@ -5,6 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import UpdateOne, ReturnDocument
 import os
 import asyncio
+import math
 import re
 import random
 import hashlib
@@ -342,31 +343,47 @@ PRODUCTS: Dict[str, Dict] = {
         "description": "Sublimation-style cycling jersey, full-body print friendly. Club + sponsors.",
     },
 
-    # ----- Leavers' hoodies & varsity jackets -----
+    # ----- Leavers' range (real garments - colours/sizes linked at startup by
+    # _link_leavers_garments from LEAVERS_GARMENTS; kids sizes 7-8 up) -----
     "leavers-pullover-hoodie": {
-        "id": "leavers-pullover-hoodie", "name": "Leavers' Pullover Hoodie", "price": 24.99, "category": "leavers",
+        "id": "leavers-pullover-hoodie", "name": "Leavers Hoodie", "price": 24.99, "category": "leavers",
         "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg",
-        "description": "Classic 320 GSM pullover. Names list, nicknames, year, school crest - printed UK in 7-10 days.",
+        "description": "Gildan Heavy Blend hoodie (18500) - the classic leavers' hoodie. Adults and kids 7-8 up.",
+    },
+    "leavers-premium-hoodie": {
+        "id": "leavers-premium-hoodie", "name": "Premium Leavers Hoodie", "price": 26.99, "category": "leavers",
+        "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg",
+        "description": "AWDis College Hoodie (JH001) - thicker, softer, 100+ colours. Adults and kids 7-8 up.",
+    },
+    "leavers-varsity-hoodie": {
+        "id": "leavers-varsity-hoodie", "name": "Varsity Hoodie", "price": 28.99, "category": "leavers",
+        "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg",
+        "description": "AWDis Varsity Hoodie (JH003) - two-colour college hoodie with contrast hood lining and cuffs.",
     },
     "leavers-zip-hoodie": {
-        "id": "leavers-zip-hoodie", "name": "Leavers' Zip Hoodie", "price": 29.99, "category": "leavers",
+        "id": "leavers-zip-hoodie", "name": "Leavers Zip Hoodie", "price": 31.99, "category": "leavers",
         "image": "https://images.pexels.com/photos/9558716/pexels-photo-9558716.jpeg",
-        "description": "Full-zip hoodie with brushed-back fleece. Bigger back-print area for class lists.",
+        "description": "Gildan Heavy Blend zip hoodie (18600). Adults only.",
     },
     "varsity-jacket": {
         "id": "varsity-jacket", "name": "Varsity Jacket", "price": 39.99, "category": "leavers",
         "image": "https://images.pexels.com/photos/8821005/pexels-photo-8821005.jpeg",
-        "description": "American varsity-style jacket. Letter on chest, year on back, names on sleeves.",
+        "description": "AWDis Varsity Jacket (JH043) - letter on the chest, year on the back. Adults and kids 7-8 up.",
     },
     "leavers-sweatshirt": {
-        "id": "leavers-sweatshirt", "name": "Leavers' Crew Sweatshirt", "price": 22.99, "category": "leavers",
+        "id": "leavers-sweatshirt", "name": "Leavers Sweatshirt", "price": 22.99, "category": "leavers",
         "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg",
-        "description": "Crew-neck sweatshirt - lighter than the hoodie, same print options.",
+        "description": "Gildan Heavy Blend sweatshirt (18000) - lighter than the hoodie, same print options.",
+    },
+    "leavers-tshirt": {
+        "id": "leavers-tshirt", "name": "Leavers T-Shirt", "price": 12.99, "category": "leavers",
+        "image": "https://images.pexels.com/photos/6311392/pexels-photo-6311392.jpeg",
+        "description": "Gildan Softstyle tee (GD01) - the budget leavers' option, or for signing on the last day.",
     },
     "leavers-drawstring-bag": {
         "id": "leavers-drawstring-bag", "name": "Printed Drawstring Bag", "price": 3.99, "category": "leavers",
         "image": "https://images.pexels.com/photos/6764015/pexels-photo-6764015.jpeg",
-        "description": "Westford Mill-style carry-all. Same design as your hoodie - add as an addon per person.",
+        "description": "Westford Mill Cotton Gymsac (W110). Same design as your hoodie - add as an addon per person.",
     },
 
     # ----- Aprons -----
@@ -589,6 +606,9 @@ _VARIANT_MAP = {
     "varsity-jacket":              {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "leavers-sweatshirt":          {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     "leavers-drawstring-bag":      {"colors": COLOURS_GARMENT, "sizes": ["One Size"],              "size_upcharges": {}},
+    "leavers-premium-hoodie":      {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "leavers-varsity-hoodie":      {"colors": COLOURS_HOODIE,  "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
+    "leavers-tshirt":              {"colors": COLOURS_GARMENT, "sizes": DEFAULT_SIZES,              "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     # Sports team generic bundle
     "sports-team-bundle":          {"colors": COLOURS_GARMENT, "sizes": KIDS_SIZES + DEFAULT_SIZES, "size_upcharges": DEFAULT_SIZE_UPCHARGES},
     # Full Squad Configurator "set" slots
@@ -935,7 +955,7 @@ async def search_products(q: str = "", limit: int = 25, offset: int = 0):
     def matches(p: Dict) -> bool:
         # Design Shop products have their own browse/search - keep them out of the
         # main (workwear) search results.
-        if p.get("design_shop"):
+        if p.get("design_shop") or p.get("category") == "leavers":
             return False
         hay = f"{p.get('name', '')} {p.get('brand', '') or p.get('_brand', '')} {p.get('id', '')} {p.get('sku', '') or ''} {p.get('source_sku', '') or ''}".lower()
         return query in hay
@@ -971,6 +991,10 @@ async def list_products(category: Optional[str] = None, industries: Optional[str
         # Design Shop (ready-made printed designs) products are a separate store and
         # never appear in the workwear catalogue, industry pages, or "all".
         if p.get("design_shop"):
+            return False
+        # Leavers products are only sold on the Leavers page (own photos/prices) -
+        # the main catalogue shows the plain garments instead.
+        if p.get("category") == "leavers" and category != "leavers":
             return False
         # Designer-only products live in their own "online-designer" collection and
         # are hidden from every other listing (normal categories, industries, all).
@@ -1785,7 +1809,7 @@ async def _resolve_line_pricing(
     elif product_id in FIGHT_NIGHT_IDS:
         base_price = tier_unit_price(fight_night_tiers(base_price), base_price, total_qty)
     elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
-        base_price = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base_price, total_qty)
+        base_price = apply_bulk_tier_pct(base_price, total_qty, LEAVERS_BULK_TIERS_PCT)
     elif product.get("bulk_pricing_enabled"):
         ovr = product.get("bulk_pricing_overrides")
         if ovr:
@@ -2540,7 +2564,113 @@ FIGHT_NIGHT_TIER_DISCOUNTS = [(25, 2.00), (10, 1.00)]  # £ off each tee's own p
 
 def fight_night_tiers(base_price: float) -> List[Tuple[int, float]]:
     return [(q, round(base_price - off, 2)) for q, off in FIGHT_NIGHT_TIER_DISCOUNTS]
-LEAVERS_BULK_TIERS_DEFAULT = [(100, 15.99), (60, 16.99), (30, 17.99), (20, 19.99)]
+# % off each garment's own price (adult or kids), snapped to .99 - replaces the
+# old fixed £15.99-£19.99 tiers that undercut the dearer garments (Oct 2026).
+LEAVERS_BULK_TIERS_PCT: List[Tuple[int, float]] = [(100, 15.0), (60, 12.0), (30, 10.0), (20, 5.0)]
+
+# Leavers products = real garments (Tim, Oct 2026). Colours/sizes come from the
+# supplier products; kids sizes (7-8 up only) from the kids version, priced at
+# kids_price (kids clothes are zero-rated). kid_sizes maps our label -> supplier size.
+_GILDAN_KIDS = {"7-8": "M", "9-11": "L", "12-14": "XL"}
+_AWDIS_KIDS = {"7-8": "7-8", "9-11": "9-11", "12-13": "12-13"}
+LEAVERS_GARMENTS: Dict[str, Dict] = {
+    "leavers-pullover-hoodie": {"adult": "gd57", "kids": "gd57b", "kids_price": 18.99, "kid_sizes": _GILDAN_KIDS},
+    "leavers-premium-hoodie": {"adult": "jh001", "kids": "jh001b", "kids_price": 19.99, "kid_sizes": _AWDIS_KIDS},
+    "leavers-varsity-hoodie": {"adult": "jh003", "kids": "jh003b", "kids_price": 21.99, "kid_sizes": _AWDIS_KIDS},
+    "leavers-zip-hoodie": {"adult": "gd58", "kids": None},
+    "varsity-jacket": {"adult": "jh043", "kids": "jh043b", "kids_price": 29.99, "kid_sizes": _AWDIS_KIDS},
+    "leavers-sweatshirt": {"adult": "gd56", "kids": "gd56b", "kids_price": 16.99, "kid_sizes": _GILDAN_KIDS},
+    "leavers-tshirt": {"adult": "gd01", "kids": "gd01b", "kids_price": 10.99, "kid_sizes": _GILDAN_KIDS},
+    "leavers-drawstring-bag": {"adult": "w110", "kids": None},
+}
+LEAVERS_BAG_ID = "leavers-drawstring-bag"
+
+
+def _leavers_kid_sizes(pid: str) -> List[str]:
+    return list((LEAVERS_GARMENTS.get(pid) or {}).get("kid_sizes") or {})
+
+
+def leavers_size_prices(p: Dict) -> Dict[str, List[float]]:
+    """size -> [price for 1-19, then one per LEAVERS_BULK_TIERS_PCT tier, smallest
+    tier first]. Each size's own price (kids / 3XL+) gets the % off."""
+    base = float(p.get("price") or 0)
+    ups = p.get("size_upcharges") or {}
+    asc = sorted(LEAVERS_BULK_TIERS_PCT)
+    out = {}
+    for sz in p.get("sizes") or []:
+        own = round(base + float(ups.get(sz, 0) or 0), 2)
+        out[sz] = [own] + [snap_to_99(own * (1 - pct / 100.0)) for _, pct in asc]
+    return out
+
+
+def leavers_unit(p: Dict, size: str, total_qty: int) -> float:
+    prices = leavers_size_prices(p).get(size)
+    if not prices:
+        raise HTTPException(400, f"Size '{size}' unavailable for {p.get('name')}")
+    idx = 0
+    for i, (q, _) in enumerate(sorted(LEAVERS_BULK_TIERS_PCT)):
+        if total_qty >= q:
+            idx = i + 1
+    return prices[idx]
+
+
+def _two_tone_hexes(name: str, lookup: Dict[str, str]) -> Optional[List[str]]:
+    if "/" not in name:
+        return None
+    halves = [lookup.get(h.strip().lower()) for h in name.split("/")]
+    return halves if len(halves) == 2 and all(halves) else None
+
+
+def _link_leavers_garments() -> List[str]:
+    """Copy the real garments' colours (photo + whether the kids version comes
+    in it), sizes and 3XL+ upcharges onto the leavers products. Runs every
+    start-up after imports; saved admin edits are re-applied afterwards."""
+    lookup: Dict[str, str] = {}
+    for src in ("jh001", "gd57", "gd01", "jh003"):
+        for c in (PRODUCTS.get(src) or {}).get("colors") or []:
+            if isinstance(c, dict) and c.get("name") and c.get("hex"):
+                lookup.setdefault(c["name"].strip().lower(), c["hex"])
+    done = []
+    for pid, g in LEAVERS_GARMENTS.items():
+        p, adult = PRODUCTS.get(pid), PRODUCTS.get(g["adult"])
+        if not p or not adult or not adult.get("colors"):
+            continue
+        kids = PRODUCTS.get(g.get("kids") or "") or {}
+        kid_names = {(c.get("name") if isinstance(c, dict) else c) for c in (kids.get("colors") or [])}
+        cols = []
+        for c in adult.get("colors") or []:
+            if not isinstance(c, dict) or not c.get("name"):
+                continue
+            cols.append({"name": c["name"], "hex": c.get("hex") or "#cccccc", "image": c.get("image") or adult.get("image") or "",
+                         "hexes": _two_tone_hexes(c["name"], lookup),
+                         "kids": bool(kids) and c["name"] in kid_names})
+        sizes = list(adult.get("sizes") or [])
+        seed_price = float(_PRISTINE_PRODUCTS.get(pid, p).get("price") or p["price"])
+        # 3XL+ cost more - same upcharge as the plain garment, rounded so the price ends .99
+        ups = {s: round(math.ceil(seed_price + float(v) - 0.001) - 0.01 - seed_price, 2)
+               for s, v in (adult.get("size_upcharges") or {}).items() if s in sizes and v}
+        if kids and g.get("kid_sizes"):
+            kid_sup = set(kids.get("sizes") or [])
+            for label, sup in g["kid_sizes"].items():
+                if sup in kid_sup:
+                    sizes.append(label)
+                    ups[label] = round(g["kids_price"] - seed_price, 2)
+        p["colors"], p["sizes"], p["size_upcharges"] = cols, sizes, ups
+        p["leavers_garment"] = g["adult"]
+        if pid == LEAVERS_BAG_ID and adult.get("image"):
+            p["image"] = adult["image"]
+        done.append(pid)
+    return done
+
+
+async def _leavers_range_v1():
+    """One-off (Tim, Oct 2026): the leavers range is GD57 / JH001 / JH003 / JH043 /
+    GD56 / GD01 - the zip hoodie isn't in it, so hide it (not deleted)."""
+    marker = "leavers_range_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    await _set_product_active("leavers-zip-hoodie", False)
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
 
 LEAVERS_BAG_PRICE = 3.99  # printed drawstring carry-all addon, per garment
 
@@ -3097,9 +3227,10 @@ async def get_product_bulk_tiers(product_id: str):
     if product_id in FIGHT_NIGHT_IDS:
         return {"mode": "absolute", "base_price": base_price,
                 "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in fight_night_tiers(base_price)]}
-    if p.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
+    if p.get("category") == "leavers" and product_id != LEAVERS_BAG_ID:
+        tiers = [(q, snap_to_99(base_price * (1 - pct / 100.0))) for q, pct in sorted(LEAVERS_BULK_TIERS_PCT)]
         return {"mode": "absolute", "base_price": base_price,
-                "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in LEAVERS_BULK_TIERS_DEFAULT]}
+                "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in tiers]}
     if not p.get("bulk_pricing_enabled"):
         return {"mode": "none", "base_price": base_price, "tiers": []}
     ovr = p.get("bulk_pricing_overrides")
@@ -3339,11 +3470,18 @@ async def update_product_meta(product_id: str, payload: ProductMeta):
     return {"ok": True}
 
 
+def leavers_bag_price() -> float:
+    bag = PRODUCTS.get(LEAVERS_BAG_ID)
+    return float(bag["price"]) if bag and bag.get("price") else LEAVERS_BAG_PRICE
+
+
 @api_router.get("/bulk-tiers/leavers")
 async def get_leavers_tiers():
+    """% off each garment's own price at each quantity (see LEAVERS_BULK_TIERS_PCT);
+    the per-size prices are on /leavers/products (size_prices)."""
     return {
-        "tiers": [{"min_qty": t, "unit_price": p} for t, p in LEAVERS_BULK_TIERS_DEFAULT],
-        "bag_price": LEAVERS_BAG_PRICE,
+        "tiers": [{"min_qty": t, "pct": pct} for t, pct in sorted(LEAVERS_BULK_TIERS_PCT)],
+        "bag_price": leavers_bag_price(),
     }
 
 
@@ -3358,8 +3496,8 @@ async def get_leavers_config():
     """Public config for the Leavers order flow - pricing & rules used by the UI."""
     return {
         "full_front_upcharge": LEAVERS_FULL_FRONT_UPCHARGE,
-        "bag_price": LEAVERS_BAG_PRICE,
-        "bulk_tiers": [{"min_qty": t, "unit_price": p} for t, p in LEAVERS_BULK_TIERS_DEFAULT],
+        "bag_price": leavers_bag_price(),
+        "bulk_tiers": [{"min_qty": t, "pct": pct} for t, pct in sorted(LEAVERS_BULK_TIERS_PCT)],
         "no_full_front_product_ids": sorted(LEAVERS_NO_FULL_FRONT_IDS),
         "proof_days": 2,
         "names_deadline_days": 7,
@@ -3376,8 +3514,11 @@ async def list_leavers_products():
     out = []
     for p in live_products():
         if p.get("category") == "leavers":
-            item = {k: p.get(k) for k in ("id", "name", "price", "image", "description", "sizes")}
+            item = {k: p.get(k) for k in ("id", "name", "price", "image", "description", "sizes", "colors")}
             item["allows_full_front"] = p["id"] not in LEAVERS_NO_FULL_FRONT_IDS
+            item["kids_sizes"] = [s for s in _leavers_kid_sizes(p["id"]) if s in (p.get("sizes") or [])]
+            # [1-19 price, then one per bulk tier] for every size (kids / 3XL+ have their own)
+            item["size_prices"] = leavers_size_prices(p)
             out.append(item)
     return out
 
@@ -3478,6 +3619,8 @@ class LeaversCheckoutRequest(BaseModel):
     names_collection_mode: str = "upload"                   # "upload" | "we-will-contact"
     sizes: List[LeaversSizeQty]
     add_drawstring_bag: bool = False
+    colour: Optional[str] = None                            # garment colour (required when the garment has colours)
+    bag_colour: Optional[str] = None
     origin_url: str
 
 
@@ -3508,11 +3651,35 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         raise HTTPException(400, f"{p['name']} does not support a full-front print - please choose the breast option.")
     full_front_upcharge = LEAVERS_FULL_FRONT_UPCHARGE if payload.print_position == "full_front" else 0.0
 
-    base = float(p["price"])
-    unit = tier_unit_price(LEAVERS_BULK_TIERS_DEFAULT, base, total_qty) + full_front_upcharge
-    bag_each = LEAVERS_BAG_PRICE if payload.add_drawstring_bag else 0.0
-    per_unit = unit + bag_each
-    total_amount = round(per_unit * total_qty, 2)
+    # Colour: must be one the garment really comes in - and, with kids sizes in
+    # the order, one the kids version is made in too.
+    colour = (payload.colour or "").strip()
+    cols = {c.get("name"): c for c in (p.get("colors") or []) if isinstance(c, dict)}
+    if cols:
+        if colour not in cols:
+            raise HTTPException(400, f"Please choose a colour for the {p['name']}")
+        kid_sizes = set(_leavers_kid_sizes(p["id"]))
+        if any(s.size in kid_sizes and s.qty > 0 for s in payload.sizes) and not cols[colour].get("kids", True):
+            raise HTTPException(400, f"{colour} isn't made in kids sizes - pick another colour, or adult sizes only")
+    bag_colour = ""
+    if payload.add_drawstring_bag:
+        bag_cols = [c.get("name") for c in ((PRODUCTS.get(LEAVERS_BAG_ID) or {}).get("colors") or []) if isinstance(c, dict)]
+        bag_colour = (payload.bag_colour or "").strip()
+        if bag_cols and bag_colour not in bag_cols:
+            raise HTTPException(400, "Please choose a colour for the drawstring bags")
+
+    # Each size at its own price (kids sizes cheaper, 3XL+ dearer), all with the
+    # bulk % off for the order's total quantity.
+    garments_total = 0.0
+    size_prices: Dict[str, float] = {}
+    for s in payload.sizes:
+        if s.qty < 1:
+            continue
+        size_prices[s.size] = leavers_unit(p, s.size, total_qty)
+        garments_total += (size_prices[s.size] + full_front_upcharge) * int(s.qty)
+    unit = round(garments_total / total_qty, 2)   # average, for the records
+    bag_each = leavers_bag_price() if payload.add_drawstring_bag else 0.0
+    total_amount = round(garments_total + bag_each * total_qty, 2)
     if total_amount < 0.5:
         raise HTTPException(400, "Total below Stripe minimum (£0.50)")
 
@@ -3562,7 +3729,9 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "names_mode": payload.names_collection_mode,
         "total_qty": str(total_qty),
         "unit_price": f"{unit:.2f}",
+        "color": colour[:60],
         "bag_each": f"{bag_each:.2f}",
+        "bag_colour": bag_colour[:60],
         "lines": ",".join(line_summary)[:450],
     }
 
@@ -3597,6 +3766,15 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "contact_email": payload.contact_email,
         "contact_phone": payload.contact_phone,
         "product_id": payload.product_id,
+        # same shape as the other flows, so Admin > Orders and the order email
+        # show what was ordered
+        "product_name": p["name"] + (f" ({p['leavers_garment'].upper()})" if p.get("leavers_garment") else ""),
+        "color": colour,
+        "size_qtys": {s.size: int(s.qty) for s in payload.sizes if s.qty > 0},
+        "size_prices": size_prices,
+        "placements": [("Full front" if payload.print_position == "full_front" else "Front breast")]
+                      + (["Back"] if (payload.back_design_id or payload.custom_back_design_data_url) else [])
+                      + ([f"Drawstring bags x{total_qty} ({bag_colour or 'colour tbc'})"] if payload.add_drawstring_bag else []),
         "template_id": payload.template_id,
         "template_title": payload.template_title,
         "front_design_id": payload.front_design_id,
@@ -3816,6 +3994,8 @@ def _garment_type_of(product: Dict) -> Optional[str]:
     # This lets bulk-imported products land in the collection admin chose at import
     # time without depending on fragile name-substring heuristics.
     cat = (product.get("category") or "").lower()
+    if cat == "leavers":
+        return None  # sold only on the Leavers page
     _catalogue_slugs = {t["slug"] for t in GARMENT_TYPE_CATALOGUE}
     if cat in _catalogue_slugs:
         return cat
@@ -8091,6 +8271,12 @@ async def _load_imported_products():
             asyncio.create_task(_mirror_restored_colour_photos())
         except Exception as e:
             logging.warning(f"colour restore skipped: {e}")
+        try:
+            linked = _link_leavers_garments()
+            await reapply_saved_settings(linked)
+            await _leavers_range_v1()
+        except Exception as e:
+            logging.warning(f"leavers garments link skipped: {e}")
         if count:
             logging.info(f"Loaded {count} imported products from Mongo ({hidden} hidden).")
     except Exception as e:

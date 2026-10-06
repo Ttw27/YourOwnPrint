@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversCheckout, fetchPortfolio, api, mediaUrl } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
@@ -9,6 +9,7 @@ import { ExVat } from "../components/bold/PriceTag";
 
 export default function LeaversStart() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [tiers, setTiers] = useState({ tiers: [], bag_price: 3.99 });
@@ -34,6 +35,8 @@ export default function LeaversStart() {
   const [bagProduct, setBagProduct] = useState(null);
   const [sizeQtys, setSizeQtys] = useState({});
   const [addBag, setAddBag] = useState(false);
+  const [colour, setColour] = useState("");
+  const [bagColour, setBagColour] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -46,6 +49,9 @@ export default function LeaversStart() {
       const bag = (ps || []).find((p) => p.id === "leavers-drawstring-bag") || null;
       setProducts(garments);
       setBagProduct(bag);
+      // came from a garment's own page (/product/:id redirects here)
+      const want = searchParams.get("garment");
+      if (want && garments.some((g) => g.id === want)) setProductId(want);
       setTemplates(ts || []);
       if (lt) setTiers(lt);
       if (cfg) setConfig(cfg);
@@ -77,21 +83,35 @@ export default function LeaversStart() {
     for (const t of tiersAsc) if (totalQty >= t.min_qty) m = t.min_qty;
     return m;
   }, [tiersAsc, totalQty]);
-  const unitPrice = useMemo(() => {
-    if (!product) return 0;
-    const activeTier = tiersAsc.find((t) => t.min_qty === activeMinQty);
-    const base = activeTier ? Number(activeTier.unit_price) : Number(product.price || 0);
-    const ff = printPosition === "full_front" ? Number(config.full_front_upcharge || 0) : 0;
-    return base + ff;
-  }, [product, tiersAsc, activeMinQty, printPosition, config]);
-  const bagPerUnit = addBag ? (tiers.bag_price || 3.99) : 0;
-  const totalAmount = useMemo(() => (unitPrice + bagPerUnit) * totalQty, [unitPrice, bagPerUnit, totalQty]);
+  // index into each size's price list: 0 = list price, 1.. = bulk tiers (smallest first)
+  const tierIdx = useMemo(() => (activeMinQty ? tiersAsc.findIndex((t) => t.min_qty === activeMinQty) + 1 : 0), [tiersAsc, activeMinQty]);
+  const fullFront = printPosition === "full_front" ? Number(config.full_front_upcharge || 0) : 0;
+  const sizePrice = (sz, idx = tierIdx) => {
+    const list = product?.size_prices?.[sz];
+    return list ? Number(list[Math.min(idx, list.length - 1)]) : Number(product?.price || 0);
+  };
+  const kidsSizes = useMemo(() => product?.kids_sizes || [], [product]);
+  const adultSizes = useMemo(() => (product?.sizes || []).filter((s) => !kidsSizes.includes(s)), [product, kidsSizes]);
+  const firstAdult = adultSizes.find((s) => !/^[3-9]XL$/.test(s) && s !== "XS") || adultSizes[0];
+  const garmentsTotal = useMemo(
+    () => Object.entries(sizeQtys).reduce((sum, [sz, q]) => sum + (Number(q) || 0) * (sizePrice(sz) + fullFront), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sizeQtys, product, tierIdx, fullFront]);
+  const unitPrice = totalQty ? garmentsTotal / totalQty : 0;
+  const bagPerUnit = addBag ? Number(tiers.bag_price || 3.99) : 0;
+  const totalAmount = garmentsTotal + bagPerUnit * totalQty;
+  const colourObj = useMemo(() => (product?.colors || []).find((c) => c.name === colour) || null, [product, colour]);
+  const kidsQty = kidsSizes.reduce((a, sz) => a + (Number(sizeQtys[sz]) || 0), 0);
+  const colourKidsClash = !!(colourObj && colourObj.kids === false && kidsQty > 0);
+  const bagColours = bagProduct?.colors || [];
 
   const detailsOk = details.school.trim() && details.year_group.trim() && details.contact_name.trim() && details.contact_email.trim();
   const hasFrontDesign = !!(frontDesignId || customFront || templateId);
   const hasBackDesign = !!(backDesignId || customBack);
   const designOk = hasFrontDesign || hasBackDesign;
-  const canCheckout = detailsOk && product && designOk && totalQty >= 1;
+  const colourOk = !(product?.colors || []).length || (!!colourObj && !colourKidsClash);
+  const bagOk = !addBag || !bagColours.length || !!bagColour;
+  const canCheckout = detailsOk && product && colourOk && designOk && totalQty >= 1 && bagOk;
 
   const setSizeQty = (sz, v) => setSizeQtys((s) => ({ ...s, [sz]: Math.max(0, Math.min(2000, Number(v) || 0)) }));
   const bump = (sz, d) => setSizeQty(sz, (sizeQtys[sz] || 0) + d);
@@ -100,6 +120,9 @@ export default function LeaversStart() {
     if (!canCheckout) {
       if (!detailsOk) toast.error("Fill in school, year group, name and email first.");
       else if (!product) toast.error("Pick a garment.");
+      else if (!colourObj) toast.error("Pick a colour.");
+      else if (colourKidsClash) toast.error(`${colour} isn't made in kids sizes - pick another colour or adult sizes only.`);
+      else if (!bagOk) toast.error("Pick a colour for the drawstring bags.");
       else if (!designOk) toast.error("Pick a front or back design, or upload your own.");
       else toast.error("Add at least one item to a size.");
       return;
@@ -124,6 +147,8 @@ export default function LeaversStart() {
         names_file_data_url: namesFile || null,
         sizes: Object.entries(sizeQtys).filter(([, q]) => Number(q) > 0).map(([size, qty]) => ({ size, qty: Number(qty) })),
         add_drawstring_bag: addBag,
+        colour: colour || null,
+        bag_colour: addBag ? (bagColour || null) : null,
         origin_url: window.location.origin,
       });
       window.location.href = res.url;
@@ -174,7 +199,8 @@ export default function LeaversStart() {
                   type="button"
                   onClick={() => {
                     setProductId(p.id);
-                    setSizeQtys({}); // reset sizes when switching garment
+                    setSizeQtys({}); // reset sizes + colour when switching garment
+                    setColour("");
                   }}
                   className={`text-left rounded-2xl border-2 overflow-hidden transition ${productId === p.id ? "border-[#7bc67e] bg-[#f0fdf4] shadow-md" : "border-[#dcfce7] bg-white hover:border-[#7bc67e]"}`}
                   data-testid={`ls-garment-${p.id}`}
@@ -187,11 +213,17 @@ export default function LeaversStart() {
                   </div>
                   <div className="p-3">
                     <div className="font-extrabold text-sm">{p.name}</div>
-                    <div className="text-xs text-[#4b5563] mt-0.5">From £{p.price.toFixed(2)}</div>
+                    <div className="text-xs text-[#4b5563] mt-0.5">
+                      £{Number(p.price).toFixed(2)}
+                      {(p.kids_sizes || []).length > 0 && p.size_prices?.[p.kids_sizes[0]] && <> · kids £{Number(p.size_prices[p.kids_sizes[0]][0]).toFixed(2)}</>}
+                    </div>
                   </div>
                 </button>
               ))}
             </div>
+            {product && (product.colors || []).length > 0 && (
+              <ColourPicker product={product} colour={colour} onPick={setColour} kidsQty={kidsQty} />
+            )}
           </section>
 
           {/* Step 3: Print position - breast (included) vs full front (+upcharge, disabled for varsity) */}
@@ -341,50 +373,67 @@ export default function LeaversStart() {
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
                   <Tile
                     label={tiersAsc[0] ? `1–${tiersAsc[0].min_qty - 1}` : "Any"}
-                    price={`£${Number(product.price).toFixed(2)}`}
-                    sub="List price"
+                    price={`£${sizePrice(firstAdult, 0).toFixed(2)}`}
+                    sub={kidsSizes.length ? `kids £${sizePrice(kidsSizes[0], 0).toFixed(2)}` : "List price"}
                     active={activeMinQty === 0 && totalQty >= 1}
                     testid="ls-tier-base"
                   />
-                  {tiersAsc.map((t) => (
+                  {tiersAsc.map((t, i) => (
                     <Tile
                       key={t.min_qty}
                       testid={`ls-tier-${t.min_qty}`}
                       label={`${t.min_qty}+`}
-                      price={`£${t.unit_price.toFixed(2)}`}
-                      sub="per hoodie"
+                      price={`£${sizePrice(firstAdult, i + 1).toFixed(2)}`}
+                      sub={kidsSizes.length ? `kids £${sizePrice(kidsSizes[0], i + 1).toFixed(2)}` : "each"}
                       active={activeMinQty === t.min_qty}
                     />
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(product.sizes || ["S", "M", "L", "XL"]).map((sz) => {
-                  const q = sizeQtys[sz] || 0;
-                  return (
-                    <div key={sz} className={`bg-white border-2 rounded-2xl p-3 ${q > 0 ? "border-[#7bc67e]" : "border-[#e5e7eb]"}`} data-testid={`ls-size-card-${sz}`}>
-                      <div className="text-xs font-extrabold uppercase">{sz}</div>
-                      <div className="flex items-center gap-1 mt-2">
-                        <button onClick={() => bump(sz, -1)} disabled={q === 0} className="w-7 h-7 grid place-items-center rounded-full border border-[#e5e7eb] disabled:opacity-40" data-testid={`ls-size-${sz}-minus`}>−</button>
-                        <input
-                          type="number" min={0}
-                          value={q}
-                          onChange={(e) => setSizeQty(sz, e.target.value)}
-                          className="w-full text-center bg-transparent font-extrabold text-sm focus:outline-none"
-                          data-testid={`ls-size-${sz}-qty`}
-                        />
-                        <button onClick={() => bump(sz, 1)} className="w-7 h-7 grid place-items-center rounded-full border border-[#e5e7eb]" data-testid={`ls-size-${sz}-plus`}>+</button>
-                      </div>
+              {[["Adult sizes", adultSizes], ["Kids sizes (age)", kidsSizes]].filter(([, list]) => list.length).map(([title, list]) => {
+                const kidsBlocked = title.startsWith("Kids") && colourObj && colourObj.kids === false;
+                return (
+                  <div key={title} className="mb-3">
+                    <div className="text-xs font-extrabold uppercase tracking-wider text-[#4b5563] mb-1.5">
+                      {title}
+                      {kidsBlocked && <span className="ml-2 normal-case tracking-normal font-bold text-rose-600">{colour} isn&apos;t made in kids sizes - pick another colour for kids</span>}
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {list.map((sz) => {
+                        const q = sizeQtys[sz] || 0;
+                        return (
+                          <div key={sz} className={`bg-white border-2 rounded-2xl p-3 ${q > 0 ? (kidsBlocked ? "border-rose-400" : "border-[#7bc67e]") : "border-[#e5e7eb]"} ${kidsBlocked && !q ? "opacity-50" : ""}`} data-testid={`ls-size-card-${sz}`}>
+                            <div className="flex items-baseline justify-between gap-1">
+                              <span className="text-xs font-extrabold uppercase">{sz}</span>
+                              <span className="text-[11px] text-[#4b5563]">£{(sizePrice(sz) + fullFront).toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-2">
+                              <button onClick={() => bump(sz, -1)} disabled={q === 0} className="w-7 h-7 grid place-items-center rounded-full border border-[#e5e7eb] disabled:opacity-40" data-testid={`ls-size-${sz}-minus`}>−</button>
+                              <input
+                                type="number" min={0}
+                                value={q}
+                                disabled={kidsBlocked && !q}
+                                onChange={(e) => setSizeQty(sz, e.target.value)}
+                                className="w-full text-center bg-transparent font-extrabold text-sm focus:outline-none"
+                                data-testid={`ls-size-${sz}-qty`}
+                              />
+                              <button onClick={() => bump(sz, 1)} disabled={kidsBlocked} className="w-7 h-7 grid place-items-center rounded-full border border-[#e5e7eb] disabled:opacity-40" data-testid={`ls-size-${sz}-plus`}>+</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
 
               <DrawstringBagCard
                 bag={bagProduct}
-                price={tiers.bag_price || 3.99}
+                price={Number(tiers.bag_price || 3.99)}
                 checked={addBag}
                 onToggle={setAddBag}
+                colour={bagColour}
+                onColour={setBagColour}
               />
             </section>
           )}
@@ -405,12 +454,14 @@ export default function LeaversStart() {
             <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold">Live total</div>
             <div className="text-4xl font-black mt-2" data-testid="ls-total">£{totalAmount.toFixed(2)}</div>
             <ExVat amount={totalAmount} className="text-xs opacity-70 mt-0.5" />
-            <div className="text-sm text-zinc-300 mt-1">{totalQty} hoodie{totalQty === 1 ? "" : "s"}{unitPrice > 0 ? ` · £${unitPrice.toFixed(2)} ea` : ""}{addBag ? ` + £${bagPerUnit.toFixed(2)} bag` : ""}</div>
+            <div className="text-sm text-zinc-300 mt-1">{totalQty} item{totalQty === 1 ? "" : "s"}{unitPrice > 0 ? ` · £${unitPrice.toFixed(2)} ea${kidsQty && kidsQty < totalQty ? " (avg)" : ""}` : ""}{addBag ? ` + £${bagPerUnit.toFixed(2)} bag` : ""}</div>
+            {product && <div className="text-xs text-zinc-400 mt-1">{product.name}{colour ? ` · ${colour}` : ""}</div>}
             {product && tiersAsc.length > 0 && (() => {
-              const next = tiersAsc.find((t) => totalQty < t.min_qty);
+              const nextI = tiersAsc.findIndex((t) => totalQty < t.min_qty);
+              const next = tiersAsc[nextI];
               return next ? (
                 <div className="mt-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs" data-testid="ls-next-tier">
-                  Add <strong>{next.min_qty - totalQty}</strong> more to drop to <strong className="text-[#7bc67e]">£{next.unit_price.toFixed(2)}</strong> each
+                  Add <strong>{next.min_qty - totalQty}</strong> more for the {next.min_qty}+ price: <strong className="text-[#7bc67e]">£{sizePrice(firstAdult, nextI + 1).toFixed(2)}</strong> each{kidsSizes.length ? ` (kids £${sizePrice(kidsSizes[0], nextI + 1).toFixed(2)})` : ""}
                 </div>
               ) : null;
             })()}
@@ -601,13 +652,15 @@ function CustomDesignDrop({ dataUrl, onChange, slot = "" }) {
 }
 
 // ---- Drawstring bag preview + toggle ----
-function DrawstringBagCard({ bag, price, checked, onToggle }) {
+function DrawstringBagCard({ bag, price, checked, onToggle, colour, onColour }) {
+  const cols = bag?.colors || [];
+  const picked = cols.find((c) => c.name === colour);
   return (
     <div className="mt-4 bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl overflow-hidden" data-testid="ls-bag-card">
       <label className="flex flex-col sm:flex-row cursor-pointer">
         {bag && (
           <div className="sm:w-44 sm:flex-shrink-0 aspect-[4/3] sm:aspect-square overflow-hidden bg-white">
-            <img src={bag.image} alt="Matching printed drawstring bag" className="w-full h-full object-contain" data-testid="ls-bag-image" />
+            <img src={picked?.image || bag.image} alt="Matching printed drawstring bag" className="w-full h-full object-contain" data-testid="ls-bag-image" />
           </div>
         )}
         <div className="p-4 flex-1 flex flex-col gap-2">
@@ -623,18 +676,83 @@ function DrawstringBagCard({ bag, price, checked, onToggle }) {
               <div className="font-extrabold text-sm flex items-center gap-2">
                 <Package size={14} className="text-[#7bc67e]" />
                 Matching printed drawstring bag
-                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#7bc67e] text-[#1a1a1a] font-extrabold">+£{price.toFixed(2)} / hoodie</span>
+                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#7bc67e] text-[#1a1a1a] font-extrabold">+£{price.toFixed(2)} each</span>
               </div>
               <div className="text-xs text-[#4b5563] mt-1 leading-relaxed">
-                Same design as your hoodie printed on the front, with the <strong className="text-[#1a1a1a]">size of the garment inside</strong> printed on the back - makes handing them out at school painless.
+                Same design as your garment printed on the front, with the <strong className="text-[#1a1a1a]">size of the garment inside</strong> printed on the back - makes handing them out at school painless.
               </div>
               <div className="text-[11px] text-[#4b5563] mt-2 flex items-center gap-1">
-                <ImageIcon size={11} className="text-[#7bc67e]" /> Westford Mill-style carry-all · UK printed
+                <ImageIcon size={11} className="text-[#7bc67e]" /> Westford Mill cotton gymsac · one per garment · UK printed
               </div>
+              {checked && cols.length > 0 && (
+                <div className="mt-3" data-testid="ls-bag-colours" onClick={(e) => e.preventDefault()}>
+                  <div className="text-xs font-extrabold mb-1.5">Bag colour: <span className="font-bold text-[#4b5563]">{colour || "pick one"}</span></div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cols.map((c) => (
+                      <button key={c.name} type="button" title={c.name} onClick={() => onColour(c.name)}
+                        className={`w-7 h-7 rounded-full border-2 ${colour === c.name ? "border-[#1a1a1a] ring-2 ring-[#7bc67e]" : "border-[#e5e7eb]"}`}
+                        style={{ background: c.hexes && c.hexes.length === 2 ? `linear-gradient(135deg, ${c.hexes[0]} 50%, ${c.hexes[1]} 50%)` : (c.hex || "#ccc") }} data-testid={`ls-bag-colour-${c.name}`} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </label>
+    </div>
+  );
+}
+
+// ---- Garment colour (the real garment's colours; kids version may have fewer) ----
+function ColourPicker({ product, colour, onPick, kidsQty }) {
+  const cols = product.colors || [];
+  const picked = cols.find((c) => c.name === colour);
+  const hasKids = (product.kids_sizes || []).length > 0;
+  const swatch = (c) => (c.hexes && c.hexes.length === 2
+    ? `linear-gradient(135deg, ${c.hexes[0]} 50%, ${c.hexes[1]} 50%)`
+    : (c.hex || "#ccc"));
+  return (
+    <div className="mt-4 bg-white border-2 border-[#dcfce7] rounded-2xl p-4" data-testid="ls-colours">
+      <div className="flex gap-4 items-start">
+        <div className="flex-1 min-w-0">
+          <div className="font-extrabold text-sm">
+            Colour: <span className="text-[#4b5563] font-bold" data-testid="ls-colour-name">{colour || "pick one"}</span>
+          </div>
+          {hasKids && (
+            <div className="text-[11px] text-[#4b5563] mt-0.5">
+              Colours with a dot <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#1a1a1a] align-middle" /> are adult sizes only - the kids version isn&apos;t made in them.
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {cols.map((c) => {
+              const adultOnly = hasKids && c.kids === false;
+              const blocked = adultOnly && kidsQty > 0;
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  title={`${c.name}${adultOnly ? " (adult sizes only)" : ""}`}
+                  onClick={() => onPick(c.name)}
+                  className={`relative w-8 h-8 rounded-full border-2 transition ${colour === c.name ? "border-[#1a1a1a] ring-2 ring-[#7bc67e]" : "border-[#e5e7eb] hover:border-[#7bc67e]"} ${blocked ? "opacity-35" : ""}`}
+                  style={{ background: swatch(c) }}
+                  data-testid={`ls-colour-${c.name}`}
+                >
+                  {adultOnly && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1a1a1a] border border-white" />}
+                </button>
+              );
+            })}
+          </div>
+          {picked && hasKids && (
+            <div className={`text-[11px] mt-2 font-bold ${picked.kids === false ? "text-rose-600" : "text-[#16a34a]"}`}>
+              {picked.kids === false ? `${picked.name} is adult sizes only` : `${picked.name} comes in adult and kids sizes`}
+            </div>
+          )}
+        </div>
+        {picked?.image && (
+          <img src={picked.image} alt={`${product.name} in ${picked.name}`} onError={(e) => { e.currentTarget.style.display = "none"; }} className="w-24 h-24 sm:w-28 sm:h-28 object-contain rounded-xl bg-[#f9fafb] border border-[#e5e7eb] flex-shrink-0" data-testid="ls-colour-photo" />
+        )}
+      </div>
     </div>
   );
 }

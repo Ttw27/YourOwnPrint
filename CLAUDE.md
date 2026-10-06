@@ -260,6 +260,12 @@ frontend/src/
   live on the same product with a -£2 size upcharge (adults + kids count together for tiers). Their /product/:id
   pages redirect to the Fight Night page. Colours = every colour the KIDS version is made in (GD01B / JC001B,
   all also in adult), from PenCarrie's export: `FIGHT_NIGHT_COLOURS_STANDARD` / `_PERFORMANCE`.
+- **Leavers range** (`/leavers-hoodies/start`, LeaversFlow.jsx): own products (category "leavers", own photos/prices),
+  linked to real garments in `LEAVERS_GARMENTS` (GD57, JH001, JH003, JH043, GD56, GD01; zip GD58 hidden; bag = W110).
+  `_link_leavers_garments()` copies colours (+ `kids` flag), sizes, 3XL+ upcharges every startup, then reapply_saved_settings.
+  Kids sizes 7-8 up only (Gildan M/L/XL = 7-8/9-11/12-14), priced via negative size upcharges. Bulk = % off each size's own
+  price (`LEAVERS_BULK_TIERS_PCT`, `leavers_size_prices`). Colour required at checkout; adult-only colours refused with
+  kids sizes. Leavers products are kept OUT of /products, search, shop-by-type and Find My Kit; /product/:id redirects.
 - **Offers ("Was" price):** `was_price` in `product_overrides` (Product settings > Name, price & main
   photo > "Offer - 'Was' price"). Shown only while above `price` (`offer_was_price()`): crossed out +
   "Offer" pill in PriceTag (cards), designer Total panel + product dropdown, basket (`on_offer` from

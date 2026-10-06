@@ -168,7 +168,7 @@ def _gather_candidates(industries: List[str]) -> List[Dict]:
             continue
         # Design Shop (ready-made printed designs) are a separate consumer store,
         # never workwear kit.
-        if p.get("design_shop"):
+        if p.get("design_shop") or p.get("category") == "leavers":
             continue
         tags = set(canonical_industries(p.get("industry_tags") or []))
         # A product is a candidate if it suits one of the wanted industries.
