@@ -148,7 +148,10 @@ export default function ProductDetail() {
         setProduct(p); setPlacements(pl); setAggregates(ag);
         setAllowedPlacements(ap);
         setQA(qaList || []);
-        setColor((p.colors && p.colors[0]?.name) || null);
+        // ?colour=Name (Google Shopping / ads links) opens that colour
+        const wantColour = new URLSearchParams(window.location.search).get("colour");
+        const linked = wantColour && (p.colors || []).find((c) => c.name === wantColour);
+        setColor((linked && linked.name) || (p.colors && p.colors[0]?.name) || null);
         setSizeQtys({});
         setPrintMode("custom");
         // Specials products auto-select left-breast so the upload widget is visible immediately

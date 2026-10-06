@@ -9107,6 +9107,7 @@ import routers.delivery  # noqa: F401 - registers /delivery/info + /admin/delive
 import routers.trusted_logos  # noqa: F401 - registers /trusted-logos (homepage "Trusted by")
 import routers.team_kits  # noqa: F401 - registers /team-kits/kit/{id} (kits built from real garments)
 import routers.dance_kit  # noqa: F401 - registers /dance-kit/config (dance studio kit builder)
+import routers.google_feed  # noqa: F401 - registers /feeds/google.xml (Merchant Center feed)
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
