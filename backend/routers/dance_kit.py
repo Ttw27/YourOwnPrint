@@ -62,15 +62,30 @@ SETS: List[Dict] = [
     {"key": "bag", "kind": "bag", "title": "Dance bag", "sub": "Logo on the front - add their name too.",
      "options": [
          {"id": "dance-bag", "label": "Junior dance bag", "adult": "bg145", "kids": None, "note": "BagBase - holdall with shoe pocket"},
+         {"id": "mini-barrel", "label": "Mini barrel bag", "adult": "bg140s", "kids": None, "note": "BagBase - just right for little dancers"},
+         {"id": "barrel", "label": "Barrel bag", "adult": "bg140", "kids": None, "note": "BagBase Original - 14 colours"},
          {"id": "gymsac", "label": "Drawstring bag", "adult": "w110", "kids": None, "note": "Westford Mill cotton gymsac"},
      ]},
 ]
+
+# Kit bags for the sports builders (Sports Outfit + Full Squad): same pricing
+# (logo £3 included, name +£3), ordered with design_meta.flow == "club_bag".
+CLUB_BAG_SET: Dict = {
+    "key": "bag", "kind": "bag", "title": "Kit bag", "sub": "Your logo on the front - add each player's name too.",
+    "options": [
+        {"id": "barrel", "label": "Barrel bag", "adult": "bg140", "kids": None, "note": "BagBase Original - 14 colours"},
+        {"id": "teamwear-holdall", "label": "Teamwear holdall", "adult": "bg572", "kids": None, "note": "BagBase - club colours, boot compartment"},
+        {"id": "sports-holdall", "label": "Sports holdall", "adult": "qs70", "kids": None, "note": "Quadra Teamwear - big kit bag"},
+        {"id": "boot-bag", "label": "Boot / shoe bag", "adult": "qd76", "kids": None, "note": "Quadra Teamwear"},
+        {"id": "gymsac", "label": "Drawstring bag", "adult": "w110", "kids": None, "note": "Westford Mill cotton gymsac"},
+    ],
+}
 
 FRONT_LABEL = {"chest": "Logo on the chest", "hip": "Logo on the hip", "bag": "Logo on the front"}
 
 
 def _kind_of(pid: str) -> Optional[Tuple[Dict, Dict]]:
-    for s in SETS:
+    for s in SETS + [CLUB_BAG_SET]:
         for o in s["options"]:
             if pid in (o["adult"], o.get("kids")):
                 return s, o
@@ -95,7 +110,7 @@ def dance_print(product_id: str, placements: List[str], color: Optional[str]) ->
     from server import PRODUCTS
     found = _kind_of(product_id)
     if not found:
-        raise HTTPException(400, f"{product_id} isn't part of the dance studio kit")
+        raise HTTPException(400, f"{product_id} isn't part of the kit builder")
     s, _ = found
     k = KINDS[s["kind"]]
     names = [(c.get("name") if isinstance(c, dict) else c) for c in ((PRODUCTS.get(product_id) or {}).get("colors") or [])]
@@ -134,25 +149,36 @@ def _side(pid: Optional[str], kid_labels: Optional[Dict[str, str]] = None, kids:
     }
 
 
+def _set_payload(s: Dict) -> Optional[Dict]:
+    from server import PRODUCTS
+    opts = []
+    for o in s["options"]:
+        adult = _side(o["adult"])
+        if not adult:
+            continue
+        kids = _side(o.get("kids"), o.get("kid_labels"), kids=True) if o.get("kids") else None
+        kid_names = {(c.get("name") if isinstance(c, dict) else c) for c in ((PRODUCTS.get(o.get("kids") or "") or {}).get("colors") or [])}
+        cols = [{"name": c["name"], "hex": c.get("hex") or "#cccccc", "image": c.get("image") or adult["image"],
+                 "kids": (c["name"] in kid_names) if kids else None}
+                for c in (PRODUCTS[o["adult"]].get("colors") or []) if isinstance(c, dict) and c.get("name")]
+        opts.append({"id": o["id"], "label": o["label"], "note": o["note"], "adult": adult, "kids": kids, "colours": cols})
+    if not opts:
+        return None
+    k = KINDS[s["kind"]]
+    return {"key": s["key"], "title": s["title"], "sub": s["sub"], "kind": s["kind"], "options": opts,
+            "prints": {"front_label": FRONT_LABEL[k["front"]], "logo_optional": k["logo_optional"],
+                       "big_front": k["big_front"], "name": k["name"], "back": k["back"]}}
+
+
+_PRICES = lambda: {"logo": LOGO_PRICE, "big_front": BIG_FRONT_PRICE, "name": NAME_PRICE, "back_logo": BACK_LOGO_PRICE}  # noqa: E731
+
+
 @api_router.get("/dance-kit/config")
 async def dance_kit_config():
-    from server import PRODUCTS
-    sets = []
-    for s in SETS:
-        opts = []
-        for o in s["options"]:
-            adult = _side(o["adult"])
-            if not adult:
-                continue
-            kids = _side(o.get("kids"), o.get("kid_labels"), kids=True) if o.get("kids") else None
-            kid_names = {(c.get("name") if isinstance(c, dict) else c) for c in ((PRODUCTS.get(o.get("kids") or "") or {}).get("colors") or [])}
-            cols = [{"name": c["name"], "hex": c.get("hex") or "#cccccc", "image": c.get("image") or adult["image"],
-                     "kids": (c["name"] in kid_names) if kids else None}
-                    for c in (PRODUCTS[o["adult"]].get("colors") or []) if isinstance(c, dict) and c.get("name")]
-            opts.append({"id": o["id"], "label": o["label"], "note": o["note"], "adult": adult, "kids": kids, "colours": cols})
-        if opts:
-            k = KINDS[s["kind"]]
-            sets.append({"key": s["key"], "title": s["title"], "sub": s["sub"], "kind": s["kind"], "options": opts,
-                         "prints": {"front_label": FRONT_LABEL[k["front"]], "logo_optional": k["logo_optional"],
-                                    "big_front": k["big_front"], "name": k["name"], "back": k["back"]}})
-    return {"sets": sets, "prices": {"logo": LOGO_PRICE, "big_front": BIG_FRONT_PRICE, "name": NAME_PRICE, "back_logo": BACK_LOGO_PRICE}}
+    return {"sets": [x for x in (_set_payload(s) for s in SETS) if x], "prices": _PRICES()}
+
+
+@api_router.get("/club-bags")
+async def club_bags():
+    """Kit bag add-on for the Sports Outfit + Full Squad builders."""
+    return {"set": _set_payload(CLUB_BAG_SET), "prices": _PRICES()}

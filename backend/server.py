@@ -1733,7 +1733,7 @@ async def _resolve_line_pricing(
         pos = bundle_logo_position(product)
         placements_clean = [pos] if pos else []
         print_cost = 0.0
-    elif (design_meta or {}).get("flow") == "dance":
+    elif (design_meta or {}).get("flow") in ("dance", "club_bag"):
         # Dance studio kit builder (routers/dance_kit.py): logo / name / back
         # logo at the dance prices, colour checked against the real garment.
         from routers.dance_kit import dance_print
@@ -1811,8 +1811,8 @@ async def _resolve_line_pricing(
     # Bulk-tier pricing
     if is_design:
         pass  # Design Shop: flat retail price per garment
-    elif (design_meta or {}).get("flow") == "dance":
-        pass  # dance studio kit: each garment's own price, no bulk tiers
+    elif (design_meta or {}).get("flow") in ("dance", "club_bag"):
+        pass  # dance studio kit / club kit bags: each garment's own price, no bulk tiers
     elif product_id in FIGHT_NIGHT_IDS:
         base_price = tier_unit_price(fight_night_tiers(base_price), base_price, total_qty)
     elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":

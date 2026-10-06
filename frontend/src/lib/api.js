@@ -418,6 +418,11 @@ export async function fetchTeamKitAddons() {
   return data;
 }
 // Team kits built from real garments: parts + their colours (with photos), price table, defaults.
+// Kit bag add-on (barrel bag / holdalls / boot bag) for the Sports Outfit + Full Squad builders.
+export async function fetchClubBags() {
+  const { data } = await api.get("/club-bags");
+  return data;
+}
 // Dance studio kit builder: sets -> garment options (women's + kids), colours, size prices, print prices.
 export async function fetchDanceKitConfig() {
   const { data } = await api.get("/dance-kit/config");

@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { submitQuoteRequest, createCartCheckout, uploadOrderArtwork, fetchTeamKitAddons } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { useKit, OptionalSet, ImageSlot } from "./FullSquadConfigurator";
+import { useClubBag, ClubBagCard, clubBagItem } from "../components/bold/ClubBagAddon";
 import { toast } from "sonner";
 import { Plus, Trash2, ShieldCheck, Loader2, Check, ShoppingCart, Send } from "lucide-react";
 import { ExVat } from "../components/bold/PriceTag";
@@ -34,6 +35,7 @@ export default function SportsOutfitConfigurator() {
   const [backPrice, setBackPrice] = useState(3.5);
   const [people, setPeople] = useState(Array.from({ length: 5 }, blankPerson));
   const [busy, setBusy] = useState(false);
+  const bag = useClubBag();
 
   useEffect(() => {
     fetchTeamKitAddons().then((list) => {
@@ -68,9 +70,12 @@ export default function SportsOutfitConfigurator() {
     const qty = Object.values(size_qtys).reduce((a, b) => a + b, 0);
     return { ...s, size_qtys, qty, total, extra };
   });
-  const grandTotal = lines.reduce((a, l) => a + l.total, 0);
-  const totalItems = lines.reduce((a, l) => a + l.qty, 0);
-  const headcount = people.filter((p) => sets.some((s) => s.sizeOf(p))).length;
+  // kit bags: everyone on the list (with a size, or a name if only bags are ordered) unless "Bag" is unticked
+  const bagPeople = bag.on ? people.filter((p) => !p.nobag && (sets.some((s) => s.sizeOf(p)) || (!sets.length && p.name.trim()))) : [];
+  const bagTotal = bagPeople.length * bag.unit;
+  const grandTotal = lines.reduce((a, l) => a + l.total, 0) + bagTotal;
+  const totalItems = lines.reduce((a, l) => a + l.qty, 0) + bagPeople.length;
+  const headcount = people.filter((p) => sets.some((s) => s.sizeOf(p)) || bagPeople.includes(p)).length;
   const quoteOnly = headcount > QUOTE_THRESHOLD;
   const anyBack = sets.some((s) => backOn[s.key]);
 
@@ -80,12 +85,13 @@ export default function SportsOutfitConfigurator() {
   const tracksuitSizes = tracksuit.kit?.adult_sizes || ["XS", "S", "M", "L", "XL", "XXL"];
 
   const validate = () => {
-    if (!sets.length) return "Pick the training kit, the tracksuit, or both";
+    if (!sets.length && !bag.on) return "Pick the training kit, the tracksuit, a kit bag - or all of them";
     if (!team.name.trim()) return "Add your gym / club name";
     if (!team.contact_email.trim()) return "Add a contact email";
     if (!logo) return "Upload your logo";
     if (anyBack && !backLogo) return "Upload the logo for the back (or untick the back print)";
     if (!totalItems) return "Add at least one person with a size";
+    if (bag.on && bag.name && bagPeople.some((p) => !p.name.trim())) return "Add a name for everyone getting a bag (or untick names on the bag)";
     for (const s of sets) {
       if (s.k.parts.some((pt) => !s.k.cols[pt.key])) return `Pick the colours for the ${s.label.toLowerCase()}`;
       const kp = kidsProblem(s.k, s.sizeOf);
@@ -121,6 +127,8 @@ export default function SportsOutfitConfigurator() {
           ...art,
         },
       }));
+      const bagLine = clubBagItem(bag, bagPeople, { team_name: team.name, set: "Kit bag", ...art });
+      if (bagLine) items.push(bagLine);
       const { url } = await createCartCheckout(items, team.contact_email);
       window.location.href = url;
     } catch (e) {
@@ -136,7 +144,7 @@ export default function SportsOutfitConfigurator() {
       await submitQuoteRequest({
         kind: "team_kit", name: team.contact_name || team.name, email: team.contact_email, phone: team.contact_phone,
         company: team.name, sport: "", kit_type: "sports-outfit-configurator", quantity: totalItems,
-        message: [`Gym / club kit order for ${team.name} (${headcount} people)`, ...setSummary, `Indicative total: £${grandTotal.toFixed(2)}`, "", ...peopleText].join("\n"),
+        message: [`Gym / club kit order for ${team.name} (${headcount} people)`, ...setSummary, ...(bagPeople.length ? [`Kit bag: ${bag.opt.label} (${bag.opt.adult.name}) in ${bag.colour}${bag.name ? ", names on the bags" : ""} x${bagPeople.length} = £${bagTotal.toFixed(2)}`] : []), `Indicative total: £${grandTotal.toFixed(2)}`, "", ...peopleText].join("\n"),
         artwork: [logo, anyBack ? backLogo : null].filter(Boolean),
         roster: people.filter((p) => sets.some((s) => s.sizeOf(p))).map((p) => ({ name: p.name, number: "", size: p.size, qty: 1, tracksuit: p.tracksuit })),
         product_id: "sports-outfit",
@@ -194,9 +202,11 @@ export default function SportsOutfitConfigurator() {
           <OptionalSet n={3} title="Tracksuit" sub="College hoodie + cuffed joggers, your logo on both. Adult sizes." on={withTracksuit} setOn={setWithTracksuit} k={tracksuit} kidsProblem={[]} testid="soc-tracksuit" />
           {withTracksuit && tracksuit.kit && <BackToggle setKey="tracksuit" what="hoodie" />}
 
+          <ClubBagCard bag={bag} n={4} logo={logo} testid="soc-bag" />
+
           <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="soc-people">
             <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-              <h2 className="font-black text-2xl"><span className="text-[#7bc67e]">4.</span> Who&apos;s it for <span className="text-sm text-[#4b5563] font-bold">({headcount} people)</span></h2>
+              <h2 className="font-black text-2xl"><span className="text-[#7bc67e]">5.</span> Who&apos;s it for <span className="text-sm text-[#4b5563] font-bold">({headcount} people)</span></h2>
               <select onChange={(e) => setPeople(Array.from({ length: Number(e.target.value) }, (_, i) => people[i] || blankPerson()))} defaultValue=""
                 className="bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-3 py-1.5 text-xs font-bold" data-testid="soc-quick-rows">
                 <option value="" disabled>Number of people…</option>
@@ -210,7 +220,7 @@ export default function SportsOutfitConfigurator() {
             <div className="space-y-1.5">
               {people.map((p, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center bg-white border border-[#dcfce7] rounded-xl p-2" data-testid={`soc-person-${i}`}>
-                  <input value={p.name} onChange={(e) => setPerson(i, { name: e.target.value })} placeholder={training.opts.names && withTraining ? "Name on back" : "Name (optional)"} className={`${withTraining && withTracksuit ? "col-span-5" : "col-span-8"} text-sm px-2 py-1 outline-none bg-transparent min-w-0`} />
+                  <input value={p.name} onChange={(e) => setPerson(i, { name: e.target.value })} placeholder={training.opts.names && withTraining ? "Name on back" : "Name (optional)"} className={`${withTraining && withTracksuit ? (bag.on ? "col-span-4" : "col-span-5") : (bag.on ? "col-span-7" : "col-span-8")} text-sm px-2 py-1 outline-none bg-transparent min-w-0`} />
                   {withTraining && (
                     <select value={p.size} onChange={(e) => setPerson(i, { size: e.target.value })} className="col-span-3 text-sm bg-transparent outline-none min-w-0 border-l border-[#dcfce7]" title="Training kit size" data-testid={`soc-person-${i}-size`}>
                       {withTracksuit && <option value="">No training kit</option>}
@@ -225,13 +235,18 @@ export default function SportsOutfitConfigurator() {
                     </select>
                   )}
                   {!withTraining && !withTracksuit && <div className="col-span-3" />}
+                  {bag.on && (
+                    <label className="col-span-1 flex flex-col items-center text-[9px] font-extrabold text-[#4b5563] cursor-pointer" title="Kit bag">
+                      <input type="checkbox" checked={!p.nobag} onChange={(e) => setPerson(i, { nobag: !e.target.checked })} className="accent-[#7bc67e]" data-testid={`soc-person-${i}-bag`} />Bag
+                    </label>
+                  )}
                   <button type="button" onClick={() => setPeople((ps) => ps.filter((_, j) => j !== i))} className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center" aria-label="Remove person"><Trash2 size={14} /></button>
                 </div>
               ))}
             </div>
             {withTraining && withTracksuit && (
               <div className="grid grid-cols-12 gap-2 px-2 mt-1 text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">
-                <span className="col-span-5" /><span className="col-span-3">Training kit</span><span className="col-span-3">Tracksuit</span>
+                <span className={bag.on ? "col-span-4" : "col-span-5"} /><span className="col-span-3">Training kit</span><span className="col-span-3">Tracksuit</span>
               </div>
             )}
             <button type="button" onClick={() => setPeople((ps) => [...ps, blankPerson()])} className="mt-2 inline-flex items-center gap-1.5 text-sm font-extrabold text-[#7bc67e] hover:underline" data-testid="soc-add-person"><Plus size={14} /> Add person</button>
@@ -251,7 +266,13 @@ export default function SportsOutfitConfigurator() {
                   <span className="font-extrabold">£{l.total.toFixed(2)}</span>
                 </div>
               ))}
-              {!lines.length && <div className="text-xs text-neutral-400">Pick the training kit, the tracksuit, or both.</div>}
+              {bagPeople.length > 0 && (
+                <div className="flex justify-between gap-3 border-b border-white/10 pb-2">
+                  <span><strong>{bag.opt.label}</strong><br /><span className="text-xs text-neutral-400">{bagPeople.length} × {bag.colour}{bag.name ? " · names" : ""}</span></span>
+                  <span className="font-extrabold">£{bagTotal.toFixed(2)}</span>
+                </div>
+              )}
+              {!lines.length && !bagPeople.length && <div className="text-xs text-neutral-400">Pick the training kit, the tracksuit, or both.</div>}
             </div>
             <div className="mt-5 space-y-2">
               {!quoteOnly && (

@@ -4,6 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchKitDetails, submitQuoteRequest, createCartCheckout, uploadOrderArtwork } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { KitPicker } from "../components/bold/TeamKitConfigurator";
+import { useClubBag, ClubBagCard, clubBagItem } from "../components/bold/ClubBagAddon";
 import { toast } from "sonner";
 import { Plus, Trash2, ShieldCheck, Loader2, Check, Camera, Upload, ShoppingCart, Send } from "lucide-react";
 import { ExVat } from "../components/bold/PriceTag";
@@ -59,6 +60,7 @@ export default function FullSquadConfigurator() {
   const [withTracksuit, setWithTracksuit] = useState(false);
   const [players, setPlayers] = useState(Array.from({ length: 5 }, blankPlayer));
   const [busy, setBusy] = useState(false);
+  const bag = useClubBag();
 
   const active = useMemo(() => players.filter((p) => p.size), [players]);
   const kidsIn = (k) => active.some((p) => (k.kit?.kids_sizes || []).includes(p.size));
@@ -87,8 +89,10 @@ export default function FullSquadConfigurator() {
     const qty = Object.values(size_qtys).reduce((a, b) => a + b, 0);
     return { ...s, size_qtys, qty, total };
   });
-  const grandTotal = lines.reduce((a, l) => a + l.total, 0);
-  const totalKits = lines.reduce((a, l) => a + l.qty, 0);
+  const bagPeople = bag.on ? active.filter((p) => !p.nobag) : [];
+  const bagTotal = bagPeople.length * bag.unit;
+  const grandTotal = lines.reduce((a, l) => a + l.total, 0) + bagTotal;
+  const totalKits = lines.reduce((a, l) => a + l.qty, 0) + bagPeople.length;
   const quoteOnly = active.length > QUOTE_THRESHOLD;
 
   const setPlayer = (i, patch) => setPlayers((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)));
@@ -107,6 +111,7 @@ export default function FullSquadConfigurator() {
       if (s.k !== tracksuit && kp.length) return `${s.label}: ${kp.join(", ")} isn't made in kids sizes - pick another colour`;
     }
     if (withTracksuit && !active.some((p) => p.tracksuit)) return "Pick a tracksuit size for at least one player (or untick the tracksuit)";
+    if (bag.on && bag.name && bagPeople.some((p) => !p.name.trim())) return "Add a name for every player getting a bag (or untick names on the bag)";
     return null;
   };
 
@@ -134,6 +139,8 @@ export default function FullSquadConfigurator() {
           ...art,
         },
       }));
+      const bagLine = clubBagItem(bag, bagPeople, { team_name: team.name, set: "Kit bag", ...art });
+      if (bagLine) items.push(bagLine);
       const { url } = await createCartCheckout(items, team.contact_email);
       window.location.href = url;
     } catch (e) {
@@ -149,7 +156,7 @@ export default function FullSquadConfigurator() {
       await submitQuoteRequest({
         kind: "full_squad", name: team.contact_name || team.name, email: team.contact_email, phone: team.contact_phone,
         company: team.name, sport: "football", kit_type: "full squad", quantity: totalKits,
-        message: [`Full squad order for ${team.name} (${active.length} players)`, ...setSummary, `Indicative total: £${grandTotal.toFixed(2)}`].join("\n"),
+        message: [`Full squad order for ${team.name} (${active.length} players)`, ...setSummary, ...(bagPeople.length ? [`Kit bag: ${bag.opt.label} (${bag.opt.adult.name}) in ${bag.colour}${bag.name ? ", names on the bags" : ""} x${bagPeople.length} = £${bagTotal.toFixed(2)}`] : []), `Indicative total: £${grandTotal.toFixed(2)}`].join("\n"),
         artwork: [badge, sponsor].filter(Boolean),
         roster: active.map((p) => ({ name: p.name, number: p.number, size: p.size, qty: 1, tracksuit: p.tracksuit })),
         product_id: "full-squad",
@@ -208,10 +215,11 @@ export default function FullSquadConfigurator() {
 
           <OptionalSet n={3} title="Training kit" sub="Top + shorts with your badge - add socks or names if you want." on={withTraining} setOn={setWithTraining} k={training} kidsProblem={kidsProblem(training)} testid="fsc-training" />
           <OptionalSet n={4} title="Club tracksuit" sub="College hoodie + cuffed joggers, badge on both. Adult sizes." on={withTracksuit} setOn={setWithTracksuit} k={tracksuit} kidsProblem={[]} testid="fsc-tracksuit" />
+          <ClubBagCard bag={bag} n={5} logo={badge} testid="fsc-bag" />
 
           <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="fsc-roster">
             <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-              <h2 className="font-black text-2xl"><span className="text-[#7bc67e]">5.</span> Your squad <span className="text-sm text-[#4b5563] font-bold">({active.length} players)</span></h2>
+              <h2 className="font-black text-2xl"><span className="text-[#7bc67e]">6.</span> Your squad <span className="text-sm text-[#4b5563] font-bold">({active.length} players)</span></h2>
               <select onChange={(e) => setPlayers(Array.from({ length: Number(e.target.value) }, (_, i) => players[i] || blankPlayer()))} defaultValue=""
                 className="bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-3 py-1.5 text-xs font-bold" data-testid="fsc-quick-rows">
                 <option value="" disabled>Number of players…</option>
@@ -222,7 +230,7 @@ export default function FullSquadConfigurator() {
             <div className="space-y-1.5">
               {players.map((p, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center bg-white border border-[#dcfce7] rounded-xl p-2" data-testid={`fsc-player-${i}`}>
-                  <input value={p.name} onChange={(e) => setPlayer(i, { name: e.target.value })} placeholder="Name on back" className={`${withTracksuit ? "col-span-4" : "col-span-6"} text-sm px-2 py-1 outline-none bg-transparent min-w-0`} />
+                  <input value={p.name} onChange={(e) => setPlayer(i, { name: e.target.value })} placeholder="Name on back" className={`${withTracksuit ? (bag.on ? "col-span-3" : "col-span-4") : (bag.on ? "col-span-5" : "col-span-6")} text-sm px-2 py-1 outline-none bg-transparent min-w-0`} />
                   <input value={p.number} onChange={(e) => setPlayer(i, { number: e.target.value })} placeholder="No." className="col-span-2 text-sm text-center px-1 py-1 outline-none bg-transparent border-l border-[#dcfce7] min-w-0" />
                   <select value={p.size} onChange={(e) => setPlayer(i, { size: e.target.value })} className="col-span-3 text-sm bg-transparent outline-none min-w-0" data-testid={`fsc-player-${i}-size`}>
                     <optgroup label="Adult">{adultSizes.map((s) => <option key={s} value={s}>{s}</option>)}</optgroup>
@@ -233,6 +241,11 @@ export default function FullSquadConfigurator() {
                       <option value="">No tracksuit</option>
                       {(tracksuit.kit?.adult_sizes || adultSizes).map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
+                  )}
+                  {bag.on && (
+                    <label className="col-span-1 flex flex-col items-center text-[9px] font-extrabold text-[#4b5563] cursor-pointer" title="Kit bag">
+                      <input type="checkbox" checked={!p.nobag} onChange={(e) => setPlayer(i, { nobag: !e.target.checked })} className="accent-[#7bc67e]" data-testid={`fsc-player-${i}-bag`} />Bag
+                    </label>
                   )}
                   <button type="button" onClick={() => setPlayers((ps) => ps.filter((_, j) => j !== i))} className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center" aria-label="Remove player"><Trash2 size={14} /></button>
                 </div>
@@ -255,6 +268,12 @@ export default function FullSquadConfigurator() {
                   <span className="font-extrabold">£{l.total.toFixed(2)}</span>
                 </div>
               ))}
+              {bagPeople.length > 0 && (
+                <div className="flex justify-between gap-3 border-b border-white/10 pb-2">
+                  <span><strong>{bag.opt.label}</strong><br /><span className="text-xs text-neutral-400">{bagPeople.length} × {bag.colour}{bag.name ? " · names" : ""}</span></span>
+                  <span className="font-extrabold">£{bagTotal.toFixed(2)}</span>
+                </div>
+              )}
             </div>
             <div className="mt-5 space-y-2">
               {!quoteOnly && (

@@ -272,6 +272,10 @@ frontend/src/
   SK427/SM427; hoodie: JH016, JH001/JH001B, JH050/JH050B; joggers JH072/JH072B; bag BG145 / W110). Garment = product's
   own price; prints whole pounds (logo £3 incl., big front +£2, name £3, back logo £5) via `dance_print()` in
   _resolve_line_pricing when design_meta.flow == "dance" (no bulk tiers). Basket checkout. Dance landing CTA points here.
+  Dance bags also include mini barrel BG140S + barrel BG140.
+- **Kit bag add-on** (ClubBagAddon.jsx, `/club-bags`, `dance_kit.CLUB_BAG_SET`) in the Sports Outfit + Full Squad
+  builders: barrel BG140, teamwear holdall BG572, Quadra holdall QS70, boot bag QD76, gymsac W110; logo £3 included,
+  name +£3; one basket line with design_meta.flow "club_bag" (priced by dance_print). Per-person "Bag" tick in the roster.
 - **Leavers range** (`/leavers-hoodies/start`, LeaversFlow.jsx): own products (category "leavers", own photos/prices),
   linked to real garments in `LEAVERS_GARMENTS` (GD57, JH001, JH003, JH043, GD56, GD01; zip GD58 hidden; bag = W110).
   `_link_leavers_garments()` copies colours (+ `kids` flag), sizes, 3XL+ upcharges every startup, then reapply_saved_settings.
