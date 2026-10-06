@@ -260,6 +260,10 @@ frontend/src/
   live on the same product with a -£2 size upcharge (adults + kids count together for tiers). Their /product/:id
   pages redirect to the Fight Night page. Colours = every colour the KIDS version is made in (GD01B / JC001B,
   all also in adult), from PenCarrie's export: `FIGHT_NIGHT_COLOURS_STANDARD` / `_PERFORMANCE`.
+- **Prototype placeholders hidden** (`OLD_PLACEHOLDER_PRODUCTS`, `_hide_placeholder_products_v1`, Oct 2026): 27 built-in
+  stock-photo products (football-jersey, aprons, hi-vis-vest, joggers...). Sports page tiles + sport landing product_ids
+  point at real garments; old /product links redirect (ProductDetail PLACEHOLDER_MOVED). The Sports Outfit Configurator
+  still reads sports-outfit-training/-tracksuit from PRODUCTS for its estimate (quote only) until it's rebuilt.
 - **Leavers range** (`/leavers-hoodies/start`, LeaversFlow.jsx): own products (category "leavers", own photos/prices),
   linked to real garments in `LEAVERS_GARMENTS` (GD57, JH001, JH003, JH043, GD56, GD01; zip GD58 hidden; bag = W110).
   `_link_leavers_garments()` copies colours (+ `kids` flag), sizes, 3XL+ upcharges every startup, then reapply_saved_settings.

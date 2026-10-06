@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
-import { fetchProducts, fetchReviewsAggregate } from "../lib/api";
+import { api, fetchProducts, fetchReviewsAggregate } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import { Trophy, Users, Zap, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
@@ -13,12 +13,12 @@ import { DEFAULT_HERO_IMAGES } from "../lib/defaultImages";
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
 const SPORT_GROUPS = [
-  { key: "football", label: "Football", icon: Trophy, accent: "bg-[#7bc67e]", desc: "Match jerseys, shorts, training kits", products: ["football-jersey", "football-shorts", "training-tracksuit", "training-tee"] },
-  { key: "rugby", label: "Rugby", icon: Trophy, accent: "bg-[#fbcfe8]", desc: "Match shirts, training, tracksuits", products: ["rugby-shirt", "training-tracksuit", "training-tee"] },
-  { key: "boxing", label: "Boxing & Fight Night", icon: Zap, accent: "bg-[#fde68a]", desc: "Walk-out tees, sponsor prints, free proofs", products: ["boxing-fight-tee"], cta: { label: "Fight Night Tee builder", to: "/fight-night-tee" } },
-  { key: "muaythai", label: "Muay Thai / Kickboxing", icon: Zap, accent: "bg-[#fed7aa]", desc: "Traditional shorts, club apparel", products: ["muay-thai-shorts", "fight-shorts"] },
-  { key: "mma", label: "MMA / BJJ", icon: Zap, accent: "bg-[#bfdbfe]", desc: "Fight shorts, gym gear, sponsor tees", products: ["fight-shorts", "boxing-fight-tee"] },
-  { key: "training", label: "PT & Training", icon: Users, accent: "bg-[#dcfce7]", desc: "PTs, gyms, training squads", products: ["training-tracksuit", "training-tee"] },
+  { key: "football", label: "Football", icon: Trophy, accent: "bg-[#7bc67e]", desc: "Full kits, match shirts, shorts, training", products: ["kit-classic", "kit-contrast", "jc003", "jc080"], cta: { label: "Football kits", to: "/team-kits" } },
+  { key: "rugby", label: "Rugby", icon: Trophy, accent: "bg-[#fbcfe8]", desc: "Training kit, club & supporters shirts", products: ["kit-contrast", "fr100", "fr7"] },
+  { key: "boxing", label: "Boxing & Fight Night", icon: Zap, accent: "bg-[#fde68a]", desc: "Walk-out tees, sponsor prints, free proofs", products: ["boxing-fight-tee", "boxing-fight-performance"], cta: { label: "Fight Night Tee builder", to: "/fight-night-tee" } },
+  { key: "muaythai", label: "Muay Thai / Kickboxing", icon: Zap, accent: "bg-[#fed7aa]", desc: "Club tees, hoodies and training shorts", products: ["boxing-fight-performance", "jh001", "jc080"] },
+  { key: "mma", label: "MMA / BJJ", icon: Zap, accent: "bg-[#bfdbfe]", desc: "Sponsor tees, club hoodies, gym gear", products: ["boxing-fight-performance", "jc001", "jh001"] },
+  { key: "training", label: "PT & Training", icon: Users, accent: "bg-[#dcfce7]", desc: "PTs, gyms, training squads", products: ["kit-training", "kit-tracksuit", "jc001", "jc070"] },
 ];
 
 export default function Sports() {
@@ -38,9 +38,10 @@ export default function Sports() {
   useEffect(() => {
     // Both are enhancements (featured picks per sport, star ratings) - if they
     // fail the page still works without them, so fail quietly.
-    fetchProducts("sports", 500).then((d) => {
-      setProductsById(Object.fromEntries((d.items || []).map(p => [p.id, p])));
-    }).catch(() => {});
+    // the featured picks are real garments from any category - fetch each one
+    const ids = [...new Set(SPORT_GROUPS.flatMap((g) => g.products))];
+    Promise.all(ids.map((id) => api.get(`/products/${id}`).then((r) => r.data).catch(() => null)))
+      .then((list) => setProductsById(Object.fromEntries(list.filter((p) => p && p.active !== false).map((p) => [p.id, p]))));
     fetchReviewsAggregate().then((a) => setAggs(a || {})).catch(() => {});
   }, []);
 

@@ -108,6 +108,21 @@ export default function ProductDetail() {
       "football-premium-bundle": "kit-contrast", "football-premium-front-only": "kit-contrast",
       "training-pack-bundle": "kit-training", "training-pack-front-only": "kit-training",
     };
+    // Prototype placeholder products (stock photos, made-up prices) hidden Oct 2026 -
+    // old links go to the real garment, or the page that replaced them.
+    const PLACEHOLDER_MOVED = {
+      "football-jersey": "/product/jc003", "football-shorts": "/product/jc080", "rugby-shirt": "/product/fr100",
+      "training-tracksuit": "/product/kit-tracksuit", "training-tee": "/product/jc001", "basketball-vest": "/product/sr278m",
+      "cricket-polo": "/product/cn155", "hockey-shirt": "/product/jc003", "athletics-vest": "/product/jc007",
+      "gym-shorts": "/product/jc080", "performance-leggings": "/product/jc070", "joggers": "/product/jh072",
+      "workwear-jacket": "/product/ba514", "hi-vis-vest": "/product/pw002", "workwear-trousers": "/product/pr565",
+      "bib-apron": "/product/pr165", "waist-apron": "/product/pr155", "denim-apron": "/product/pr126",
+      "muay-thai-shorts": "/sports", "fight-shorts": "/sports", "cycling-jersey": "/sports",
+      "sports-team-bundle": "/team-kits", "full-squad-match-day": "/full-squad-configurator",
+      "full-squad-training": "/full-squad-configurator", "full-squad-tracksuit": "/full-squad-configurator",
+      "sports-outfit-training": "/sports-outfit-configurator", "sports-outfit-tracksuit": "/sports-outfit-configurator",
+    };
+    if (PLACEHOLDER_MOVED[id]) { navigate(PLACEHOLDER_MOVED[id], { replace: true }); return; }
     if (KIT_MOVED[id]) { navigate(`/product/${KIT_MOVED[id]}`, { replace: true }); return; }
     if (id === "rugby-kit-bundle" || id === "rugby-kit-front-only") { navigate("/team-kits#bundles", { replace: true }); return; }
     setLoading(true);

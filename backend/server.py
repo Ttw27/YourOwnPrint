@@ -2415,7 +2415,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "How long until match day?", "a": "Most full football kits ship in 7–10 working days from artwork approval. Rush options available on request."},
        {"q": "Can I add a sponsor on the back?", "a": "Yes - front sponsor, sleeve sponsors and a small back-of-shorts logo are all supported."},
      ],
-     "product_ids": ["kit-classic", "kit-contrast", "kit-training", "kit-tracksuit", "football-jersey", "football-shorts", "football-kit-bundle", "football-premium-bundle", "football-kit-front-only", "football-premium-front-only", "training-tee", "training-tracksuit"],
+     "product_ids": ["kit-classic", "kit-contrast", "kit-training", "kit-tracksuit", "jc003", "jc080", "football-kit-bundle", "football-premium-bundle", "football-kit-front-only", "football-premium-front-only", "jc001"],
     },
     {"slug": "rugby", "title": "Rugby Kits", "h1": "Custom Rugby Kits - Heavy-Grade Match Shirts",
      "subtitle": "Match shirts, training tops, club tracksuits",
@@ -2427,7 +2427,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "Can you replicate our existing crest?", "a": "Absolutely - send us any file (JPG, PNG, PDF, vector) and we'll mock it up for free."},
        {"q": "Do you do training shirts as well?", "a": "Yes - match shirts, training tees and full tracksuits all under one order."},
      ],
-     "product_ids": ["rugby-shirt", "rugby-kit-bundle", "rugby-kit-front-only", "training-tee", "training-tracksuit", "sports-tee"],
+     "product_ids": ["kit-contrast", "fr100", "fr7", "rugby-kit-bundle", "rugby-kit-front-only", "jc001", "kit-tracksuit", "sports-tee"],
     },
     {"slug": "gyms", "title": "Gym Kit & Branded Apparel", "h1": "Branded Kit for Gyms - Built for the Floor",
      "subtitle": "Tees, hoodies, joggers, leggings - branded for your gym",
@@ -2439,7 +2439,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "Do you do front and back prints?", "a": "Yes - front breast logo plus a larger back print are both included on most products."},
        {"q": "What's the lead time on a bulk gym kit order?", "a": "Typically 7–10 working days from artwork approval, faster on smaller orders."},
      ],
-     "product_ids": ["personalised-tee", "personalised-hoodie", "joggers", "performance-leggings", "gym-shorts", "training-tee", "sports-tee"],
+     "product_ids": ["personalised-tee", "personalised-hoodie", "jh072", "jc070", "jc080", "jc001", "sports-tee"],
     },
     {"slug": "personal-trainers", "title": "Personal Trainer Kit", "h1": "Personal Trainer Kit - Branded For Your Studio",
      "subtitle": "Coach polos, performance tees, hoodies - sorted",
@@ -2451,7 +2451,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "Will my logo look right on dark colours?", "a": "Yes - we'll mock it up for free on any colour before you commit, so there's no nasty surprises."},
        {"q": "Can I add my Instagram handle?", "a": "Of course - pop it under the logo or on the sleeve."},
      ],
-     "product_ids": ["personalised-tee", "polo-shirt", "personalised-hoodie", "joggers", "training-tee", "sports-tee", "performance-leggings"],
+     "product_ids": ["personalised-tee", "polo-shirt", "personalised-hoodie", "jh072", "jc001", "sports-tee", "jc070"],
     },
     {"slug": "boxing-gyms", "title": "Boxing Gym Kit", "h1": "Boxing Gym Kit - Walk-out Tees, Hoodies & More",
      "subtitle": "Fight night tees, gym hoodies, sponsor shirts",
@@ -2463,7 +2463,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "How quick can you turn around a fight night order?", "a": "Standard turnaround is 7–10 days; we'll often beat that for fight cards - speak to us if you're tight on time."},
        {"q": "Do you do walk-out hoodies too?", "a": "Yes - branded gym hoodies, joggers, beanies, drawstring bags - anything you need to outfit your corner."},
      ],
-     "product_ids": ["boxing-fight-tee", "personalised-tee", "personalised-hoodie", "joggers", "sports-tee", "training-tee"],
+     "product_ids": ["boxing-fight-tee", "personalised-tee", "personalised-hoodie", "jh072", "sports-tee", "jc001"],
     },
     {"slug": "thai-boxing", "title": "Thai Boxing Gym Kit", "h1": "Muay Thai Gym Kit & Custom Shorts",
      "subtitle": "Branded Thai shorts, walk-out tees, gym hoodies",
@@ -2475,7 +2475,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "Do you offer kids' Thai shorts?", "a": "Yes - we cover junior sizes from 7–8 up to adult."},
        {"q": "How vibrant is the print on satin?", "a": "Very - sublimation print on satin makes colours pop. We always send a mock-up before printing."},
      ],
-     "product_ids": ["muay-thai-shorts", "boxing-fight-tee", "personalised-tee", "personalised-hoodie", "training-tee"],
+     "product_ids": ["boxing-fight-performance", "boxing-fight-tee", "personalised-tee", "personalised-hoodie", "jc001"],
     },
     {"slug": "kick-boxing", "title": "Kickboxing Gym Kit", "h1": "Kickboxing Gym Kit, Shorts & Walk-out Tees",
      "subtitle": "Custom kickboxing shorts, club hoodies, training kit",
@@ -2487,7 +2487,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "Will the print survive grappling?", "a": "Yes - sublimation prints sit inside the fibres, not on top, so they don't crack or peel."},
        {"q": "Minimums?", "a": "No minimum - order one set or fifty."},
      ],
-     "product_ids": ["fight-shorts", "muay-thai-shorts", "boxing-fight-tee", "personalised-tee", "personalised-hoodie", "training-tee"],
+     "product_ids": ["boxing-fight-performance", "boxing-fight-tee", "personalised-tee", "personalised-hoodie", "jc001"],
     },
     {"slug": "dance-studios", "title": "Dance Studio Apparel", "h1": "Custom Dance Studio Apparel & Crew Kit",
      "subtitle": "Studio tees, hoodies, leggings, joggers - branded",
@@ -2499,7 +2499,7 @@ SPORTS_TEAMS_CATALOGUE = [
        {"q": "Do you do small sizes for kids?", "a": "Yes - junior sizes from 3–4 up to 12–13 across most styles."},
        {"q": "Can dancers have their name on the back?", "a": "Yes - names, year groups, studio colours, crew names - your call."},
      ],
-     "product_ids": ["dance-tee", "personalised-hoodie", "joggers", "performance-leggings", "personalised-tee", "kids-tee"],
+     "product_ids": ["dance-tee", "personalised-hoodie", "jh072", "jc070", "personalised-tee", "kids-tee"],
     },
 ]
 
@@ -6079,6 +6079,30 @@ async def _add_front_row_rugby_v1():
     asyncio.create_task(_mirror())
 
 
+# Prototype products from the first build (stock photos, made-up prices, no real
+# garment) - hidden Oct 2026; pages now point at real PenCarrie/Ralawise garments
+# and old links redirect (ProductDetail PLACEHOLDER_MOVED).
+OLD_PLACEHOLDER_PRODUCTS = [
+    "football-jersey", "football-shorts", "rugby-shirt", "training-tracksuit", "training-tee",
+    "muay-thai-shorts", "fight-shorts", "basketball-vest", "cricket-polo", "hockey-shirt",
+    "athletics-vest", "cycling-jersey", "sports-team-bundle", "full-squad-match-day",
+    "full-squad-training", "full-squad-tracksuit", "sports-outfit-training", "sports-outfit-tracksuit",
+    "bib-apron", "waist-apron", "denim-apron", "joggers", "workwear-trousers",
+    "performance-leggings", "gym-shorts", "workwear-jacket", "hi-vis-vest",
+]
+
+
+async def _hide_placeholder_products_v1():
+    """One-off (Tim, Oct 2026): hide (never delete) the prototype placeholders."""
+    marker = "hide_placeholder_products_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    for pid in OLD_PLACEHOLDER_PRODUCTS:
+        if pid in PRODUCTS:
+            await _set_product_active(pid, False)
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+
+
 async def _hide_placeholder_kits_v1():
     """One-off (Tim, Oct 2026): the prototype football/training kit placeholders
     (stock photos, no real garments) are replaced by kit-classic / kit-contrast /
@@ -8246,6 +8270,10 @@ async def _load_imported_products():
             await _hide_placeholder_kits_v1()
         except Exception as e:
             logging.warning(f"placeholder kits skipped: {e}")
+        try:
+            await _hide_placeholder_products_v1()
+        except Exception as e:
+            logging.warning(f"placeholder products skipped: {e}")
         try:
             await _hivis_vest_prints_v1()
         except Exception as e:
