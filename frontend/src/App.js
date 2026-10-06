@@ -79,6 +79,8 @@ import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import Account from "@/pages/Account";
 import ResetPassword from "@/pages/ResetPassword";
 import CookieConsent from "@/components/bold/CookieConsent";
+import ReviewOrder from "@/pages/ReviewOrder";
+import BasketRestore from "@/pages/BasketRestore";
 
 function App() {
   // Pull the admin-set WhatsApp number once on load so every WhatsApp link
@@ -160,6 +162,8 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/reviews" element={<ReviewsPage />} />
+          <Route path="/review/:token" element={<ReviewOrder />} />
+          <Route path="/basket/restore/:token" element={<BasketRestore />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/import-reviews" element={<RequireAdmin><AdminLayout><AdminImport /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/reviews" element={<RequireAdmin><AdminLayout><AdminReviews /></AdminLayout></RequireAdmin>} />

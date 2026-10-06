@@ -1517,6 +1517,10 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
         if details:
             customer_email = getattr(details, "email", None)
         customer_email = customer_email or doc.get("customer_email") or doc.get("contact_email")
+        # for the follow-up review email (routers/followups.py)
+        await db.payment_transactions.update_one(
+            {"session_id": doc["session_id"]},
+            {"$set": {"paid_at": datetime.now(timezone.utc).isoformat(), "paid_email": (customer_email or "").strip().lower() or None}})
 
         amount = float(getattr(status_resp, "amount_total", None) or 0) / 100.0
         currency = (getattr(status_resp, "currency", None) or "gbp").upper()
@@ -9127,6 +9131,12 @@ import routers.trusted_logos  # noqa: F401 - registers /trusted-logos (homepage 
 import routers.team_kits  # noqa: F401 - registers /team-kits/kit/{id} (kits built from real garments)
 import routers.dance_kit  # noqa: F401 - registers /dance-kit/config (dance studio kit builder)
 import routers.google_feed  # noqa: F401 - registers /feeds/google.xml (Merchant Center feed)
+import routers.followups  # noqa: F401 - review request + abandoned basket emails, /review-request/*, /basket/restore/*
+
+
+@app.on_event("startup")
+async def _start_followups():
+    routers.followups.start()
 
 # Legacy helpers still used by leavers/bespoke and /contact - thin wrappers that
 # proxy to the new services.email module. Kept here until those endpoints move
