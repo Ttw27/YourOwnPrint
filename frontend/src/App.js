@@ -82,6 +82,7 @@ import CookieConsent from "@/components/bold/CookieConsent";
 import SignupOffer from "@/components/bold/SignupOffer";
 import AdminSubscribers from "@/pages/AdminSubscribers";
 import ReviewOrder from "@/pages/ReviewOrder";
+import Occasion from "@/pages/Occasion";
 import BasketRestore from "@/pages/BasketRestore";
 
 function App() {
@@ -166,6 +167,7 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/review/:token" element={<ReviewOrder />} />
+          <Route path="/occasions/:slug" element={<Occasion />} />
           <Route path="/basket/restore/:token" element={<BasketRestore />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/import-reviews" element={<RequireAdmin><AdminLayout><AdminImport /></AdminLayout></RequireAdmin>} />

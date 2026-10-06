@@ -38,6 +38,10 @@ const PAGE_COPY_SLUGS = [
   { slug: "full-squad-configurator", label: "Full Squad Configurator" },
   { slug: "sports-outfit-configurator", label: "Sports Outfit Configurator" },
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
+  { slug: "occasion-christmas", label: "Occasion: Christmas" },
+  { slug: "occasion-stag-and-hen", label: "Occasion: Stag & hen" },
+  { slug: "occasion-charity-events", label: "Occasion: Charity & events" },
+  { slug: "occasion-back-to-school", label: "Occasion: Back to school / new season" },
   ...[
     ["healthcare", "Healthcare"], ["construction-trades", "Construction & Trades"], ["retail", "Retail"],
     ["security", "Security"], ["corporate", "Corporate"], ["sports-fitness", "Sports & Fitness"],
@@ -103,6 +107,10 @@ const PAGE_MEDIA_SLOTS = {
       label: "Photo or video beside 'Start your own clothing line'",
       hint: "The square block on the left of the dark section further down. A short clip here plays silently on a loop." },
   ],
+  ...Object.fromEntries(["christmas", "stag-and-hen", "charity-events", "back-to-school"].map((o) => [`occasion-${o}`, [
+    { key: "hero_image", kind: "image", field: "hero_image", label: "Photo at the top of the page",
+      hint: "Shown on the right of the heading.", emptyNote: "the page shows the first four products instead" },
+  ]])),
   "fight-night": [
     { key: "hero", kind: "media",
       label: "Photo or video beside the headline",

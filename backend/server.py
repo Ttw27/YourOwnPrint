@@ -885,6 +885,15 @@ async def sitemap_xml():
         ("/design", "0.7", "weekly"),
         ("/industries", "0.7", "weekly"),
         ("/reviews", "0.5", "weekly"),
+        ("/dance-studio-kit", "0.7", "monthly"),
+        ("/full-squad-configurator", "0.7", "monthly"),
+        ("/sports-outfit-configurator", "0.7", "monthly"),
+        ("/leavers-hoodies", "0.8", "weekly"),
+        ("/fight-night-tee", "0.7", "monthly"),
+        ("/occasions/christmas", "0.7", "weekly"),
+        ("/occasions/stag-and-hen", "0.6", "monthly"),
+        ("/occasions/charity-events", "0.6", "monthly"),
+        ("/occasions/back-to-school", "0.6", "monthly"),
     ]
     for t in GARMENT_TYPE_CATALOGUE:
         urls.append((f"/shop/{t['slug']}", "0.8", "daily"))

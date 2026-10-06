@@ -16,6 +16,7 @@ import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera, M
 import PriceTag from "../components/bold/PriceTag";
 import usePageTitle from "../hooks/usePageTitle";
 import JsonLd from "../components/bold/JsonLd";
+import SeasonalBanner from "../components/bold/SeasonalBanner";
 import { DEFAULT_HERO_IMAGES } from "../lib/defaultImages";
 
 export default function Home() {
@@ -212,6 +213,8 @@ export default function Home() {
 
       {/* Full price promise hero */}
       <PricePromise variant="hero" />
+
+      <SeasonalBanner />
 
       {/* Built-in tools showcase */}
       <ToolsShowcase />
