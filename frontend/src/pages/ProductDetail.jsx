@@ -16,6 +16,7 @@ import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, ShoppingBag, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import JsonLd, { productLd } from "../components/bold/JsonLd";
 import PriceTag from "../components/bold/PriceTag";
 import { trackViewProduct } from "../lib/tracking";
 import { useAccountDiscount, discounted } from "../context/CustomerAuthContext";
@@ -382,6 +383,8 @@ export default function ProductDetail() {
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
       <BoldNavbar />
+      {product && <JsonLd id="product" data={productLd(product, { rating: agg?.average, count: agg?.count, colour: color,
+        image: (product.colors || []).find((c) => c.name === color)?.image })} />}
       <WhatsAppFAB preset={`Hi! Question about the ${product?.name || "product"}…`} />
 
       <div className="max-w-7xl mx-auto px-6 py-10">

@@ -10,6 +10,7 @@ import { useCustomerAuth, useAccountDiscount, discounted } from "../context/Cust
 import { toast } from "sonner";
 import { Upload, Type, Trash2, Plus, Minus, RotateCw, ShoppingCart, Loader2, Wand2, Sparkles, ArrowUp, ArrowDown, Copy, Pencil, Image as ImageIcon, Layers, Tag, Info, Lock, Eye } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import JsonLd, { productLd } from "../components/bold/JsonLd";
 import { MobileToolBar, MobileSheet, useIsMobile } from "../components/bold/MobileDesignerShell";
 import { ExVat } from "../components/bold/PriceTag";
 
@@ -900,6 +901,7 @@ export default function DesignYourOwn() {
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
       <BoldNavbar />
+      {product && <JsonLd id="designer-product" data={productLd(product, { rating: product.rating, count: product.review_count, path: `/design?product=${encodeURIComponent(product.id)}` })} />}
 
       <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-8 pb-24 lg:pb-8">
         <div className="flex items-end justify-between flex-wrap gap-3 mb-6">

@@ -15,6 +15,7 @@ import SiteImage from "../components/bold/SiteImage";
 import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera, MessageCircle } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
 import usePageTitle from "../hooks/usePageTitle";
+import JsonLd from "../components/bold/JsonLd";
 import { DEFAULT_HERO_IMAGES } from "../lib/defaultImages";
 
 export default function Home() {
@@ -44,6 +45,11 @@ export default function Home() {
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
       <BoldNavbar />
+      <JsonLd id="organization" data={{
+        "@context": "https://schema.org", "@type": "Organization", name: "Your Own Print",
+        legalName: "TEZL GROUP LTD", url: "https://www.yourownprint.co.uk", logo: "https://www.yourownprint.co.uk/logo.png",
+        address: { "@type": "PostalAddress", addressLocality: "Leicester", addressCountry: "GB" },
+      }} />
 
       {/* Hero - playful blobs */}
       <div className="relative overflow-hidden">
