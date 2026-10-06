@@ -886,6 +886,7 @@ async def sitemap_xml():
         ("/industries", "0.7", "weekly"),
         ("/reviews", "0.5", "weekly"),
         ("/dance-studio-kit", "0.7", "monthly"),
+        ("/club-shop/new", "0.7", "monthly"),
         ("/full-squad-configurator", "0.7", "monthly"),
         ("/sports-outfit-configurator", "0.7", "monthly"),
         ("/leavers-hoodies", "0.8", "weekly"),
@@ -1419,6 +1420,9 @@ def _order_details_html(doc: dict) -> str:
                 y = float(ps.get("y", 0) or 0)
                 pos = "standard position" if not y else (f"moved {abs(y):g}% of the print area {'down' if y > 0 else 'up'}")
                 rows.append(f"Print size: {esc(ps.get('scale', 100))}% of the standard print area, {esc(pos)}")
+        if dm.get("club_code"):
+            rows.append(f"Club shop: {esc(dm.get('club_name') or dm.get('club_code'))}"
+                        + (f" - name on back: <strong>{esc(dm.get('child_name'))}</strong>" if dm.get("child_name") else ""))
         if dm.get("mode") or dm.get("flow"):
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
         # the customer's actual print files (art_<position> -> /api/uploads/artwork/...)
@@ -1746,6 +1750,10 @@ async def _resolve_line_pricing(
         pos = bundle_logo_position(product)
         placements_clean = [pos] if pos else []
         print_cost = 0.0
+    elif (design_meta or {}).get("flow") == "club_shop":
+        # Club shop (routers/club_shops.py): parent order from a club's link
+        from routers.club_shops import club_print
+        placements_clean, print_cost = await club_print(product_id, placements, color, design_meta or {})
     elif (design_meta or {}).get("flow") in ("dance", "club_bag"):
         # Dance studio kit builder (routers/dance_kit.py): logo / name / back
         # logo at the dance prices, colour checked against the real garment.
@@ -1824,8 +1832,8 @@ async def _resolve_line_pricing(
     # Bulk-tier pricing
     if is_design:
         pass  # Design Shop: flat retail price per garment
-    elif (design_meta or {}).get("flow") in ("dance", "club_bag"):
-        pass  # dance studio kit / club kit bags: each garment's own price, no bulk tiers
+    elif (design_meta or {}).get("flow") in ("dance", "club_bag", "club_shop"):
+        pass  # dance studio kit / club kit bags / club shops - each garment's own price: each garment's own price, no bulk tiers
     elif product_id in FIGHT_NIGHT_IDS:
         base_price = tier_unit_price(fight_night_tiers(base_price), base_price, total_qty)
     elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
@@ -1956,8 +1964,12 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         cancel_url=cancel_url,
         metadata=metadata,
         product_name="Your Own Print cart order",
-        shipping_options=await _delivery_options_for([(p["product"], p["total_qty"]) for p in priced], grand_total,
-                                                     payload.delivery_region or "uk"),
+        # club shop orders all go to the club together - one free option
+        shipping_options=([{"shipping_rate_data": {"type": "fixed_amount", "fixed_amount": {"amount": 0, "currency": "gbp"},
+                                                   "display_name": f"Delivered to {(priced[0]['design_meta'].get('club_name') or 'your club')[:60]} with the group order - FREE"}}]
+                          if all((p["design_meta"] or {}).get("flow") == "club_shop" for p in priced)
+                          else await _delivery_options_for([(p["product"], p["total_qty"]) for p in priced], grand_total,
+                                                           payload.delivery_region or "uk")),
         allowed_countries=await _allowed_countries(payload.delivery_region or "uk"),
     )
 
@@ -9140,6 +9152,7 @@ import routers.trusted_logos  # noqa: F401 - registers /trusted-logos (homepage 
 import routers.team_kits  # noqa: F401 - registers /team-kits/kit/{id} (kits built from real garments)
 import routers.dance_kit  # noqa: F401 - registers /dance-kit/config (dance studio kit builder)
 import routers.google_feed  # noqa: F401 - registers /feeds/google.xml (Merchant Center feed)
+import routers.club_shops  # noqa: F401 - registers /club-shops/*, /admin/club-shops
 import routers.signup_offer  # noqa: F401 - registers /signup-offer, /admin/subscribers
 import routers.followups  # noqa: F401 - review request + abandoned basket emails, /review-request/*, /basket/restore/*
 

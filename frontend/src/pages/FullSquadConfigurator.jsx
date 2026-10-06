@@ -287,6 +287,7 @@ export default function FullSquadConfigurator() {
             </div>
             <div className="mt-4 text-xs text-neutral-400 flex items-start gap-1.5"><ShieldCheck size={12} className="mt-0.5 text-[#7bc67e]" /> We send a free proof before anything is printed.{quoteOnly ? ` Squads over ${QUOTE_THRESHOLD} players get a tailored quote.` : ""}</div>
             <div className="mt-2 text-xs text-neutral-400">Just need one kit? <Link to="/team-kits" className="text-[#7bc67e] underline">Order a single kit</Link></div>
+            <div className="mt-2 text-xs text-neutral-400">Members paying for their own? <Link to="/club-shop/new" className="text-[#7bc67e] underline" data-testid="fsc-club-shop">Set up a club shop link</Link></div>
           </div>
         </aside>
       </div>

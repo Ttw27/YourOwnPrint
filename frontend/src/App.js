@@ -83,6 +83,10 @@ import SignupOffer from "@/components/bold/SignupOffer";
 import AdminSubscribers from "@/pages/AdminSubscribers";
 import ReviewOrder from "@/pages/ReviewOrder";
 import Occasion from "@/pages/Occasion";
+import ClubShopCreate from "@/pages/ClubShopCreate";
+import ClubShop from "@/pages/ClubShop";
+import ClubShopManage from "@/pages/ClubShopManage";
+import AdminClubShops from "@/pages/AdminClubShops";
 import BasketRestore from "@/pages/BasketRestore";
 
 function App() {
@@ -168,11 +172,15 @@ function App() {
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/review/:token" element={<ReviewOrder />} />
           <Route path="/occasions/:slug" element={<Occasion />} />
+          <Route path="/club-shop/new" element={<ClubShopCreate />} />
+          <Route path="/club/:code" element={<ClubShop />} />
+          <Route path="/club/:code/manage/:token" element={<ClubShopManage />} />
           <Route path="/basket/restore/:token" element={<BasketRestore />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/import-reviews" element={<RequireAdmin><AdminLayout><AdminImport /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/reviews" element={<RequireAdmin><AdminLayout><AdminReviews /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/subscribers" element={<RequireAdmin><AdminLayout><AdminSubscribers /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/club-shops" element={<RequireAdmin><AdminLayout><AdminClubShops /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/team-kits" element={<RequireAdmin><AdminLayout><AdminTeamKits /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/designer-products" element={<RequireAdmin><AdminLayout><AdminDesignerProducts /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/product-settings" element={<RequireAdmin><AdminLayout><AdminProductSettings /></AdminLayout></RequireAdmin>} />

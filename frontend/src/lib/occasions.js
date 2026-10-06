@@ -65,6 +65,7 @@ export const OCCASIONS = {
     ctas: [
       { label: "Team kits", to: "/team-kits" },
       { label: "Dance studio kit", to: "/dance-studio-kit" },
+      { label: "Parent order link", to: "/club-shop/new" },
       { label: "School staff pack", to: "/product/bundle-school-staff-pack-10-people" },
     ],
     products: ["kit-classic", "jh001b", "gd01b", "qd456", "bundle-school-staff-pack-10-people", "jc001b"],

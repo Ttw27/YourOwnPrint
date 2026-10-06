@@ -23,6 +23,7 @@ const GROUPS = [
       { label: "Questions (Q&A)", to: "/admin/qa", icon: HelpCircle },
       { label: "Reviews", to: "/admin/reviews", icon: Star },
       { label: "Email sign-ups", to: "/admin/subscribers", icon: Mail },
+      { label: "Club shops", to: "/admin/club-shops", icon: Users },
     ],
   },
   {

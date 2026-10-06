@@ -275,7 +275,11 @@ export default function DanceStudioKit() {
             )}
             <button type="button" onClick={() => setDancers((ds) => [...ds, blankDancer()])} className="mt-2 inline-flex items-center gap-1.5 text-sm font-extrabold text-[#7bc67e] hover:underline" data-testid="dk-add-dancer"><Plus size={14} /> Add dancer</button>
           </div>
-          <NeedHelpCTA title="Selling to parents?" body="Send us your logo and colours and we can set up the order for you - or ask about a parent pre-order list." presetMessage="Hi! I'd like branded dancewear for my studio." />
+          <Link to="/club-shop/new" className="block bg-[#f0fdf4] border-2 border-[#7bc67e] rounded-3xl p-5 hover:bg-[#dcfce7] transition" data-testid="dk-club-shop">
+            <div className="font-black text-xl">Parents paying for their own? Set up a studio shop link</div>
+            <p className="text-sm text-[#4b5563] mt-1">Pick the kit once, share one link - every parent chooses sizes and names and pays online. We print it all together. Free to set up →</p>
+          </Link>
+          <NeedHelpCTA title="Rather we set it up?" body="Send us your logo and colours and we can set up the order for you." presetMessage="Hi! I'd like branded dancewear for my studio." />
         </section>
 
         <aside className="lg:col-span-4">

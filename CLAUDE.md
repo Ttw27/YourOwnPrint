@@ -308,6 +308,26 @@ frontend/src/
   links in the shop's order email; NOT copied into Stripe metadata (50-key cap). Before Oct 2026 the files never
   left the browser - any new checkout flow must do the same.
 
+- **Growth features (Oct 2026):**
+  - Image domain: `services/image_host.ImageHostMiddleware` rewrites saved r2.dev photo URLs to R2_PUBLIC_URL in API
+    responses once R2_PUBLIC_URL is a custom domain (no-op while it is r2.dev). No DB migration needed.
+  - Google Merchant feed: `routers/google_feed.py`, GET /api/feeds/google.xml (gzipped, cached 6h, colour x size
+    variants, sizes with upcharges left out so prices match the PDP). PDP opens `?colour=`.
+  - Tracking: `lib/tracking.js` + `CookieConsent.jsx` - Meta Pixel / GA4 / Google Ads IDs in Admin > Integrations
+    (public via /api/site/tracking); NOTHING loads before "Accept all". Events: page view, view item, add to basket,
+    begin checkout (api.js checkout fns), purchase (CheckoutSuccess).
+  - Structured data: `components/bold/JsonLd.jsx` (Product + rating on PDP/designer, Organization on home, FAQ on occasions).
+  - Follow-ups: `routers/followups.py` loop every 30 min - review request REVIEW_DAYS (10) after paid_at (stamped in
+    _maybe_send_order_emails) -> /review/<token>; abandoned basket reminder (unpaid cart checkouts with email after 3h,
+    saved customer carts after 4h) -> /basket/restore/<token>; opt-out link /api/email/stop/<token>. Only orders/baskets
+    after `followups_started_at`.
+  - Sign-up offer: `routers/signup_offer.py` + `SignupOffer.jsx` popup - single-use Stripe promotion code 10% off
+    (WELCOME-XXXXXX); ALL checkouts allow_promotion_codes. Admin > Email sign-ups (CSV).
+  - Seasonal pages: `/occasions/:slug` (lib/occasions.js, page copy `occasion-<slug>`) + `SeasonalBanner` on home.
+  - Club shops: `routers/club_shops.py` - /club-shop/new (organiser), /club/<code> (parents pay individually, lines
+    flow "club_shop", priced by club_print: garment + logo £3 + name £3, free "delivered to the club" shipping),
+    /club/<code>/manage/<token>, Admin > Club shops (CSV).
+
 ## 6. Known gotchas / debugging lessons (all learned the hard way)
 
 - **Backend-served image paths need the backend prefix.** Portfolio (and some other) images are
