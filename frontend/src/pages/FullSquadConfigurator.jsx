@@ -19,7 +19,7 @@ import { ExVat } from "../components/bold/PriceTag";
 const QUOTE_THRESHOLD = 25;
 
 // One kit's state: details from the server, options, colours.
-function useKit(pid) {
+export function useKit(pid) {
   const [kit, setKit] = useState(null);
   const [opts, setOpts] = useState({ socks: true, names: true });
   const [cols, setCols] = useState({});
@@ -276,7 +276,7 @@ export default function FullSquadConfigurator() {
   );
 }
 
-function OptionalSet({ n, title, sub, on, setOn, k, kidsProblem, testid }) {
+export function OptionalSet({ n, title, sub, on, setOn, k, kidsProblem, testid }) {
   return (
     <div className="space-y-3" data-testid={testid}>
       <label className={`flex items-start gap-3 bg-white border-2 rounded-3xl p-5 cursor-pointer ${on ? "border-[#7bc67e]" : "border-[#dcfce7]"}`}>
@@ -291,7 +291,7 @@ function OptionalSet({ n, title, sub, on, setOn, k, kidsProblem, testid }) {
   );
 }
 
-function ImageSlot({ label, hint, value, onChange, testid }) {
+export function ImageSlot({ label, hint, value, onChange, testid }) {
   const ref = useRef(null);
   const pick = (file) => {
     if (!file) return;

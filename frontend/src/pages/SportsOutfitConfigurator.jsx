@@ -1,527 +1,274 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchSportsOutfitConfig, submitQuoteRequest, uploadArtwork, mediaUrl } from "../lib/api";
+import { submitQuoteRequest, createCartCheckout, uploadOrderArtwork, fetchTeamKitAddons } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
+import { useKit, OptionalSet, ImageSlot } from "./FullSquadConfigurator";
 import { toast } from "sonner";
-import {
-  Plus, Minus, ShieldCheck, Truck, ArrowRight, Loader2, ChevronDown, Check, Info,
-  Upload, Image as ImageIcon, X,
-} from "lucide-react";
+import { Plus, Trash2, ShieldCheck, Loader2, Check, ShoppingCart, Send } from "lucide-react";
 import { ExVat } from "../components/bold/PriceTag";
 
 /**
- * Sports Outfit Configurator - simpler builder for gyms, PTs, boxing/thai/kick gyms.
- *
- * Two "sets": Training (top + shorts) and Tracksuit (hoodie + joggers). User can select
- * either or both.
- *
- * Print options:
- *   - FRONT (radio):  Unbranded (£0) | Breast logo (+£3) | Full front (+£6)
- *   - BACK  (opt-in checkbox, tops only): +£4
- *
- * Front breast and full-front are mutually exclusive with each other, but front-of-any-kind
- * can be combined with back. Shorts + joggers never receive back prints (server-side rule).
- *
- * File uploads: designs are uploaded on selection to /api/uploads/artwork (Emergent Object
- * Storage) and the returned URLs are attached to the quote request submission.
+ * Sports Outfit Configurator - gyms, PTs, boxing / thai / kickboxing clubs.
+ * Built on the same real kits as Team Kits (routers/team_kits.py):
+ *   Training kit = AWDis Cool T (JC001) + Cool Shorts (JC080), adults + kids
+ *   Tracksuit    = AWDis College Hoodie (JH001) + Cuffed Joggers (JH072), adults
+ * Logo on the front of everything is included; a big logo on the back of the
+ * top / hoodie is an add-on (team-kit "back-print" price). One list of people
+ * (name optional + a size per set). Pays online as kit lines in the basket
+ * (server re-prices each), or a quote for big orders.
  */
-const FRONT_MODES = [
-  { id: "unbranded",  label: "Unbranded",       key: "unbranded_price" },
-  { id: "breast",     label: "Breast logo",     key: "breast_print_price" },
-  { id: "full_front", label: "Full front print", key: "full_front_print_price" },
-];
+const QUOTE_THRESHOLD = 25;
+
+const blankPerson = () => ({ name: "", size: "M", tracksuit: "" });
 
 export default function SportsOutfitConfigurator() {
-  const [cfg, setCfg] = useState(null);
   const [team, setTeam] = useState({ name: "", contact_name: "", contact_email: "", contact_phone: "" });
-  const [state, setState] = useState({}); // { [sectionKey]: {variant_id, colour, sizes, front_mode, back_on, front_artwork, back_artwork} }
+  const [logo, setLogo] = useState(null);
+  const [backLogo, setBackLogo] = useState(null);
+  const training = useKit("kit-training");
+  const tracksuit = useKit("kit-tracksuit");
+  const [withTraining, setWithTraining] = useState(true);
+  const [withTracksuit, setWithTracksuit] = useState(false);
+  const [backOn, setBackOn] = useState({ training: false, tracksuit: false });
+  const [backPrice, setBackPrice] = useState(3.5);
+  const [people, setPeople] = useState(Array.from({ length: 5 }, blankPerson));
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { fetchSportsOutfitConfig().then(setCfg).catch(() => setCfg(null)); }, []);
+  useEffect(() => {
+    fetchTeamKitAddons().then((list) => {
+      const bp = (list || []).find((a) => a.id === "back-print");
+      if (bp) setBackPrice(Number(bp.price));
+    }).catch(() => {});
+  }, []);
 
-  const activeSets = useMemo(() => Object.entries(state).filter(([, v]) => v?.variant_id), [state]);
-  // Helper: given a v.sizes state (either {S:n,M:n} legacy or {_split, top:{}, bottom:{}}), compute qty.
-  const qtyOf = (sizes) => {
-    if (!sizes) return 0;
-    if ("top" in sizes || "bottom" in sizes) {
-      const sum = (obj) => Object.values(obj || {}).reduce((a, b) => a + Number(b || 0), 0);
-      return sizes._split ? Math.max(sum(sizes.top), sum(sizes.bottom)) : sum(sizes.top);
-    }
-    return Object.values(sizes).reduce((a, b) => a + Number(b || 0), 0);
-  };
-  const printCostOf = (v) => {
-    if (!cfg) return 0;
-    const frontKey = FRONT_MODES.find((m) => m.id === (v.front_mode || "unbranded"))?.key || "unbranded_price";
-    const frontCost = Number(cfg.addons?.[frontKey] || 0);
-    const backCost = v.back_on ? Number(cfg.addons?.back_print_price || 0) : 0;
-    return frontCost + backCost;
-  };
-  const totals = useMemo(() => {
-    if (!cfg) return { subtotal: 0, totalQty: 0 };
-    let subtotal = 0, totalQty = 0;
-    activeSets.forEach(([, v]) => {
-      const qty = qtyOf(v.sizes);
-      const unit = Number(v.__unit_price || 0) + printCostOf(v);
-      subtotal += unit * qty;
-      totalQty += qty;
+  const kidsIn = (k, sizeOf) => people.some((p) => (k.kit?.kids_sizes || []).includes(sizeOf(p)));
+  const kidsProblem = (k, sizeOf) => (kidsIn(k, sizeOf) ? k.parts.map((pt) => {
+    const c = pt.colours.find((x) => x.name === k.cols[pt.key]);
+    return c && c.kids === false ? `${pt.label} in ${c.name}` : null;
+  }).filter(Boolean) : []);
+
+  const sets = useMemo(() => {
+    const out = [];
+    if (withTraining) out.push({ key: "training", label: "Training kit", k: training, sizeOf: (p) => p.size, backWhat: "top" });
+    if (withTracksuit) out.push({ key: "tracksuit", label: "Tracksuit", k: tracksuit, sizeOf: (p) => (withTraining ? p.tracksuit : ((tracksuit.kit?.adult_sizes || []).includes(p.size) ? p.size : "")), backWhat: "hoodie" });
+    return out;
+  }, [training, tracksuit, withTraining, withTracksuit]);
+
+  const lines = sets.map((s) => {
+    const size_qtys = {};
+    let total = 0;
+    const extra = backOn[s.key] ? backPrice : 0;
+    people.forEach((p) => {
+      const sz = s.sizeOf(p);
+      if (!sz) return;
+      size_qtys[sz] = (size_qtys[sz] || 0) + 1;
+      total += s.k.unit(sz) + extra;
     });
-    return { subtotal, totalQty };
-  }, [activeSets, cfg]);
+    const qty = Object.values(size_qtys).reduce((a, b) => a + b, 0);
+    return { ...s, size_qtys, qty, total, extra };
+  });
+  const grandTotal = lines.reduce((a, l) => a + l.total, 0);
+  const totalItems = lines.reduce((a, l) => a + l.qty, 0);
+  const headcount = people.filter((p) => sets.some((s) => s.sizeOf(p))).length;
+  const quoteOnly = headcount > QUOTE_THRESHOLD;
+  const anyBack = sets.some((s) => backOn[s.key]);
 
-  if (!cfg) {
-    return <div className="min-h-screen grid place-items-center bg-white"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
-  }
-  const { sections, addons, proof_days } = cfg;
+  const setPerson = (i, patch) => setPeople((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+  const trainingAdult = training.kit?.adult_sizes || ["XS", "S", "M", "L", "XL", "XXL"];
+  const trainingKids = training.kit?.kids_sizes || [];
+  const tracksuitSizes = tracksuit.kit?.adult_sizes || ["XS", "S", "M", "L", "XL", "XXL"];
 
-  const patchSection = (key, patch) => setState((s) => ({ ...s, [key]: { ...(s[key] || {}), ...patch } }));
-
-  const onSubmit = async () => {
-    if (!team.name.trim() || !team.contact_email.trim()) {
-      toast.error("Please fill in team / gym name and email."); return;
+  const validate = () => {
+    if (!sets.length) return "Pick the training kit, the tracksuit, or both";
+    if (!team.name.trim()) return "Add your gym / club name";
+    if (!team.contact_email.trim()) return "Add a contact email";
+    if (!logo) return "Upload your logo";
+    if (anyBack && !backLogo) return "Upload the logo for the back (or untick the back print)";
+    if (!totalItems) return "Add at least one person with a size";
+    for (const s of sets) {
+      if (s.k.parts.some((pt) => !s.k.cols[pt.key])) return `Pick the colours for the ${s.label.toLowerCase()}`;
+      const kp = kidsProblem(s.k, s.sizeOf);
+      if (kp.length) return `${s.label}: ${kp.join(", ")} isn't made in kids sizes - pick another colour`;
     }
-    if (!activeSets.length || totals.totalQty === 0) {
-      toast.error("Pick a kit and add at least one size."); return;
-    }
+    if (training.opts.names && withTraining && people.some((p) => p.size && !p.name.trim())) return "Add a name for each person (or untick names & numbers)";
+    return null;
+  };
+
+  const peopleText = people.filter((p) => sets.some((s) => s.sizeOf(p))).map((p) =>
+    `${p.name || "-"}: ${sets.map((s) => `${s.label.toLowerCase()} ${s.sizeOf(p) || "none"}`).join(", ")}`);
+  const setSummary = lines.map((l) => `${l.label}: ${l.k.kit?.garments || l.k.pid} - ${l.k.parts.map((pt) => `${pt.label} ${l.k.cols[pt.key]}`).join(", ")}` +
+    (l.k.kit?.options ? ` (${l.k.opts.socks ? "with socks" : "no socks"}, ${l.k.opts.names ? "names & numbers" : "logo only"})` : "") +
+    (backOn[l.key] ? `, big logo on the back of the ${l.backWhat}` : "") + ` x${l.qty} = £${l.total.toFixed(2)}`);
+
+  const checkout = async () => {
+    const err = validate(); if (err) { toast.error(err); return; }
     setBusy(true);
     try {
-      const summaryLines = [];
-      const attachments = [];
-      activeSets.forEach(([sectionKey, v]) => {
-        const sec = sections.find((s) => s.key === sectionKey);
-        const variant = sec?.variants.find((x) => x.id === v.variant_id);
-        const brandLabel = `${variant?.brand ? variant.brand + " " : ""}${variant?.name || "Standard"}`.trim();
-        const qty = qtyOf(v.sizes);
-        const frontLabel = FRONT_MODES.find((m) => m.id === (v.front_mode || "unbranded"))?.label || "Unbranded";
-        const unit = Number(variant?.price || 0) + printCostOf(v);
-        const printParts = [frontLabel];
-        if (v.back_on) printParts.push("Back print");
-        summaryLines.push(`[${sec.title}] ${brandLabel} - colour: ${v.colour || "n/a"} - print: ${printParts.join(" + ")} - ${qty} kits @ £${unit.toFixed(2)}`);
-        const sizeParts = [];
-        const sz = v.sizes || {};
-        const splitOn = !!sz._split;
-        Object.entries(sz.top || {}).forEach(([s, q]) => q > 0 && sizeParts.push(`${s}×${q}${splitOn ? " (top)" : ""}`));
-        if (splitOn) Object.entries(sz.bottom || {}).forEach(([s, q]) => q > 0 && sizeParts.push(`${s}×${q} (bottom)`));
-        if (sizeParts.length) summaryLines.push(`  · sizes: ${sizeParts.join(", ")}`);
-        if (v.front_artwork) {
-          summaryLines.push(`  · front artwork: ${v.front_artwork.filename} (${v.front_artwork.absolute_url})`);
-          attachments.push({ ...v.front_artwork, section: sec.title, purpose: "front-artwork" });
-        }
-        if (v.back_on && v.back_artwork) {
-          summaryLines.push(`  · back artwork: ${v.back_artwork.filename} (${v.back_artwork.absolute_url})`);
-          attachments.push({ ...v.back_artwork, section: sec.title, purpose: "back-artwork" });
-        }
-      });
-      await submitQuoteRequest({
-        kind: "team_kit",
-        name: team.contact_name?.trim() || team.name.trim(),
-        email: team.contact_email.trim(),
-        phone: team.contact_phone || "",
-        company: team.name.trim(),
-        sport: "",
-        kit_type: "sports-outfit-configurator",
-        quantity: totals.totalQty,
-        deadline: "",
-        message: `Sports Outfit Configurator quote - estimated subtotal £${totals.subtotal.toFixed(2)}.\n${summaryLines.join("\n")}`,
-        roster: [],
-        attachments,
-      });
-      toast.success("Quote sent - we'll be in touch with a proof and price.");
+      const art = await uploadOrderArtwork({ logo, "back-print": anyBack ? backLogo : null }, "sports-outfit");
+      const items = lines.filter((l) => l.qty > 0).map((l) => ({
+        product_id: l.k.pid,
+        size_qtys: l.size_qtys,
+        color: l.k.parts.map((pt) => `${pt.label}: ${l.k.cols[pt.key]}`).join(" / "),
+        placements: backOn[l.key] ? ["back-print"] : [],
+        blank: false,
+        design_meta: {
+          flow: "sports_outfit", team_name: team.name, set: l.label,
+          kit_socks: l.k.opts.socks ? "yes" : "no", kit_names: l.k.opts.names ? "yes" : "no",
+          ...Object.fromEntries(l.k.parts.map((pt) => [`${pt.key}_colour`, l.k.cols[pt.key]])),
+          garments: l.k.kit?.garments || "",
+          roster: peopleText.join(" | ").slice(0, 1500),
+          ...art,
+        },
+      }));
+      const { url } = await createCartCheckout(items, team.contact_email);
+      window.location.href = url;
     } catch (e) {
-      const d = e?.response?.data?.detail;
-      const msg = typeof d === "string"
-        ? d
-        : Array.isArray(d)
-          ? d.map((x) => x?.msg || String(x)).join(", ")
-          : "Couldn't send the quote - try WhatsApp instead.";
-      toast.error(msg);
+      toast.error(e?.response?.data?.detail || e.message || "Checkout failed");
+      setBusy(false);
+    }
+  };
+
+  const quote = async () => {
+    const err = validate(); if (err) { toast.error(err); return; }
+    setBusy(true);
+    try {
+      await submitQuoteRequest({
+        kind: "team_kit", name: team.contact_name || team.name, email: team.contact_email, phone: team.contact_phone,
+        company: team.name, sport: "", kit_type: "sports-outfit-configurator", quantity: totalItems,
+        message: [`Gym / club kit order for ${team.name} (${headcount} people)`, ...setSummary, `Indicative total: £${grandTotal.toFixed(2)}`, "", ...peopleText].join("\n"),
+        artwork: [logo, anyBack ? backLogo : null].filter(Boolean),
+        roster: people.filter((p) => sets.some((s) => s.sizeOf(p))).map((p) => ({ name: p.name, number: "", size: p.size, qty: 1, tracksuit: p.tracksuit })),
+        product_id: "sports-outfit",
+      });
+      toast.success("Quote request sent - we'll be in touch with a proof and price.");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Couldn't send - try WhatsApp instead.");
     } finally { setBusy(false); }
   };
+
+  const BackToggle = ({ setKey, what }) => (
+    <label className={`flex items-start gap-3 rounded-2xl border-2 p-3 cursor-pointer text-sm ${backOn[setKey] ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`} data-testid={`soc-back-${setKey}`}>
+      <input type="checkbox" checked={backOn[setKey]} onChange={(e) => setBackOn((b) => ({ ...b, [setKey]: e.target.checked }))} className="mt-0.5 w-4 h-4 accent-[#7bc67e]" />
+      <span><strong>Big logo on the back of the {what}</strong> <span className="text-[#4b5563]">+£{backPrice.toFixed(2)} each</span>
+        <span className="block text-xs text-[#4b5563]">Your front logo is included. Shorts and joggers get the front logo only.</span></span>
+    </label>
+  );
 
   return (
     <div className="bg-white min-h-screen text-[#1a1a1a] font-nunito" data-testid="sports-outfit-page">
       <BoldNavbar />
-
       <header className="relative overflow-hidden bg-[#1a1a1a] text-white">
-        <div className="absolute inset-0 opacity-25 bg-gradient-to-br from-[#7bc67e] via-[#fbbf24] to-[#60a5fa]" />
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
-          <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Sports outfit configurator</span>
-          <h1 className="font-black text-4xl lg:text-6xl mt-2">Kit your gym, box or class.</h1>
-          <p className="text-zinc-300 mt-3 max-w-2xl">Pick a training kit, a tracksuit - or both. Unbranded or add a logo where you want it. Perfect for gyms, PTs, boxing / thai / kick gyms and dance studios.</p>
+        <div className="absolute inset-0 opacity-25 bg-gradient-to-br from-[#7bc67e] via-[#fde68a] to-[#f87171]" />
+        <div className="relative max-w-7xl mx-auto px-6 py-14">
+          <span className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Gym &amp; club kit builder</span>
+          <h1 className="font-black text-4xl lg:text-6xl mt-2">Training kit and tracksuits - one order.</h1>
+          <p className="text-zinc-300 mt-3 max-w-2xl">For gyms, PTs, boxing, Muay Thai and kickboxing clubs. Pick your colours, add your team once, and your logo goes on everything.</p>
+          <div className="mt-5 flex flex-wrap gap-2 text-[11px]">
+            {["Real AWDis kit in your colours", "Adults and kids in one order", "UK printed · free proof"].map((t) => (
+              <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 font-extrabold"><Check size={12} className="text-[#7bc67e]" /> {t}</span>
+            ))}
+          </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-10 grid lg:grid-cols-12 gap-6">
-        <section className="lg:col-span-8 space-y-6" data-testid="soc-main">
-          {/* 1. Business */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 grid lg:grid-cols-12 gap-6">
+        <section className="lg:col-span-8 space-y-6 min-w-0" data-testid="soc-main">
           <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="soc-team">
-            <h2 className="font-nunito font-black text-2xl mb-3"><span className="text-[#7bc67e]">1.</span> Your details</h2>
+            <h2 className="font-black text-2xl mb-3"><span className="text-[#7bc67e]">1.</span> Your gym / club</h2>
             <div className="grid sm:grid-cols-2 gap-3">
-              <input value={team.name} onChange={(e) => setTeam({ ...team, name: e.target.value })} placeholder="Gym / studio / class name *" className="soc-input" data-testid="soc-team-name" />
-              <input value={team.contact_name} onChange={(e) => setTeam({ ...team, contact_name: e.target.value })} placeholder="Your name" className="soc-input" data-testid="soc-contact-name" />
-              <input value={team.contact_email} onChange={(e) => setTeam({ ...team, contact_email: e.target.value })} placeholder="Email *" className="soc-input" data-testid="soc-contact-email" />
-              <input value={team.contact_phone} onChange={(e) => setTeam({ ...team, contact_phone: e.target.value })} placeholder="Phone (optional)" className="soc-input" data-testid="soc-contact-phone" />
+              {[["name", "Gym / club name *"], ["contact_name", "Your name"], ["contact_email", "Email *"], ["contact_phone", "Phone (optional)"]].map(([k, ph]) => (
+                <input key={k} value={team[k]} onChange={(e) => setTeam({ ...team, [k]: e.target.value })} placeholder={ph}
+                  className="w-full bg-white border-2 border-[#dcfce7] focus:border-[#7bc67e] rounded-xl px-3 py-2.5 text-sm outline-none" data-testid={`soc-${k}`} />
+              ))}
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4 mt-4">
+              <ImageSlot label="Your logo *" hint="Front of everything - included" value={logo} onChange={setLogo} testid="soc-logo" />
+              {anyBack && <ImageSlot label="Back logo *" hint="Big print on the back of the top / hoodie" value={backLogo} onChange={setBackLogo} testid="soc-back-logo" />}
             </div>
           </div>
 
-          {sections.map((section, idx) => (
-            <SportsSectionBuilder
-              key={section.key}
-              index={idx + 2}
-              section={section}
-              addons={addons}
-              value={state[section.key] || {}}
-              onChange={(patch) => patchSection(section.key, patch)}
-            />
-          ))}
+          <OptionalSet n={2} title="Training kit" sub="Cool wicking tee + shorts with your logo - add socks or names if you want." on={withTraining} setOn={setWithTraining} k={training} kidsProblem={kidsProblem(training, (p) => p.size)} testid="soc-training" />
+          {withTraining && training.kit && <BackToggle setKey="training" what="top" />}
 
-          <NeedHelpCTA
-            title="Not sure on quantities? Want mockups before you commit?"
-            body="Message us with your logo and rough numbers - we'll send back proofs, a tailored quote and colour options."
-            presetMessage="Hi! I'd like to kit out my gym / studio - can we chat?"
-            testid="soc-need-help"
-            variant="banner"
-          />
+          <OptionalSet n={3} title="Tracksuit" sub="College hoodie + cuffed joggers, your logo on both. Adult sizes." on={withTracksuit} setOn={setWithTracksuit} k={tracksuit} kidsProblem={[]} testid="soc-tracksuit" />
+          {withTracksuit && tracksuit.kit && <BackToggle setKey="tracksuit" what="hoodie" />}
+
+          <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="soc-people">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <h2 className="font-black text-2xl"><span className="text-[#7bc67e]">4.</span> Who&apos;s it for <span className="text-sm text-[#4b5563] font-bold">({headcount} people)</span></h2>
+              <select onChange={(e) => setPeople(Array.from({ length: Number(e.target.value) }, (_, i) => people[i] || blankPerson()))} defaultValue=""
+                className="bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-3 py-1.5 text-xs font-bold" data-testid="soc-quick-rows">
+                <option value="" disabled>Number of people…</option>
+                {[1, 2, 3, 5, 8, 10, 15, 20, 25].map((n) => <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>)}
+              </select>
+            </div>
+            <div className="text-xs text-[#4b5563] mb-2">
+              One line per person with their size{withTraining && withTracksuit ? " for each set - leave a set blank for anyone who doesn't need it" : ""}.
+              {training.opts.names && withTraining ? " The name goes on the back of the training top." : " Names are optional - just to help you hand them out."}
+            </div>
+            <div className="space-y-1.5">
+              {people.map((p, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 items-center bg-white border border-[#dcfce7] rounded-xl p-2" data-testid={`soc-person-${i}`}>
+                  <input value={p.name} onChange={(e) => setPerson(i, { name: e.target.value })} placeholder={training.opts.names && withTraining ? "Name on back" : "Name (optional)"} className={`${withTraining && withTracksuit ? "col-span-5" : "col-span-8"} text-sm px-2 py-1 outline-none bg-transparent min-w-0`} />
+                  {withTraining && (
+                    <select value={p.size} onChange={(e) => setPerson(i, { size: e.target.value })} className="col-span-3 text-sm bg-transparent outline-none min-w-0 border-l border-[#dcfce7]" title="Training kit size" data-testid={`soc-person-${i}-size`}>
+                      {withTracksuit && <option value="">No training kit</option>}
+                      <optgroup label="Adult">{trainingAdult.map((s) => <option key={s} value={s}>{s}</option>)}</optgroup>
+                      {trainingKids.length > 0 && <optgroup label="Kids (age)">{trainingKids.map((s) => <option key={s} value={s}>{s}</option>)}</optgroup>}
+                    </select>
+                  )}
+                  {withTracksuit && (
+                    <select value={withTraining ? p.tracksuit : p.size} onChange={(e) => setPerson(i, withTraining ? { tracksuit: e.target.value } : { size: e.target.value })} className="col-span-3 text-sm bg-transparent outline-none min-w-0 border-l border-[#dcfce7]" title="Tracksuit size" data-testid={`soc-person-${i}-tracksuit`}>
+                      {withTraining && <option value="">No tracksuit</option>}
+                      {tracksuitSizes.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                  {!withTraining && !withTracksuit && <div className="col-span-3" />}
+                  <button type="button" onClick={() => setPeople((ps) => ps.filter((_, j) => j !== i))} className="col-span-1 text-rose-500 hover:bg-rose-50 rounded-full p-1 grid place-items-center" aria-label="Remove person"><Trash2 size={14} /></button>
+                </div>
+              ))}
+            </div>
+            {withTraining && withTracksuit && (
+              <div className="grid grid-cols-12 gap-2 px-2 mt-1 text-[10px] uppercase tracking-wider font-extrabold text-[#4b5563]">
+                <span className="col-span-5" /><span className="col-span-3">Training kit</span><span className="col-span-3">Tracksuit</span>
+              </div>
+            )}
+            <button type="button" onClick={() => setPeople((ps) => [...ps, blankPerson()])} className="mt-2 inline-flex items-center gap-1.5 text-sm font-extrabold text-[#7bc67e] hover:underline" data-testid="soc-add-person"><Plus size={14} /> Add person</button>
+          </div>
+          <NeedHelpCTA title="Easier to send it over?" body="Send your logo, colours and sizes on WhatsApp or email and we'll set the order up for you." presetMessage="Hi! I'd like training kit / tracksuits for my gym." />
         </section>
 
-        <aside className="lg:col-span-4" data-testid="soc-summary">
-          <div className="bg-[#1a1a1a] text-white rounded-3xl p-5 sticky top-24">
-            <div className="text-[#7bc67e] text-xs uppercase tracking-[0.3em] font-extrabold">Sports outfit summary</div>
-            <div className="mt-2 text-3xl font-black">£{totals.subtotal.toFixed(2)}</div>
-            <ExVat amount={totals.subtotal} className="text-xs opacity-70 mt-0.5" />
-            <div className="text-xs text-zinc-400">{totals.totalQty} kits across {activeSets.length} set{activeSets.length === 1 ? "" : "s"}</div>
-            <div className="mt-4 space-y-2 max-h-64 overflow-y-auto pr-1">
-              {activeSets.map(([k, v]) => {
-                const sec = sections.find((s) => s.key === k);
-                const variant = sec?.variants.find((x) => x.id === v.variant_id);
-                const qty = qtyOf(v.sizes);
-                const unit = Number(variant?.price || 0) + printCostOf(v);
-                return (
-                  <div key={k} className="text-xs bg-white/5 rounded-lg p-2" data-testid={`soc-summary-${k}`}>
-                    <div className="font-extrabold">{sec.title}</div>
-                    <div className="text-zinc-400">{variant?.brand} {variant?.name} · {v.colour || "colour tbc"} · {qty} × £{unit.toFixed(2)}</div>
-                  </div>
-                );
-              })}
-              {activeSets.length === 0 && <div className="text-xs text-zinc-500">Pick a kit under Training or Tracksuit to start.</div>}
+        <aside className="lg:col-span-4">
+          <div className="lg:sticky lg:top-24 bg-[#1a1a1a] text-white rounded-3xl p-6" data-testid="soc-summary">
+            <div className="text-xs uppercase tracking-[0.3em] text-[#7bc67e] font-extrabold">Your order</div>
+            <div className="font-black text-4xl mt-2" data-testid="soc-total">£{grandTotal.toFixed(2)}</div>
+            <ExVat amount={grandTotal} className="text-[11px] text-neutral-400" />
+            <div className="mt-4 space-y-2 text-sm">
+              {lines.map((l) => (
+                <div key={l.key} className="flex justify-between gap-3 border-b border-white/10 pb-2">
+                  <span><strong>{l.label}</strong><br /><span className="text-xs text-neutral-400">{l.qty} × {l.k.parts.map((pt) => l.k.cols[pt.key]).filter(Boolean).join(" / ")}{l.extra ? " · back logo" : ""}</span></span>
+                  <span className="font-extrabold">£{l.total.toFixed(2)}</span>
+                </div>
+              ))}
+              {!lines.length && <div className="text-xs text-neutral-400">Pick the training kit, the tracksuit, or both.</div>}
             </div>
-            <button onClick={onSubmit} disabled={busy} className="mt-4 w-full bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-40 text-[#1a1a1a] font-extrabold py-3 rounded-xl inline-flex items-center justify-center gap-2" data-testid="soc-submit">
-              {busy ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />} Get a proof &amp; final quote
-            </button>
-            <div className="mt-3 space-y-1 text-[11px] text-zinc-300">
-              <div className="inline-flex items-start gap-1.5"><ShieldCheck size={11} className="mt-0.5 text-[#7bc67e]" /><span>We&apos;ll send a full proof before anything is printed.</span></div>
-              <div className="inline-flex items-start gap-1.5"><Truck size={11} className="mt-0.5 text-[#7bc67e]" /><span>UK printed · low minimums · one point of contact.</span></div>
+            <div className="mt-5 space-y-2">
+              {!quoteOnly && (
+                <button onClick={checkout} disabled={busy} className="w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-extrabold px-5 py-3.5 rounded-full" data-testid="soc-checkout">
+                  {busy ? <Loader2 className="animate-spin" size={16} /> : <ShoppingCart size={16} />} Checkout £{grandTotal.toFixed(2)}
+                </button>
+              )}
+              <button onClick={quote} disabled={busy} className={`w-full inline-flex items-center justify-center gap-2 font-extrabold px-5 py-3.5 rounded-full ${quoteOnly ? "bg-[#7bc67e] text-[#1a1a1a]" : "border-2 border-[#7bc67e] text-[#7bc67e]"}`} data-testid="soc-quote">
+                <Send size={16} /> {quoteOnly ? "Get a proof & quote" : "Get a quote first"}
+              </button>
             </div>
+            <div className="mt-4 text-xs text-neutral-400 flex items-start gap-1.5"><ShieldCheck size={12} className="mt-0.5 text-[#7bc67e]" /> We send a free proof before anything is printed.{quoteOnly ? ` Orders for over ${QUOTE_THRESHOLD} people get a tailored quote.` : ""}</div>
+            <div className="mt-2 text-xs text-neutral-400">Running a team? <Link to="/full-squad-configurator" className="text-[#7bc67e] underline">Full squad builder</Link> (match kits too)</div>
           </div>
         </aside>
       </div>
-
-      <style>{`
-        .soc-input { width: 100%; padding: 0.65rem 0.9rem; border-radius: 0.85rem; border: 2px solid #dcfce7; background: white; font-size: 0.875rem; }
-        .soc-input:focus { outline: none; border-color: #7bc67e; }
-      `}</style>
       <BoldFooter />
     </div>
-  );
-}
-
-function SportsSectionBuilder({ index, section, addons, value, onChange }) {
-  const [detailsOpen, setDetailsOpen] = useState({});
-  const chosenVariant = section.variants.find((v) => v.id === value.variant_id) || null;
-  const hasVariant = !!chosenVariant;
-
-  useEffect(() => {
-    if (!hasVariant) {
-      if (value.__unit_price) onChange({ __unit_price: 0 });
-      return;
-    }
-    const unit = Number(chosenVariant.price || 0);
-    if (value.__unit_price !== unit) onChange({ __unit_price: unit });
-  }, [value.variant_id]);
-
-  const bumpSize = (kind, sz, delta) => {
-    const sizes = value.sizes || { _split: false, top: {}, bottom: {} };
-    const cur = Number(sizes[kind]?.[sz] || 0);
-    const nq = Math.max(0, cur + delta);
-    const next = { ...sizes, [kind]: { ...(sizes[kind] || {}), [sz]: nq } };
-    if (nq === 0) delete next[kind][sz];
-    onChange({ sizes: next });
-  };
-  const toggleSplit = () => {
-    const sizes = value.sizes || { _split: false, top: {}, bottom: {} };
-    onChange({ sizes: { ...sizes, _split: !sizes._split } });
-  };
-  const setPrintMode = (id) => onChange({ front_mode: id });
-  const toggleBack = () => onChange({ back_on: !value.back_on });
-  const currentFrontMode = value.front_mode || "unbranded";
-  const currentFrontCost = addons?.[FRONT_MODES.find((p) => p.id === currentFrontMode)?.key || "unbranded_price"] || 0;
-  const currentBackCost = value.back_on ? Number(addons?.back_print_price || 0) : 0;
-
-  return (
-    <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid={`soc-section-${section.key}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-nunito font-black text-2xl"><span className="text-[#7bc67e]">{index}.</span> {section.title}</h2>
-          <p className="text-xs text-[#4b5563] mt-0.5">{section.subtitle}</p>
-        </div>
-        {(section.included_items || []).length > 0 && (
-          <div className="hidden sm:flex flex-wrap gap-1 justify-end max-w-[45%]">
-            {section.included_items.map((it) => (
-              <span key={it} className="text-[10px] uppercase tracking-wider font-extrabold bg-[#f0fdf4] text-[#166534] rounded-full px-2 py-0.5">
-                {it} included
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-4 grid sm:grid-cols-2 gap-3" data-testid={`soc-brands-${section.key}`}>
-        {section.variants.map((variant) => {
-          const isChosen = value.variant_id === variant.id;
-          const isOpen = detailsOpen[variant.id] || false;
-          return (
-            <div key={variant.id} className={`rounded-2xl border-2 transition ${isChosen ? "border-[#7bc67e] shadow-md bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`} data-testid={`soc-brand-${section.key}-${variant.id}`}>
-              <button
-                type="button"
-                onClick={() => onChange({
-                  variant_id: isChosen ? null : variant.id,
-                  colour: isChosen ? null : (variant.colours?.[0]?.name || ""),
-                  sizes: isChosen ? null : { _split: false, top: {}, bottom: {} },
-                  front_mode: isChosen ? null : "unbranded",
-                  back_on: isChosen ? false : false,
-                  front_artwork: null,
-                  back_artwork: null,
-                })}
-                className="w-full text-left p-3 flex items-center gap-3"
-              >
-                {variant.image
-                  ? <img src={mediaUrl(variant.image)} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" />
-                  : <div className="w-16 h-16 rounded-xl bg-[#dcfce7] grid place-items-center flex-shrink-0"><Check size={22} className="text-[#7bc67e]" /></div>}
-                <div className="flex-1 min-w-0">
-                  <div className="font-extrabold text-sm truncate">{variant.brand} {variant.name}</div>
-                  <div className="text-xs text-[#4b5563]">£{Number(variant.price).toFixed(2)} per kit (before print)</div>
-                </div>
-                <span className={`w-8 h-8 grid place-items-center rounded-full ${isChosen ? "bg-[#7bc67e] text-[#1a1a1a]" : "bg-[#f0fdf4]"}`}>
-                  {isChosen ? <Check size={14} /> : <Plus size={16} />}
-                </span>
-              </button>
-              <button type="button" onClick={() => setDetailsOpen((d) => ({ ...d, [variant.id]: !d[variant.id] }))} className="w-full px-3 pb-2 pt-0.5 flex items-center justify-between text-[11px] font-extrabold text-[#4b5563] hover:text-[#1a1a1a]" data-testid={`soc-brand-details-${section.key}-${variant.id}`}>
-                <span>Details, sizes &amp; description</span>
-                <ChevronDown size={12} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
-              </button>
-              {isOpen && (
-                <div className="border-t-2 border-[#dcfce7] p-3 text-xs space-y-2 bg-white rounded-b-2xl">
-                  {variant.description && <p className="text-[#4b5563]">{variant.description}</p>}
-                  {(variant.included_items || []).length > 0 && (
-                    <div><strong className="text-[#166534]">Includes:</strong> {(variant.included_items).join(", ")}</div>
-                  )}
-                  {(variant.colours || []).length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap"><strong>Colours:</strong>
-                      {(variant.colours || []).map((c) => (
-                        <span key={c.name} className="inline-flex items-center gap-1 bg-[#f0fdf4] rounded-full px-2 py-0.5">
-                          <span className="w-2.5 h-2.5 rounded-full border border-white shadow-inner" style={{ background: c.hex }} /> {c.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {(variant.sizes || []).length > 0 && (<div><strong>Sizes:</strong> {(variant.sizes).join(" · ")}</div>)}
-                  {variant.size_guide && (
-                    <div className="mt-2 p-2 rounded-lg bg-[#f8fafc] whitespace-pre-wrap text-[11px] text-[#374151]">{variant.size_guide}</div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {hasVariant && (
-        <div className="mt-4 space-y-4 border-t-2 border-[#dcfce7] pt-4" data-testid={`soc-config-${section.key}`}>
-          {(chosenVariant.colours || []).length > 0 && (
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Colour</div>
-              <div className="flex flex-wrap gap-2">
-                {(chosenVariant.colours || []).map((c) => {
-                  const active = value.colour === c.name;
-                  return (
-                    <button key={c.name} type="button" onClick={() => onChange({ colour: c.name })} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs font-extrabold transition ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`} data-testid={`soc-colour-${section.key}-${c.name}`}>
-                      <span className="w-3 h-3 rounded-full border border-white shadow-inner" style={{ background: c.hex }} />{c.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold mb-1.5">Print - front &amp; back</div>
-            <div className="text-xs text-[#4b5563] mb-2 flex items-start gap-1.5">
-              <Info size={12} className="mt-0.5" /> Pick a front option - breast and full-front are mutually exclusive with each other. Back print can be added on top of any front option (tops only - shorts &amp; joggers never receive back prints).
-            </div>
-
-            {/* FRONT - radio */}
-            <div className="text-[11px] font-extrabold text-[#4b5563] mb-1">Front</div>
-            <div className="grid sm:grid-cols-3 gap-2">
-              {FRONT_MODES.map((m) => {
-                const active = currentFrontMode === m.id;
-                const cost = Number(addons?.[m.key] || 0);
-                return (
-                  <button key={m.id} type="button" onClick={() => setPrintMode(m.id)} className={`text-left rounded-xl border-2 p-3 flex items-start gap-2 ${active ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#dcfce7] hover:border-[#7bc67e]"}`} data-testid={`soc-front-${section.key}-${m.id}`}>
-                    <span className={`w-4 h-4 rounded-full border-2 mt-0.5 grid place-items-center ${active ? "bg-[#7bc67e] border-[#7bc67e]" : "border-[#dcfce7]"}`}>
-                      {active && <Check size={10} className="text-[#1a1a1a]" />}
-                    </span>
-                    <div className="flex-1">
-                      <div className="text-xs font-extrabold">{m.label}</div>
-                      <div className="text-[11px] text-[#4b5563]">{cost > 0 ? `+£${cost.toFixed(2)} per kit` : "Included"}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Front artwork uploader - appears when front is not 'unbranded' */}
-            {currentFrontMode !== "unbranded" && (
-              <div className="mt-3">
-                <ArtworkUploader
-                  label={`Upload your ${currentFrontMode === "full_front" ? "full-front" : "breast-logo"} artwork`}
-                  helper="PNG/JPEG/PDF/AI/EPS/SVG up to 10 MB. High-res preferred. We'll come back with a proof."
-                  value={value.front_artwork}
-                  onChange={(next) => onChange({ front_artwork: next })}
-                  purpose="front-artwork"
-                  testid={`soc-front-upload-${section.key}`}
-                />
-              </div>
-            )}
-
-            {/* BACK - checkbox */}
-            <div className="text-[11px] font-extrabold text-[#4b5563] mt-4 mb-1">Back (tops only)</div>
-            <label className="flex items-start gap-2 rounded-xl border-2 border-dashed border-[#7bc67e] bg-[#f0fdf4] p-3 cursor-pointer" data-testid={`soc-back-${section.key}`}>
-              <input type="checkbox" checked={!!value.back_on} onChange={toggleBack} className="mt-0.5 accent-[#7bc67e]" data-testid={`soc-back-toggle-${section.key}`} />
-              <div className="flex-1 text-xs">
-                <div className="font-extrabold">Add a centred back print</div>
-                <div className="text-[#4b5563] mt-0.5">+£{Number(addons?.back_print_price || 0).toFixed(2)} per kit. Applied to the top - never the shorts or joggers.</div>
-              </div>
-            </label>
-
-            {/* Back artwork uploader */}
-            {value.back_on && (
-              <div className="mt-3">
-                <ArtworkUploader
-                  label="Upload your back print artwork"
-                  helper="PNG/JPEG/PDF/AI/EPS/SVG up to 10 MB. High-res preferred."
-                  value={value.back_artwork}
-                  onChange={(next) => onChange({ back_artwork: next })}
-                  purpose="back-artwork"
-                  testid={`soc-back-upload-${section.key}`}
-                />
-              </div>
-            )}
-
-            {(currentFrontCost > 0 || currentBackCost > 0) && (
-              <div className="mt-2 text-[11px] text-[#166534] font-extrabold">
-                Selected print: +£{(currentFrontCost + currentBackCost).toFixed(2)} per kit
-                {currentFrontCost > 0 && currentBackCost > 0 && (
-                  <span className="text-[#4b5563] font-normal"> (front £{currentFrontCost.toFixed(2)} + back £{currentBackCost.toFixed(2)})</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="text-[10px] uppercase tracking-wider text-[#7bc67e] font-extrabold">Sizes &amp; quantities</div>
-              <label className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#4b5563] cursor-pointer" data-testid={`soc-split-toggle-${section.key}`}>
-                <input type="checkbox" checked={!!(value.sizes?._split)} onChange={toggleSplit} />
-                Different sizes for tops &amp; bottoms?
-              </label>
-            </div>
-            {(() => {
-              const splitOn = !!(value.sizes?._split);
-              const rows = splitOn ? [{ key: "top", label: "Tops" }, { key: "bottom", label: "Bottoms" }] : [{ key: "top", label: "Kits" }];
-              return rows.map((row) => (
-                <div key={row.key} className="mb-2">
-                  {splitOn && <div className="text-[11px] font-extrabold text-[#4b5563] mb-1">{row.label}</div>}
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5" data-testid={`soc-sizes-${section.key}-${row.key}`}>
-                    {(chosenVariant.sizes || []).map((sz) => {
-                      const q = Number(value.sizes?.[row.key]?.[sz] || 0);
-                      return (
-                        <div key={sz} className={`rounded-lg border-2 p-1.5 ${q > 0 ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] bg-white"}`}>
-                          <div className="text-[10px] font-extrabold text-center">{sz}</div>
-                          <div className="flex items-center justify-between mt-0.5">
-                            <button onClick={() => bumpSize(row.key, sz, -1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-white border" data-testid={`soc-size-minus-${section.key}-${row.key}-${sz}`}><Minus size={9} /></button>
-                            <span className="text-xs font-bold min-w-[16px] text-center">{q}</span>
-                            <button onClick={() => bumpSize(row.key, sz, 1)} type="button" className="w-5 h-5 grid place-items-center rounded-full bg-[#fbbf24]" data-testid={`soc-size-plus-${section.key}-${row.key}-${sz}`}><Plus size={9} /></button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ));
-            })()}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- Artwork uploader (uploads on selection, shows thumbnail + filename) ----------
-function ArtworkUploader({ label, helper, value, onChange, purpose, testid }) {
-  const [uploading, setUploading] = useState(false);
-  const inputRef = useRef(null);
-
-  const onFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10_000_000) { toast.error("File too large (max 10 MB)"); return; }
-    setUploading(true);
-    try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-      const uploaded = await uploadArtwork({ dataUrl, filename: file.name, purpose });
-      onChange({ ...uploaded, preview: dataUrl.startsWith("data:image/") ? dataUrl : null });
-      toast.success(`Uploaded ${file.name}`);
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || "Upload failed - try a smaller file.");
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  };
-
-  const clear = () => onChange(null);
-
-  if (value) {
-    return (
-      <div className="rounded-xl border-2 border-[#7bc67e] bg-[#f0fdf4] p-3 flex items-center gap-3" data-testid={testid}>
-        <div className="w-14 h-14 rounded-lg overflow-hidden bg-white grid place-items-center flex-shrink-0">
-          {value.preview ? <img src={value.preview} alt="" className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-[#7bc67e]" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-xs font-extrabold truncate">{value.filename}</div>
-          <div className="text-[11px] text-[#4b5563]">Uploaded · {(value.size_bytes / 1024).toFixed(0)} KB</div>
-        </div>
-        <button type="button" onClick={clear} className="text-[#4b5563] hover:text-rose-500 rounded-full p-1" data-testid={`${testid}-remove`}>
-          <X size={14} />
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <label className="rounded-xl border-2 border-dashed border-[#7bc67e] bg-[#f0fdf4] p-4 flex items-center gap-3 cursor-pointer hover:bg-[#dcfce7] transition" data-testid={testid}>
-      <input ref={inputRef} type="file" accept="image/*,.pdf,.ai,.eps,.svg" onChange={onFile} className="hidden" data-testid={`${testid}-input`} />
-      <div className="w-14 h-14 rounded-lg bg-white grid place-items-center flex-shrink-0">
-        {uploading ? <Loader2 size={20} className="animate-spin text-[#7bc67e]" /> : <Upload size={20} className="text-[#7bc67e]" />}
-      </div>
-      <div className="flex-1 text-xs">
-        <div className="font-extrabold">{label}</div>
-        <div className="text-[#4b5563] mt-0.5">{helper}</div>
-      </div>
-    </label>
   );
 }
