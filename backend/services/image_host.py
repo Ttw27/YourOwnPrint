@@ -19,6 +19,11 @@ LEGACY_R2_BASES = (
 _REWRITE_TYPES = (b"application/json", b"application/xml", b"text/xml", b"text/html", b"application/rss+xml")
 
 
+# Safety switch: False while the image domain isn't reachable yet (DNS) - then
+# EVERY photo URL, old or new, is served from the r2.dev address instead.
+IMAGE_DOMAIN_LIVE = False
+
+
 def _new_base() -> bytes:
     base = os.environ.get("R2_PUBLIC_URL", "").strip().rstrip("/")
     if not base or ".r2.dev" in base:
@@ -26,13 +31,23 @@ def _new_base() -> bytes:
     return base.encode()
 
 
+def _rewrites():
+    """[(from, to), ...] applied to API responses."""
+    new = _new_base()
+    if not new:
+        return []
+    if IMAGE_DOMAIN_LIVE:
+        return [(old, new) for old in LEGACY_R2_BASES]
+    return [(new, LEGACY_R2_BASES[0])]   # domain not live: send everything to r2.dev
+
+
 class ImageHostMiddleware:
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        new = _new_base()
-        if scope["type"] != "http" or not new:
+        swaps = _rewrites()
+        if scope["type"] != "http" or not swaps:
             await self.app(scope, receive, send)
             return
         start = {}
@@ -59,7 +74,7 @@ class ImageHostMiddleware:
                 if message.get("more_body"):
                     return
                 body = b"".join(chunks)
-                for old in LEGACY_R2_BASES:
+                for old, new in swaps:
                     body = body.replace(old, new)
                 headers = [(k, v) for k, v in start.get("headers", []) if k.lower() != b"content-length"]
                 headers.append((b"content-length", str(len(body)).encode()))

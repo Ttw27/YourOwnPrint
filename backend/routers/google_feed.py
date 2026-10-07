@@ -92,11 +92,10 @@ class _Out:
     """Writes the feed straight into a gzip buffer (~84k items - too big to
     hold as text), swapping old r2.dev photo URLs for the image domain."""
     def __init__(self):
-        from services.image_host import LEGACY_R2_BASES, _new_base
+        from services.image_host import _rewrites
         self.buf = io.BytesIO()
         self.gz = gzip.GzipFile(fileobj=self.buf, mode="wb", compresslevel=6)
-        new = _new_base().decode()
-        self.swap = [(o.decode(), new) for o in LEGACY_R2_BASES] if new else []
+        self.swap = [(a.decode(), b.decode()) for a, b in _rewrites()]
 
     def append(self, text: str):
         for old, new in self.swap:
