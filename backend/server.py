@@ -1252,8 +1252,14 @@ async def delete_brand(brand_id: str):
 
 @api_router.post("/quote-request")
 async def create_quote_request(payload: QuoteRequest):
-    # Limit artwork sizes silently
-    artwork = [a for a in (payload.artwork or []) if isinstance(a, str) and len(a) < 1_500_000][:12]
+    # Uploaded logos / artwork (sent as data URLs) -> stored files with links, like
+    # order files (before, anything over ~1.5MB was silently dropped)
+    artwork = []
+    for i, a in enumerate((payload.artwork or [])[:12]):
+        if isinstance(a, str) and a.startswith("data:") and len(a) < 12_000_000:
+            url = await _save_order_file(a, f"quote-file-{i + 1}")
+            if url:
+                artwork.append(url)
     doc = {
         "id": str(uuid.uuid4()),
         "kind": payload.kind,
@@ -1285,6 +1291,36 @@ async def create_quote_request(payload: QuoteRequest):
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.quote_requests.insert_one(doc)
+    # tell the shop (quote requests used to be saved without any email)
+    try:
+        shop_to = await _shop_notification_recipient()
+        if shop_to:
+            import html as _h
+            esc = lambda v: _h.escape(str(v or ""))  # noqa: E731
+            base = _backend_public_url()
+            files = [(f"File {i + 1}", u) for i, u in enumerate(artwork)] + \
+                    [(a.get("filename") or a.get("purpose") or "file", a.get("url")) for a in doc["attachments"] if a.get("url")]
+            files_html = " · ".join(f"<a href='{esc(base + u if str(u).startswith('/') else u)}'>{esc(n)}</a>" for n, u in files) or "-"
+            roster = doc["roster"][:150]
+            roster_html = ("<p style='margin-top:12px'><strong>Roster</strong></p><table cellpadding='4' style='border-collapse:collapse;font-size:13px'>"
+                           + "".join(f"<tr><td>{esc(r.get('name'))}</td><td>{esc(r.get('number'))}</td><td>{esc(r.get('size'))}</td>"
+                                     f"<td>{esc(r.get('tracksuit'))}</td></tr>" for r in roster if isinstance(r, dict)) + "</table>") if roster else ""
+            body = _email_wrap(f"New quote request - {doc['name']}", f"""
+                <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px">
+                  <tr><td style="color:#4b5563"><strong>Type</strong></td><td>{esc(doc['kind'])} {esc(doc['kit_type'])} {esc(doc['sport'])}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Name</strong></td><td>{esc(doc['name'])} {('(' + esc(doc['company']) + ')') if doc['company'] else ''}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Email</strong></td><td>{esc(doc['email'])}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{esc(doc['phone']) or '-'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Quantity</strong></td><td>{doc['quantity'] or '-'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Deadline</strong></td><td>{esc(doc['deadline']) or '-'}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Files</strong></td><td>{files_html}</td></tr>
+                </table>
+                <p style="margin-top:12px;white-space:pre-wrap;font-size:14px">{esc(doc['message'])}</p>
+                {roster_html}""")
+            await _send_email(to=[shop_to], subject=f"[Quote request] {doc['company'] or doc['name']} - {doc['kit_type'] or doc['kind']}",
+                              html=body, reply_to=str(payload.email))
+    except Exception as e:
+        logging.warning(f"quote email skipped: {e}")
     return {"ok": True, "id": doc["id"]}
 
 
@@ -1909,10 +1945,35 @@ async def _resolve_line_pricing(
         "total_qty": total_qty,
         "line_total": line_total,
         "breakdown": breakdown,
-        "design_meta": design_meta or {},
+        "design_meta": await _order_art_links(design_meta or {}),
         "account_discount_pct": acct_pct,
         "account_saving": round(account_saving, 2),
     }
+
+
+_DESIGNER_PARTS = {"print-front": "artwork_png", "mockup-front": "preview_png", "print-back": "back_png", "mockup-back": "back_preview_png"}
+
+
+async def _order_art_links(dm: Dict) -> Dict:
+    """Make sure the order line carries LINKS to every file the customer chose
+    (Admin > Orders thumbnails + the order email): the Design Your Own artwork
+    (saved separately, only its id was on the order) and a club shop's logo."""
+    dm = dict(dm or {})
+    aid = dm.get("artwork_id")
+    if aid and not any(k.startswith("art_print") for k in dm):
+        doc = await db.designer_artwork.find_one({"id": aid}, {"artwork_png": 1, "preview_png": 1, "back_png": 1, "back_preview_png": 1, "neck_label_pngs": 1})
+        if doc:
+            for part, field in _DESIGNER_PARTS.items():
+                if doc.get(field):
+                    dm[f"art_{part}"] = f"/api/designer/artwork/{aid}/{part}.png"
+            for sz in (doc.get("neck_label_pngs") or {}):
+                dm[f"art_neck-label-{sz}"] = f"/api/designer/artwork/{aid}/neck-{sz}.png"
+    if dm.get("club_code") and not dm.get("art_club-logo"):
+        from routers.club_shops import club_logo
+        logo = await club_logo(dm["club_code"])
+        if logo:
+            dm["art_club-logo"] = logo
+    return dm
 
 
 async def _price_line_item(item: CartLineItem, account_discount_pct: float = 0.0) -> Dict:
@@ -3219,6 +3280,24 @@ async def save_designer_artwork(payload: DesignerArtwork):
     return {"id": doc["id"]}
 
 
+@api_router.get("/designer/artwork/{artwork_id}/{part}.png")
+async def get_designer_artwork_file(artwork_id: str, part: str):
+    """One file of a saved Design Your Own artwork as a real image (print file,
+    mock-up, back, neck label) - linked from Admin > Orders and the order email."""
+    doc = await db.designer_artwork.find_one({"id": artwork_id})
+    if not doc:
+        raise HTTPException(404, "Artwork not found")
+    if part.startswith("neck-"):
+        data = (doc.get("neck_label_pngs") or {}).get(part[5:])
+    else:
+        data = doc.get(_DESIGNER_PARTS.get(part, ""))
+    if not data or "," not in data:
+        raise HTTPException(404, "No such file")
+    head, b64 = data.split(",", 1)
+    return Response(content=_base64.b64decode(b64), media_type=head.split(";")[0].replace("data:", "") or "image/png",
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
 @api_router.get("/designer/artwork/{artwork_id}")
 async def get_designer_artwork(artwork_id: str):
     """Retrieve a saved artwork - used by fulfilment/admin."""
@@ -3772,7 +3851,8 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     ):
         if not du:
             continue
-        if not (du.startswith("data:image/") or du.startswith("data:application/")):
+        # names lists come as CSV / text too ("CSV, spreadsheet, screenshot or PDF")
+        if not (du.startswith("data:image/") or du.startswith("data:application/") or du.startswith("data:text/")):
             raise HTTPException(400, f"{label} upload must be an image or file data URL")
         if len(du) > 8 * 1024 * 1024:
             raise HTTPException(400, f"{label} upload too large (max ~6 MB)")
@@ -3868,6 +3948,9 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
             "art_front": await _save_order_file(payload.custom_design_data_url, "leavers-front"),
             "art_back": await _save_order_file(payload.custom_back_design_data_url, "leavers-back"),
             "art_names-list": await _save_order_file(payload.names_file_data_url, "leavers-names"),
+            # a design picked from the library (Admin > Portfolio leavers designs) -> its picture
+            "art_chosen-front-design": await _portfolio_image(payload.front_design_id),
+            "art_chosen-back-design": await _portfolio_image(payload.back_design_id),
             "bespoke": payload.bespoke or "",
             "design_notes": (payload.design_notes or "").strip()[:1200],
             "school": payload.school, "year_group": payload.year_group,
@@ -4910,6 +4993,11 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
         "flow": "workforce",
         "lines": valid_lines,
+        # same shape as basket orders -> Admin > Orders + the order email show each garment and the logo files
+        "items": _workforce_items(valid_lines, {
+            "art_logo": await _save_order_file(payload.breast_logo_data_url, "workforce-logo"),
+            "art_back-print": await _save_order_file(payload.back_print_data_url, "workforce-back"),
+            "flow": "workforce", "company": (payload.company or "")[:80]}),
         "total_quantity": total_qty,
         "discount_pct": discount_pct,
         "amount": total_amount,
@@ -4922,6 +5010,21 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
     return CheckoutResponse(url=session.url, session_id=session.id)
+
+
+def _workforce_items(lines: List[Dict], files: Dict) -> List[Dict]:
+    """Kit Your Workforce lines (one per size) -> one item per garment + colour,
+    with the logo files on each (as basket orders store them)."""
+    out: Dict[Tuple, Dict] = {}
+    for ln in lines:
+        key = (ln["product_id"], ln.get("color") or "", bool(ln.get("back_print")))
+        it = out.setdefault(key, {
+            "product_id": ln["product_id"], "product_name": ln.get("product_name"), "color": ln.get("color"),
+            "size_qtys": {}, "placements": ["Logo"] + (["Back print"] if ln.get("back_print") else []),
+            "design_meta": {k: v for k, v in files.items() if v and (k != "art_back-print" or ln.get("back_print"))},
+        })
+        it["size_qtys"][ln["size"]] = it["size_qtys"].get(ln["size"], 0) + int(ln["qty"])
+    return list(out.values())
 
 
 # ---------- Also bought with (cross-sells) ----------
@@ -5896,6 +5999,13 @@ _ORDER_FILE_EXT = {"image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", 
                    "image/svg+xml": "svg", "application/pdf": "pdf", "text/csv": "csv", "text/plain": "txt",
                    "application/vnd.ms-excel": "xls",
                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx"}
+
+
+async def _portfolio_image(item_id: Optional[str]) -> str:
+    if not item_id:
+        return ""
+    d = await db.portfolio.find_one({"id": item_id}, {"image_url": 1, "web_url": 1})
+    return (d or {}).get("web_url") or (d or {}).get("image_url") or ""
 
 
 async def _save_order_file(data_url: Optional[str], purpose: str) -> str:

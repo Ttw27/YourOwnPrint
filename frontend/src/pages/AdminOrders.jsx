@@ -117,7 +117,9 @@ function OrderDetails({ o }) {
               <div className="flex flex-wrap gap-2 pt-1" data-testid="admin-order-artwork">
                 {Object.entries(l.dm).filter(([k, v]) => k.startsWith("art_") && v).map(([k, v]) => (
                   <a key={k} href={mediaUrl(v)} target="_blank" rel="noreferrer" className="block text-center" title="Open the customer's file">
-                    <img src={mediaUrl(v)} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-zinc-700" />
+                    {/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(v) || /designer\/artwork/.test(v)
+                      ? <img src={mediaUrl(v)} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-zinc-700" />
+                      : <span className="w-16 h-16 grid place-items-center bg-zinc-800 rounded-lg border border-zinc-700 text-[10px] font-bold text-zinc-300">FILE</span>}
                     <span className="block text-[10px] text-zinc-400 mt-0.5">{k.slice(4).replace(/[-_]/g, " ")}</span>
                   </a>
                 ))}

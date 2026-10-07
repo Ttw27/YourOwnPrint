@@ -59,6 +59,11 @@ def _item_view(it: Dict) -> Optional[Dict]:
             "sizes": [{"size": s, "price": round(base + float(ups.get(s, 0) or 0), 2)} for s in (p.get("sizes") or [])]}
 
 
+async def club_logo(code: str) -> str:
+    shop = await db.club_shops.find_one({"code": code}, {"logo": 1})
+    return (shop or {}).get("logo") or ""
+
+
 async def club_print(product_id: str, placements: List[str], color: Optional[str], design_meta: Dict) -> Tuple[List[str], float]:
     """Called from server._resolve_line_pricing for flow == "club_shop"."""
     code = (design_meta or {}).get("club_code") or ""
