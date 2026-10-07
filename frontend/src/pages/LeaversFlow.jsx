@@ -36,6 +36,11 @@ export default function LeaversStart() {
   const [sizeQtys, setSizeQtys] = useState({});
   const [addBag, setAddBag] = useState(false);
   const [colour, setColour] = useState("");
+  // "Your own design" tile: upload a design / a photo of one they like + describe it
+  const [bespokeFront, setBespokeFront] = useState(false);
+  const [bespokeBack, setBespokeBack] = useState(false);
+  const [notesFront, setNotesFront] = useState("");
+  const [notesBack, setNotesBack] = useState("");
   const [bagColour, setBagColour] = useState("");
 
   useEffect(() => {
@@ -106,8 +111,10 @@ export default function LeaversStart() {
   const bagColours = bagProduct?.colors || [];
 
   const detailsOk = details.school.trim() && details.year_group.trim() && details.contact_name.trim() && details.contact_email.trim();
-  const hasFrontDesign = !!(frontDesignId || customFront || templateId);
-  const hasBackDesign = !!(backDesignId || customBack);
+  const bespokeFrontOk = bespokeFront && !!(customFront || notesFront.trim());
+  const bespokeBackOk = bespokeBack && !!(customBack || notesBack.trim());
+  const hasFrontDesign = !!(frontDesignId || customFront || templateId || bespokeFrontOk);
+  const hasBackDesign = !!(backDesignId || customBack || bespokeBackOk);
   const designOk = hasFrontDesign || hasBackDesign;
   const colourOk = !(product?.colors || []).length || (!!colourObj && !colourKidsClash);
   const bagOk = !addBag || !bagColours.length || !!bagColour;
@@ -123,7 +130,8 @@ export default function LeaversStart() {
       else if (!colourObj) toast.error("Pick a colour.");
       else if (colourKidsClash) toast.error(`${colour} isn't made in kids sizes - pick another colour or adult sizes only.`);
       else if (!bagOk) toast.error("Pick a colour for the drawstring bags.");
-      else if (!designOk) toast.error("Pick a front or back design, or upload your own.");
+      else if ((bespokeFront && !bespokeFrontOk) || (bespokeBack && !bespokeBackOk)) toast.error("For your own design, upload a picture or tell us about your idea.");
+      else if (!designOk) toast.error("Pick a front or back design, or choose 'Your own design'.");
       else toast.error("Add at least one item to a size.");
       return;
     }
@@ -144,6 +152,8 @@ export default function LeaversStart() {
         back_design_id: backDesignId || null,
         print_position: printPosition,
         names_collection_mode: namesMode,
+        design_notes: [bespokeFront && notesFront.trim() ? `Front: ${notesFront.trim()}` : "", bespokeBack && notesBack.trim() ? `Back: ${notesBack.trim()}` : ""].filter(Boolean).join(" | ") || null,
+        bespoke: [bespokeFront ? "front" : "", bespokeBack ? "back" : ""].filter(Boolean).join(",") || null,
         names_file_data_url: namesFile || null,
         sizes: Object.entries(sizeQtys).filter(([, q]) => Number(q) > 0).map(([size, qty]) => ({ size, qty: Number(qty) })),
         add_drawstring_bag: addBag,
@@ -278,20 +288,13 @@ export default function LeaversStart() {
                 testidPrefix="ls-front-design"
                 items={printPosition === "full_front" ? designLibs.full_front : designLibs.front_breast}
                 selectedId={frontDesignId}
-                onSelect={(id) => { setFrontDesignId(id === frontDesignId ? null : id); setTemplateId(null); if (id) setCustomFront(null); }}
+                onSelect={(id) => { setFrontDesignId(id === frontDesignId ? null : id); setTemplateId(null); if (id) { setCustomFront(null); setBespokeFront(false); } }}
+                bespoke={bespokeFront}
+                onBespoke={() => { const on = !bespokeFront; setBespokeFront(on); if (on) { setFrontDesignId(null); setTemplateId(null); } else { setCustomFront(null); setNotesFront(""); } }}
               />
-              <div className="mt-4 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-4" data-testid="ls-front-upload-block">
-                <div className="font-extrabold text-sm flex items-center gap-2">
-                  Or upload your own front design
-                  {customFront && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#7bc67e] text-[#1a1a1a]">Uploaded</span>}
-                </div>
-                <div className="text-[11px] text-[#4b5563] mt-0.5">PNG, JPG or SVG (max 6&nbsp;MB). Uploading overrides any preset picked above.</div>
-                <CustomDesignDrop
-                  dataUrl={customFront}
-                  onChange={(d) => { setCustomFront(d); if (d) { setFrontDesignId(null); setTemplateId(null); } }}
-                  slot="front"
-                />
-              </div>
+              {bespokeFront && (
+                <BespokeBox slot="front" dataUrl={customFront} onFile={setCustomFront} notes={notesFront} onNotes={setNotesFront} />
+              )}
             </section>
           )}
 
@@ -303,20 +306,13 @@ export default function LeaversStart() {
                 testidPrefix="ls-back-design"
                 items={designLibs.back}
                 selectedId={backDesignId}
-                onSelect={(id) => { setBackDesignId(id === backDesignId ? null : id); if (id) setCustomBack(null); }}
+                onSelect={(id) => { setBackDesignId(id === backDesignId ? null : id); if (id) { setCustomBack(null); setBespokeBack(false); } }}
+                bespoke={bespokeBack}
+                onBespoke={() => { const on = !bespokeBack; setBespokeBack(on); if (on) setBackDesignId(null); else { setCustomBack(null); setNotesBack(""); } }}
               />
-              <div className="mt-4 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-4" data-testid="ls-back-upload-block">
-                <div className="font-extrabold text-sm flex items-center gap-2">
-                  Or upload your own back design
-                  {customBack && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#7bc67e] text-[#1a1a1a]">Uploaded</span>}
-                </div>
-                <div className="text-[11px] text-[#4b5563] mt-0.5">PNG, JPG or SVG (max 6&nbsp;MB). Uploading overrides the preset picked above.</div>
-                <CustomDesignDrop
-                  dataUrl={customBack}
-                  onChange={(d) => { setCustomBack(d); if (d) setBackDesignId(null); }}
-                  slot="back"
-                />
-              </div>
+              {bespokeBack && (
+                <BespokeBox slot="back" dataUrl={customBack} onFile={setCustomBack} notes={notesBack} onNotes={setNotesBack} />
+              )}
             </section>
           )}
 
@@ -506,17 +502,29 @@ export default function LeaversStart() {
 }
 
 // ---- Design library grid (portfolio-backed presets) ----
-function DesignLibraryGrid({ items, selectedId, onSelect, testidPrefix }) {
-  if (!items || items.length === 0) {
-    return (
-      <div className="bg-[#f0fdf4] border-2 border-dashed border-[#dcfce7] rounded-2xl p-6 text-center text-sm text-[#4b5563]" data-testid={`${testidPrefix}-empty`}>
-        No preset designs live yet - <strong>upload your own below</strong> or ask us to design one for you.
-      </div>
-    );
-  }
+function DesignLibraryGrid({ items, selectedId, onSelect, testidPrefix, bespoke, onBespoke }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" data-testid={`${testidPrefix}-grid`}>
-      {items.map((it) => {
+      {/* always first: their own design / one they've seen - we make it for them */}
+      <button
+        type="button"
+        onClick={onBespoke}
+        className={`text-left rounded-2xl border-2 overflow-hidden transition ${bespoke ? "border-[#7bc67e] shadow-md" : "border-[#fbbf24] hover:border-[#7bc67e]"}`}
+        data-testid={`${testidPrefix}-bespoke`}
+      >
+        <div className="aspect-square relative bg-gradient-to-br from-[#fff7ed] via-[#fef3c7] to-[#dcfce7] grid place-items-center p-4 text-center">
+          <div>
+            <Sparkles className="mx-auto text-[#f59e0b]" size={34} />
+            <div className="font-black text-lg leading-tight mt-2">Your own design</div>
+            <div className="text-[11px] text-[#4b5563] mt-1 leading-snug">Got a design, or seen one you like? Show us and we&apos;ll make it for your year group.</div>
+          </div>
+          {bespoke && <div className="absolute top-2 right-2 bg-[#7bc67e] text-[#1a1a1a] rounded-full p-1"><CheckCircle2 size={16} /></div>}
+        </div>
+        <div className="p-2 bg-white">
+          <div className="font-extrabold text-xs">Free - we send a proof first</div>
+        </div>
+      </button>
+      {(items || []).map((it) => {
         const active = selectedId === it.id;
         return (
           <button
@@ -536,6 +544,29 @@ function DesignLibraryGrid({ items, selectedId, onSelect, testidPrefix }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// Shown when "Your own design" is picked: upload their artwork or a photo of a design they like, and describe it.
+function BespokeBox({ slot, dataUrl, onFile, notes, onNotes }) {
+  return (
+    <div className="mt-4 bg-[#fff7ed] border-2 border-[#fed7aa] rounded-2xl p-4" data-testid={`ls-${slot}-bespoke-block`}>
+      <div className="font-extrabold text-sm flex items-center gap-2">
+        Show us your {slot} design
+        {dataUrl && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#7bc67e] text-[#1a1a1a]">Uploaded</span>}
+      </div>
+      <div className="text-[11px] text-[#4b5563] mt-0.5">Upload your artwork, a sketch, or a screenshot of a design you&apos;ve seen and like (PNG or JPG, max 6&nbsp;MB). We&apos;ll recreate it with your school, year and names and send a free proof before anything is printed.</div>
+      <CustomDesignDrop dataUrl={dataUrl} onChange={onFile} slot={slot} />
+      <textarea
+        value={notes}
+        onChange={(e) => onNotes(e.target.value)}
+        rows={3}
+        maxLength={600}
+        placeholder="Tell us about it - e.g. 'Like this one but with our school colours and LEAVERS 2027', or describe your idea if you haven't got a picture."
+        className="mt-3 w-full border-2 border-[#fed7aa] focus:border-[#fbbf24] rounded-xl px-3 py-2 text-sm outline-none bg-white"
+        data-testid={`ls-${slot}-bespoke-notes`}
+      />
     </div>
   );
 }

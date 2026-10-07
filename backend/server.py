@@ -1420,6 +1420,10 @@ def _order_details_html(doc: dict) -> str:
                 y = float(ps.get("y", 0) or 0)
                 pos = "standard position" if not y else (f"moved {abs(y):g}% of the print area {'down' if y > 0 else 'up'}")
                 rows.append(f"Print size: {esc(ps.get('scale', 100))}% of the standard print area, {esc(pos)}")
+        if dm.get("bespoke") or dm.get("design_notes"):
+            rows.append(f"<strong>Bespoke design</strong> ({esc(dm.get('bespoke') or '')})"
+                        + (f": {esc(dm.get('design_notes'))}" if dm.get("design_notes") else "")
+                        + " - their upload is in Admin &gt; Orders")
         if dm.get("club_code"):
             rows.append(f"Club shop: {esc(dm.get('club_name') or dm.get('club_code'))}"
                         + (f" - name on back: <strong>{esc(dm.get('child_name'))}</strong>" if dm.get("child_name") else ""))
@@ -3652,6 +3656,9 @@ class LeaversCheckoutRequest(BaseModel):
     sizes: List[LeaversSizeQty]
     add_drawstring_bag: bool = False
     colour: Optional[str] = None                            # garment colour (required when the garment has colours)
+    # "Your own design" tile: what they want us to make (with their upload / a photo of a design they like)
+    design_notes: Optional[str] = None
+    bespoke: Optional[str] = None                           # "front", "back" or "front,back"
     bag_colour: Optional[str] = None
     origin_url: str
 
@@ -3722,6 +3729,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         payload.back_design_id,
         payload.custom_design_data_url,
         payload.custom_back_design_data_url,
+        (payload.design_notes or "").strip(),
     ])
     if not has_design:
         raise HTTPException(400, "Pick a design (front or back) or upload your own artwork")
@@ -3759,6 +3767,8 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "front_design_id": (payload.front_design_id or "")[:60],
         "back_design_id": (payload.back_design_id or "")[:60],
         "names_mode": payload.names_collection_mode,
+        "bespoke": (payload.bespoke or "")[:20],
+        "design_notes": (payload.design_notes or "")[:450],
         "total_qty": str(total_qty),
         "unit_price": f"{unit:.2f}",
         "color": colour[:60],
@@ -3814,6 +3824,15 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "print_position": payload.print_position,
         "names_collection_mode": payload.names_collection_mode,
         "custom_design_artwork_id": artwork_id,
+        "design_meta": {k: v for k, v in {
+            # their files as links -> thumbnails in Admin > Orders + links in the order email
+            "art_front": await _save_order_file(payload.custom_design_data_url, "leavers-front"),
+            "art_back": await _save_order_file(payload.custom_back_design_data_url, "leavers-back"),
+            "art_names-list": await _save_order_file(payload.names_file_data_url, "leavers-names"),
+            "bespoke": payload.bespoke or "",
+            "design_notes": (payload.design_notes or "").strip()[:1200],
+            "school": payload.school, "year_group": payload.year_group,
+        }.items() if v},
         "sizes": [s.model_dump() for s in payload.sizes if s.qty > 0],
         "add_drawstring_bag": bool(payload.add_drawstring_bag),
         "total_quantity": total_qty,
@@ -5831,6 +5850,38 @@ async def upload_artwork(payload: ArtworkUploadPayload):
         "filename": doc["filename"],
         "size_bytes": doc["size_bytes"],
     }
+
+
+_ORDER_FILE_EXT = {"image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", "image/webp": "webp", "image/gif": "gif",
+                   "image/svg+xml": "svg", "application/pdf": "pdf", "text/csv": "csv", "text/plain": "txt",
+                   "application/vnd.ms-excel": "xls",
+                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx"}
+
+
+async def _save_order_file(data_url: Optional[str], purpose: str) -> str:
+    """A customer's file sent as a data URL (artwork, names list...) -> stored in R2
+    like /uploads/artwork, returning its /api/uploads/artwork/<id>.<ext> link for
+    the order (Admin > Orders thumbnails, order email). '' if none / unreadable."""
+    if not data_url or not data_url.startswith("data:"):
+        return ""
+    try:
+        head, b64 = data_url.split(",", 1)
+        ctype = head.split(";")[0].replace("data:", "") or "application/octet-stream"
+        raw = _base64.b64decode(b64)
+    except Exception:
+        return ""
+    ext = _ORDER_FILE_EXT.get(ctype, "bin")
+    item_id = str(uuid.uuid4())
+    path = f"{_OBJ_APP_NAME}/artwork/{item_id}.{ext}"
+    try:
+        _storage_put(path, raw, ctype)
+    except Exception as e:
+        logging.warning(f"order file save failed: {e}")
+        return ""
+    await db.artwork_uploads.insert_one({"id": item_id, "storage_path": path, "content_type": ctype,
+                                         "filename": f"{purpose}.{ext}", "purpose": purpose[:60], "size_bytes": len(raw),
+                                         "created_at": datetime.now(timezone.utc).isoformat()})
+    return f"/api/uploads/artwork/{item_id}.{ext}"
 
 
 @api_router.get("/uploads/artwork/{filename}")

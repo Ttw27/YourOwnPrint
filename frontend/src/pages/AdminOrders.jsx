@@ -111,6 +111,8 @@ function OrderDetails({ o }) {
             {l.dm && l.dm.pack_sizes_text && <div className="text-amber-300">Pack size split: {l.dm.pack_sizes_text}</div>}
             <div>Print: {(l.placements && l.placements.length) ? l.placements.join(", ") : "blank / none"}</div>
             {l.dm && (l.dm.mode || l.dm.flow) && <div className="text-zinc-500">Artwork: {l.dm.mode || l.dm.flow}</div>}
+            {l.dm && (l.dm.bespoke || l.dm.design_notes) && <div className="text-amber-300">Bespoke design{l.dm.bespoke ? ` (${l.dm.bespoke})` : ""}{l.dm.design_notes ? `: ${l.dm.design_notes}` : ""}</div>}
+            {l.dm && l.dm.child_name && <div>Name on back: <strong>{l.dm.child_name}</strong>{l.dm.club_name ? ` · ${l.dm.club_name} club shop` : ""}</div>}
             {l.dm && Object.keys(l.dm).some((k) => k.startsWith("art_") && l.dm[k]) && (
               <div className="flex flex-wrap gap-2 pt-1" data-testid="admin-order-artwork">
                 {Object.entries(l.dm).filter(([k, v]) => k.startsWith("art_") && v).map(([k, v]) => (
