@@ -222,20 +222,23 @@ export default function SchoolTrips() {
       <section className="max-w-6xl mx-auto px-6 py-16">
         <div className="bg-[#1a1a1a] text-white rounded-3xl p-8 sm:p-10 flex flex-col md:flex-row md:items-center gap-6" data-testid="school-trips-easy-route">
           <div className="flex-1">
-            <div className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Rather we sort it for you?</div>
-            <h3 className="font-black text-2xl sm:text-3xl mt-1">Just send us the details - we&rsquo;ll do the rest.</h3>
+            <div className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Ready when you are</div>
+            <h3 className="font-black text-2xl sm:text-3xl mt-1">Build it now - or just send us the details.</h3>
             <p className="text-zinc-300 mt-2 max-w-xl">
               Message us your school name, logo, rough numbers and sizes, and the trip date. We&rsquo;ll suggest a colour,
               send you a free mock-up and a price, and invoice the school if that&rsquo;s easier.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row md:flex-col gap-2 flex-shrink-0">
+            <Link to="/school-trips/order" className="inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full" data-testid="school-trips-build-now">
+              Build it now <ArrowRight size={16} />
+            </Link>
             <a href={buildWhatsAppLink("Hi! I'd like trip t-shirts for our school - can I send you the details?")} target="_blank" rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5a] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full" data-testid="school-trips-whatsapp">
               <MessageCircle size={16} /> WhatsApp us
             </a>
             <Link to="/contact" className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-extrabold px-6 py-3 rounded-full" data-testid="school-trips-cta-final">
-              Email / quote form
+              Get a trip quote
             </Link>
           </div>
         </div>
