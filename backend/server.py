@@ -1358,6 +1358,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         metadata=metadata,
         product_name=product["name"],
         shipping_options=await _delivery_options_for([(product, total_qty)], total_amount),
+        lines=[_stripe_line(priced)],
     )
 
     await db.payment_transactions.insert_one(
@@ -1394,6 +1395,25 @@ def _backend_public_url() -> str:
         return explicit
     dom = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip()
     return f"https://{dom}" if dom else "https://yourownprint-production.up.railway.app"
+
+
+def _stripe_line(p: Dict) -> Dict:
+    """One priced basket line -> a row on Stripe's checkout page (name, colour,
+    sizes, prints, photo, line total)."""
+    prod = p["product"]
+    dm = p.get("design_meta") or {}
+    qty = int(p.get("total_qty") or 0)
+    sizes = ", ".join(f"{q}x {sz}" for sz, q in (p.get("size_qtys") or {}).items() if sz.upper() not in ("ONE", "ONE SIZE", "OS"))
+    names = {"logo": "Logo", "name": "Name", "back-logo": "Back logo", "big-front": "Big front logo"}
+    prints = ", ".join((PLACEMENT_BY_ID.get(x) or {}).get("label") or names.get(x) or x.replace("-", " ").capitalize()
+                       for x in (p.get("placements_clean") or []))
+    bits = [b for b in [p.get("color"), sizes, (f"Print: {prints}" if prints else ("Blank" if p.get("blank") else "")),
+                        (f"for {dm.get('child_name')}" if dm.get("child_name") else "")] if b]
+    name = dm.get("garment_name") and f"{prod.get('name')} on {dm.get('garment_name')}" or prod.get("name") or "Item"
+    img = prod.get("image") or ""
+    col = next((c for c in (prod.get("colors") or []) if isinstance(c, dict) and c.get("name") == p.get("color") and c.get("image")), None)
+    return {"name": f"{name} x{qty}" if qty > 1 else name, "description": " · ".join(bits),
+            "amount": p["line_total"], "image": (col or {}).get("image") or img}
 
 
 def _order_details_html(doc: dict) -> str:
@@ -1971,6 +1991,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=metadata,
+        lines=[_stripe_line(p) for p in priced],
         product_name="Your Own Print cart order",
         # club shop orders all go to the club together - one free option
         shipping_options=([{"shipping_rate_data": {"type": "fixed_amount", "fixed_amount": {"amount": 0, "currency": "gbp"},
@@ -3793,6 +3814,14 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         metadata=metadata,
         product_name="Leavers hoodie order",
         shipping_options=await _delivery_options_for([({"name": "hoodie"}, total_qty)], total_amount),
+        lines=[{"name": f"{p['name']}{(' - ' + colour) if colour else ''} x{total_qty}",
+                "description": " · ".join(x for x in [", ".join(f"{s.qty}x {s.size}" for s in payload.sizes if s.qty > 0),
+                                                     "Full front print" if payload.print_position == "full_front" else "Chest print",
+                                                     "Back print" if (payload.back_design_id or payload.custom_back_design_data_url or payload.bespoke) else "",
+                                                     payload.school] if x),
+                "amount": round(garments_total, 2), "image": p.get("image") or ""}]
+              + ([{"name": f"Printed drawstring bags x{total_qty}", "description": bag_colour, "amount": round(bag_each * total_qty, 2),
+                   "image": (PRODUCTS.get(LEAVERS_BAG_ID) or {}).get("image") or ""}] if bag_each else []),
     )
 
     artwork_id = None

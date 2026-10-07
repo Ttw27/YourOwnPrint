@@ -35,19 +35,39 @@ async def create_checkout_session(
     product_name: str = "Your Own Print order",
     shipping_options: Optional[List[Dict]] = None,
     allowed_countries: Optional[List[str]] = None,
+    lines: Optional[List[Dict]] = None,
 ):
-    """Creates a single-line-item Checkout Session for `amount` (major units, e.g. GBP)."""
+    """Creates a Checkout Session for `amount` (major units, e.g. GBP).
+
+    `lines` = what the customer sees on Stripe's page, one row per item:
+    [{"name", "description", "amount" (line total, major units), "image"}]. Used
+    only if they add up to `amount` to the penny; otherwise one summary row."""
     _configure(api_key)
+    total_p = int(round(amount * 100))
+    items = None
+    if lines:
+        items = []
+        for ln in lines:
+            pd = {"name": (ln.get("name") or product_name)[:250]}
+            if ln.get("description"):
+                pd["description"] = str(ln["description"])[:500]
+            img = ln.get("image") or ""
+            if img.startswith("https://"):
+                pd["images"] = [img]
+            items.append({"price_data": {"currency": currency, "product_data": pd,
+                                         "unit_amount": int(round(float(ln["amount"]) * 100))}, "quantity": 1})
+        if sum(i["price_data"]["unit_amount"] for i in items) != total_p or any(i["price_data"]["unit_amount"] < 0 for i in items):
+            items = None
     return await asyncio.to_thread(
         stripe.checkout.Session.create,
         mode="payment",
         payment_method_types=["card"],
-        line_items=[
+        line_items=items or [
             {
                 "price_data": {
                     "currency": currency,
                     "product_data": {"name": product_name},
-                    "unit_amount": int(round(amount * 100)),
+                    "unit_amount": total_p,
                 },
                 "quantity": 1,
             }
