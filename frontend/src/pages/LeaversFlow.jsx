@@ -737,9 +737,13 @@ function DrawstringBagCard({ bag, price, checked, onToggle, colour, onColour }) 
 
 // ---- Garment colour (the real garment's colours; kids version may have fewer) ----
 function ColourPicker({ product, colour, onPick, kidsQty }) {
-  const cols = product.colors || [];
-  const picked = cols.find((c) => c.name === colour);
+  const all = product.colors || [];
+  const picked = all.find((c) => c.name === colour);
   const hasKids = (product.kids_sizes || []).length > 0;
+  // "Kids colours only" switch - hides colours the kids version isn't made in
+  const [kidsOnly, setKidsOnly] = React.useState(false);
+  const kidsCount = all.filter((c) => c.kids !== false).length;
+  const cols = hasKids && kidsOnly ? all.filter((c) => c.kids !== false) : all;
   const swatch = (c) => (c.hexes && c.hexes.length === 2
     ? `linear-gradient(135deg, ${c.hexes[0]} 50%, ${c.hexes[1]} 50%)`
     : (c.hex || "#ccc"));
@@ -751,13 +755,25 @@ function ColourPicker({ product, colour, onPick, kidsQty }) {
             Colour: <span className="text-[#4b5563] font-bold" data-testid="ls-colour-name">{colour || "pick one"}</span>
           </div>
           {hasKids && (
-            <div className="text-[11px] text-[#4b5563] mt-0.5">
-              Colours with a dot <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#1a1a1a] align-middle" /> are adult sizes only - the kids version isn&apos;t made in them.
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <label className="inline-flex items-center gap-2 cursor-pointer select-none" data-testid="ls-kids-only">
+                <span className={`relative w-10 h-6 rounded-full transition ${kidsOnly ? "bg-[#7bc67e]" : "bg-[#d1d5db]"}`}>
+                  <input type="checkbox" className="sr-only" checked={kidsOnly} onChange={(e) => setKidsOnly(e.target.checked)} />
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${kidsOnly ? "left-[18px]" : "left-0.5"}`} />
+                </span>
+                <span className="text-xs font-extrabold">Kids colours only <span className="font-bold text-[#4b5563]">({kidsCount} of {all.length})</span></span>
+              </label>
+              {!kidsOnly && (
+                <span className="text-[11px] text-[#4b5563]">
+                  Colours with a dot <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#1a1a1a] align-middle" /> are adult sizes only.
+                </span>
+              )}
+              {kidsOnly && <span className="text-[11px] text-[#16a34a] font-bold">Every colour shown comes in adult and kids sizes.</span>}
             </div>
           )}
           <div className="flex flex-wrap gap-1.5 mt-3">
             {cols.map((c) => {
-              const adultOnly = hasKids && c.kids === false;
+              const adultOnly = hasKids && c.kids === false && !kidsOnly;
               const blocked = adultOnly && kidsQty > 0;
               return (
                 <button
