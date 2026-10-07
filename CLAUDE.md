@@ -15,7 +15,7 @@ This file is the working brief. Read it before making changes.
 | Frontend  | React + Tailwind (CRA + **craco**)| **Vercel** — root dir `frontend`                            |
 | Backend   | FastAPI (Python)                  | **Railway** — root dir `backend`, URL `https://yourownprint-production.up.railway.app` |
 | Database  | MongoDB Atlas                     |                                                             |
-| Storage   | Cloudflare R2                     | Public base e.g. `https://pub-b995388ef13c4c14a498c874668ad48e.r2.dev` |
+| Storage   | Cloudflare R2 (bucket `yourownprint`) | Public base `https://yourownprintimages.co.uk` (custom domain, Oct 2026; old r2.dev URLs saved in Mongo are rewritten by ImageHostMiddleware) |
 | Payments  | Stripe (hosted Checkout)          |                                                             |
 | Other     | remove.bg (designer bg-removal), Judge.me (imported reviews) |                                  |
 
