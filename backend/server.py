@@ -887,6 +887,8 @@ async def sitemap_xml():
         ("/reviews", "0.5", "weekly"),
         ("/dance-studio-kit", "0.7", "monthly"),
         ("/club-shop/new", "0.7", "monthly"),
+        ("/school-trips/order", "0.7", "monthly"),
+        ("/sports-day", "0.7", "monthly"),
         ("/full-squad-configurator", "0.7", "monthly"),
         ("/sports-outfit-configurator", "0.7", "monthly"),
         ("/leavers-hoodies", "0.8", "weekly"),
@@ -1814,6 +1816,10 @@ async def _resolve_line_pricing(
         pos = bundle_logo_position(product)
         placements_clean = [pos] if pos else []
         print_cost = 0.0
+    elif (design_meta or {}).get("flow") == "group_kit":
+        # School trip / sports day builders: £3 a print, first one included in the shown price
+        from routers.group_kits import group_print
+        placements_clean, print_cost = group_print(product_id, placements, color, design_meta or {})
     elif (design_meta or {}).get("flow") == "club_shop":
         # Club shop (routers/club_shops.py): parent order from a club's link
         from routers.club_shops import club_print
@@ -1897,7 +1903,11 @@ async def _resolve_line_pricing(
     if is_design:
         pass  # Design Shop: flat retail price per garment
     elif (design_meta or {}).get("flow") in ("dance", "club_bag", "club_shop"):
-        pass  # dance studio kit / club kit bags / club shops - each garment's own price: each garment's own price, no bulk tiers
+        pass  # dance studio kit / club kit bags / club shops - each garment's own price, no bulk tiers
+    elif (design_meta or {}).get("flow") == "group_kit":
+        # whole-order bulk % (group_qty counted server-side by _set_group_qty)
+        gq = int((design_meta or {}).get("group_qty") or total_qty)
+        base_price = apply_bulk_tier_pct(base_price, max(gq, total_qty), LEAVERS_BULK_TIERS_PCT)
     elif product_id in FIGHT_NIGHT_IDS:
         base_price = tier_unit_price(fight_night_tiers(base_price), base_price, total_qty)
     elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
@@ -1976,6 +1986,22 @@ async def _order_art_links(dm: Dict) -> Dict:
     return dm
 
 
+def _set_group_qty(items) -> None:
+    """School group orders (routers/group_kits.py): the bulk discount is for the
+    WHOLE order, so count every line of the same group here (server-side - the
+    browser's own figure is ignored)."""
+    totals: Dict[str, int] = {}
+    for it in items:
+        dm = it.design_meta or {}
+        if dm.get("flow") == "group_kit":
+            g = dm.get("group_id") or "-"
+            totals[g] = totals.get(g, 0) + sum(int(q or 0) for q in (it.size_qtys or {}).values())
+    for it in items:
+        dm = it.design_meta or {}
+        if dm.get("flow") == "group_kit":
+            it.design_meta = {**dm, "group_qty": str(totals.get(dm.get("group_id") or "-", 0))}
+
+
 async def _price_line_item(item: CartLineItem, account_discount_pct: float = 0.0) -> Dict:
     """Backwards-compatible wrapper - resolves the pricing for one CartLineItem
     by delegating to the shared `_resolve_line_pricing()` helper."""
@@ -2020,6 +2046,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
     _assert_origin_ok(payload.origin_url)
 
     acct_pct = await account_discount_for_request(http_request)
+    _set_group_qty(payload.items)
     priced = [await _price_line_item(item, acct_pct) for item in payload.items]
     grand_total = round(sum(p["line_total"] for p in priced), 2)
     total_qty = sum(p["total_qty"] for p in priced)
@@ -2106,6 +2133,7 @@ async def price_cart(payload: CartCheckoutRequest, request: Request):
     if len(payload.items) > 20:
         raise HTTPException(400, "Cart limit is 20 lines")
     acct_pct = await account_discount_for_request(request)
+    _set_group_qty(payload.items)
     priced = [await _price_line_item(item, acct_pct) for item in payload.items]
     grand_total = round(sum(p["line_total"] for p in priced), 2)
     # Ex-VAT total worked out per line, so children's (zero-rated) items are right.
@@ -9394,6 +9422,7 @@ import routers.delivery  # noqa: F401 - registers /delivery/info + /admin/delive
 import routers.trusted_logos  # noqa: F401 - registers /trusted-logos (homepage "Trusted by")
 import routers.team_kits  # noqa: F401 - registers /team-kits/kit/{id} (kits built from real garments)
 import routers.dance_kit  # noqa: F401 - registers /dance-kit/config (dance studio kit builder)
+import routers.group_kits  # noqa: F401 - registers /group-kits/{page} (school trip + sports day builders)
 import routers.google_feed  # noqa: F401 - registers /feeds/google.xml (Merchant Center feed)
 import routers.club_shops  # noqa: F401 - registers /club-shops/*, /admin/club-shops
 import routers.signup_offer  # noqa: F401 - registers /signup-offer, /admin/subscribers

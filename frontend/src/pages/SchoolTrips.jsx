@@ -100,11 +100,14 @@ export default function SchoolTrips() {
             {hero.subtitle}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/design" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full" data-testid="school-trips-cta-design">
-              Design your trip tee <ArrowRight size={16} />
+            <Link to="/school-trips/order" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full" data-testid="school-trips-cta-design">
+              Build your school order <ArrowRight size={16} />
             </Link>
             <Link to="/contact" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-extrabold px-6 py-3 rounded-full" data-testid="school-trips-cta-quote">
               <MessageCircle size={16} /> Get a quote for your trip
+            </Link>
+            <Link to="/sports-day" className="inline-flex items-center gap-2 text-[#bbf7d0] hover:underline font-extrabold px-2 py-3" data-testid="school-trips-cta-sports-day">
+              Sports day &amp; house colours →
             </Link>
           </div>
         </div>

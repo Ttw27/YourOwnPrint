@@ -84,6 +84,8 @@ import AdminSubscribers from "@/pages/AdminSubscribers";
 import ReviewOrder from "@/pages/ReviewOrder";
 import Occasion from "@/pages/Occasion";
 import ClubShopCreate from "@/pages/ClubShopCreate";
+import SchoolTripOrder from "@/pages/SchoolTripOrder";
+import SportsDay from "@/pages/SportsDay";
 import ClubShop from "@/pages/ClubShop";
 import ClubShopManage from "@/pages/ClubShopManage";
 import AdminClubShops from "@/pages/AdminClubShops";
@@ -138,6 +140,8 @@ function App() {
           <Route path="/fight-night-tee" element={<FightNightTee />} />
           <Route path="/leavers-hoodies" element={<LeaversHoodies />} />
           <Route path="/school-trips" element={<SchoolTrips />} />
+          <Route path="/school-trips/order" element={<SchoolTripOrder />} />
+          <Route path="/sports-day" element={<SportsDay />} />
           <Route path="/leavers-hoodies/start" element={<LeaversStart />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/full-squad-configurator" element={<FullSquadConfigurator />} />
