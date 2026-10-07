@@ -6140,6 +6140,7 @@ DEFAULT_NAV_CONFIG = {
                     {"label": "Teams & Schools Home", "to": "/teams-schools"},
                     {"label": "Leavers' Hoodies", "to": "/leavers-hoodies"},
                     {"label": "School Trip Tees", "to": "/school-trips", "badge": "New"},
+                    {"label": "Sports Day & House Colours", "to": "/sports-day", "badge": "New"},
                     {"label": "Education & Schools", "to": "/industries/education-schools"},
                 ]},
                 {"heading": "Sports & Clubs", "links": [
@@ -6488,6 +6489,31 @@ async def _nav_add_bundles_v1():
                                       "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
     except Exception as e:
         logging.warning(f"nav bundles link skipped: {e}")
+
+
+async def _nav_add_sports_day_v1():
+    """One-off (Tim, Oct 2026): add "Sports Day & House Colours" to the SAVED menu
+    (Teams & Schools > Schools, after School Trip Tees) without replacing the rest."""
+    marker = "nav_add_sports_day_v1"
+    try:
+        if await db.settings.find_one({"key": marker}):
+            return
+        doc = await db.settings.find_one({"key": "navigation_config"})
+        cfg = (doc or {}).get("config") or {}
+        added = False
+        if cfg.get("menu") and "/sports-day" not in __import__("json").dumps(cfg["menu"]):
+            ts = next((m for m in cfg["menu"] if m.get("key") == "teams-schools" and m.get("columns")), None)
+            if ts:
+                col = next((c for c in ts["columns"] if any(l.get("to") == "/school-trips" for l in c.get("links", []))), ts["columns"][0])
+                links = col.setdefault("links", [])
+                at = next((i + 1 for i, l in enumerate(links) if l.get("to") == "/school-trips"), len(links))
+                links.insert(at, {"label": "Sports Day & House Colours", "to": "/sports-day", "badge": "New"})
+                await db.settings.update_one({"key": "navigation_config"}, {"$set": {"config": cfg}})
+                added = True
+        await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "added": added,
+                                      "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    except Exception as e:
+        logging.warning(f"nav sports day link skipped: {e}")
 
 
 @api_router.get("/navigation")
@@ -8588,6 +8614,7 @@ async def _load_imported_products():
             await _hide_placeholder_kits_v1()
         except Exception as e:
             logging.warning(f"placeholder kits skipped: {e}")
+        await _nav_add_sports_day_v1()
         try:
             await _seed_leavers_designs_v1()
         except Exception as e:
