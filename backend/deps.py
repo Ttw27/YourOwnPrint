@@ -116,6 +116,8 @@ INTEGRATION_ENV_MAP: Dict[str, str] = {
     "ga4_id": "GA4_ID",
     "google_ads_id": "GOOGLE_ADS_ID",
     "google_ads_purchase_label": "GOOGLE_ADS_PURCHASE_LABEL",
+    "meta_capi_token": "META_CAPI_TOKEN",
+    "meta_test_event_code": "META_TEST_EVENT_CODE",
 }
 
 

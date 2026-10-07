@@ -1364,6 +1364,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         {
             "id": str(uuid.uuid4()),
             "session_id": session.id,
+            "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
             "product_id": payload.product_id,
             "product_name": product["name"],
             "color": payload.color,
@@ -1538,6 +1539,9 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
         await db.payment_transactions.update_one(
             {"session_id": doc["session_id"]},
             {"$set": {"paid_at": datetime.now(timezone.utc).isoformat(), "paid_email": (customer_email or "").strip().lower() or None}})
+        # Meta Conversions API: the Purchase from the server too (same event id as the browser pixel)
+        from services.meta_capi import send_purchase as _meta_purchase
+        asyncio.create_task(_meta_purchase({**doc, "paid_email": (customer_email or "").strip().lower() or None}, status_resp))
 
         amount = float(getattr(status_resp, "amount_total", None) or 0) / 100.0
         currency = (getattr(status_resp, "currency", None) or "gbp").upper()
@@ -1980,6 +1984,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.id,
+        "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
         "kind": "cart",
         "customer_email": payload.customer_email,
         "items": [
@@ -3805,6 +3810,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.id,
+        "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
         "flow": "leavers",
         "school": payload.school,
         "year_group": payload.year_group,
@@ -4872,6 +4878,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.id,
+        "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
         "flow": "workforce",
         "lines": valid_lines,
         "total_quantity": total_qty,
@@ -6856,6 +6863,10 @@ INTEGRATION_KEYS = {
                              "help": "From PenCarrie: My Account > Account Settings > API Access Tokens. Used to pull the product catalogue automatically."},
     "meta_pixel_id": {"label": "Meta (Facebook) Pixel ID", "kind": "text", "env": "META_PIXEL_ID",
                       "help": "Meta Events Manager > Data sources > your pixel - the long number. Tracks visits, add to basket, checkout and purchases for your Facebook / Instagram ads."},
+    "meta_capi_token": {"label": "Meta Conversions API access token", "kind": "secret", "env": "META_CAPI_TOKEN",
+                        "help": "Events Manager > your pixel > Settings > Conversions API > Generate access token. Sends paid orders to Meta from the server too (like Shopify's 'Maximum')."},
+    "meta_test_event_code": {"label": "Meta test event code (optional)", "kind": "text", "env": "META_TEST_EVENT_CODE",
+                             "help": "Only while testing: Events Manager > Test events > the TEST... code. Clear it once purchases show up there."},
     "ga4_id": {"label": "Google Analytics 4 Measurement ID", "kind": "text", "env": "GA4_ID",
                "help": "Google Analytics > Admin > Data streams > your website - starts G-"},
     "google_ads_id": {"label": "Google Ads tag ID", "kind": "text", "env": "GOOGLE_ADS_ID",
@@ -7512,6 +7523,7 @@ def _apply_product_override(pid: str, ov: Dict) -> None:
 # override at runtime (without waiting for a supervisor restart).
 import copy as _copy
 _PRISTINE_PRODUCTS: Dict[str, Dict] = _copy.deepcopy(PRODUCTS)
+from services.meta_capi import tracking_context as _meta_tracking  # noqa: E402
 
 
 @app.on_event("startup")

@@ -28,6 +28,11 @@ export function setAdminToken(token) {
 }
 export function clearAdminToken() { setAdminToken(""); }
 
+try {
+  const fbclid = new URLSearchParams(window.location.search).get("fbclid");
+  if (fbclid) { sessionStorage.setItem("yop_fbclid", fbclid); sessionStorage.setItem("yop_fbclid_at", String(Date.now())); }
+} catch { /* storage blocked */ }
+
 api.interceptors.request.use((config) => {
   const token = getAdminToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -36,6 +41,19 @@ api.interceptors.request.use((config) => {
   try {
     const ct = localStorage.getItem("yop_customer_token");
     if (ct) config.headers["X-Customer-Token"] = ct;
+  } catch { /* storage blocked */ }
+  // Cookie choice + Meta's browser ids, so a paid order can also be sent to Meta
+  // from the server (Conversions API) - only for visitors who pressed "Accept all".
+  try {
+    if (localStorage.getItem("yop_cookie_consent") === "all") {
+      config.headers["X-Consent"] = "all";
+      const ck = (n) => (document.cookie.match(new RegExp(`(?:^|; )${n}=([^;]*)`)) || [])[1];
+      const fbp = ck("_fbp"); if (fbp) config.headers["X-Fbp"] = fbp;
+      let fbc = ck("_fbc");
+      if (!fbc) { const id = sessionStorage.getItem("yop_fbclid"); if (id) fbc = `fb.1.${sessionStorage.getItem("yop_fbclid_at") || Date.now()}.${id}`; }
+      if (fbc) config.headers["X-Fbc"] = fbc;
+      config.headers["X-Page-Url"] = window.location.href.slice(0, 500);
+    }
   } catch { /* storage blocked */ }
   return config;
 });

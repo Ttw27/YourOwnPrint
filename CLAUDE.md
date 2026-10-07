@@ -316,6 +316,11 @@ frontend/src/
   - Tracking: `lib/tracking.js` + `CookieConsent.jsx` - Meta Pixel / GA4 / Google Ads IDs in Admin > Integrations
     (public via /api/site/tracking); NOTHING loads before "Accept all". Events: page view, view item, add to basket,
     begin checkout (api.js checkout fns), purchase (CheckoutSuccess).
+  - Meta Conversions API (`services/meta_capi.py`): Purchase sent server-side when an order is paid
+    (_maybe_send_order_emails), event_id = Stripe session id (same as the browser pixel's eventID, so deduped), hashed
+    email/phone/name/town/postcode, ONLY if the customer accepted cookies. Checkouts store `tracking` (X-Consent,
+    X-Fbp, X-Fbc, X-Page-Url headers from api.js + IP/UA). Settings: meta_capi_token, meta_test_event_code. Last
+    result in db.settings `meta_capi_last`.
   - Structured data: `components/bold/JsonLd.jsx` (Product + rating on PDP/designer, Organization on home, FAQ on occasions).
   - Follow-ups: `routers/followups.py` loop every 30 min - review request REVIEW_DAYS (10) after paid_at (stamped in
     _maybe_send_order_emails) -> /review/<token>; abandoned basket reminder (unpaid cart checkouts with email after 3h,
