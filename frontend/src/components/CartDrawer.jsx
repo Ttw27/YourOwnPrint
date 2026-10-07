@@ -95,7 +95,7 @@ export default function CartDrawer() {
                           </p>
                           {lineError && (
                             <p className="text-[11px] font-bold text-rose-600" data-testid={`cart-line-error-${line.product_id}`}>
-                              Can&apos;t be ordered as it is: {lineError}. Please remove it.
+                              {/remove/i.test(lineError) ? lineError : `Can't be ordered as it is: ${lineError} - please remove it.`}
                             </p>
                           )}
                           <p className="text-[11px] text-[#4b5563]">
