@@ -7,6 +7,7 @@ import usePageCopy from "../hooks/usePageCopy";
 import { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
 import usePageTitle from "../hooks/usePageTitle";
+import { api } from "../lib/api";
 import {
   Eye, ShieldCheck, Users, Palette, Truck, PoundSterling,
   ArrowRight, MessageCircle, Shirt, MapPin,
@@ -26,6 +27,23 @@ import {
  * admin-editable copy via usePageCopy("school-trips", …).
  */
 export default function SchoolTrips() {
+  const [tripPhotos, setTripPhotos] = React.useState({});
+  React.useEffect(() => {
+    // bright, school-trip colours for the sample photos
+    const prefs = {
+      tee: ["Royal", "Sapphire", "Royal Blue"], hoodie: ["Red", "Cherry Red"], polo: ["Kelly Green", "Irish Green", "Bright Green"],
+      cap: ["Orange", "Yellow", "Bright Royal"],
+    };
+    api.get("/group-kits/school-trip").then(({ data }) => {
+      const out = {};
+      (data.garments || []).forEach((g) => {
+        const c = (prefs[g.key] || []).map((n) => g.colours.find((x) => x.name === n)).find((x) => x && x.image) || g.colours.find((x) => x.image);
+        out[g.key] = (c && c.image) || g.adult.image;
+      });
+      setTripPhotos(out);
+    }).catch(() => {});
+  }, []);
+
   usePageTitle("School trip t-shirts - bright, easy to spot, printed in the UK", {
     description:
       "Bright, matching school trip t-shirts with your school name on the back. Easy to spot and count on any trip. No minimum order, free proof, UK printed.",
@@ -138,18 +156,25 @@ export default function SchoolTrips() {
         <p className="text-center text-[#4b5563] mt-2">Tap a style to start - or ask us and we'll help you pick.</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
           {[
-            { key: "t-shirt", label: "Trip T-Shirts", to: "/shop/t-shirts" },
-            { key: "hoodie", label: "Hoodies", to: "/shop/hoodies" },
-            { key: "polo", label: "Polo Shirts", to: "/shop/polos" },
-            { key: "cap", label: "Caps & Hats", to: "/shop/hats" },
-          ].map((g) => (
-            <Link key={g.key} to={g.to} data-testid={`school-garment-${g.key}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md rounded-3xl overflow-hidden transition-all">
-              <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-                <SiteImage src={site.image(`school-trip:${g.key}`, "")} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" testid={`school-garment-image-${g.key}`} />
+            { key: "t-shirt", label: "Trip T-Shirts", garment: "tee" },
+            { key: "hoodie", label: "Hoodies", garment: "hoodie" },
+            { key: "polo", label: "Polo Shirts", garment: "polo" },
+            { key: "cap", label: "Caps & Hats", garment: "cap" },
+          ].map((g) => {
+            // your own photo (Admin > Page copy) if set, else the real garment in a bright trip colour
+            const own = site.image(`school-trip:${g.key}`, "");
+            const sample = tripPhotos[g.garment];
+            return (
+            <Link key={g.key} to={`/school-trips/order?garment=${g.garment}`} data-testid={`school-garment-${g.key}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md rounded-3xl overflow-hidden transition-all">
+              <div className="aspect-square overflow-hidden bg-white">
+                {own || !sample
+                  ? <SiteImage src={own} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" testid={`school-garment-image-${g.key}`} />
+                  : <img src={sample} alt={g.label} loading="lazy" className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500" data-testid={`school-garment-image-${g.key}`} />}
               </div>
               <div className="p-4 text-center font-black">{g.label}</div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </section>
 

@@ -31,7 +31,8 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
       const init = {};
       data.garments.forEach((g, i) => {
         const def = g.colours.find((c) => /^(black|navy|royal|red|jet black)$/i.test(c.name)) || g.colours[0];
-        init[g.key] = { on: i === 0, rows: [newRow(def?.name || "")] };
+        const want = new URLSearchParams(window.location.search).get("garment");   // tile on the School Trips page
+        init[g.key] = { on: want ? g.key === want : i === 0, rows: [newRow(def?.name || "")] };
       });
       setSel(init);
     }).catch(() => toast.error("Couldn't load the order builder - please refresh"));
