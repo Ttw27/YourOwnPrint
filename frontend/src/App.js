@@ -81,6 +81,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import CookieConsent from "@/components/bold/CookieConsent";
 import SignupOffer from "@/components/bold/SignupOffer";
 import AdminSubscribers from "@/pages/AdminSubscribers";
+import AdminBuilderPhotos from "@/pages/AdminBuilderPhotos";
 import ReviewOrder from "@/pages/ReviewOrder";
 import Occasion from "@/pages/Occasion";
 import ClubShopCreate from "@/pages/ClubShopCreate";
@@ -186,6 +187,7 @@ function App() {
           <Route path="/admin/import-reviews" element={<RequireAdmin><AdminLayout><AdminImport /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/reviews" element={<RequireAdmin><AdminLayout><AdminReviews /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/subscribers" element={<RequireAdmin><AdminLayout><AdminSubscribers /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/builder-photos" element={<RequireAdmin><AdminLayout><AdminBuilderPhotos /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/club-shops" element={<RequireAdmin><AdminLayout><AdminClubShops /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/team-kits" element={<RequireAdmin><AdminLayout><AdminTeamKits /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/designer-products" element={<RequireAdmin><AdminLayout><AdminDesignerProducts /></AdminLayout></RequireAdmin>} />

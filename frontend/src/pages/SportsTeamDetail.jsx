@@ -199,9 +199,6 @@ export default function SportsTeamDetail() {
         </div>
       </section>
 
-      {/* Order builder banner - the easy way to order the whole kit */}
-      <KitBuilderBanner builder={builder} />
-
       {/* SEO content paragraph */}
       <section className="max-w-4xl mx-auto px-6 py-12">
         <h2 className="text-2xl font-black mb-3">Why {builder === "dance" ? "studios" : builder === "gym" ? "clubs" : "teams"} choose us for {data.title.toLowerCase()}</h2>
@@ -410,6 +407,9 @@ export default function SportsTeamDetail() {
           </div>
         </section>
       )}
+
+      {/* Order builder banner - the easy way to order the whole kit (also the hero button + first grid tile) */}
+      <KitBuilderBanner builder={builder} />
 
       {/* FAQs */}
       {data.faqs?.length > 0 && (

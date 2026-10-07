@@ -48,6 +48,7 @@ const GROUPS = [
       { label: "Page copy", to: "/admin/page-copy", icon: FileText },
       { label: "Navigation menu", to: "/admin/navigation", icon: MenuIcon },
       { label: "Portfolio", to: "/admin/portfolio", icon: Image },
+      { label: "Kit builder photos", to: "/admin/builder-photos", icon: Image },
       { label: "Team kits", to: "/admin/team-kits", icon: Shirt },
       { label: "Leavers templates", to: "/admin/leavers-templates", icon: GraduationCap },
     ],

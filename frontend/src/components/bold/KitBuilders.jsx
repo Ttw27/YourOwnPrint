@@ -1,35 +1,43 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Wrench } from "lucide-react";
-import { api } from "../../lib/api";
+import { api, mediaUrl } from "../../lib/api";
 import { useSiteImages } from "../../hooks/usePageCopy";
 
 /**
  * "Build your kit" promos for the order builders, so they aren't only reachable
  * from one hero button:
- *   <KitBuilderBanner builder="dance" />  wide card under a sport page's trust strip
+ *   <KitBuilderBanner builder="dance" />  wide card under a sport page's products
  *   <KitBuilderTile builder="dance" />    first card in a sport page's product grid
  *   <KitBuildersRow />                    homepage row, one tile per builder
- * Photos: real garment photos (/api/kit-builders/photos) or the kit photos in
- * public/kits; each can be replaced in Admin > Page copy > "Pictures used across
- * the whole site" (builder:<key>).
+ * Photo, first that exists: the one picked in Admin > Kit builder photos
+ * (site image builder:<key>) -> a photo already uploaded for the same thing
+ * elsewhere (`related` site image keys, e.g. the Teams & Schools tile) -> the
+ * garment photo (public/kits or /api/kit-builders/photos).
+ * `portfolio` = photo gallery categories offered as picks in that admin page.
  */
 export const KIT_BUILDERS = {
   team: { title: "Team kits", who: "Football & rugby clubs", to: "/full-squad-configurator", cta: "Build your squad's kit",
     headline: "Kit out the whole squad in one go", image: "/kits/classic-black.jpg",
-    steps: ["Pick your kit & colours", "Add your badge & sponsor", "Names, numbers & sizes"] },
+    steps: ["Pick your kit & colours", "Add your badge & sponsor", "Names, numbers & sizes"],
+    related: ["ts-tile:full-squad", "tool:team-kits", "sportsteam:football", "sportsteam:rugby"], portfolio: ["team-kits", "sports"] },
   gym: { title: "Gym & fight club kit", who: "Gyms, PTs, boxing & martial arts", to: "/sports-outfit-configurator", cta: "Build your club's kit",
     headline: "Kit out your gym or club in one go", image: "/kits/training-black.jpg",
-    steps: ["Pick tops, hoodies & joggers", "Your logo - included", "Names & sizes for everyone"] },
+    steps: ["Pick tops, hoodies & joggers", "Your logo - included", "Names & sizes for everyone"],
+    related: ["ts-tile:sports-outfit", "sportsteam:gyms", "sportsteam:boxing-gyms", "sportsteam:personal-trainers"], portfolio: ["fitness", "sports", "fight-night-action"] },
   dance: { title: "Dance studio kit", who: "Dance schools & crews", to: "/dance-studio-kit", cta: "Build your studio kit",
     headline: "Kit out the whole studio in one go",
-    steps: ["Pick tops, bottoms & hoodies", "Your studio logo - included", "Dancers' names & sizes"] },
+    steps: ["Pick tops, bottoms & hoodies", "Your studio logo - included", "Dancers' names & sizes"],
+    related: ["ts-tile:dance", "sportsteam:dance-studios"], portfolio: ["sports", "fitness", "events", "other"] },
   "school-trip": { title: "School trip tops", who: "Trips, residentials & events", to: "/school-trips", cta: "Build your school order",
-    headline: "Matching tops for the whole trip", steps: ["Pick tees, hoodies or caps", "Add your school badge", "Kids & staff sizes"] },
+    headline: "Matching tops for the whole trip", steps: ["Pick tees, hoodies or caps", "Add your school badge", "Kids & staff sizes"],
+    related: ["school-trip:t-shirt", "school-trip:hoodie", "ts-tile:group-hoodies"], portfolio: ["schools", "events"] },
   "sports-day": { title: "Sports day & house kit", who: "House colours & inter-school", to: "/sports-day", cta: "Build your school sports order",
-    headline: "Every house colour, one order", steps: ["A colour per house", "Badge front, house name back", "Kids & staff sizes"] },
+    headline: "Every house colour, one order", steps: ["A colour per house", "Badge front, house name back", "Kids & staff sizes"],
+    related: [], portfolio: ["schools", "sports", "events"] },
   leavers: { title: "Leavers hoodies", who: "Year 6, Year 11 & sixth form", to: "/leavers-hoodies", cta: "Design your leavers hoodies",
-    headline: "Leavers hoodies with every name", steps: ["Pick a hoodie & colour", "Choose or upload a design", "Names & sizes"] },
+    headline: "Leavers hoodies with every name", steps: ["Pick a hoodie & colour", "Choose or upload a design", "Names & sizes"],
+    related: ["ts-tile:leavers"], portfolio: ["leavers", "schools"] },
 };
 
 let _photos = null;
@@ -41,18 +49,30 @@ function useBuilderPhotos() {
   }, []);
   return photos;
 }
-function useBuilderImage(key) {
+/** {src, photo, from} - photo = a real photo (fill the box), not a garment cut-out. */
+export function builderImage(key, siteImages, photos) {
+  const b = KIT_BUILDERS[key] || {};
+  const own = (siteImages[`builder:${key}`] || "").trim();
+  if (own) return { src: mediaUrl(own), photo: true, from: "picked" };
+  for (const k of b.related || []) {
+    const v = (siteImages[k] || "").trim();
+    if (v) return { src: mediaUrl(v), photo: true, from: k };
+  }
+  return { src: b.image || photos[key] || "", photo: false, from: "garment" };
+}
+export function useBuilderImage(key) {
   const site = useSiteImages();
   const photos = useBuilderPhotos();
-  return site.image(`builder:${key}`, KIT_BUILDERS[key]?.image || photos[key] || "");
+  return builderImage(key, site.images, photos);
 }
+export { useBuilderPhotos };
 
 export function KitBuilderBanner({ builder }) {
   const b = KIT_BUILDERS[builder];
   const img = useBuilderImage(builder);
   if (!b) return null;
   return (
-    <section className="max-w-7xl mx-auto px-6 pt-10" data-testid={`kit-builder-banner-${builder}`}>
+    <section className="max-w-7xl mx-auto px-6 pb-12" data-testid={`kit-builder-banner-${builder}`}>
       <div className="bg-[#1a1a1a] text-white rounded-3xl overflow-hidden grid md:grid-cols-[1.5fr_1fr] items-stretch">
         <div className="p-7 sm:p-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#7bc67e] text-[#1a1a1a] font-extrabold rounded-full text-xs"><Wrench size={13} /> The easy way to order</div>
@@ -69,9 +89,9 @@ export function KitBuilderBanner({ builder }) {
           </Link>
           <div className="text-xs text-zinc-400 mt-3">Free proof before we print · pay by card or get a quote</div>
         </div>
-        <div className="bg-white hidden sm:flex items-center justify-center p-6">
-          {img && <img src={img} alt={b.title} loading="lazy" className="max-h-64 w-auto object-contain" />}
-        </div>
+        {img.src && (img.photo
+          ? <div className="relative min-h-[240px]"><img src={img.src} alt={b.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover" /></div>
+          : <div className="bg-[#f0fdf4] hidden sm:flex items-center justify-center p-6"><img src={img.src} alt={b.title} loading="lazy" className="max-h-64 w-auto object-contain" /></div>)}
       </div>
     </section>
   );
@@ -97,7 +117,7 @@ function RowTile({ k }) {
   const img = useBuilderImage(k);
   return (
     <Link to={b.to} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-3xl overflow-hidden transition hover:shadow-md" data-testid={`kit-builders-row-${k}`}>
-      <div className="aspect-square bg-white">{img && <img src={img} alt={b.title} loading="lazy" className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500" />}</div>
+      <div className="aspect-square bg-white overflow-hidden">{img.src && <img src={img.src} alt={b.title} loading="lazy" className={`w-full h-full group-hover:scale-105 transition-transform duration-500 ${img.photo ? "object-cover" : "object-contain p-4"}`} />}</div>
       <div className="p-4 border-t border-[#dcfce7]">
         <div className="font-black leading-tight">{b.title}</div>
         <div className="text-xs text-[#4b5563] mt-0.5">{b.who}</div>
