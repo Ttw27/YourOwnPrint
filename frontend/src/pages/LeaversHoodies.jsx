@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
-import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversBespoke } from "../lib/api";
+import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversBespoke, fetchPortfolio, mediaUrl } from "../lib/api";
 import { buildWhatsAppLink } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
@@ -14,19 +14,26 @@ export default function LeaversHoodies() {
   const [products, setProducts] = useState([]);
   const [tiers, setTiers] = useState({ tiers: [], bag_price: 3.99 });
   const [templates, setTemplates] = useState([]);
+  const [designs, setDesigns] = useState([]);
   const [showBespoke, setShowBespoke] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchLeaversProducts().then(setProducts).catch(() => toast.error("Couldn't load products - please refresh"));
     fetchLeaversTiers().then(setTiers).catch(() => toast.error("Couldn't load pricing tiers - please refresh"));
-    fetchLeaversTemplates().then(setTemplates).catch(() => setTemplates([]));
+    // The same designs customers pick from on the order page (Admin > Portfolio >
+    // "Leavers designer - ... design choices") - add a design once, it shows in both.
+    Promise.all(["leavers-back-designs", "leavers-front-designs", "leavers-full-front-designs"].map((c) =>
+      fetchPortfolio({ category: c, limit: 40 }).then((d) => d.items || []).catch(() => [])))
+      .then(([back, front, full]) => setDesigns([...back, ...full, ...front]));
+    // older "Leavers templates" (Admin > Leavers templates) - shown only if they have a real photo
+    fetchLeaversTemplates().then((ts) => setTemplates((ts || []).filter((t) => t.image && !/pexels\.com/.test(t.image)))).catch(() => setTemplates([]));
   }, []);
   const tiersAsc = [...(tiers.tiers || [])].sort((a, b) => a.min_qty - b.min_qty);
 
   const copy = usePageCopy("leavers-hoodies", {
     title: "",
-    subtitle: "Pullover hoodies, zip hoodies, varsity jackets - printed in the UK in 7–10 days. Fill in your details, pick your garment and design, choose sizes, and we'll get cracking. Free proof before we print a thing.",
+    subtitle: "Hoodies, varsity jackets, sweatshirts and tees, adults and kids - printed in the UK in 7–10 days. Fill in your details, pick your garment and design, choose sizes, and we'll get cracking. Free proof before we print a thing.",
     // Swap in /admin/page-copy → Leavers Hoodies → Pictures & video.
     hero_image: DEFAULT_HERO_IMAGES["leavers-hoodies"],
   });
@@ -117,10 +124,23 @@ export default function LeaversHoodies() {
       <div className="bg-[#f0fdf4] py-14 border-y border-[#dcfce7]">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="font-nunito font-black text-3xl lg:text-4xl">Ready-to-go designs</h2>
-          <p className="text-[#4b5563] mt-2">Start with one of these or use Bespoke for something custom - we&apos;ll send a free proof either way.</p>
+          <p className="text-[#4b5563] mt-2">Start with one of these, or show us your own idea - we&apos;ll send a free proof either way.</p>
           <ImageCarousel
             testid="leavers-templates-carousel"
-            items={templates.map((t) => ({ id: t.id, image: t.image, title: t.title, sub: t.description }))}
+            items={[
+              { id: "bespoke", onClick: () => setShowBespoke(true), node: (
+                <div className="w-full h-full bg-gradient-to-br from-[#fff7ed] via-[#fef3c7] to-[#dcfce7] grid place-items-center p-6 text-center">
+                  <div>
+                    <Sparkles className="mx-auto text-[#f59e0b]" size={44} />
+                    <div className="font-black text-2xl leading-tight mt-3">Your own design</div>
+                    <div className="text-sm text-[#4b5563] mt-2 leading-snug">Got a design, or seen one you like? Show us and we&apos;ll make it for your year group.</div>
+                    <div className="mt-4 inline-flex items-center gap-1.5 bg-[#1a1a1a] text-white text-xs font-extrabold px-4 py-2 rounded-full">Tell us your idea <ArrowRight size={13} /></div>
+                  </div>
+                </div>
+              ), title: "Bespoke design", sub: "Free - we design it and send a proof before anything is printed." },
+              ...designs.map((d) => ({ id: d.id, image: mediaUrl(d.thumb_url || d.image_url), title: d.title, sub: d.caption })),
+              ...templates.map((t) => ({ id: t.id, image: t.image, title: t.title, sub: t.description })),
+            ]}
           />
         </div>
       </div>
@@ -196,12 +216,13 @@ function ImageCarousel({ items, testid }) {
         {items.map((it) => (
           <div
             key={it.id}
-            className="bg-white rounded-2xl border-2 border-[#dcfce7] overflow-hidden flex-shrink-0 w-72 snap-start cursor-default"
+            onClick={it.onClick}
+            role={it.onClick ? "button" : undefined}
+            className={`bg-white rounded-2xl border-2 overflow-hidden flex-shrink-0 w-72 snap-start ${it.onClick ? "cursor-pointer border-[#fbbf24] hover:border-[#7bc67e] transition" : "border-[#dcfce7] cursor-default"}`}
             data-testid={`${testid}-item-${it.id}`}
-            aria-disabled="true"
           >
             <div className="aspect-square overflow-hidden bg-[#f0fdf4]">
-              <img src={it.image} alt={it.title} className="w-full h-full object-cover" />
+              {it.node || <img src={it.image} alt={it.title} className="w-full h-full object-cover" loading="lazy" />}
             </div>
             <div className="p-4">
               <div className="font-nunito font-extrabold">{it.title}</div>
