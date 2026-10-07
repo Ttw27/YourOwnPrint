@@ -101,7 +101,9 @@ export function CartProvider({ children }) {
         const res = await priceCart(cartPayload);
         if (!cancelled) setPriced(res);
       } catch (e) {
-        if (!cancelled) toast.error(e?.response?.data?.detail || "Couldn't reprice cart");
+        // No reply at all = a brief connection blip (e.g. the server restarting after an
+        // update) - stay quiet, the basket re-prices on the next change / page.
+        if (!cancelled && e?.response) toast.error(e.response.data?.detail || "Couldn't update the basket prices");
       } finally { if (!cancelled) setPricing(false); }
     }
     reprice();

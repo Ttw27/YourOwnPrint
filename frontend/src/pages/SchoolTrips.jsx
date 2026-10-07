@@ -153,7 +153,7 @@ export default function SchoolTrips() {
       {/* Garment examples - admin-editable photos so schools can picture it */}
       <section className="max-w-6xl mx-auto px-6 pb-4">
         <h2 className="font-black text-3xl sm:text-4xl text-center">Popular for school trips</h2>
-        <p className="text-center text-[#4b5563] mt-2">Tap a style to start - or ask us and we'll help you pick.</p>
+        <p className="text-center text-[#4b5563] mt-2">All in adult and kids sizes, in loads of bright colours - choose yours in the order builder.</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
           {[
             { key: "t-shirt", label: "Trip T-Shirts", garment: "tee" },
@@ -165,16 +165,21 @@ export default function SchoolTrips() {
             const own = site.image(`school-trip:${g.key}`, "");
             const sample = tripPhotos[g.garment];
             return (
-            <Link key={g.key} to={`/school-trips/order?garment=${g.garment}`} data-testid={`school-garment-${g.key}`} className="group bg-white border-2 border-[#dcfce7] hover:border-[#7bc67e] hover:shadow-md rounded-3xl overflow-hidden transition-all">
+            <div key={g.key} data-testid={`school-garment-${g.key}`} className="bg-white border-2 border-[#dcfce7] rounded-3xl overflow-hidden">
               <div className="aspect-square overflow-hidden bg-white">
                 {own || !sample
-                  ? <SiteImage src={own} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" testid={`school-garment-image-${g.key}`} />
-                  : <img src={sample} alt={g.label} loading="lazy" className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500" data-testid={`school-garment-image-${g.key}`} />}
+                  ? <SiteImage src={own} className="w-full h-full object-cover" testid={`school-garment-image-${g.key}`} />
+                  : <img src={sample} alt={g.label} loading="lazy" className="w-full h-full object-contain p-4" data-testid={`school-garment-image-${g.key}`} />}
               </div>
               <div className="p-4 text-center font-black">{g.label}</div>
-            </Link>
+            </div>
             );
           })}
+        </div>
+        <div className="text-center mt-8">
+          <Link to="/school-trips/order" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full" data-testid="school-trips-cta-builder-2">
+            Build your school order <ArrowRight size={16} />
+          </Link>
         </div>
       </section>
 

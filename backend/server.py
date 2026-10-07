@@ -2127,42 +2127,56 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
 @api_router.post("/cart/price")
 async def price_cart(payload: CartCheckoutRequest, request: Request):
     """Repriced cart preview - used by the drawer to show the correct total incl. bulk tiers,
-    print upcharges, size upcharges. Does NOT create a Stripe session."""
+    print upcharges, size upcharges. Does NOT create a Stripe session.
+
+    Each line is priced on its own: a line that can't be ordered any more (hidden
+    product, colour gone...) comes back with an "error" in its place instead of
+    breaking the whole basket."""
     if not payload.items:
         return {"items": [], "grand_total": 0.0, "total_qty": 0}
     if len(payload.items) > 20:
         raise HTTPException(400, "Cart limit is 20 lines")
     acct_pct = await account_discount_for_request(request)
     _set_group_qty(payload.items)
-    priced = [await _price_line_item(item, acct_pct) for item in payload.items]
+    out_items: List[Dict] = []
+    priced: List[Dict] = []
+    for item in payload.items:
+        try:
+            p = await _price_line_item(item, acct_pct)
+        except HTTPException as e:
+            prod = PRODUCTS.get(item.product_id) or {}
+            out_items.append({"error": str(e.detail), "product_id": item.product_id,
+                              "product_name": prod.get("name") or item.product_id, "product_image": prod.get("image"),
+                              "line_total": 0.0, "total_qty": 0})
+            continue
+        priced.append(p)
+        out_items.append({
+            "product_id": p["product_id"],
+            "product_name": p["product"]["name"],
+            "product_image": p["product"].get("image"),
+            "size_qtys": p["size_qtys"],
+            "placements": p["placements_clean"],
+            "blank": p["blank"],
+            "color": p["color"],
+            "total_qty": p["total_qty"],
+            "line_total": p["line_total"],
+            "breakdown": p["breakdown"],
+            "unit_hint": round(p["line_total"] / p["total_qty"], 2) if p["total_qty"] else 0.0,
+            "on_offer": bool(offer_was_price(p["product"])),
+        })
     grand_total = round(sum(p["line_total"] for p in priced), 2)
     # Ex-VAT total worked out per line, so children's (zero-rated) items are right.
     grand_total_ex_vat = round(sum(p["line_total"] if is_zero_rated(p["product"]) else p["line_total"] / (1 + UK_VAT_RATE)
                                    for p in priced), 2)
     return {
         "grand_total_ex_vat": grand_total_ex_vat,
-        "items": [
-            {
-                "product_id": p["product_id"],
-                "product_name": p["product"]["name"],
-                "product_image": p["product"].get("image"),
-                "size_qtys": p["size_qtys"],
-                "placements": p["placements_clean"],
-                "blank": p["blank"],
-                "color": p["color"],
-                "total_qty": p["total_qty"],
-                "line_total": p["line_total"],
-                "breakdown": p["breakdown"],
-                "unit_hint": round(p["line_total"] / p["total_qty"], 2) if p["total_qty"] else 0.0,
-                "on_offer": bool(offer_was_price(p["product"])),
-            }
-            for p in priced
-        ],
+        "items": out_items,
+        "problems": sum(1 for x in out_items if x.get("error")),
         "grand_total": grand_total,
         "total_qty": sum(p["total_qty"] for p in priced),
         "account_discount_pct": acct_pct,
         "account_saving": round(sum(p["account_saving"] for p in priced), 2),
-        "delivery": await _delivery_quote_for(priced, grand_total),
+        "delivery": await _delivery_quote_for(priced, grand_total) if priced else None,
     }
 
 

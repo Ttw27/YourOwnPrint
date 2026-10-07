@@ -81,6 +81,7 @@ export default function CartDrawer() {
                 const name = pi?.product_name || line.product_id;
                 const image = pi?.product_image;
                 const lineTotal = pi?.line_total || 0;
+                const lineError = pi?.error;
                 const unit = pi?.unit_hint || 0;
                 return (
                   <div key={line.line_id} className="border-2 border-[#dcfce7] rounded-2xl p-3 flex gap-3" data-testid={`cart-line-${line.product_id}`}>
@@ -92,6 +93,11 @@ export default function CartDrawer() {
                             {pi?.on_offer && <span className="bg-[#f07c74] text-white rounded-full px-1.5 py-px text-[10px] font-extrabold mr-1.5 align-middle" data-testid={`cart-line-offer-${line.product_id}`}>Offer</span>}
                             {name}
                           </p>
+                          {lineError && (
+                            <p className="text-[11px] font-bold text-rose-600" data-testid={`cart-line-error-${line.product_id}`}>
+                              Can&apos;t be ordered as it is: {lineError}. Please remove it.
+                            </p>
+                          )}
                           <p className="text-[11px] text-[#4b5563]">
                             {garmentName ? `${garmentName} · ` : ""}
                             {line.color ? `${line.color} · ` : ""}
@@ -168,7 +174,7 @@ export default function CartDrawer() {
               </div>
               <button
                 onClick={goCheckout}
-                disabled={checkingOut || pricing || items.length === 0}
+                disabled={checkingOut || pricing || items.length === 0 || (priced.problems || 0) > 0}
                 className="w-full py-3 rounded-full bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold inline-flex items-center justify-center gap-2 disabled:opacity-50"
                 data-testid="cart-drawer-checkout"
               >
