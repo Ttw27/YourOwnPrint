@@ -30,6 +30,7 @@ PAGE_COPY_SLUGS = [
     "sports-outfit-configurator", "team-kits", "team-kit-builder",
     "festival-tees-brands",
     # Seasonal / occasion pages (/occasions/:slug, frontend lib/occasions.js)
+    "sports-day",
     "occasion-christmas", "occasion-stag-and-hen", "occasion-charity-events", "occasion-back-to-school",
     # Industry landing pages - now read admin copy (IndustryDetail overrides its
     # backend defaults with these where set). Canonical slugs only; the page

@@ -281,6 +281,8 @@ frontend/src/
 - **Kit bag add-on** (ClubBagAddon.jsx, `/club-bags`, `dance_kit.CLUB_BAG_SET`) in the Sports Outfit + Full Squad
   builders: barrel BG140, teamwear holdall BG572, Quadra holdall QS70, boot bag QD76, gymsac W110; logo £3 included,
   name +£3; one basket line with design_meta.flow "club_bag" (priced by dance_print). Per-person "Bag" tick in the roster.
+- **School group builders** (`routers/group_kits.py`, GroupKitBuilder.jsx): School Trips (`/school-trips` landing ->
+  `/school-trips/order`) and Sports Day (`/sports-day` SEO landing, page copy `sports-day` -> `/sports-day/order`, house colours).
 - **Leavers range** (`/leavers-hoodies/start`, LeaversFlow.jsx): own products (category "leavers", own photos/prices),
   linked to real garments in `LEAVERS_GARMENTS` (GD57, JH001, JH003, JH043, GD56, GD01; zip GD58 hidden; bag = W110).
   `_link_leavers_garments()` copies colours (+ `kids` flag), sizes, 3XL+ upcharges every startup, then reapply_saved_settings.
