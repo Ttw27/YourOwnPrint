@@ -2693,7 +2693,9 @@ def _link_leavers_garments() -> List[str]:
                     ups[label] = round(g["kids_price"] - seed_price, 2)
         p["colors"], p["sizes"], p["size_upcharges"] = cols, sizes, ups
         p["leavers_garment"] = g["adult"]
-        if pid == LEAVERS_BAG_ID and adult.get("image"):
+        # default photo = the real garment's product photo (a photo set in Admin >
+        # Products is an override and is re-applied on top afterwards, so it still wins)
+        if adult.get("image"):
             p["image"] = adult["image"]
         done.append(pid)
     return done
