@@ -3900,7 +3900,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
                                                      "Back print" if (payload.back_design_id or payload.custom_back_design_data_url or payload.bespoke) else "",
                                                      payload.school] if x),
                 "amount": round(garments_total, 2), "image": p.get("image") or ""}]
-              + ([{"name": f"Printed drawstring bags x{total_qty}", "description": bag_colour, "amount": round(bag_each * total_qty, 2),
+              + ([{"name": f"Printed gift bags x{total_qty}", "description": " · ".join(x for x in [bag_colour, "your design + each name & size"] if x), "amount": round(bag_each * total_qty, 2),
                    "image": (PRODUCTS.get(LEAVERS_BAG_ID) or {}).get("image") or ""}] if bag_each else []),
     )
 
@@ -3935,7 +3935,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         "size_prices": size_prices,
         "placements": [("Full front" if payload.print_position == "full_front" else "Front breast")]
                       + (["Back"] if (payload.back_design_id or payload.custom_back_design_data_url) else [])
-                      + ([f"Drawstring bags x{total_qty} ({bag_colour or 'colour tbc'})"] if payload.add_drawstring_bag else []),
+                      + ([f"Gift drawstring bags x{total_qty} ({bag_colour or 'colour tbc'}) - front design + each student's name & size"] if payload.add_drawstring_bag else []),
         "template_id": payload.template_id,
         "template_title": payload.template_title,
         "front_design_id": payload.front_design_id,

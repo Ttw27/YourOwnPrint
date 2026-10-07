@@ -691,7 +691,7 @@ function DrawstringBagCard({ bag, price, checked, onToggle, colour, onColour }) 
       <label className="flex flex-col sm:flex-row cursor-pointer">
         {bag && (
           <div className="sm:w-44 sm:flex-shrink-0 aspect-[4/3] sm:aspect-square overflow-hidden bg-white">
-            <img src={picked?.image || bag.image} alt="Matching printed drawstring bag" className="w-full h-full object-contain" data-testid="ls-bag-image" />
+            <img src={picked?.image || bag.image} alt="Printed gift bag" className="w-full h-full object-contain" data-testid="ls-bag-image" />
           </div>
         )}
         <div className="p-4 flex-1 flex flex-col gap-2">
@@ -706,14 +706,14 @@ function DrawstringBagCard({ bag, price, checked, onToggle, colour, onColour }) 
             <div className="flex-1">
               <div className="font-extrabold text-sm flex items-center gap-2">
                 <Package size={14} className="text-[#7bc67e]" />
-                Matching printed drawstring bag
+                Add a printed gift bag
                 <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#7bc67e] text-[#1a1a1a] font-extrabold">+£{price.toFixed(2)} each</span>
               </div>
               <div className="text-xs text-[#4b5563] mt-1 leading-relaxed">
-                Same design as your garment printed on the front, with the <strong className="text-[#1a1a1a]">size of the garment inside</strong> printed on the back - makes handing them out at school painless.
+                Each garment arrives packed in its own drawstring bag - a keepsake gift for every leaver. We print <strong className="text-[#1a1a1a]">your front design</strong> on the bag, plus <strong className="text-[#1a1a1a]">each student&apos;s name and size</strong>, so handing them out at school is quick and easy.
               </div>
               <div className="text-[11px] text-[#4b5563] mt-2 flex items-center gap-1">
-                <ImageIcon size={11} className="text-[#7bc67e]" /> Westford Mill cotton gymsac · one per garment · UK printed
+                <ImageIcon size={11} className="text-[#7bc67e]" /> Westford Mill cotton gymsac · one per garment, names from your list · UK printed
               </div>
               {checked && cols.length > 0 && (
                 <div className="mt-3" data-testid="ls-bag-colours" onClick={(e) => e.preventDefault()}>

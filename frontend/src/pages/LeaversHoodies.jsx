@@ -104,7 +104,7 @@ export default function LeaversHoodies() {
         <div className="mt-8 text-center">
           <span className="inline-flex items-center gap-2 bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-4 py-2 text-sm" data-testid="leavers-bag-callout">
             <Package size={14} className="text-[#7bc67e]" />
-            Add a matching <strong className="text-[#1a1a1a]">printed drawstring bag</strong> for just <strong className="text-[#7bc67e]">£{Number(tiers.bag_price).toFixed(2)}</strong> each
+            Every garment in its own <strong className="text-[#1a1a1a]">printed gift bag</strong> with the student&apos;s name and size, just <strong className="text-[#7bc67e]">£{Number(tiers.bag_price).toFixed(2)}</strong> each
           </span>
         </div>
       </div>
