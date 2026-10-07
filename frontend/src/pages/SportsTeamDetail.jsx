@@ -8,14 +8,21 @@ import FacetBlock from "../components/bold/FacetBlock";
 import PriceTag from "../components/bold/PriceTag";
 import { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
+import { KitBuilderBanner, KitBuilderTile } from "../components/bold/KitBuilders";
 
 // 12 fills the 2 / 3 / 4-column grid evenly at every breakpoint, so no page
 // ends with an orphan on a row of its own.
 const PAGE_SIZE = 12;
 const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids: "Kids" };
 
+// which order builder each sport page promotes (hero button, banner, grid tile)
+const builderFor = (slug) => (["football", "rugby"].includes(slug) ? "team" : slug === "dance-studios" ? "dance" : "gym");
+
 export default function SportsTeamDetail() {
   const { slug } = useParams();
+  const builder = builderFor(slug);
+  // the builder tile takes the first slot of every grid page, so fetch one fewer product
+  const perPage = PAGE_SIZE - 1;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
@@ -40,11 +47,11 @@ export default function SportsTeamDetail() {
 
   const load = useCallback(() => {
     setLoading(true); setErr(false);
-    const opts = { limit: PAGE_SIZE, offset: page * PAGE_SIZE };
+    const opts = { limit: perPage, offset: page * perPage };
     Object.entries(filters).forEach(([k, v]) => { if (v) opts[k] = v; });
     fetchSportsTeam(slug, opts)
       .then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
-  }, [slug, page, filters]);
+  }, [slug, page, filters, perPage]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -79,7 +86,7 @@ export default function SportsTeamDetail() {
   const facets = data?.facets || {};
   // matched_total is the count after filtering; total is the whole lineup.
   const totalProducts = data?.matched_total ?? data?.total ?? (data?.products?.length || 0);
-  const totalPages = Math.max(1, Math.ceil(totalProducts / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalProducts / perPage));
 
   // Windowed page numbers, so a long catalogue doesn't print 30 buttons.
   const pageNumbers = useMemo(() => {
@@ -192,9 +199,12 @@ export default function SportsTeamDetail() {
         </div>
       </section>
 
+      {/* Order builder banner - the easy way to order the whole kit */}
+      <KitBuilderBanner builder={builder} />
+
       {/* SEO content paragraph */}
       <section className="max-w-4xl mx-auto px-6 py-12">
-        <h2 className="text-2xl font-black mb-3">Why teams choose us for {data.title.toLowerCase()}</h2>
+        <h2 className="text-2xl font-black mb-3">Why {builder === "dance" ? "studios" : builder === "gym" ? "clubs" : "teams"} choose us for {data.title.toLowerCase()}</h2>
         <p className="text-[#4b5563] leading-relaxed">{data.seo_paragraph}</p>
       </section>
 
@@ -223,7 +233,7 @@ export default function SportsTeamDetail() {
             <h2 className="text-2xl font-black">Shop the lineup</h2>
             {totalProducts > 0 && (
               <span className="text-xs text-[#4b5563]" data-testid="sports-team-product-count">
-                Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, totalProducts)} of {totalProducts}
+                Showing {page * perPage + 1}&ndash;{Math.min((page + 1) * perPage, totalProducts)} of {totalProducts}
                 {activeCount > 0 && ` (filtered from ${data.total})`}
               </span>
             )}
@@ -332,6 +342,7 @@ export default function SportsTeamDetail() {
                 </div>
               ) : (
           <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4" data-testid="sports-team-products">
+            <KitBuilderTile builder={builder} />
             {data.products.map((p) => (
               <Link
                 key={p.id}

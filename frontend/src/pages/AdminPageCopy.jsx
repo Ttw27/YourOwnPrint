@@ -127,6 +127,13 @@ const PAGE_MEDIA_SLOTS = {
     { key: "tool:workforce", kind: "image", label: "Tool tile - Kit Your Workforce" },
     { key: "tool:team-kits", kind: "image", label: "Tool tile - Team Kits" },
     { key: "tool:fight-night", kind: "image", label: "Tool tile - Fight Night Tees" },
+    { key: "builder:team", kind: "image", label: "Kit builder - Team kits",
+      hint: "Photos for the 'Build your whole kit' tiles on the homepage and the builder banner on sports pages. Leave empty to use the garment photo." },
+    { key: "builder:gym", kind: "image", label: "Kit builder - Gym & fight club kit" },
+    { key: "builder:dance", kind: "image", label: "Kit builder - Dance studio kit" },
+    { key: "builder:school-trip", kind: "image", label: "Kit builder - School trip tops" },
+    { key: "builder:sports-day", kind: "image", label: "Kit builder - Sports day & house kit" },
+    { key: "builder:leavers", kind: "image", label: "Kit builder - Leavers hoodies" },
   ],
 };
 

@@ -278,6 +278,10 @@ frontend/src/
   (landing pages `/school-trips`, `/sports-day` (page copy `sports-day`); house colours: several colour rows per garment, house name per colour; JC001/B, GD01/B, JC007/B, JC040/B, GD57/B,
   BB10/B). Front and/or back print: upload a design or type wording; £3 a print (first shown in the price). Whole-order
   bulk % (LEAVERS tiers) - `_set_group_qty()` counts every flow "group_kit" line of a group_id server-side before pricing.
+- **Kit builder promos** (`components/bold/KitBuilders.jsx`, KIT_BUILDERS): banner under the trust strip + first grid tile
+  on every /sports-teams/:slug page (football/rugby -> Full Squad, dance-studios -> studio kit, rest -> Sports Outfit; the
+  grid fetches 11 products a page so the tile makes 12) and the homepage "Build your whole kit" row (6 builders). Photos:
+  public/kits or GET /kit-builders/photos (group_kits._BUILDER_PHOTOS), replaceable via site image `builder:<key>`.
 - **Kit bag add-on** (ClubBagAddon.jsx, `/club-bags`, `dance_kit.CLUB_BAG_SET`) in the Sports Outfit + Full Squad
   builders: barrel BG140, teamwear holdall BG572, Quadra holdall QS70, boot bag QD76, gymsac W110; logo £3 included,
   name +£3; one basket line with design_meta.flow "club_bag" (priced by dance_print). Per-person "Bag" tick in the roster.

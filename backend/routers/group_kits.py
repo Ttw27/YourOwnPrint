@@ -99,3 +99,28 @@ async def group_kit_config(page: str):
                     "colours": cols, "prints": PRINTS[g["kind"]]})
     return {"page": page, "garments": out, "houses": PAGES[page]["houses"], "print_price": PRINT_PRICE,
             "bulk_tiers": [{"min_qty": q, "pct": pct} for q, pct in sorted(LEAVERS_BULK_TIERS_PCT)]}
+
+
+# Photos for the "Build your kit" banners / tiles (KitBuilders.jsx) - a real
+# garment photo per builder. Admin can replace any of them in Admin > Page copy >
+# "Pictures used across the whole site" (builder:<key>).
+_BUILDER_PHOTOS = {
+    "dance": ("sk236", ["Black/Black", "Black/White", "Black"]),
+    "school-trip": ("gd01", ["Royal Blue", "Orange", "Red"]),
+    "sports-day": ("jc001", ["Fire Red", "Royal Blue"]),
+    "leavers": ("leavers-varsity-hoodie", ["Jet Black/White"]),
+}
+
+
+@api_router.get("/kit-builders/photos")
+async def kit_builder_photos():
+    from server import PRODUCTS
+    out = {}
+    for key, (pid, prefer) in _BUILDER_PHOTOS.items():
+        p = PRODUCTS.get(pid) or {}
+        cols = [c for c in (p.get("colors") or []) if isinstance(c, dict) and c.get("image")]
+        pick = next((c for n in prefer for c in cols if c.get("name") == n), None)
+        img = (pick or {}).get("image") or p.get("image")
+        if img:
+            out[key] = img
+    return out

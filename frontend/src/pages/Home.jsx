@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { KitBuildersRow } from "../components/bold/KitBuilders";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
@@ -146,6 +147,9 @@ export default function Home() {
           })}
         </div>
       </div>
+
+      {/* Kit builders - team, gym, dance, school trip, sports day, leavers */}
+      <KitBuildersRow />
 
       {/* Designer banner - in the style of the old site's "Design it yourself" banner */}
       <DesignerBanner image={(copy.images && copy.images["designer:banner"]) || "/banners/designer-screenshot.jpg"} />
