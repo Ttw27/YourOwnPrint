@@ -307,6 +307,10 @@ frontend/src/
   `design_meta.art_<position>` = "/api/uploads/artwork/<id>.png". Shown as thumbnails in Admin > Orders and as
   links in the shop's order email; NOT copied into Stripe metadata (50-key cap). Before Oct 2026 the files never
   left the browser - any new checkout flow must do the same.
+  Server-side backstops (Oct 2026 audit): `_order_art_links()` (end of _resolve_line_pricing) adds links for
+  Design Your Own artwork (`/api/designer/artwork/<id>/<part>.png`) and a club shop's logo; leavers + workforce save
+  their data-URL files with `_save_order_file()` (leavers also the picked library design); workforce orders store
+  `items` like basket orders. Quote requests save files as links, email the shop, Admin > Enquiries shows them.
 
 - **Growth features (Oct 2026):**
   - Image domain: `services/image_host.ImageHostMiddleware` rewrites saved r2.dev photo URLs to R2_PUBLIC_URL in API
