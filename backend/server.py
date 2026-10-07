@@ -2614,9 +2614,9 @@ LEAVERS_GARMENTS: Dict[str, Dict] = {
     "leavers-premium-hoodie": {"adult": "jh001", "kids": "jh001b", "kids_price": 19.99, "kid_sizes": _AWDIS_KIDS},
     "leavers-varsity-hoodie": {"adult": "jh003", "kids": "jh003b", "kids_price": 21.99, "kid_sizes": _AWDIS_KIDS},
     "leavers-zip-hoodie": {"adult": "gd58", "kids": None},
-    "varsity-jacket": {"adult": "jh043", "kids": "jh043b", "kids_price": 29.99, "kid_sizes": _AWDIS_KIDS},
+    "varsity-jacket": {"adult": "jh043", "kids": "jh043b", "kids_price": 29.99, "kid_sizes": _AWDIS_KIDS, "photo_colour": "Jet Black/White"},
     "leavers-sweatshirt": {"adult": "gd56", "kids": "gd56b", "kids_price": 16.99, "kid_sizes": _GILDAN_KIDS},
-    "leavers-tshirt": {"adult": "gd01", "kids": "gd01b", "kids_price": 10.99, "kid_sizes": _GILDAN_KIDS},
+    "leavers-tshirt": {"adult": "gd01", "kids": "gd01b", "kids_price": 10.99, "kid_sizes": _GILDAN_KIDS, "photo_colour": "Black"},
     "leavers-drawstring-bag": {"adult": "w110", "kids": None},
 }
 LEAVERS_BAG_ID = "leavers-drawstring-bag"
@@ -2695,8 +2695,10 @@ def _link_leavers_garments() -> List[str]:
         p["leavers_garment"] = g["adult"]
         # default photo = the real garment's product photo (a photo set in Admin >
         # Products is an override and is re-applied on top afterwards, so it still wins)
-        if adult.get("image"):
-            p["image"] = adult["image"]
+        # ("photo_colour" picks which colour's photo to show instead of the garment's main one)
+        pc = next((c.get("image") for c in cols if c["name"] == g.get("photo_colour") and c.get("image")), None)
+        if pc or adult.get("image"):
+            p["image"] = pc or adult["image"]
         done.append(pid)
     return done
 
