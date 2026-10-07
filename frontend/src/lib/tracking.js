@@ -29,10 +29,17 @@ function addScript(src) {
   document.head.appendChild(s);
 }
 
-async function load() {
-  if (loaded || consentChoice() !== "all") return;
+let loading = null;
+function load() {
+  // one start-up only, however many events ask at once (two would trigger Meta's "Duplicate Pixel ID")
+  if (loaded || consentChoice() !== "all") return Promise.resolve();
+  if (!loading) loading = start().finally(() => { loading = null; });
+  return loading;
+}
+
+async function start() {
   const c = await trackingConfig();
-  if (!anyTracking(c)) return;
+  if (!anyTracking(c) || loaded) return;
   loaded = true;
   if (c.meta_pixel_id) {
     /* eslint-disable */
