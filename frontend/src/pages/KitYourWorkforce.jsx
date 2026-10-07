@@ -199,7 +199,7 @@ export default function KitYourWorkforce() {
                 No workforce-eligible products yet. Ask the admin to flag them in <strong>Product settings → Workforce eligible</strong>.
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3" data-testid="workforce-products-grid">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="workforce-products-grid">
                 {products.map(p => {
                   const isOpen = expandedId === p.id;
                   const itemQty = productSubtotalQty(p.id);
@@ -218,7 +218,7 @@ export default function KitYourWorkforce() {
                       >
                         <img src={colourImage(p, colourOf(p))} alt="" className="w-16 h-16 rounded-xl object-contain bg-white flex-shrink-0" data-testid={`workforce-thumb-${p.id}`} />
                         <div className="flex-1 min-w-0">
-                          <div className="font-extrabold text-sm truncate">{p.name}</div>
+                          <div className="font-extrabold text-sm leading-snug line-clamp-2">{p.name}</div>
                           <div className="text-xs text-[#4b5563]">£{Number(p.unit_with_logo ?? p.price).toFixed(2)} with your logo · {pickable(p).length > 1 ? `${pickable(p).length} colours · ` : ""}{p.sizes?.length || 0} sizes {itemQty > 0 && <span className="text-[#7bc67e] font-extrabold">· {itemQty} added</span>}</div>
                         </div>
                         <div className={`w-8 h-8 grid place-items-center rounded-full transition-transform ${isOpen ? "bg-[#fbbf24] text-[#1a1a1a] rotate-180" : "bg-[#fef3c7] text-[#1a1a1a]"}`}>
