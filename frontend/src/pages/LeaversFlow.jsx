@@ -710,7 +710,7 @@ function DrawstringBagCard({ bag, price, checked, onToggle, colour, onColour }) 
                 <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#7bc67e] text-[#1a1a1a] font-extrabold">+£{price.toFixed(2)} each</span>
               </div>
               <div className="text-xs text-[#4b5563] mt-1 leading-relaxed">
-                Each garment arrives packed in its own drawstring bag - a keepsake gift for every leaver. We print <strong className="text-[#1a1a1a]">your front design</strong> on the bag, plus <strong className="text-[#1a1a1a]">each student&apos;s name and size</strong>, so handing them out at school is quick and easy.
+                Each garment arrives packed in its own drawstring bag - a keepsake gift for every leaver. The front of the bag has <strong className="text-[#1a1a1a]">your design with each student&apos;s name and size</strong> underneath, so handing them out at school is quick and easy.
               </div>
               <div className="text-[11px] text-[#4b5563] mt-2 flex items-center gap-1">
                 <ImageIcon size={11} className="text-[#7bc67e]" /> Westford Mill cotton gymsac · one per garment, names from your list · UK printed
