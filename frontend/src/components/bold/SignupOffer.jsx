@@ -10,6 +10,7 @@ import { X, Gift, Loader2 } from "lucide-react";
  * mid-order pages.
  */
 const KEY = "yop_signup_offer";
+let dismissed = false; // also covers browsers where localStorage is blocked
 const QUIET = /^\/(admin|checkout|design\b|basket|review|full-squad|sports-outfit|dance-studio-kit|leavers-hoodies\/start)/;
 
 export default function SignupOffer() {
@@ -23,14 +24,20 @@ export default function SignupOffer() {
     let seen = null;
     try { seen = localStorage.getItem(KEY); } catch { /* ignore */ }
     if (seen || QUIET.test(loc.pathname)) return undefined;
-    const show = () => { if (!QUIET.test(window.location.pathname)) setOpen(true); };
+    // re-check on every trigger: once closed / signed up it must never reopen (the timer
+    // and exit listener from before the close are still running)
+    const show = () => {
+      let done = null;
+      try { done = localStorage.getItem(KEY); } catch { /* ignore */ }
+      if (!done && !dismissed && !QUIET.test(window.location.pathname)) setOpen(true);
+    };
     const t = setTimeout(show, 25000);
     const exit = (e) => { if (e.clientY <= 0) show(); };
     document.addEventListener("mouseleave", exit);
     return () => { clearTimeout(t); document.removeEventListener("mouseleave", exit); };
   }, [loc.pathname]);
 
-  const close = () => { setOpen(false); try { localStorage.setItem(KEY, "seen"); } catch { /* ignore */ } };
+  const close = () => { dismissed = true; setOpen(false); try { localStorage.setItem(KEY, "seen"); } catch { /* ignore */ } };
   const submit = async (e) => {
     e.preventDefault();
     setErr(""); setState("busy");
