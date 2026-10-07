@@ -7,7 +7,7 @@ import JsonLd from "../components/bold/JsonLd";
 import { api } from "../lib/api";
 import { buildWhatsAppLink } from "../lib/data";
 import {
-  Trophy, Palette, Users, Shirt, PoundSterling, Truck, ArrowRight, MessageCircle, Upload, Eye, CheckCircle2, ShieldCheck,
+  Trophy, Medal, Flag, Timer, Star, Palette, Users, Shirt, PoundSterling, Truck, ArrowRight, MessageCircle, Upload, Eye, CheckCircle2, ShieldCheck,
 } from "lucide-react";
 
 /**
@@ -16,11 +16,19 @@ import {
  * is /sports-day/order (GroupKitBuilder, house colours). Copy editable in
  * Admin > Page copy > "Sports Day" (usePageCopy("sports-day")).
  */
+const USED_FOR = [
+  { icon: Trophy, title: "Sports day", body: "A colour for every house so the whole field can spot their team." },
+  { icon: Medal, title: "Inter-school games", body: "One colour with the school badge for School Games events, district and county tournaments." },
+  { icon: Flag, title: "House competitions", body: "House days, house matches and charity days - all year round, not just July." },
+  { icon: Timer, title: "Cross country, athletics & galas", body: "Light, wicking tees and vests for runners, swimmers and athletes." },
+  { icon: Star, title: "Sports & play leaders", body: "A different colour for sports leaders, young leaders and play leaders so they stand out." },
+  { icon: Users, title: "Staff & PE teachers", body: "Matching polos and hoodies for staff, in the same order and bulk discount." },
+];
 const HOUSES = [["Fire Red", "Red house"], ["Royal Blue", "Blue house"], ["Kelly Green", "Green house"], ["Sun Yellow", "Yellow house"]];
 
 export default function SportsDay() {
-  usePageTitle("Sports day t-shirts & house colour kit for schools", {
-    description: "House colour sports day t-shirts, vests, polos and hoodies for primary and secondary schools - school badge on the front, house name on the back, kids and adult sizes, bulk prices, free proof, UK printed.",
+  usePageTitle("Sports day t-shirts, house colours & inter-school sports kit", {
+    description: "Sports day and house colour t-shirts, inter-school games and team tops, vests, polos and hoodies for primary and secondary schools - school badge on the front, house or team name on the back, kids and adult sizes, bulk prices, free proof, UK printed.",
   });
   const copy = usePageCopy("sports-day", {});
   const [photos, setPhotos] = React.useState({ houses: [], extra: {} });
@@ -39,9 +47,9 @@ export default function SportsDay() {
   }, []);
 
   const hero = {
-    eyebrow: copy.eyebrow || "Sports day · house competitions · school sport",
-    title: copy.title || "Sports day t-shirts in every house colour",
-    subtitle: copy.subtitle || "Wicking sports tees, vests, polos and hoodies for the whole school - your badge on the front, the house name on the back. Kids and adult sizes in one order, bulk prices, free proof and UK printed.",
+    eyebrow: copy.eyebrow || "Sports day · house competitions · inter-school games",
+    title: copy.title || "Sports day, house & inter-school kit",
+    subtitle: copy.subtitle || "Wicking sports tees, vests, polos and hoodies for sports day, house competitions and inter-school games - your badge on the front, the house or team name on the back. Kids and adult sizes in one order, bulk prices, free proof and UK printed.",
   };
   const benefits = [
     { icon: Palette, title: "Every house, one order", body: "Red, blue, green, yellow - add a colour for each house with its own sizes. No juggling four separate orders." },
@@ -59,6 +67,8 @@ export default function SportsDay() {
   ];
   const faq = [
     { q: "Can each house have its own colour and name?", a: "Yes - add a colour for each house in the order builder and type the house name for the back of each one. It all goes through as one order." },
+    { q: "Can we order one colour for our inter-school team?", a: "Yes. Add just one colour in the order builder and skip the house names - or put the school or team name on the back. It's ideal for School Games events, district tournaments, cross country and swimming galas." },
+    { q: "Do you do sports leader or staff tops?", a: "Yes - many schools pick a different colour for sports leaders, young leaders or play leaders so they stand out, and matching polos or hoodies for PE staff. Add them as extra colours in the same order and they all count towards the bulk discount." },
     { q: "Do you do children's sizes?", a: "Yes. The sports tees, vests and polos come in kids sizes from age 3-4 to 12-13 and adult sizes for older pupils and staff. Kids clothing is zero-rated for VAT, so it's cheaper." },
     { q: "Which t-shirt is best for sports day?", a: "Most schools choose the AWDis Cool sports t-shirt - it's lightweight, wicks sweat and comes in 50+ colours, so every house colour is covered. A cotton tee is a cheaper alternative." },
     { q: "Can we pay by invoice?", a: "Yes - pay by card in the builder, or send it as a quote and we'll invoice the school." },
@@ -80,7 +90,7 @@ export default function SportsDay() {
           <p className="text-zinc-200 mt-5 text-base sm:text-lg max-w-2xl">{hero.subtitle}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/sports-day/order" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full" data-testid="sports-day-cta-build">
-              Build your house colours order <ArrowRight size={16} />
+              Build your school sports order <ArrowRight size={16} />
             </Link>
             <Link to="/contact" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-extrabold px-6 py-3 rounded-full">
               <MessageCircle size={16} /> Get a quote
@@ -103,6 +113,20 @@ export default function SportsDay() {
           </div>
         </section>
       )}
+
+      <section className="max-w-6xl mx-auto px-6 pt-14" data-testid="sports-day-used-for">
+        <h2 className="font-black text-3xl sm:text-4xl text-center">Not just for sports day</h2>
+        <p className="text-center text-[#4b5563] mt-2">The same kit, ordered the same way, for every school sports event.</p>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+          {USED_FOR.map((u) => (
+            <div key={u.title} className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5">
+              <u.icon className="text-[#16a34a]" size={22} />
+              <div className="font-black mt-2">{u.title}</div>
+              <p className="text-sm text-[#4b5563] mt-1 leading-relaxed">{u.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="max-w-6xl mx-auto px-6 py-14 sm:py-20">
         <h2 className="font-black text-3xl sm:text-4xl text-center">Why schools order house colour kit</h2>
@@ -131,7 +155,7 @@ export default function SportsDay() {
         </div>
         <div className="text-center mt-8">
           <Link to="/sports-day/order" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full">
-            Build your house colours order <ArrowRight size={16} />
+            Build your school sports order <ArrowRight size={16} />
           </Link>
         </div>
       </section>
@@ -171,7 +195,7 @@ export default function SportsDay() {
           <div className="flex-1">
             <div className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">Ready when you are</div>
             <h3 className="font-black text-2xl sm:text-3xl mt-1">Build it now - or just send us the details.</h3>
-            <p className="text-zinc-300 mt-2 max-w-xl">Message us your school badge, house names and colours, rough numbers and sizes, and your sports day date. We&rsquo;ll send a free mock-up and a price, and invoice the school if that&rsquo;s easier.</p>
+            <p className="text-zinc-300 mt-2 max-w-xl">Message us your school badge, house or team names and colours, rough numbers and sizes, and your sports day date. We&rsquo;ll send a free mock-up and a price, and invoice the school if that&rsquo;s easier.</p>
           </div>
           <div className="flex flex-col sm:flex-row md:flex-col gap-2 flex-shrink-0">
             <Link to="/sports-day/order" className="inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-6 py-3 rounded-full">Build it now <ArrowRight size={16} /></Link>

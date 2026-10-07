@@ -146,7 +146,7 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
           <h2 className="font-black text-2xl mb-1"><span style={{ color: accent }}>2.</span> What&apos;s printed</h2>
           <p className="text-sm text-[#4b5563] mb-3">One print is included in the prices; a second print is +£{(cfg.print_price || 3).toFixed(2)} each. Upload your design, or just type the wording - we&apos;ll send a free proof.</p>
           <div className="grid md:grid-cols-2 gap-4">
-            {[["front", front, setFront, "Front", "Your school logo / badge or a design"], ["back", back, setBack, "Back", houses ? "School name, house names or a design" : "e.g. ST MARY'S · YEAR 6 · LONDON 2027"]].map(([k, st, set, title, hint]) => (
+            {[["front", front, setFront, "Front", "Your school logo / badge or a design"], ["back", back, setBack, "Back", houses ? "School name, house or team names, or a design" : "e.g. ST MARY'S · YEAR 6 · LONDON 2027"]].map(([k, st, set, title, hint]) => (
               <div key={k} className={`rounded-2xl border-2 p-4 ${st.on ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb]"}`} data-testid={`gk-print-${k}`}>
                 <label className="flex items-center gap-2 font-extrabold cursor-pointer">
                   <input type="checkbox" checked={st.on} onChange={(e) => set({ ...st, on: e.target.checked })} className="w-5 h-5 accent-[#7bc67e]" data-testid={`gk-print-${k}-toggle`} />
@@ -157,7 +157,7 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
                     <ImageSlot label={`Upload ${title.toLowerCase()} design`} hint="PNG / JPG - logo, badge or full design (optional)" value={st.art} onChange={(v) => set({ ...st, art: v })} testid={`gk-${k}-art`} />
                     <textarea value={st.text} onChange={(e) => set({ ...st, text: e.target.value })} rows={2} placeholder={`Or type it: ${hint}`}
                       className="w-full border-2 border-[#dcfce7] rounded-xl px-3 py-2 text-sm outline-none focus:border-[#7bc67e] bg-white" data-testid={`gk-${k}-text`} />
-                    {k === "back" && houses && <div className="text-[11px] text-[#4b5563]">You can also give each house colour its own name below (e.g. NELSON) - we print it on the back.</div>}
+                    {k === "back" && houses && <div className="text-[11px] text-[#4b5563]">You can also give each colour its own house or team name below (e.g. NELSON) - we print it on the back. One colour for an inter-school team? Just add one.</div>}
                   </div>
                 )}
               </div>
@@ -167,7 +167,7 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
 
         <div>
           <h2 className="font-black text-2xl mb-1"><span style={{ color: accent }}>3.</span> Pick your garments</h2>
-          <p className="text-sm text-[#4b5563] mb-3">Tick as many as you like. Adults and kids sizes in one order{houses ? " - add a colour for each house" : ""}.</p>
+          <p className="text-sm text-[#4b5563] mb-3">Tick as many as you like. Adults and kids sizes in one order{houses ? " - add a colour for each house or team" : ""}.</p>
           <div className="space-y-3">
             {garments.map((g) => {
               const s = sel[g.key] || { on: false, rows: [] };
@@ -192,7 +192,7 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
                             <div className="flex items-start gap-3 flex-wrap">
                               {col?.image && <img src={col.image} alt="" className="w-16 h-16 object-contain rounded-xl bg-[#f9fafb]" />}
                               <div className="flex-1 min-w-[220px]">
-                                <div className="text-xs font-extrabold mb-1">{houses ? `House colour ${ri + 1}: ` : "Colour: "}<span className="text-[#4b5563]">{row.colour || "pick one"}</span>
+                                <div className="text-xs font-extrabold mb-1">{houses ? `Colour ${ri + 1}: ` : "Colour: "}<span className="text-[#4b5563]">{row.colour || "pick one"}</span>
                                   {col && g.kids && <span className={`ml-1 ${col.kids === false ? "text-rose-600" : "text-[#16a34a]"}`}>{col.kids === false ? "· adults only" : "· adults + kids"}</span>}</div>
                                 <div className="flex flex-wrap gap-1">
                                   {g.colours.map((c) => (
@@ -202,7 +202,7 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
                                   ))}
                                 </div>
                                 {houses && back.on && g.prints.back && (
-                                  <input value={row.house} onChange={(e) => patchRow(g.key, ri, { house: e.target.value })} placeholder="House name on the back (optional) e.g. NELSON"
+                                  <input value={row.house} onChange={(e) => patchRow(g.key, ri, { house: e.target.value })} placeholder="House or team name on the back (optional) e.g. NELSON"
                                     className="mt-2 w-full border border-[#dcfce7] rounded-lg px-2 py-1.5 text-sm" data-testid={`gk-${g.key}-${ri}-house`} />
                                 )}
                               </div>
@@ -232,7 +232,7 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
                       })}
                       {houses && (
                         <button type="button" onClick={() => patchG(g.key, { rows: [...s.rows, newRow("")] })} className="inline-flex items-center gap-1.5 text-sm font-extrabold text-[#16a34a] hover:underline" data-testid={`gk-g-${g.key}-add-colour`}>
-                          <Plus size={14} /> Add another house colour
+                          <Plus size={14} /> Add another colour (house / team)
                         </button>
                       )}
                     </div>
