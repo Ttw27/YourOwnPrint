@@ -1,0 +1,50 @@
+[
+ {
+  "file": "01-names-26-leavers.jpg",
+  "title": "26 with names",
+  "side": "back",
+  "order": 1
+ },
+ {
+  "file": "02-leavers-2026-class-list.jpg",
+  "title": "Leavers class list",
+  "side": "back",
+  "order": 2
+ },
+ {
+  "file": "03-signatures-26-leavers.jpg",
+  "title": "Signature 26",
+  "side": "back",
+  "order": 3
+ },
+ {
+  "file": "04-cambridge-varsity-26.jpg",
+  "title": "Varsity 26 leavers",
+  "side": "front",
+  "order": 4
+ },
+ {
+  "file": "05-cambridge-names-varsity-26.jpg",
+  "title": "Varsity 26 with names",
+  "side": "back",
+  "order": 5
+ },
+ {
+  "file": "06-cambridge-26-leavers-arched.jpg",
+  "title": "Arched school 26",
+  "side": "front",
+  "order": 6
+ },
+ {
+  "file": "07-cambridge-leavers-2026.jpg",
+  "title": "School name leavers",
+  "side": "front",
+  "order": 7
+ },
+ {
+  "file": "08-cambridge-26-serif.jpg",
+  "title": "Classic serif '26",
+  "side": "front",
+  "order": 8
+ }
+]

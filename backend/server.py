@@ -6186,6 +6186,39 @@ OLD_PLACEHOLDER_PRODUCTS = [
 ]
 
 
+async def _seed_leavers_designs_v1():
+    """One-off (Tim, Oct 2026): Tim's leavers designs (backend/data/leavers_designs, made
+    from his artwork - black cut out, on black/red/navy squares) added to the leavers
+    order page design pickers. Back designs (with names) -> back choices; the others ->
+    both front pickers (chest and full front). Normal portfolio items afterwards, so
+    they can be edited / hidden / reordered in Admin > Portfolio."""
+    marker = "seed_leavers_designs_v1"
+    if await db.settings.find_one({"key": marker}):
+        return
+    folder = ROOT_DIR / "data" / "leavers_designs"
+    import json as _json
+    manifest = _json.loads((folder / "designs.json").read_text())
+    for m in manifest:
+        raw = (folder / m["file"]).read_bytes()
+        cats = ["leavers-back-designs"] if m["side"] == "back" else ["leavers-front-designs", "leavers-full-front-designs"]
+        for cat in cats:
+            item_id = str(uuid.uuid4())
+            path = f"{_OBJ_APP_NAME}/portfolio/{item_id}.jpg"
+            try:
+                meta = _storage_put(path, raw, "image/jpeg")
+                versions = await _pf_versions_async(raw, f"{_OBJ_APP_NAME}/portfolio-web/{item_id}-{uuid.uuid4().hex[:6]}")
+            except Exception as e:
+                logging.warning(f"leavers design upload failed: {e}")
+                return  # try again next start-up
+            await db.portfolio.insert_one({
+                "id": item_id, "title": m["title"], "category": cat, "caption": "", "alt_text": f"Leavers design - {m['title']}",
+                "image_url": f"/api/portfolio/file/{item_id}.jpg", "storage_path": path, "storage_meta": meta,
+                "content_type": "image/jpeg", "display_order": int(m["order"]), "featured": False, "is_hidden": False,
+                "size_bytes": len(raw), "created_at": datetime.now(timezone.utc).isoformat(), **versions,
+            })
+    await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+
+
 async def _hide_placeholder_products_v1():
     """One-off (Tim, Oct 2026): hide (never delete) the prototype placeholders."""
     marker = "hide_placeholder_products_v1"
@@ -8388,6 +8421,10 @@ async def _load_imported_products():
             await _hide_placeholder_kits_v1()
         except Exception as e:
             logging.warning(f"placeholder kits skipped: {e}")
+        try:
+            await _seed_leavers_designs_v1()
+        except Exception as e:
+            logging.warning(f"leavers designs skipped: {e}")
         try:
             await _hide_placeholder_products_v1()
         except Exception as e:

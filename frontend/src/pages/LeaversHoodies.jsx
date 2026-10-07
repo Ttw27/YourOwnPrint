@@ -25,7 +25,11 @@ export default function LeaversHoodies() {
     // "Leavers designer - ... design choices") - add a design once, it shows in both.
     Promise.all(["leavers-back-designs", "leavers-front-designs", "leavers-full-front-designs"].map((c) =>
       fetchPortfolio({ category: c, limit: 40 }).then((d) => d.items || []).catch(() => [])))
-      .then(([back, front, full]) => setDesigns([...back, ...full, ...front]));
+      .then(([back, front, full]) => {
+        // a design can be in both front pickers - show it once
+        const seen = new Set();
+        setDesigns([...back, ...full, ...front].filter((d) => { const k = (d.title || d.id).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }));
+      });
     // older "Leavers templates" (Admin > Leavers templates) - shown only if they have a real photo
     fetchLeaversTemplates().then((ts) => setTemplates((ts || []).filter((t) => t.image && !/pexels\.com/.test(t.image)))).catch(() => setTemplates([]));
   }, []);
