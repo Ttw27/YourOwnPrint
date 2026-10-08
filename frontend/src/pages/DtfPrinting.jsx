@@ -46,12 +46,12 @@ export function DtfComparison({ compact = false }) {
 
 export default function DtfPrinting() {
   usePageTitle("Why We Print With DTF", {
-    description: "DTF printing explained: sharper detail, unlimited colours and prints that last as long as the garment. How DTF compares with embroidery - and embroidery on request if you still prefer it.",
+    description: "DTF printing explained: sharper detail, unlimited colours and prints that last as long as the garment. How DTF compares with embroidery - plus embroidery and screen printing on request.",
   });
   const copy = usePageCopy("dtf-printing", {
     title: "Why we print with DTF",
     subtitle: "Sharper detail, every colour, and prints that last as long as the garment.",
-    body: "DTF is how we print as standard, because it simply does a better job of showing off your logo - especially the small, detailed logos most businesses, clubs and teams actually have. Prefer an embroidered finish? We can still arrange embroidery on request - just ask for a quote.",
+    body: "DTF is how we print as standard, because it simply does a better job of showing off your logo - especially the small, detailed logos most businesses, clubs and teams actually have. Prefer embroidery or screen printing? We can arrange both on request - just ask for a quote.",
   });
 
   const steps = [
@@ -97,8 +97,8 @@ export default function DtfPrinting() {
 
       <section className="max-w-5xl mx-auto px-6 pt-8">
         <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-3 justify-between" data-testid="dtf-embroidery-note">
-          <div><div className="font-black">Still want embroidery?</div>
-            <p className="text-sm text-[#4b5563] mt-1">Embroidery is available on request through our trusted embroidery partner - quote only. Tell us the garment, quantity and your logo.</p></div>
+          <div><div className="font-black">Want embroidery or screen printing?</div>
+            <p className="text-sm text-[#4b5563] mt-1">Both are available on request through our trusted partners - quote only. Tell us the garment, quantity and your logo.</p></div>
           <Link to="/business-enquiry" className="inline-flex items-center justify-center bg-[#1a1a1a] text-white font-extrabold rounded-full px-5 py-2.5 text-sm flex-shrink-0">Ask for a quote</Link>
         </div>
       </section>

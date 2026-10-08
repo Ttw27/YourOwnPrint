@@ -26,7 +26,7 @@ export default function HowWePrint({ className = "", variant = "section" }) {
   const copy = usePageCopy("how-we-print", {
     title: "How we print",
     body: "Every order is printed with DTF as standard - sharper detail than embroidery, every colour you need, and a print that's bonded into the fabric to last as long as the garment. No minimums, no setup fees.",
-    subtitle: "Ordering a big run, or need embroidery? Embroidery is available on request - get in touch and we'll put a quote together for you.",
+    subtitle: "Ordering a big run, or need embroidery or screen printing? Both are available on request - get in touch and we'll put a quote together for you.",
     cta_label: "Get a quote",
   });
   const heading = copy.title || "How we print";

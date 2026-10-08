@@ -21,7 +21,7 @@ import SeasonalBanner from "../components/bold/SeasonalBanner";
 import { DEFAULT_HERO_IMAGES } from "../lib/defaultImages";
 
 export default function Home() {
-  usePageTitle("Custom Print & Workwear", { description: "Personalised clothing, workwear and team kit - printed in the UK, embroidery on request." });
+  usePageTitle("Custom Print & Workwear", { description: "Personalised clothing, workwear and team kit - printed in the UK, embroidery and screen printing on request." });
   const [bestSellers, setBestSellers] = useState([]);
   const [aggregates, setAggregates] = useState({});
   const [recentReviews, setRecentReviews] = useState([]);
