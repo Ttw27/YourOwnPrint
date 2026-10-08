@@ -6,36 +6,42 @@ import usePageCopy from "../hooks/usePageCopy";
 import { Check, X, Sparkles, Palette, Type, ShieldCheck, Feather, Layers, ArrowRight } from "lucide-react";
 
 /**
- * Why we print with DTF - what DTF is, how it compares with embroidery, and why
+ * Why we print with DTF - what DTF is, how it compares with screen printing and embroidery, and why
  * we moved to it. Heading/intro editable in Admin > Page Copy ("dtf-printing").
  */
+// [what, DTF, [screen printing, good?], [embroidery, good?]]
 export const DTF_VS_EMBROIDERY = [
-  ["Small text and fine detail", "Crisp and readable, even tiny lettering and thin lines", "Small text blurs or fills in - stitches can't go finer than the thread"],
-  ["Colours", "Unlimited - full colour, gradients, even photos", "Limited to a handful of thread colours, no gradients or photos"],
-  ["Logo accuracy", "Your logo exactly as designed", "Redrawn as stitches - detail is simplified or lost"],
-  ["Durability", "Bonded into the fabric - built to last as long as the garment", "Threads can snag, pull and come loose over time"],
-  ["Feel on the garment", "Soft and flexible, moves with the fabric", "Stiff stitching and backing, can pucker thin fabrics"],
-  ["Lightweight garments", "Perfect on tees, sportswear and performance fabrics", "Heavy stitching can drag and pucker thin tees"],
-  ["Minimum order", "None - one item or hundreds, same price per print", "Often minimums + a digitising (setup) fee"],
+  ["Colours", "Unlimited - the full colour spectrum, gradients, even photos", ["Each colour needs its own screen - usually up to around 8-10, gradients and photos are hard", false], ["A handful of thread colours, no gradients or photos", false]],
+  ["Cost as colours go up", "Same price however many colours", ["Every extra colour is another screen, setup charge and pass", false], ["More colours and stitches add cost", false]],
+  ["Setup & minimum order", "None - one item or hundreds, same price per print", ["Setup charge per colour (often £20-25 each) and minimums of around 20-25+ pieces", false], ["Often minimums + a digitising (setup) fee", false]],
+  ["Small text and fine detail", "Crisp and readable, even tiny lettering and thin lines", ["Fine for bold designs - very fine detail can fill in or break up", false], ["Small text blurs or fills in - stitches can't go finer than the thread", false]],
+  ["Logo accuracy", "Your logo exactly as designed", ["Colours matched to set inks - shading has to be simplified", false], ["Redrawn as stitches - detail is simplified or lost", false]],
+  ["Durability", "Bonded into the fabric - built to last as long as the garment", ["Very hard-wearing", true], ["Threads can snag, pull and come loose over time", false]],
+  ["Feel on the garment", "Soft and flexible, moves with the fabric", ["Can feel thick on dark garments (white base layer underneath)", false], ["Stiff stitching and backing, can pucker thin fabrics", false]],
+  ["Best for", "Any quantity, any design", ["Big runs of a simple 1-3 colour design", true], ["Simple, bold logos on heavier garments", true]],
 ];
 
 export function DtfComparison({ compact = false }) {
   return (
     <div className="overflow-x-auto" data-testid="dtf-comparison">
-      <table className={`w-full ${compact ? "text-xs" : "text-sm"} min-w-[520px]`}>
+      <table className={`w-full ${compact ? "text-xs" : "text-sm"} min-w-[680px]`}>
         <thead>
           <tr className="text-left">
             <th className="py-2 pr-3 font-extrabold text-[#4b5563]"></th>
             <th className="py-2 px-3 font-black text-[#166534] bg-[#f0fdf4] rounded-t-xl">DTF (what we use)</th>
+            <th className="py-2 px-3 font-black text-[#4b5563]">Screen printing</th>
             <th className="py-2 px-3 font-black text-[#4b5563]">Embroidery</th>
           </tr>
         </thead>
         <tbody>
-          {DTF_VS_EMBROIDERY.map(([what, dtf, emb]) => (
+          {DTF_VS_EMBROIDERY.map(([what, dtf, ...others]) => (
             <tr key={what} className="border-t border-[#eef2f7] align-top">
               <td className="py-2.5 pr-3 font-extrabold">{what}</td>
               <td className="py-2.5 px-3 bg-[#f0fdf4]"><span className="inline-flex gap-1.5"><Check size={15} className="text-[#16a34a] flex-shrink-0 mt-0.5" />{dtf}</span></td>
-              <td className="py-2.5 px-3 text-[#4b5563]"><span className="inline-flex gap-1.5"><X size={15} className="text-[#dc2626] flex-shrink-0 mt-0.5" />{emb}</span></td>
+              {others.map(([text, good], i) => (
+                <td key={i} className="py-2.5 px-3 text-[#4b5563]"><span className="inline-flex gap-1.5">
+                  {good ? <Check size={15} className="text-[#16a34a] flex-shrink-0 mt-0.5" /> : <X size={15} className="text-[#dc2626] flex-shrink-0 mt-0.5" />}{text}</span></td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -46,7 +52,7 @@ export function DtfComparison({ compact = false }) {
 
 export default function DtfPrinting() {
   usePageTitle("Why We Print With DTF", {
-    description: "DTF printing explained: sharper detail, unlimited colours and prints that last as long as the garment. How DTF compares with embroidery - plus embroidery and screen printing on request.",
+    description: "DTF printing explained: sharper detail, unlimited colours and prints that last as long as the garment. How DTF compares with screen printing and embroidery - both available on request.",
   });
   const copy = usePageCopy("dtf-printing", {
     title: "Why we print with DTF",
@@ -82,8 +88,8 @@ export default function DtfPrinting() {
       </section>
 
       <section className="max-w-5xl mx-auto px-6 py-12">
-        <h2 className="font-black text-3xl">DTF vs embroidery</h2>
-        <p className="text-[#4b5563] mt-2 max-w-3xl">Embroidery has its place, but most logos aren&rsquo;t big, bold and simple. Here&rsquo;s how the two compare on the things that matter when it&rsquo;s your brand on the shirt.</p>
+        <h2 className="font-black text-3xl">DTF vs screen printing vs embroidery</h2>
+        <p className="text-[#4b5563] mt-2 max-w-3xl">Screen printing and embroidery both have their place - and we can arrange either on request - but most logos aren&rsquo;t big, bold and simple. Here&rsquo;s how the three compare on the things that matter when it&rsquo;s your brand on the shirt.</p>
         <div className="mt-6 border-2 border-[#eef2f7] rounded-3xl p-4 sm:p-6"><DtfComparison /></div>
       </section>
 
@@ -92,6 +98,7 @@ export default function DtfPrinting() {
         <div className="mt-4 grid md:grid-cols-2 gap-6 text-[#374151] leading-relaxed">
           <p>Embroidery builds your logo out of thread, and thread has a minimum thickness. On a breast-pocket logo - usually around 9cm wide - small text and fine details simply can&rsquo;t be stitched clearly. Letters fill in, thin lines disappear and the logo ends up looking blurry or &ldquo;blobby&rdquo;. We kept seeing it: a sharp logo on screen, and a disappointing badge on the shirt.</p>
           <p>Stitching also wears. Loose threads snag on bags and seatbelts, edges start to fray, and the stiff backing can make lighter garments pucker. DTF bonds the print into the fabric itself, so there are no threads to pull and nothing to come unstitched - the print is built to last as long as the garment does, keeping your brand looking sharp on every wear.</p>
+          <p className="md:col-span-2">Screen printing pushes ink through a separate screen for every colour. That&rsquo;s great value for a big run of a simple one or two colour design - but every extra colour means another screen, another setup charge and another pass, there&rsquo;s usually a minimum order, and a full-colour logo with gradients or shading has to be simplified to a set number of inks. DTF prints the full colour spectrum in one go, with no setup and no minimum, so a one-off or a small team order costs the same per print as a big one.</p>
         </div>
       </section>
 

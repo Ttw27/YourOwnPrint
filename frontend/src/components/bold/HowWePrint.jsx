@@ -49,7 +49,7 @@ export default function HowWePrint({ className = "", variant = "section" }) {
           <div>
             <div className="font-black text-sm">{heading}</div>
             <p className="text-xs text-[#4b5563] mt-1">{body}</p>
-            <Link to="/dtf-printing" className="inline-block text-xs font-extrabold text-[#166534] hover:underline mt-1">Why DTF beats embroidery →</Link>
+            <Link to="/dtf-printing" className="inline-block text-xs font-extrabold text-[#166534] hover:underline mt-1">Why we print with DTF →</Link>
             <p className="text-xs text-[#4b5563] mt-2">{enquiry}{" "}
               <Link to="/contact" className="font-extrabold text-[#166534] hover:underline">{enquiry_cta} →</Link>
             </p>
@@ -71,7 +71,7 @@ export default function HowWePrint({ className = "", variant = "section" }) {
             <p className="mt-4 text-[#4b5563]">{enquiry}</p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link to="/dtf-printing" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-extrabold rounded-full px-6 py-3" data-testid="how-we-print-more">
-                Why DTF beats embroidery →
+                Why we print with DTF →
               </Link>
               <Link to="/contact" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] font-extrabold rounded-full px-6 py-3" data-testid="how-we-print-cta">
                 {enquiry_cta}
@@ -94,7 +94,7 @@ export default function HowWePrint({ className = "", variant = "section" }) {
           </div>
         </div>
         <div className="mt-8 border-t-2 border-[#f0fdf4] pt-6">
-          <div className="font-black text-lg mb-2">DTF vs embroidery at a glance</div>
+          <div className="font-black text-lg mb-2">DTF vs screen printing vs embroidery at a glance</div>
           <DtfComparison compact />
         </div>
       </div>
