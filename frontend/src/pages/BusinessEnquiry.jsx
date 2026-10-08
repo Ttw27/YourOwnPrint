@@ -57,7 +57,7 @@ export default function BusinessEnquiry() {
     [Shirt, "Workwear & uniforms", "Polos, tees, hoodies, hi-vis and trousers for your whole team.", "/workwear"],
     [Package, "Bulk packs", "Ready-made team packs with your logo on every item.", "/bundles"],
     [Megaphone, "Merch & events", "Event tees, totes and caps for launches, festivals and fundraisers.", "/festival-tees-and-brands"],
-    [Printer, "Printing & embroidery", "Full-colour prints and embroidered logos, done in the UK.", "/portfolio"],
+    [Printer, "Printing (embroidery on request)", "Full-colour DTF prints as standard. Embroidery available on request - quote only.", "/dtf-printing"],
   ];
 
   return (

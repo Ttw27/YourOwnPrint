@@ -27,7 +27,7 @@ const PRETTY = {
 const NOT_PORTFOLIO = new Set(["leavers-front-designs", "leavers-back-designs", "leavers-full-front-designs"]);
 
 export default function Portfolio() {
-  usePageTitle("Our Work", { description: "Recent custom print and embroidery projects." });
+  usePageTitle("Our Work", { description: "Recent custom print projects for clubs, schools and businesses." });
   const [data, setData] = useState({ categories: [], items: [] });
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState("all");

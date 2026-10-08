@@ -45,13 +45,13 @@ export function DtfComparison({ compact = false }) {
 }
 
 export default function DtfPrinting() {
-  usePageTitle("Why We Print With DTF (and Not Embroidery)", {
-    description: "DTF printing explained: sharper detail, unlimited colours and prints that last as long as the garment. How DTF compares with embroidery, and why we switched.",
+  usePageTitle("Why We Print With DTF", {
+    description: "DTF printing explained: sharper detail, unlimited colours and prints that last as long as the garment. How DTF compares with embroidery - and embroidery on request if you still prefer it.",
   });
   const copy = usePageCopy("dtf-printing", {
     title: "Why we print with DTF",
     subtitle: "Sharper detail, every colour, and prints that last as long as the garment.",
-    body: "We used to offer embroidery. We moved to DTF because it simply does a better job of showing off your logo - especially the small, detailed logos most businesses, clubs and teams actually have.",
+    body: "DTF is how we print as standard, because it simply does a better job of showing off your logo - especially the small, detailed logos most businesses, clubs and teams actually have. Prefer an embroidered finish? We can still arrange embroidery on request - just ask for a quote.",
   });
 
   const steps = [
@@ -88,10 +88,18 @@ export default function DtfPrinting() {
       </section>
 
       <section className="max-w-5xl mx-auto px-6 pb-4">
-        <h2 className="font-black text-3xl">Why we moved away from embroidery</h2>
+        <h2 className="font-black text-3xl">Why DTF is our standard</h2>
         <div className="mt-4 grid md:grid-cols-2 gap-6 text-[#374151] leading-relaxed">
           <p>Embroidery builds your logo out of thread, and thread has a minimum thickness. On a breast-pocket logo - usually around 9cm wide - small text and fine details simply can&rsquo;t be stitched clearly. Letters fill in, thin lines disappear and the logo ends up looking blurry or &ldquo;blobby&rdquo;. We kept seeing it: a sharp logo on screen, and a disappointing badge on the shirt.</p>
           <p>Stitching also wears. Loose threads snag on bags and seatbelts, edges start to fray, and the stiff backing can make lighter garments pucker. DTF bonds the print into the fabric itself, so there are no threads to pull and nothing to come unstitched - the print is built to last as long as the garment does, keeping your brand looking sharp on every wear.</p>
+        </div>
+      </section>
+
+      <section className="max-w-5xl mx-auto px-6 pt-8">
+        <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-3 justify-between" data-testid="dtf-embroidery-note">
+          <div><div className="font-black">Still want embroidery?</div>
+            <p className="text-sm text-[#4b5563] mt-1">Embroidery is available on request through our trusted embroidery partner - quote only. Tell us the garment, quantity and your logo.</p></div>
+          <Link to="/business-enquiry" className="inline-flex items-center justify-center bg-[#1a1a1a] text-white font-extrabold rounded-full px-5 py-2.5 text-sm flex-shrink-0">Ask for a quote</Link>
         </div>
       </section>
 
