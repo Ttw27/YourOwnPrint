@@ -34,7 +34,9 @@ export const KIT_BUILDERS = {
     related: ["school-trip:t-shirt", "school-trip:hoodie", "ts-tile:group-hoodies"], portfolio: ["schools", "events"] },
   "sports-day": { title: "Sports day & house kit", who: "House colours & inter-school", to: "/sports-day", cta: "Build your school sports order",
     headline: "Every house colour, one order", steps: ["A colour per house", "Badge front, house name back", "Kids & staff sizes"],
-    related: [], portfolio: ["schools", "sports", "events"] },
+    related: [], portfolio: ["schools", "team-kits", "sports", "events"],
+    // Inter School Games job from the Portfolio (Tim, Oct 2026)
+    photo: "https://pub-b995388ef13c4c14a498c874668ad48e.r2.dev/yourownprint/portfolio-web/ebebe555-d7cc-43ed-bd96-81ee96d2da3e-2ca188_thumb.webp" },
   leavers: { title: "Leavers hoodies", who: "Year 6, Year 11 & sixth form", to: "/leavers-hoodies", cta: "Design your leavers hoodies",
     headline: "Leavers hoodies with every name", steps: ["Pick a hoodie & colour", "Choose or upload a design", "Names & sizes"],
     related: ["ts-tile:leavers"], portfolio: ["leavers", "schools"] },
@@ -58,6 +60,7 @@ export function builderImage(key, siteImages, photos) {
     const v = (siteImages[k] || "").trim();
     if (v) return { src: mediaUrl(v), photo: true, from: k };
   }
+  if (b.photo) return { src: mediaUrl(b.photo), photo: true, from: "default-photo" };
   return { src: b.image || photos[key] || "", photo: false, from: "garment" };
 }
 export function useBuilderImage(key) {

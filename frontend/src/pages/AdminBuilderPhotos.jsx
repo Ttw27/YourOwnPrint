@@ -10,6 +10,7 @@ import { KIT_BUILDERS, builderImage, useBuilderPhotos } from "../components/bold
 const FROM_LABEL = (k) => {
   if (k === "picked") return "Your chosen photo";
   if (k === "garment") return "Garment photo (automatic)";
+  if (k === "default-photo") return "Portfolio photo (built in)";
   if (k.startsWith("ts-tile:")) return "Teams, Schools & Clubs page tile";
   if (k.startsWith("sportsteam:")) return "Sports page header photo";
   if (k.startsWith("tool:")) return "Tools tile";
