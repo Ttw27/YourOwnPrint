@@ -31,7 +31,7 @@ export const KIT_BUILDERS = {
     related: ["ts-tile:dance", "sportsteam:dance-studios"], portfolio: ["sports", "fitness", "events", "other"] },
   "school-trip": { title: "School trip tops", who: "Trips, residentials & events", to: "/school-trips", cta: "Build your school order",
     headline: "Matching tops for the whole trip", steps: ["Pick tees, hoodies or caps", "Add your school badge", "Kids & staff sizes"],
-    related: ["school-trip:t-shirt", "school-trip:hoodie", "ts-tile:group-hoodies"], portfolio: ["schools", "events"] },
+    related: [], portfolio: ["schools", "events"], photo: "/kits/school-trip.jpg" },   // Tim's school trip photo (Oct 2026)
   "sports-day": { title: "Sports day & house kit", who: "House colours & inter-school", to: "/sports-day", cta: "Build your school sports order",
     headline: "Every house colour, one order", steps: ["A colour per house", "Badge front, house name back", "Kids & staff sizes"],
     related: [], portfolio: ["schools", "team-kits", "sports", "events"],
