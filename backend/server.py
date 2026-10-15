@@ -6535,6 +6535,33 @@ async def _nav_add_corporate_v1():
         logging.warning(f"nav corporate link skipped: {e}")
 
 
+async def _nav_add_corporate_v2():
+    """v1 wrongly skipped because "/industries/corporate" contains "/corporate" - add the
+    "Corporate & large orders" link after For Business, checking for that exact link."""
+    marker = "nav_add_corporate_v2"
+    try:
+        if await db.settings.find_one({"key": marker}):
+            return
+        doc = await db.settings.find_one({"key": "navigation_config"})
+        cfg = (doc or {}).get("config") or {}
+        added = False
+        links_all = [l for m in cfg.get("menu") or [] for c in m.get("columns") or [] for l in c.get("links") or []]
+        if cfg.get("menu") and not any(l.get("to") == "/corporate" for l in links_all):
+            for m in cfg["menu"]:
+                for col in m.get("columns") or []:
+                    links = col.get("links") or []
+                    at = next((i + 1 for i, l in enumerate(links) if l.get("to") == "/for-business"), None)
+                    if at is not None and not added:
+                        links.insert(at, {"label": "Corporate & large orders", "to": "/corporate", "badge": "New"})
+                        added = True
+            if added:
+                await db.settings.update_one({"key": "navigation_config"}, {"$set": {"config": cfg}})
+        await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "added": added,
+                                      "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    except Exception as e:
+        logging.warning(f"nav corporate link (v2) skipped: {e}")
+
+
 async def _nav_add_sports_day_v1():
     """One-off (Tim, Oct 2026): add "Sports Day & House Colours" to the SAVED menu
     (Teams & Schools > Schools, after School Trip Tees) without replacing the rest."""
@@ -8660,6 +8687,7 @@ async def _load_imported_products():
             logging.warning(f"placeholder kits skipped: {e}")
         await _nav_add_sports_day_v1()
         await _nav_add_corporate_v1()
+        await _nav_add_corporate_v2()
         try:
             await _seed_leavers_designs_v1()
         except Exception as e:

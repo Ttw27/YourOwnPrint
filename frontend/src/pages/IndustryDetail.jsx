@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchIndustry, fetchReviewsAggregate } from "../lib/api";
-import { ArrowRight, ShieldCheck, Loader2, X, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, ShieldCheck, Loader2, X, ChevronDown, SlidersHorizontal, Building2 } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import FacetBlock from "../components/bold/FacetBlock";
 import PriceTag from "../components/bold/PriceTag";
@@ -130,6 +130,14 @@ export default function IndustryDetail() {
           </div>
         </div>
       </header>
+
+      {/* Big orders from any sector -> the corporate page */}
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 pt-5">
+        <Link to="/corporate" className="flex flex-wrap items-center justify-between gap-2 bg-[#f0fdf4] border-2 border-[#dcfce7] hover:border-[#7bc67e] rounded-2xl px-4 py-3 text-sm" data-testid="industry-corporate-strip">
+          <span className="inline-flex items-center gap-2 font-bold"><Building2 size={16} className="text-[#16a34a]" /> Ordering 250+ garments or for several sites? Bespoke pricing, an account manager &amp; invoices.</span>
+          <span className="font-extrabold text-[#16a34a] inline-flex items-center gap-1">Corporate &amp; large orders <ArrowRight size={14} /></span>
+        </Link>
+      </div>
 
       {/* Garment types this sector buys most - a shortcut to the same
           "Product type" filter the sidebar has (they stay in sync via the URL). */}

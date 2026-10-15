@@ -13,7 +13,7 @@ import { SECTORS, REVIEWS as STATIC_REVIEWS, RATING } from "../lib/data";
 import { fetchProducts, fetchReviewsAggregate, fetchRecentReviews, fetchBestSellers } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
-import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera, MessageCircle } from "lucide-react";
+import { Star, Sparkles, Heart, Smile, ArrowRight, Check, ShieldCheck, Camera, MessageCircle, Building2 } from "lucide-react";
 import PriceTag from "../components/bold/PriceTag";
 import usePageTitle from "../hooks/usePageTitle";
 import JsonLd from "../components/bold/JsonLd";
@@ -165,6 +165,21 @@ export default function Home() {
           <Link to="/easy-ordering" className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe5b] text-white font-nunito font-extrabold px-6 py-3 rounded-full flex-shrink-0">
             How it works <ArrowRight size={16} />
           </Link>
+        </div>
+      </div>
+
+      {/* Corporate & large orders + staff order links */}
+      <div className="bg-[#f0fdf4] border-y border-[#dcfce7]" data-testid="home-corporate">
+        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[#16a34a] font-nunito font-extrabold text-sm"><Building2 size={16} /> Corporate & large orders</div>
+            <h2 className="font-nunito font-black text-2xl lg:text-3xl mt-2">Kitting out a whole company?</h2>
+            <p className="text-[#4b5563] mt-1 max-w-xl">Bespoke pricing on 250+ garments, your own account manager, pay by BACS or card, delivery to every site - and staff order links so everyone picks their own sizes.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 flex-shrink-0">
+            <Link to="/corporate" className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white font-nunito font-extrabold px-6 py-3 rounded-full">Corporate orders <ArrowRight size={16} /></Link>
+            <Link to="/staff-order-link" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] font-nunito font-extrabold px-6 py-3 rounded-full">Staff order link</Link>
+          </div>
         </div>
       </div>
 
