@@ -218,6 +218,13 @@ frontend/src/
 - **Micro fleece = small prints only** (DTF flattens/shines pile): `_micro_fleece_prints_v1` set
   allowed_placements to chest + sleeves (gilets/bodywarmers chest only) on micro fleece garments without hand-set
   positions; skips balaclava/Morf/bob hat and fleece-LINED shell jackets.
+- **Profit floor (Oct 2026):** no discount (generic bulk tiers, group kit / leavers %, Kit Your Workforce tiers,
+  regular-customer %) takes a garment below `garment_floor(p)`: the .99 price that still leaves `_PROFIT_FLOOR["pct"]`
+  (default 30%, Admin > Configurator prices > "Lowest profit allowed", db.settings `profit_floor`) after VAT, Stripe
+  (1.5% + 10p) and the print (£1 per print, `PRINT_COST_ESTIMATE`), from `source_price`. Product pages assume one logo;
+  checkout uses the line's real prints. No `source_price` = no floor. Exposed as `min_price` (`_vat_fields`) for
+  `discounted()`; `/bulk-tiers/product` hides tiers the floor makes no cheaper. Discount codes (LAUNCH10, WELCOME-)
+  are switched off on a Stripe session when any line is 15%+ off (`promo_codes_ok`, `garment_discount_pct`).
 - **Kit Your Workforce pricing:** per garment = garment price (after workforce bulk %, snapped to .99) + £3.50 logo
   (`WORKFORCE_LOGO_PRICE`), floored at the Specials price (`workforce_min_unit`: matching `special-<id>`, else the
   cheapest live Special of the same category) so it never undercuts Specials; + size upcharge + £3.50 back print.

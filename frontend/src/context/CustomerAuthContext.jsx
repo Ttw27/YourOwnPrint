@@ -91,7 +91,13 @@ export function useAccountDiscount() {
 export function discounted(price, pct, product) {
   const n = Number(price) || 0;
   if (!pct || (product && (product.bundle_items?.length || product.bundle_kind))) return n;
-  return Math.round(n * (1 - pct / 100) * 100) / 100;
+  const d = Math.round(n * (1 - pct / 100) * 100) / 100;
+  // profit floor from the server (min_price, base garment) - upcharges stay on top
+  if (product && product.min_price && product.price) {
+    const floor = Math.round((product.min_price + n - Number(product.price)) * 100) / 100;
+    return Math.min(n, Math.max(d, floor));
+  }
+  return d;
 }
 
 export function useCustomerAuth() {

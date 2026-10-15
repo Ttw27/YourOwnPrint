@@ -36,6 +36,7 @@ async def create_checkout_session(
     shipping_options: Optional[List[Dict]] = None,
     allowed_countries: Optional[List[str]] = None,
     lines: Optional[List[Dict]] = None,
+    allow_promotion_codes: bool = True,
 ):
     """Creates a Checkout Session for `amount` (major units, e.g. GBP).
 
@@ -75,8 +76,9 @@ async def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=metadata or {},
-        # sign-up codes (WELCOME-XXXXXX, routers/signup_offer.py) and any codes made in Stripe
-        allow_promotion_codes=True,
+        # sign-up codes (WELCOME-XXXXXX, routers/signup_offer.py) and any codes made in Stripe;
+        # off for orders already on a big bulk discount (server.promo_codes_ok)
+        allow_promotion_codes=allow_promotion_codes,
         # Delivery choice (collect / local / UK by weight) + address + phone on
         # Stripe's page - see routers/delivery.py.
         **({"shipping_options": shipping_options,

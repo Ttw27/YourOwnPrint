@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   adminGetConfiguratorSettings, adminUpdateFullSquadAddons, adminUpdateSportsOutfitAddons,
-  adminGetPrintPrices, adminSetPrintPrices,
+  adminGetPrintPrices, adminSetPrintPrices, adminGetProfitFloor, adminSetProfitFloor,
   adminGetDeliverySettings, adminSaveDeliverySettings,
 } from "../lib/api";
 import { Loader2, Save } from "lucide-react";
@@ -51,6 +51,7 @@ export default function AdminConfiguratorSettings() {
         <h1 className="font-black text-3xl mb-1">Configurator prices</h1>
         <p className="text-sm text-[#4b5563] mb-6">All configurator add-on prices in one place. Changes go live the moment you save - no restart needed.</p>
 
+        <ProfitFloorCard />
         <PrintPricesCard />
         <DeliveryCard />
 
@@ -187,6 +188,62 @@ function DeliveryCard() {
       <button onClick={save} disabled={saving} className="mt-4 inline-flex items-center gap-2 bg-[#1a1a1a] text-white font-extrabold rounded-full px-5 py-2 text-sm disabled:opacity-50">
         {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save delivery
       </button>
+    </div>
+  );
+}
+
+function ProfitFloorCard() {
+  const [d, setD] = useState(null);
+  const [pct, setPct] = useState("");
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    adminGetProfitFloor().then((r) => { setD(r); setPct(r.pct); }).catch(() => toast.error("Couldn't load the lowest profit setting"));
+  }, []);
+  const save = async () => {
+    setSaving(true);
+    try { const r = await adminSetProfitFloor(Number(pct) || 0); setD(r); setPct(r.pct); toast.success("Saved - live now"); }
+    catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5 mb-6" data-testid="acs-profit-floor">
+      <h2 className="font-black text-lg">Lowest profit allowed</h2>
+      <p className="text-xs text-[#4b5563] mb-3">Bulk discounts, Kit Your Workforce discounts and regular-customer discounts stop at the price
+        that still leaves this much profit - worked out from the supplier's trade price, after VAT, card fees and the logo print.
+        Discount codes (e.g. LAUNCH10) can't be used once an order is already {d ? d.codes_off_from_pct : 15}% or more off.</p>
+      {!d ? <Loader2 className="animate-spin text-[#7bc67e]" /> : (
+        <>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1 bg-white border-2 border-[#e5e7eb] rounded-xl px-3 py-2 w-32 focus-within:border-[#7bc67e]">
+              <input type="number" step="1" min="0" max="60" value={pct} onChange={(e) => setPct(e.target.value)} className="w-full text-sm font-bold focus:outline-none" data-testid="acs-profit-pct" />
+              <span className="text-sm text-[#4b5563]">%</span>
+            </div>
+            <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 text-[#1a1a1a] font-extrabold text-sm rounded-full px-5 py-2.5" data-testid="acs-profit-save">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
+            </button>
+            <span className="text-[11px] text-[#9ca3af]">Recommended: {d.default_pct}%</span>
+          </div>
+          {d.examples?.length > 0 && (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead><tr className="text-left text-[#4b5563]"><th className="py-1 pr-2">Garment</th><th className="pr-2">Trade price</th><th className="pr-2">Full price</th><th className="pr-2">Lowest it can go</th><th>Most off</th></tr></thead>
+                <tbody>
+                  {d.examples.map((x) => (
+                    <tr key={x.id} className="border-t border-[#f3f4f6]">
+                      <td className="py-1 pr-2 font-bold">{x.name}</td>
+                      <td className="pr-2">£{x.cost.toFixed(2)}</td>
+                      <td className="pr-2">£{x.price.toFixed(2)}</td>
+                      <td className="pr-2">£{x.lowest.toFixed(2)}</td>
+                      <td>{x.max_off_pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-[11px] text-[#9ca3af] mt-1">Garment prices without the logo. Saved examples update after you save.</p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

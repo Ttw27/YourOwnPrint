@@ -17,7 +17,7 @@ import {
  * staff order links (/staff-order-link), quick reorders. Quote form -> /quote-request kind "corporate".
  * Hero copy editable in Admin > Page copy > "Corporate & large orders" (usePageCopy("corporate")).
  */
-const TIERS = [["10+", "10% off"], ["25+", "18% off"], ["100+", "28% off"], ["200+", "35% off"], ["250+", "Bespoke quote"]];
+const TIERS = [["10+", "Up to 10% off"], ["25+", "Up to 18% off"], ["100+", "Up to 28% off"], ["200+", "Up to 35% off"], ["250+", "Bespoke quote"]];
 
 export default function Corporate() {
   usePageTitle("Corporate uniform & large orders", {
@@ -64,7 +64,7 @@ export default function Corporate() {
     { icon: RefreshCw, title: "Quick reorders", body: "New starter? Tell us the name and size and it's sorted - your artwork and garments are already on file, so no stockholding needed." },
   ];
   const faq = [
-    { q: "What counts as a large order?", a: "Our website prices already drop as you order more - up to 35% off at 200+ garments. From 250+ garments we'll put together a bespoke quote for you." },
+    { q: "What counts as a large order?", a: "Our website prices already drop as you order more - up to 35% off at 200+ garments, depending on the garment. From 250+ garments we'll put together a bespoke quote for you." },
     { q: "Can we pay on invoice?", a: "Yes. Once you've approved your proof we send an invoice - pay by BACS or card and we print. Regular customers can apply for 30-day account terms. Larger first orders may need a deposit." },
     { q: "Can we see a sample first?", a: "Yes - we'll make a sample garment with your logo before you commit, and the cost comes off your order." },
     { q: "Can you deliver to more than one site?", a: "Yes - to as many branches or offices as you need, or bagged and labelled per person." },

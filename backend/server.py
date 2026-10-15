@@ -1135,6 +1135,52 @@ async def admin_set_print_prices(payload: PrintPricesIn):
     return {"ok": True, "placements": [{"id": p["id"], "label": p["label"], "price": p["price"]} for p in PLACEMENTS]}
 
 
+@app.on_event("startup")
+async def _load_profit_floor():
+    try:
+        doc = await db.settings.find_one({"key": "profit_floor"})
+        if doc and doc.get("pct") is not None:
+            _PROFIT_FLOOR["pct"] = float(doc["pct"])
+    except Exception as e:
+        logging.warning(f"profit floor load skipped: {e}")
+
+
+_PROFIT_FLOOR_EXAMPLES = ["gd05", "rx151", "rx101", "rx301", "gd57", "rx350", "rx601", "rx700", "bb10", "pw002"]
+
+
+def _profit_floor_view() -> Dict:
+    ex = []
+    for pid in _PROFIT_FLOOR_EXAMPLES:
+        p = PRODUCTS.get(pid)
+        if not p or not p.get("source_price"):
+            continue
+        price, floor = float(p["price"]), garment_floor(p)
+        ex.append({"id": pid, "name": p["name"], "cost": float(p["source_price"]), "price": price,
+                   "lowest": floor, "max_off_pct": round(100 * (1 - floor / price), 0) if price else 0})
+    return {"pct": _PROFIT_FLOOR["pct"], "default_pct": PROFIT_FLOOR_DEFAULT_PCT,
+            "codes_off_from_pct": PROMO_CODES_MAX_DISCOUNT_PCT, "examples": ex}
+
+
+class ProfitFloorIn(BaseModel):
+    pct: float
+
+
+@api_router.get("/admin/profit-floor", dependencies=[Depends(require_admin)])
+async def admin_get_profit_floor():
+    return _profit_floor_view()
+
+
+@api_router.put("/admin/profit-floor", dependencies=[Depends(require_admin)])
+async def admin_set_profit_floor(payload: ProfitFloorIn):
+    if not (0 <= payload.pct <= 60):
+        raise HTTPException(400, "Lowest profit must be between 0% and 60%")
+    await db.settings.update_one({"key": "profit_floor"},
+                                 {"$set": {"key": "profit_floor", "pct": round(payload.pct, 1),
+                                           "updated_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    _PROFIT_FLOOR["pct"] = round(payload.pct, 1)
+    return _profit_floor_view()
+
+
 @api_router.get("/fight-night/addons")
 async def list_fight_night_addons():
     return [{"id": k, **v} for k, v in FIGHT_NIGHT_ADDONS.items()]
@@ -1397,6 +1443,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         success_url=success_url,
         cancel_url=cancel_url,
         metadata=metadata,
+        allow_promotion_codes=promo_codes_ok([priced["garment_discount_pct"]]),
         product_name=product["name"],
         shipping_options=await _delivery_options_for([(product, total_qty)], total_amount),
         lines=[_stripe_line(priced)],
@@ -1902,7 +1949,9 @@ async def _resolve_line_pricing(
     if total_qty < 1 or total_qty > 5000:
         raise HTTPException(400, f"{product_id}: qty must be 1–5000")
 
-    # Bulk-tier pricing
+    # Bulk-tier pricing (held at the profit floor for the prints actually on this order)
+    list_price = base_price
+    line_prints = (print_cost, len(placements_clean))
     if is_design:
         pass  # Design Shop: flat retail price per garment
     elif (design_meta or {}).get("flow") in ("dance", "club_bag", "club_shop"):
@@ -1910,11 +1959,11 @@ async def _resolve_line_pricing(
     elif (design_meta or {}).get("flow") == "group_kit":
         # whole-order bulk % (group_qty counted server-side by _set_group_qty)
         gq = int((design_meta or {}).get("group_qty") or total_qty)
-        base_price = apply_bulk_tier_pct(base_price, max(gq, total_qty), LEAVERS_BULK_TIERS_PCT)
+        base_price = floored(apply_bulk_tier_pct(base_price, max(gq, total_qty), LEAVERS_BULK_TIERS_PCT), product, *line_prints)
     elif product_id in FIGHT_NIGHT_IDS:
         base_price = tier_unit_price(fight_night_tiers(base_price), base_price, total_qty)
     elif product.get("category") == "leavers" and product_id != "leavers-drawstring-bag":
-        base_price = apply_bulk_tier_pct(base_price, total_qty, LEAVERS_BULK_TIERS_PCT)
+        base_price = floored(apply_bulk_tier_pct(base_price, total_qty, LEAVERS_BULK_TIERS_PCT), product, *line_prints)
     elif product.get("bulk_pricing_enabled"):
         ovr = product.get("bulk_pricing_overrides")
         if ovr:
@@ -1926,19 +1975,22 @@ async def _resolve_line_pricing(
             doc = await db.settings.find_one({"key": SETTINGS_KEY_BULK_DEFAULTS})
             tiers_pct = doc["tiers"] if doc and "tiers" in doc else DEFAULT_BULK_TIERS_PCT
             tiers_pct = sorted([(int(t[0]), float(t[1])) for t in tiers_pct], key=lambda x: -x[0])
-        base_price = apply_bulk_tier_pct(base_price, total_qty, tiers_pct)
+        base_price = floored(apply_bulk_tier_pct(base_price, total_qty, tiers_pct), product, *line_prints)
 
     # Regular-customer account discount (Admin > Customers): % off the GARMENT
     # only (print stays full price), on top of bulk pricing. Never on bundles -
     # they're already discounted packs.
     acct_pct = float(account_discount_pct or 0) if not product.get("bundle_items") else 0.0
     acct_factor = 1 - acct_pct / 100.0
+    floor_g = 0.0 if (is_design or is_kit(product_id)) else garment_floor(product, *line_prints)
     line_total = 0.0
     account_saving = 0.0
     breakdown: List[str] = []
     for sz, q in resolved_qtys.items():
         garment = base_price + float(size_upcharges.get(sz, 0.0)) + float((product.get("colour_upcharges") or {}).get(color or "", 0.0))
         garment_disc = round(garment * acct_factor, 2) if acct_pct > 0 else garment
+        if floor_g and garment_disc < garment:  # profit floor (size/colour upcharges kept on top)
+            garment_disc = min(garment, max(garment_disc, round(floor_g + garment - base_price, 2)))
         unit = garment_disc + print_cost
         line_total += round(unit * q, 2)
         account_saving += round((garment - garment_disc) * q, 2)
@@ -1961,6 +2013,9 @@ async def _resolve_line_pricing(
         "design_meta": await _order_art_links(design_meta or {}),
         "account_discount_pct": acct_pct,
         "account_saving": round(account_saving, 2),
+        # % taken off the garment's own price by bulk tiers + account discount
+        # (discount codes are switched off at checkout from 15% - promo_codes_ok)
+        "garment_discount_pct": round(100 * (1 - (base_price * (acct_factor if acct_pct > 0 else 1)) / list_price), 1) if list_price > 0 else 0.0,
     }
 
 
@@ -2083,6 +2138,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
         cancel_url=cancel_url,
         metadata=metadata,
         lines=[_stripe_line(p) for p in priced],
+        allow_promotion_codes=promo_codes_ok([p["garment_discount_pct"] for p in priced]),
         product_name="Your Own Print cart order",
         # club shop orders all go to the club together - one free option
         shipping_options=([{"shipping_rate_data": {"type": "fixed_amount", "fixed_amount": {"amount": 0, "currency": "gbp"},
@@ -2519,6 +2575,9 @@ def _vat_fields(p: Dict) -> Dict:
         "price_ex_vat": net,
         "vat_zero_rated": zero,
     }
+    floor = garment_floor(p)
+    if floor:
+        out["min_price"] = floor  # profit floor - discounts never go below it (CustomerAuthContext.discounted)
     was = offer_was_price(p)
     if was:
         out["was_price"] = was
@@ -2854,6 +2913,58 @@ SETTINGS_KEY_BULK_DEFAULTS = "bulk_tiers_pct_default"
 def snap_to_99(price: float) -> float:
     """Snap to the nearest £x.99 with a £0.99 floor (e.g. 5.42 → 4.99, 5.51 → 5.99)."""
     return max(0.99, round(price) - 0.01)
+
+
+# ---------- Profit floor (Tim, Oct 2026) ----------
+# No discount (bulk tiers, Kit Your Workforce tiers, regular-customer %) takes a
+# garment below the price that still leaves PROFIT_FLOOR_PCT of the money we keep
+# (after VAT and Stripe) once the garment's trade cost (source_price) and its logo
+# print are paid for. Worked out for a garment with ONE small logo (sold at the
+# left-breast price, costing PRINT_COST_ESTIMATE); extra prints only add profit.
+# Garments with no saved trade cost (built-in products) have no floor.
+# Admin > Configurator prices > "Lowest profit allowed" (db.settings "profit_floor").
+PROFIT_FLOOR_DEFAULT_PCT = 30.0
+PRINT_COST_ESTIMATE = 1.00               # DTF film + ink + powder for one logo
+STRIPE_PCT, STRIPE_PER_ITEM = 0.015, 0.10
+_PROFIT_FLOOR = {"pct": PROFIT_FLOOR_DEFAULT_PCT}
+
+
+def ceil_to_99(price: float) -> float:
+    """Round UP to the next £x.99 (11.20 -> 11.99, 11.99 -> 11.99)."""
+    return math.ceil(round(price, 2) + 0.01) - 0.01
+
+
+def garment_floor(p: Dict, print_price: Optional[float] = None, prints: int = 1) -> float:
+    """Lowest garment price (inc VAT, ends .99) a discount may reach - never above
+    the product's own price. 0 = no floor (trade cost unknown). Default = one logo
+    (product pages); checkout passes the order's real print price + number of prints."""
+    try:
+        cost = float(p.get("source_price") or 0)
+    except (TypeError, ValueError):
+        cost = 0.0
+    if cost <= 0:
+        return 0.0
+    vat = 1.0 if is_zero_rated(p) else 1 + UK_VAT_RATE
+    keep = 1 - _PROFIT_FLOOR["pct"] / 100.0
+    logo = float(PLACEMENT_BY_ID["left-breast"]["price"]) if print_price is None else float(print_price)
+    # unit U (garment + print): U/vat - U*stripe% - per_item >= (cost + print cost) / keep
+    unit = ((cost + PRINT_COST_ESTIMATE * prints) / keep + STRIPE_PER_ITEM) / (1 / vat - STRIPE_PCT)
+    floor = max(0.99, ceil_to_99(unit - logo))
+    return round(min(float(p.get("price") or 0), floor), 2)
+
+
+# Discount codes (LAUNCH10, WELCOME-...) can't go on top of a big bulk discount:
+# Stripe's code box is hidden when any garment is already this much off.
+PROMO_CODES_MAX_DISCOUNT_PCT = 15.0
+
+
+def promo_codes_ok(garment_discount_pcts) -> bool:
+    return all(float(d or 0) < PROMO_CODES_MAX_DISCOUNT_PCT for d in garment_discount_pcts)
+
+
+def floored(discounted: float, p: Dict, print_price: Optional[float] = None, prints: int = 1) -> float:
+    """A discounted garment price, held at the profit floor (never above full price)."""
+    return round(max(discounted, garment_floor(p, print_price, prints)), 2)
 
 
 def apply_bulk_tier_pct(base_price: float, total_qty: int, tiers_pct: List[Tuple[int, float]]) -> float:
@@ -3418,7 +3529,7 @@ async def get_product_bulk_tiers(product_id: str):
         return {"mode": "absolute", "base_price": base_price,
                 "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in fight_night_tiers(base_price)]}
     if p.get("category") == "leavers" and product_id != LEAVERS_BAG_ID:
-        tiers = [(q, snap_to_99(base_price * (1 - pct / 100.0))) for q, pct in sorted(LEAVERS_BULK_TIERS_PCT)]
+        tiers = _distinct_tiers([(q, floored(snap_to_99(base_price * (1 - pct / 100.0)), p)) for q, pct in sorted(LEAVERS_BULK_TIERS_PCT)], base_price)
         return {"mode": "absolute", "base_price": base_price,
                 "tiers": [{"min_qty": q, "unit_price": up, "savings_per_unit": round(base_price - up, 2)} for q, up in tiers]}
     if not p.get("bulk_pricing_enabled"):
@@ -3428,14 +3539,27 @@ async def get_product_bulk_tiers(product_id: str):
         tiers_pct = sorted([(int(t["min_qty"]), float(t["pct"])) for t in ovr if "min_qty" in t and "pct" in t], key=lambda x: -x[0])
     else:
         tiers_pct = await _get_bulk_defaults()
+    # same maths as checkout: snapped to .99, held at the profit floor; a tier
+    # the floor makes no cheaper than the one before isn't shown
+    priced = _distinct_tiers([(q, floored(snap_to_99(base_price * (1 - pct / 100)), p)) for q, pct in sorted(tiers_pct)], base_price)
     return {
         "mode": "percent", "base_price": base_price,
         "tiers": [
-            {"min_qty": q, "pct": pct, "unit_price": snap_to_99(base_price * (1 - pct / 100)),
-             "savings_per_unit": round(base_price - snap_to_99(base_price * (1 - pct / 100)), 2)}
-            for q, pct in tiers_pct
+            {"min_qty": q, "pct": round(100 * (1 - up / base_price), 1) if base_price else 0, "unit_price": up,
+             "savings_per_unit": round(base_price - up, 2)}
+            for q, up in priced
         ],
     }
+
+
+def _distinct_tiers(tiers, base_price: float):
+    """[(min_qty, unit)] ascending -> only tiers cheaper than everything before them."""
+    out, last = [], base_price
+    for q, up in tiers:
+        if up < last - 0.001:
+            out.append((q, up))
+            last = up
+    return out
 
 
 # ---------- Product meta (brand, SKU, size guide, bulk pricing flag) ----------
@@ -4089,13 +4213,16 @@ WORKFORCE_LOGO_PRICE = 3.50        # the breast/front logo on every garment
 def workforce_min_unit(p: Dict) -> float:
     """Kit Your Workforce must never undercut Your Own Print Specials: the lowest
     a garment (with its logo) can go is the matching Special's price (same
-    garment, id "special-<id>"), else the cheapest live Special of the same type."""
+    garment, id "special-<id>"), else the cheapest live Special of the same type.
+    Also never below the profit floor (garment_floor + logo)."""
+    profit = garment_floor(p)
+    profit = profit + WORKFORCE_LOGO_PRICE if profit else 0.0
     sp = PRODUCTS.get(f"special-{p.get('id')}")
     if sp and is_live(sp):
-        return float(sp["price"])
+        return max(float(sp["price"]), profit)
     same = [float(s["price"]) for s in live_products()
             if s.get("specials_eligible") and not s.get("designer_enabled") and s.get("category") == p.get("category")]
-    return min(same) if same else 0.0
+    return max(min(same) if same else 0.0, profit)
 
 
 def workforce_unit(base_price: float, factor: float, p: Dict) -> float:
@@ -5017,6 +5144,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         amount=total_amount, currency="gbp",
         success_url=success_url, cancel_url=cancel_url,
         metadata=metadata,
+        allow_promotion_codes=promo_codes_ok([discount_pct]),
         product_name="Workforce order",
         shipping_options=await _delivery_options_for(
             [(PRODUCTS.get(ln["product_id"]) or {}, ln["qty"]) for ln in valid_lines], total_amount),

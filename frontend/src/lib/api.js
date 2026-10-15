@@ -260,6 +260,14 @@ export async function fetchProofPhoto(pid, colour = "") {
 }
 
 // Print prices per position (Admin > Configurator prices)
+export async function adminGetProfitFloor() {
+  const { data } = await api.get("/admin/profit-floor");
+  return data;
+}
+export async function adminSetProfitFloor(pct) {
+  const { data } = await api.put("/admin/profit-floor", { pct });
+  return data;
+}
 export async function adminGetPrintPrices() {
   const { data } = await api.get("/admin/print-prices");
   return data;
