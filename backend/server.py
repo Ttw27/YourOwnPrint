@@ -4216,7 +4216,7 @@ def workforce_min_unit(p: Dict) -> float:
     garment, id "special-<id>"), else the cheapest live Special of the same type.
     Also never below the profit floor (garment_floor + logo)."""
     profit = garment_floor(p)
-    profit = profit + WORKFORCE_LOGO_PRICE if profit else 0.0
+    profit = round(profit + WORKFORCE_LOGO_PRICE, 2) if profit else 0.0
     sp = PRODUCTS.get(f"special-{p.get('id')}")
     if sp and is_live(sp):
         return max(float(sp["price"]), profit)
