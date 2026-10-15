@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
+import { fetchLaunchOffer } from "../../lib/launchOffer";
 import { X, Gift, Loader2 } from "lucide-react";
 
 /**
@@ -29,7 +30,9 @@ export default function SignupOffer() {
     const show = () => {
       let done = null;
       try { done = localStorage.getItem(KEY); } catch { /* ignore */ }
-      if (!done && !dismissed && !QUIET.test(window.location.pathname)) setOpen(true);
+      if (done || dismissed || QUIET.test(window.location.pathname)) return;
+      // paused while the site-wide launch code is running (Admin > Launch offer)
+      fetchLaunchOffer().then((o) => { if (!o.on) setOpen(true); });
     };
     const t = setTimeout(show, 25000);
     const exit = (e) => { if (e.clientY <= 0) show(); };

@@ -81,6 +81,8 @@ import Account from "@/pages/Account";
 import ResetPassword from "@/pages/ResetPassword";
 import CookieConsent from "@/components/bold/CookieConsent";
 import SignupOffer from "@/components/bold/SignupOffer";
+import LaunchBanner from "@/components/bold/LaunchBanner";
+import AdminLaunchOffer from "@/pages/AdminLaunchOffer";
 import AdminSubscribers from "@/pages/AdminSubscribers";
 import AdminBuilderPhotos from "@/pages/AdminBuilderPhotos";
 import ReviewOrder from "@/pages/ReviewOrder";
@@ -108,6 +110,7 @@ function App() {
         <ScrollToTop />
         <CookieConsent />
         <SignupOffer />
+        <LaunchBanner />
         <Toaster position="top-center" richColors />
         <Routes>
           <Route path="/" element={<Home />} />
@@ -192,6 +195,7 @@ function App() {
           <Route path="/admin/import-reviews" element={<RequireAdmin><AdminLayout><AdminImport /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/reviews" element={<RequireAdmin><AdminLayout><AdminReviews /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/subscribers" element={<RequireAdmin><AdminLayout><AdminSubscribers /></AdminLayout></RequireAdmin>} />
+          <Route path="/admin/launch-offer" element={<RequireAdmin><AdminLayout><AdminLaunchOffer /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/builder-photos" element={<RequireAdmin><AdminLayout><AdminBuilderPhotos /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/club-shops" element={<RequireAdmin><AdminLayout><AdminClubShops /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/team-kits" element={<RequireAdmin><AdminLayout><AdminTeamKits /></AdminLayout></RequireAdmin>} />

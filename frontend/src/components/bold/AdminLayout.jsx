@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingBag, MessageSquare, HelpCircle, Star,
   Package, Upload, Sparkles, ImageOff, Wand2, Tags, Layers,
   FileText, Menu as MenuIcon, Image, Shirt, GraduationCap,
-  Plug, SlidersHorizontal, LogOut, X, Store, Stamp, PackagePlus, Users, Mail,
+  Plug, SlidersHorizontal, LogOut, X, Store, Stamp, PackagePlus, Users, Mail, Gift,
 } from "lucide-react";
 
 /**
@@ -23,6 +23,7 @@ const GROUPS = [
       { label: "Questions (Q&A)", to: "/admin/qa", icon: HelpCircle },
       { label: "Reviews", to: "/admin/reviews", icon: Star },
       { label: "Email sign-ups", to: "/admin/subscribers", icon: Mail },
+      { label: "Launch offer", to: "/admin/launch-offer", icon: Gift },
       { label: "Club shops", to: "/admin/club-shops", icon: Users },
     ],
   },

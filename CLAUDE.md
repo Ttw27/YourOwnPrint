@@ -350,6 +350,9 @@ frontend/src/
     after `followups_started_at`.
   - Sign-up offer: `routers/signup_offer.py` + `SignupOffer.jsx` popup - single-use Stripe promotion code 10% off
     (WELCOME-XXXXXX); ALL checkouts allow_promotion_codes. Admin > Email sign-ups (CSV).
+  - Launch offer (`routers/launch_offer.py`, Admin > Launch offer): one public code LAUNCH10 (10%, ends 2026-11-30).
+    Switching on creates/reactivates the Stripe promotion code (reuses one made by hand), off deactivates it.
+    GET /site/launch-offer -> LaunchBanner.jsx (thin non-sticky top bar, closable per visit) and pauses SignupOffer.
   - Seasonal pages: `/occasions/:slug` (lib/occasions.js, page copy `occasion-<slug>`) + `SeasonalBanner` on home.
   - Club shops: `routers/club_shops.py` - /club-shop/new (organiser), /club/<code> (parents pay individually, lines
     flow "club_shop", priced by club_print: garment + logo £3 + name £3, free "delivered to the club" shipping),

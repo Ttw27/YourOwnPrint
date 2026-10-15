@@ -9654,6 +9654,7 @@ import routers.group_kits  # noqa: F401 - registers /group-kits/{page} (school t
 import routers.google_feed  # noqa: F401 - registers /feeds/google.xml (Merchant Center feed)
 import routers.club_shops  # noqa: F401 - registers /club-shops/*, /admin/club-shops
 import routers.signup_offer  # noqa: F401 - registers /signup-offer, /admin/subscribers
+import routers.launch_offer  # noqa: F401 - registers /site/launch-offer, /admin/launch-offer (LAUNCH10)
 import routers.followups  # noqa: F401 - review request + abandoned basket emails, /review-request/*, /basket/restore/*
 
 

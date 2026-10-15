@@ -180,7 +180,7 @@ export default function KitYourWorkforce() {
           <div className="mt-6 flex flex-wrap gap-3 text-xs">
             {tierList.map(t => (
               <span key={t.min_qty} className={`px-3 py-1.5 rounded-full font-extrabold ${totalQty >= t.min_qty ? "bg-[#fbbf24] text-[#1a1a1a]" : "bg-zinc-800 text-zinc-300"}`} data-testid={`workforce-tier-chip-${t.min_qty}`}>
-                {t.min_qty}+ items · -{t.pct}%
+                {t.min_qty}+ items · up to -{t.pct}%
               </span>
             ))}
           </div>
@@ -424,7 +424,7 @@ export default function KitYourWorkforce() {
             </div>
             {nextTier && (
               <div className="mt-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs" data-testid="workforce-next-tier">
-                Add <strong>{nextTier.min_qty - totalQty}</strong> more to unlock <strong className="text-[#fbbf24]">-{nextTier.pct}%</strong>
+                Add <strong>{nextTier.min_qty - totalQty}</strong> more to unlock <strong className="text-[#fbbf24]">up to -{nextTier.pct}%</strong>
               </div>
             )}
             {overThreshold && (
