@@ -890,6 +890,8 @@ async def sitemap_xml():
         ("/school-trips/order", "0.7", "monthly"),
         ("/sports-day", "0.8", "monthly"),
         ("/sports-day/order", "0.6", "monthly"),
+        ("/corporate", "0.8", "monthly"),
+        ("/staff-order-link", "0.6", "monthly"),
         ("/full-squad-configurator", "0.7", "monthly"),
         ("/sports-outfit-configurator", "0.7", "monthly"),
         ("/leavers-hoodies", "0.8", "weekly"),
@@ -6128,6 +6130,7 @@ DEFAULT_NAV_CONFIG = {
                 {"heading": "Shop workwear", "links": [
                     {"label": "All Workwear", "to": "/workwear"},
                     {"label": "For Business", "to": "/for-business", "badge": "Switch"},
+                    {"label": "Corporate & large orders", "to": "/corporate", "badge": "New"},
                     {"label": "Order by WhatsApp or email", "to": "/easy-ordering", "badge": "Easy"},
                     {"label": "Kit Your Workforce", "to": "/workforce", "badge": "Bulk"},
                     {"label": "Hi-Vis", "to": "/shop/hi-vis"},
@@ -6504,6 +6507,32 @@ async def _nav_add_bundles_v1():
                                       "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
     except Exception as e:
         logging.warning(f"nav bundles link skipped: {e}")
+
+
+async def _nav_add_corporate_v1():
+    """One-off (Tim, Oct 2026): add "Corporate & large orders" to the SAVED menu
+    (Workwear, after For Business) without replacing the rest."""
+    marker = "nav_add_corporate_v1"
+    try:
+        if await db.settings.find_one({"key": marker}):
+            return
+        doc = await db.settings.find_one({"key": "navigation_config"})
+        cfg = (doc or {}).get("config") or {}
+        added = False
+        if cfg.get("menu") and "/corporate" not in __import__("json").dumps(cfg["menu"]):
+            for m in cfg["menu"]:
+                for col in m.get("columns") or []:
+                    links = col.get("links") or []
+                    at = next((i + 1 for i, l in enumerate(links) if l.get("to") == "/for-business"), None)
+                    if at is not None and not added:
+                        links.insert(at, {"label": "Corporate & large orders", "to": "/corporate", "badge": "New"})
+                        added = True
+            if added:
+                await db.settings.update_one({"key": "navigation_config"}, {"$set": {"config": cfg}})
+        await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "added": added,
+                                      "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    except Exception as e:
+        logging.warning(f"nav corporate link skipped: {e}")
 
 
 async def _nav_add_sports_day_v1():
@@ -8630,6 +8659,7 @@ async def _load_imported_products():
         except Exception as e:
             logging.warning(f"placeholder kits skipped: {e}")
         await _nav_add_sports_day_v1()
+        await _nav_add_corporate_v1()
         try:
             await _seed_leavers_designs_v1()
         except Exception as e:

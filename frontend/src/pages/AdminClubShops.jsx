@@ -15,21 +15,23 @@ export default function AdminClubShops() {
   if (!d) return <div className="p-10"><Loader2 className="animate-spin text-[#7bc67e]" /></div>;
   return (
     <div className="p-6 max-w-6xl">
-      <h1 className="font-black text-3xl">Club shops</h1>
-      <p className="text-sm text-zinc-500 mt-1">Pre-order links clubs, studios and schools set up at /club-shop/new. Parents pay for their own items; download a shop&apos;s list to print it all together once it closes.</p>
+      <h1 className="font-black text-3xl">Club shops & staff links</h1>
+      <p className="text-sm text-zinc-500 mt-1">Club shops (set up at /club-shop/new): parents pay for their own items. Staff order links (/staff-order-link): staff just pick sizes and the company sends one order - by card, or as an invoice request (also in Enquiries). Download a list to print it all together.</p>
       <div className="mt-5 bg-white border rounded-2xl overflow-x-auto">
         <table className="w-full text-sm min-w-[760px]">
           <thead className="bg-zinc-50 text-left text-xs uppercase text-zinc-500"><tr>{["Shop", "Organiser", "Closes", "Items", "Orders", "Garments", ""].map((h) => <th key={h} className="p-3">{h}</th>)}</tr></thead>
           <tbody>
             {d.shops.map((s) => (
               <tr key={s.code} className="border-t align-top">
-                <td className="p-3"><strong>{s.name}</strong><div className="text-xs text-zinc-500">{s.open ? "Open" : "Closed"}</div></td>
+                <td className="p-3"><strong>{s.name}</strong>
+                  <div className="text-xs mt-0.5"><span className={`px-2 py-0.5 rounded-full font-bold ${s.mode === "company" ? "bg-sky-100 text-sky-700" : "bg-emerald-100 text-emerald-700"}`}>{s.mode === "company" ? "Staff link - company pays" : "Club shop - each pays"}</span></div>
+                  <div className="text-xs text-zinc-500 mt-0.5">{s.open ? "Open" : "Closed"}{s.sent ? ` · order sent (${s.sent.method === "invoice" ? `invoice${s.sent.po_number ? `, PO ${s.sent.po_number}` : ""}` : "card"})` : ""}</div></td>
                 <td className="p-3">{s.organiser}<div className="text-xs text-zinc-500">{s.email}{s.phone ? ` · ${s.phone}` : ""}</div></td>
-                <td className="p-3">{s.closes_on || "-"}</td><td className="p-3">{s.items}</td><td className="p-3">{s.orders}</td><td className="p-3">{s.garments}</td>
+                <td className="p-3">{s.closes_on || "-"}</td><td className="p-3">{s.items}</td><td className="p-3">{s.mode === "company" ? `${s.staff} staff` : s.orders}</td><td className="p-3">{s.mode === "company" ? (s.sent?.garments ?? "-") : s.garments}</td>
                 <td className="p-3 space-x-2 whitespace-nowrap">
                   <a href={`/club/${s.code}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline text-xs"><ExternalLink size={12} /> Shop</a>
                   <a href={`/club/${s.code}/manage/${s.manage_token}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline text-xs">Organiser page</a>
-                  <button onClick={() => csv(s.code)} className="inline-flex items-center gap-1 text-xs font-extrabold"><Download size={12} /> CSV</button>
+                  {s.mode !== "company" && <button onClick={() => csv(s.code)} className="inline-flex items-center gap-1 text-xs font-extrabold"><Download size={12} /> CSV</button>}
                   <button onClick={() => setStatus(s.code, s.open ? "closed" : "open")} className="text-xs underline">{s.open ? "Close" : "Reopen"}</button>
                 </td>
               </tr>

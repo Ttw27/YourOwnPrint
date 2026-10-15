@@ -347,6 +347,16 @@ frontend/src/
   - Club shops: `routers/club_shops.py` - /club-shop/new (organiser), /club/<code> (parents pay individually, lines
     flow "club_shop", priced by club_print: garment + logo £3 + name £3, free "delivered to the club" shipping),
     /club/<code>/manage/<token>, Admin > Club shops (CSV).
+  - Staff order links (Oct 2026): same club shop with `mode: "company"` - /staff-order-link (ClubShopCreate
+    defaultMode="company"; optional `max_each` allowance per item). Staff open /club/<code>, pick garments + sizes, NO prices,
+    no payment -> POST /club-shops/<code>/staff (db.club_shop_staff, same name = replace). Organiser page lists everyone and
+    sends ONE order: card (basket checkout of flow "club_shop" lines; club_print allows company shops after closing) or
+    invoice (POST .../manage/<token>/send -> quote_requests kind "staff_order" with roster + PO, emails shop + organiser,
+    shop closed + `sent`). Admin > Club shops shows mode / staff / sent.
+  - Corporate page `/corporate` (Corporate.jsx, page copy "corporate"): bespoke pricing 250+ garments, account manager,
+    BACS/card on proof approval (30-day terms for regulars, subject to approval), multi-site delivery, paid samples refunded
+    off the order, staff order links, quick reorders (NO stockholding). Quote form -> /quote-request kind "corporate".
+    Menu link added to the saved menu by `_nav_add_corporate_v1` (Workwear, after For Business).
 
 ## 6. Known gotchas / debugging lessons (all learned the hard way)
 

@@ -39,6 +39,7 @@ const PAGE_COPY_SLUGS = [
   { slug: "sports-outfit-configurator", label: "Sports Outfit Configurator" },
   { slug: "festival-tees-brands", label: "Festival Tees & Start Your Brand" },
   { slug: "sports-day", label: "Sports Day & House Colours page" },
+  { slug: "corporate", label: "Corporate & large orders page" },
   { slug: "occasion-christmas", label: "Occasion: Christmas" },
   { slug: "occasion-stag-and-hen", label: "Occasion: Stag & hen" },
   { slug: "occasion-charity-events", label: "Occasion: Charity & events" },

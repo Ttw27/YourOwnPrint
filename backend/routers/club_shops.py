@@ -8,6 +8,13 @@ and pays for their own order through the normal basket checkout - lines carry
 design_meta.flow == "club_shop" + club_code, and server._resolve_line_pricing
 prices them with club_print() (garment price + logo £3 + name £3). Everything
 for one shop is listed together for the organiser and in Admin > Club shops.
+
+Staff order links (mode == "company", Oct 2026): same shop, but staff only pick
+garments + sizes (no payment, optional allowance per item = max_each). Their
+choices are stored in db.club_shop_staff; the organiser sees them on the manage
+page and sends ONE order - pay everything by card (normal basket checkout, lines
+flow "club_shop") or request an invoice (saved as a quote request, emailed to the
+shop). club_print allows company shops after they close, since the organiser pays.
 """
 from __future__ import annotations
 
@@ -55,7 +62,7 @@ def _item_view(it: Dict) -> Optional[Dict]:
     base = float(p.get("price") or 0) + cup + LOGO_PRICE
     return {"product_id": p["id"], "name": it.get("label") or p.get("name"), "garment": p.get("name"),
             "colour": it.get("colour"), "image": (col or {}).get("image") or p.get("image"),
-            "names": bool(it.get("names")),
+            "names": bool(it.get("names")), "max_each": int(it.get("max_each") or 0),
             "sizes": [{"size": s, "price": round(base + float(ups.get(s, 0) or 0), 2)} for s in (p.get("sizes") or [])]}
 
 
@@ -70,7 +77,7 @@ async def club_print(product_id: str, placements: List[str], color: Optional[str
     shop = await db.club_shops.find_one({"code": code})
     if not shop:
         raise HTTPException(400, "That club shop doesn't exist")
-    if not _open(shop):
+    if not _open(shop) and shop.get("mode") != "company":
         raise HTTPException(400, f"Sorry - the {shop.get('name')} shop has closed")
     it = next((i for i in shop.get("items") or [] if i["product_id"] == product_id and i.get("colour") == color), None)
     if not it:
@@ -88,6 +95,7 @@ class ShopItemIn(BaseModel):
     colour: str
     names: bool = False
     label: str = ""
+    max_each: int = 0         # staff links: most of this item one person can choose (0 = no limit)
 
 
 class ShopIn(BaseModel):
@@ -99,6 +107,7 @@ class ShopIn(BaseModel):
     closes_on: str = ""       # YYYY-MM-DD
     message: str = ""
     items: List[ShopItemIn]
+    mode: str = "pay_each"    # "pay_each" (club shop) | "company" (staff order link)
 
 
 @api_router.post("/club-shops")
@@ -121,27 +130,31 @@ async def create_club_shop(payload: ShopIn):
         cols = [c.get("name") for c in (p.get("colors") or []) if isinstance(c, dict)]
         if cols and it.colour not in cols:
             continue
-        items.append({"product_id": p["id"], "colour": it.colour, "names": bool(it.names), "label": it.label.strip()[:60]})
+        items.append({"product_id": p["id"], "colour": it.colour, "names": bool(it.names), "label": it.label.strip()[:60],
+                      "max_each": max(0, min(int(it.max_each or 0), 50))})
     if not items:
         raise HTTPException(400, "Pick at least one item for your shop")
+    mode = "company" if payload.mode == "company" else "pay_each"
     code = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:24] + "-" + secrets.token_hex(2)
     manage = secrets.token_urlsafe(16)
     await db.club_shops.insert_one({
         "code": code, "manage_token": manage, "name": name, "organiser": payload.organiser.strip()[:80],
         "email": email, "phone": payload.phone.strip()[:30], "logo": payload.logo, "closes_on": payload.closes_on,
-        "message": payload.message.strip()[:600], "items": items, "status": "open", "created_at": _now(),
+        "message": payload.message.strip()[:600], "items": items, "status": "open", "created_at": _now(), "mode": mode,
     })
     shop_url, manage_url = f"{_site()}/club/{code}", f"{_site()}/club/{code}/manage/{manage}"
-    await send_email(to=[email], subject=f"Your {name} shop is ready", html=email_wrap(
-        "Your club shop is ready",
-        f"<p>Share this link with your parents / members - each person picks their sizes and pays for their own:</p>"
+    who = "staff - each person picks their garments and sizes (no payment)" if mode == "company" else "parents / members - each person picks their sizes and pays for their own"
+    await send_email(to=[email], subject=f"Your {name} {'staff order link' if mode == 'company' else 'shop'} is ready", html=email_wrap(
+        "Your staff order link is ready" if mode == "company" else "Your club shop is ready",
+        f"<p>Share this link with your {who}:</p>"
         f"<p style='font-size:16px;font-weight:800'><a href='{shop_url}'>{shop_url}</a></p>"
-        f"<p>Your private organiser page (see every order, download the list, close the shop):<br><a href='{manage_url}'>{manage_url}</a></p>"
-        f"<p style='color:#4b5563'>We'll print everything together once the shop closes{(' on ' + payload.closes_on) if payload.closes_on else ''} and send you a proof first.</p>"))
+        f"<p>Your private organiser page ({'everyone' + chr(39) + 's choices, download the list, send the order' if mode == 'company' else 'see every order, download the list, close the shop'}):<br><a href='{manage_url}'>{manage_url}</a></p>"
+        + (f"<p style='color:#4b5563'>When everyone's chosen, send the order from your organiser page - pay by card, or ask us for an invoice. We send a proof before printing.</p>" if mode == "company" else
+           f"<p style='color:#4b5563'>We'll print everything together once the shop closes{(' on ' + payload.closes_on) if payload.closes_on else ''} and send you a proof first.</p>")))
     shop_to = await shop_notification_recipient()
     if shop_to:
-        await send_email(to=[shop_to], subject=f"[Club shop] {name} set up", html=email_wrap(
-            "New club shop", f"<p><strong>{name}</strong> ({email}) set up a club shop with {len(items)} item(s), closing {payload.closes_on or 'no date'}.</p>"
+        await send_email(to=[shop_to], subject=f"[{'Staff order link' if mode == 'company' else 'Club shop'}] {name} set up", html=email_wrap(
+            "New staff order link" if mode == "company" else "New club shop", f"<p><strong>{name}</strong> ({email}) set up a {'staff order link' if mode == 'company' else 'club shop'} with {len(items)} item(s), closing {payload.closes_on or 'no date'}.</p>"
                              f"<p><a href='{shop_url}'>{shop_url}</a> - logo: <a href='{_backend_public_url()}{payload.logo}'>file</a></p>"))
     return {"code": code, "shop_url": shop_url, "manage_url": manage_url}
 
@@ -154,7 +167,7 @@ async def get_club_shop(code: str):
     if not shop:
         raise HTTPException(404, "Shop not found")
     return {"code": code, "name": shop["name"], "logo": shop.get("logo"), "closes_on": shop.get("closes_on"),
-            "message": shop.get("message"), "open": _open(shop),
+            "message": shop.get("message"), "open": _open(shop), "mode": shop.get("mode") or "pay_each",
             "items": [v for v in (_item_view(i) for i in shop.get("items") or []) if v],
             "prices": {"logo": LOGO_PRICE, "name": NAME_PRICE}}
 
@@ -190,6 +203,13 @@ async def manage_club_shop(code: str, token: str, format: str = "json"):
     shop = await db.club_shops.find_one({"code": code, "manage_token": token})
     if not shop:
         raise HTTPException(404, "Not found")
+    if shop.get("mode") == "company":
+        staff = await _staff(code)
+        if format == "csv":
+            return _staff_csv(staff)
+        return {"name": shop["name"], "mode": "company", "status": shop.get("status"), "open": _open(shop), "closes_on": shop.get("closes_on"),
+                "shop_url": f"{_site()}/club/{code}", "staff": staff, "items": [v for v in (_item_view(i) for i in shop.get("items") or []) if v],
+                "sent": shop.get("sent"), "prices": {"logo": LOGO_PRICE, "name": NAME_PRICE}}
     rows = await _shop_orders(code)
     if format == "csv":
         return _csv(rows)
@@ -205,6 +225,141 @@ async def close_club_shop(code: str, token: str):
     return {"ok": True}
 
 
+# ------------------------------------------------------------- staff order links (company pays)
+
+class StaffPick(BaseModel):
+    product_id: str
+    colour: str
+    size: str
+    qty: int = 1
+    name_on_back: str = ""
+
+
+class StaffIn(BaseModel):
+    name: str
+    email: str = ""
+    picks: List[StaffPick]
+
+
+async def _staff(code: str) -> List[Dict]:
+    return [d async for d in db.club_shop_staff.find({"code": code}, {"_id": 0}).sort("created_at", 1)]
+
+
+def _staff_csv(staff: List[Dict]) -> Response:
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["staff member", "email", "item", "colour", "size", "qty", "name_on_back"])
+    for p in staff:
+        for k in p.get("picks") or []:
+            w.writerow([p.get("name"), p.get("email"), k.get("item"), k.get("colour"), k.get("size"), k.get("qty"), k.get("name_on_back")])
+    return Response(buf.getvalue(), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=staff-choices.csv"})
+
+
+@api_router.post("/club-shops/{code}/staff")
+async def staff_choose(code: str, payload: StaffIn):
+    """A staff member saves their garments + sizes on a company-pays link. Saving again
+    under the same name replaces their earlier choices."""
+    shop = await db.club_shops.find_one({"code": code})
+    if not shop or shop.get("mode") != "company":
+        raise HTTPException(404, "Link not found")
+    if not _open(shop) or shop.get("sent"):
+        raise HTTPException(400, "Sorry - this order has closed. Please speak to whoever sent you the link.")
+    name = payload.name.strip()[:60]
+    if not name:
+        raise HTTPException(400, "Add your name")
+    views = {(v["product_id"], v["colour"]): v for v in (_item_view(i) for i in shop.get("items") or []) if v}
+    picks, per_item = [], {}
+    for k in payload.picks[:40]:
+        v = views.get((k.product_id, k.colour))
+        if not v:
+            raise HTTPException(400, "That item isn't on this list")
+        if k.size not in [s["size"] for s in v["sizes"]]:
+            raise HTTPException(400, f"Pick a size for {v['name']}")
+        q = max(1, min(int(k.qty or 1), 50))
+        per_item[k.product_id] = per_item.get(k.product_id, 0) + q
+        if v["max_each"] and per_item[k.product_id] > v["max_each"]:
+            raise HTTPException(400, f"You can choose up to {v['max_each']} × {v['name']}")
+        picks.append({"product_id": k.product_id, "item": v["name"], "colour": k.colour, "size": k.size, "qty": q,
+                      "name_on_back": k.name_on_back.strip()[:20] if v["names"] else ""})
+    if not picks:
+        raise HTTPException(400, "Choose at least one item")
+    doc = {"code": code, "name": name, "email": payload.email.strip().lower()[:120], "picks": picks, "updated_at": _now()}
+    existing = await db.club_shop_staff.find_one({"code": code, "name_key": name.lower()})
+    if existing:
+        await db.club_shop_staff.update_one({"_id": existing["_id"]}, {"$set": doc})
+    else:
+        await db.club_shop_staff.insert_one({**doc, "name_key": name.lower(), "id": secrets.token_hex(6), "created_at": _now()})
+    return {"ok": True, "replaced": bool(existing)}
+
+
+@api_router.delete("/club-shops/{code}/manage/{token}/staff/{sid}")
+async def staff_remove(code: str, token: str, sid: str):
+    if not await db.club_shops.find_one({"code": code, "manage_token": token}):
+        raise HTTPException(404, "Not found")
+    await db.club_shop_staff.delete_one({"code": code, "id": sid})
+    return {"ok": True}
+
+
+class SendIn(BaseModel):
+    method: str               # "invoice" (card payments go through the normal basket checkout from the page)
+    po_number: str = ""
+    company: str = ""
+    address: str = ""
+    notes: str = ""
+
+
+@api_router.post("/club-shops/{code}/manage/{token}/send")
+async def staff_send(code: str, token: str, payload: SendIn):
+    """Organiser sends the whole staff order for an invoice (BACS once the proof is approved)."""
+    from server import _backend_public_url
+    from services.email import send_email, email_wrap, shop_notification_recipient
+    import html as _h
+    shop = await db.club_shops.find_one({"code": code, "manage_token": token})
+    if not shop or shop.get("mode") != "company":
+        raise HTTPException(404, "Not found")
+    staff = await _staff(code)
+    if not staff:
+        raise HTTPException(400, "Nobody has chosen anything yet")
+    views = {(v["product_id"], v["colour"]): v for v in (_item_view(i) for i in shop.get("items") or []) if v}
+    total, roster, qty = 0.0, [], 0
+    for p in staff:
+        for k in p["picks"]:
+            v = views.get((k["product_id"], k["colour"]))
+            unit = next((s["price"] for s in (v or {}).get("sizes", []) if s["size"] == k["size"]), 0) + (NAME_PRICE if k.get("name_on_back") else 0)
+            total += unit * k["qty"]; qty += k["qty"]
+            roster.append({"name": p["name"], "number": f"{k['item']} ({k['colour']})", "size": k["size"], "tracksuit": f"x{k['qty']}" + (f" · back: {k['name_on_back']}" if k.get("name_on_back") else "")})
+    msg = (f"Staff order link: {shop['name']} - {len(staff)} people, {qty} garments, about £{total:.2f} at website prices (inc VAT).\n"
+           f"Invoice requested (BACS once the proof is approved). PO: {payload.po_number or '-'}\n"
+           f"Company: {payload.company or shop['name']}\nDelivery address(es): {payload.address or '-'}\nNotes: {payload.notes or '-'}\n"
+           f"Organiser page: {_site()}/club/{code}/manage/{token}")
+    await db.quote_requests.insert_one({"id": secrets.token_hex(8), "kind": "staff_order", "name": shop.get("organiser") or shop["name"],
+                                        "email": shop["email"], "phone": shop.get("phone") or "", "company": payload.company or shop["name"],
+                                        "quantity": qty, "message": msg, "artwork": [shop.get("logo")] if shop.get("logo") else [],
+                                        "attachments": [], "roster": roster[:300], "status": "new", "created_at": _now()})
+    await db.club_shops.update_one({"_id": shop["_id"]}, {"$set": {"sent": {"method": "invoice", "at": _now(), "total": round(total, 2), "garments": qty,
+                                                                            "po_number": payload.po_number[:60]}, "status": "closed"}})
+    esc = lambda v: _h.escape(str(v or ""))  # noqa: E731
+    table = "".join(f"<tr><td>{esc(r['name'])}</td><td>{esc(r['number'])}</td><td>{esc(r['size'])}</td><td>{esc(r['tracksuit'])}</td></tr>" for r in roster)
+    shop_to = await shop_notification_recipient()
+    if shop_to:
+        await send_email(to=[shop_to], subject=f"[Staff order - invoice] {shop['name']} - {qty} garments", reply_to=shop["email"], html=email_wrap(
+            f"Staff order: {shop['name']}", f"<p style='white-space:pre-wrap'>{esc(msg)}</p>"
+            f"<p>Logo: <a href='{_backend_public_url()}{shop.get('logo')}'>file</a></p>"
+            f"<table cellpadding='4' style='border-collapse:collapse;font-size:13px'><tr><th align='left'>Staff</th><th align='left'>Item</th><th align='left'>Size</th><th align='left'>Qty / name</th></tr>{table}</table>"))
+    await send_email(to=[shop["email"]], subject=f"We've got your {shop['name']} staff order", html=email_wrap(
+        "Thanks - we've got your staff order",
+        f"<p>{len(staff)} people, {qty} garments. We'll send you a proof and an invoice - pay by BACS once you've approved the proof, and we'll print.</p>"))
+    return {"ok": True, "total": round(total, 2), "garments": qty}
+
+
+@api_router.post("/club-shops/{code}/manage/{token}/paid-by-card")
+async def staff_mark_card(code: str, token: str):
+    """Called by the organiser page just before redirecting to card checkout."""
+    await db.club_shops.update_one({"code": code, "manage_token": token, "mode": "company"},
+                                   {"$set": {"sent": {"method": "card", "at": _now()}}})
+    return {"ok": True}
+
+
 # ------------------------------------------------------------- admin
 
 @api_router.get("/admin/club-shops", dependencies=[Depends(require_admin)])
@@ -214,7 +369,9 @@ async def admin_club_shops():
         rows = await _shop_orders(s["code"])
         out.append({**{k: s.get(k) for k in ("code", "name", "organiser", "email", "phone", "closes_on", "status", "created_at", "logo")},
                     "open": _open(s), "items": len(s.get("items") or []), "orders": len({r["email"] + r["date"] for r in rows}),
-                    "garments": sum(int(r["qty"]) for r in rows), "manage_token": s.get("manage_token")})
+                    "garments": sum(int(r["qty"]) for r in rows), "manage_token": s.get("manage_token"),
+                    "mode": s.get("mode") or "pay_each", "staff": await db.club_shop_staff.count_documents({"code": s["code"]}),
+                    "sent": s.get("sent")})
     return {"shops": out}
 
 

@@ -12,6 +12,7 @@ import Privacy from "@/pages/Privacy";
 import Returns from "@/pages/Returns";
 import Workwear from "@/pages/Workwear";
 import ForBusiness from "@/pages/ForBusiness";
+import Corporate from "@/pages/Corporate";
 import EasyOrdering from "@/pages/EasyOrdering";
 import Bundles from "@/pages/Bundles";
 import BusinessEnquiry from "@/pages/BusinessEnquiry";
@@ -117,6 +118,7 @@ function App() {
           <Route path="/returns" element={<Returns />} />
           <Route path="/workwear" element={<Workwear />} />
           <Route path="/for-business" element={<ForBusiness />} />
+          <Route path="/corporate" element={<Corporate />} />
           <Route path="/easy-ordering" element={<EasyOrdering />} />
           <Route path="/bundles" element={<Bundles />} />
           <Route path="/business-enquiry" element={<BusinessEnquiry />} />
@@ -182,6 +184,7 @@ function App() {
           <Route path="/review/:token" element={<ReviewOrder />} />
           <Route path="/occasions/:slug" element={<Occasion />} />
           <Route path="/club-shop/new" element={<ClubShopCreate />} />
+          <Route path="/staff-order-link" element={<ClubShopCreate defaultMode="company" />} />
           <Route path="/club/:code" element={<ClubShop />} />
           <Route path="/club/:code/manage/:token" element={<ClubShopManage />} />
           <Route path="/basket/restore/:token" element={<BasketRestore />} />

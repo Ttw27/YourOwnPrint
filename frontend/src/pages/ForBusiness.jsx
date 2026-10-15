@@ -101,6 +101,24 @@ export default function ForBusiness() {
 
       <ConciergeService variant="band" preset="Hi! I run a business and haven't got time to design online - can you sort my order over WhatsApp?" />
 
+      {/* Corporate / large orders + staff links */}
+      <section className="max-w-6xl mx-auto px-6 pt-14">
+        <div className="grid md:grid-cols-2 gap-4">
+          <Link to="/corporate" className="rounded-3xl bg-[#1a1a1a] text-white p-6 block hover:opacity-95" data-testid="for-business-corporate">
+            <div className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#7bc67e]">250+ garments?</div>
+            <div className="font-black text-2xl mt-1">Corporate & large orders</div>
+            <p className="text-sm text-zinc-300 mt-1">Bespoke pricing, an account manager, invoices, multi-site delivery and samples first.</p>
+            <span className="text-sm font-extrabold text-[#7bc67e] inline-flex items-center gap-1 mt-3">See corporate <ArrowRight size={14} /></span>
+          </Link>
+          <Link to="/staff-order-link" className="rounded-3xl border-2 border-[#dcfce7] hover:border-[#7bc67e] p-6 block" data-testid="for-business-staff-link">
+            <div className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#16a34a]">New</div>
+            <div className="font-black text-2xl mt-1">Staff order links</div>
+            <p className="text-sm text-[#4b5563] mt-1">Share one link - staff choose their own sizes, you send one order. No more chasing.</p>
+            <span className="text-sm font-extrabold text-[#16a34a] inline-flex items-center gap-1 mt-3">Set one up - free <ArrowRight size={14} /></span>
+          </Link>
+        </div>
+      </section>
+
       {/* Worries → answers */}
       <section className="max-w-6xl mx-auto px-6 py-14 sm:py-20">
         <h2 className="font-black text-3xl sm:text-4xl text-center">Already have a supplier? Here's why teams move to us</h2>
