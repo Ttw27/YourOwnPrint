@@ -63,9 +63,12 @@ async def _stripe_code(api_key: str, s: dict, active: bool) -> dict:
     if promo is None:
         if not active:
             return {}
-        coupon = await asyncio.to_thread(stripe.Coupon.create, percent_off=s["pct"], duration="once",
-                                         name=f"{s['code']} - {s['pct']}% off (launch)")
-        promo = await asyncio.to_thread(stripe.PromotionCode.create, coupon=coupon.id, code=s["code"],
+        cname = f"{s['code']} - {s['pct']}% off (launch)"
+        # reuse our coupon from an earlier try (e.g. one whose code failed), else make it
+        coupons = await asyncio.to_thread(stripe.Coupon.list, limit=100)
+        coupon = next((c for c in coupons.data if c.name == cname and c.valid), None) or \
+            await asyncio.to_thread(stripe.Coupon.create, percent_off=s["pct"], duration="once", name=cname)
+        promo = await asyncio.to_thread(stripe.PromotionCode.create, promotion={"type": "coupon", "coupon": coupon.id}, code=s["code"],
                                         expires_at=_ends_ts(s["ends"]))
     elif bool(promo.active) != active:
         promo = await asyncio.to_thread(stripe.PromotionCode.modify, promo.id, active=active)

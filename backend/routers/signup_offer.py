@@ -78,7 +78,7 @@ async def signup_offer(payload: SignupIn, request: Request):
             coupon = await _coupon_id(STRIPE_API_KEY)
             code = "WELCOME-" + "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(6))
             stripe.api_key = STRIPE_API_KEY
-            await asyncio.to_thread(stripe.PromotionCode.create, coupon=coupon, code=code, max_redemptions=1,
+            await asyncio.to_thread(stripe.PromotionCode.create, promotion={"type": "coupon", "coupon": coupon}, code=code, max_redemptions=1,
                                     expires_at=int((now + timedelta(days=VALID_DAYS)).timestamp()))
         except Exception as e:
             raise HTTPException(502, f"Couldn't create your code just now - please try again ({str(e)[:80]})")
