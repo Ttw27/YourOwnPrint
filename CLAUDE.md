@@ -220,8 +220,10 @@ frontend/src/
   positions; skips balaclava/Morf/bob hat and fleece-LINED shell jackets.
 - **Profit floor (Oct 2026):** no discount (generic bulk tiers, group kit / leavers %, Kit Your Workforce tiers,
   regular-customer %) takes a garment below `garment_floor(p)`: the .99 price that still leaves `_PROFIT_FLOOR["pct"]`
-  (default 30%, Admin > Configurator prices > "Lowest profit allowed", db.settings `profit_floor`) after VAT, Stripe
-  (1.5% + 10p) and the print (£1 per print, `PRINT_COST_ESTIMATE`), from `source_price`. Product pages assume one logo;
+  (default 25%, Admin > Configurator prices > "Lowest profit allowed", db.settings `profit_floor`) after VAT, Stripe
+  (1.5% + 10p) and the print, from `source_price`. Print cost = £1.90 (film + ink + powder ~£1, ~4 min labour, packing;
+  Tim 21 Oct 2026), editable beside the % (`_PROFIT_FLOOR["print_cost"]`, settings `print_cost`). Specials excluded
+  (they have no `source_price`; garment_floor also keeps them on £1). Marker `v25_applied` moved a saved 30% to 25% once. Product pages assume one logo;
   checkout uses the line's real prints. No `source_price` = no floor. Exposed as `min_price` (`_vat_fields`) for
   `discounted()`; `/bulk-tiers/product` hides tiers the floor makes no cheaper. Discount codes (LAUNCH10, WELCOME-)
   are switched off on a Stripe session when any line is 15%+ off (`promo_codes_ok`, `garment_discount_pct`).

@@ -195,13 +195,18 @@ function DeliveryCard() {
 function ProfitFloorCard() {
   const [d, setD] = useState(null);
   const [pct, setPct] = useState("");
+  const [cost, setCost] = useState("");
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    adminGetProfitFloor().then((r) => { setD(r); setPct(r.pct); }).catch(() => toast.error("Couldn't load the lowest profit setting"));
+    adminGetProfitFloor().then((r) => { setD(r); setPct(r.pct); setCost(r.print_cost); }).catch(() => toast.error("Couldn't load the lowest profit setting"));
   }, []);
   const save = async () => {
+    const changes = {};
+    if (Number(pct) !== d.pct) changes.pct = Number(pct) || 0;
+    if (Number(cost) !== d.print_cost) changes.print_cost = Number(cost) || 0;
+    if (!Object.keys(changes).length) { toast("Nothing changed"); return; }
     setSaving(true);
-    try { const r = await adminSetProfitFloor(Number(pct) || 0); setD(r); setPct(r.pct); toast.success("Saved - live now"); }
+    try { const r = await adminSetProfitFloor(changes); setD(r); setPct(r.pct); setCost(r.print_cost); toast.success("Saved - live now"); }
     catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
     finally { setSaving(false); }
   };
@@ -209,7 +214,8 @@ function ProfitFloorCard() {
     <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5 mb-6" data-testid="acs-profit-floor">
       <h2 className="font-black text-lg">Lowest profit allowed</h2>
       <p className="text-xs text-[#4b5563] mb-3">Bulk discounts, Kit Your Workforce discounts and regular-customer discounts stop at the price
-        that still leaves this much profit - worked out from the supplier's trade price, after VAT, card fees and the logo print.
+        that still leaves this much profit - worked out from the supplier's trade price, after VAT, card fees and the cost of the logo print.
+        Your Own Print Specials are not affected.
         Discount codes (e.g. LAUNCH10) can't be used once an order is already {d ? d.codes_off_from_pct : 15}% or more off.</p>
       {!d ? <Loader2 className="animate-spin text-[#7bc67e]" /> : (
         <>
@@ -218,10 +224,17 @@ function ProfitFloorCard() {
               <input type="number" step="1" min="0" max="60" value={pct} onChange={(e) => setPct(e.target.value)} className="w-full text-sm font-bold focus:outline-none" data-testid="acs-profit-pct" />
               <span className="text-sm text-[#4b5563]">%</span>
             </div>
+            <label className="flex items-center gap-2 text-xs font-extrabold text-[#4b5563]">
+              Cost of one print (film, ink, labour, packing)
+              <span className="flex items-center gap-1 bg-white border-2 border-[#e5e7eb] rounded-xl px-3 py-2 w-28 focus-within:border-[#7bc67e]">
+                <span className="text-sm">£</span>
+                <input type="number" step="0.05" min="0" max="20" value={cost} onChange={(e) => setCost(e.target.value)} className="w-full text-sm font-bold text-[#1a1a1a] focus:outline-none" data-testid="acs-print-cost" />
+              </span>
+            </label>
             <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-50 text-[#1a1a1a] font-extrabold text-sm rounded-full px-5 py-2.5" data-testid="acs-profit-save">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
             </button>
-            <span className="text-[11px] text-[#9ca3af]">Recommended: {d.default_pct}%</span>
+            <span className="text-[11px] text-[#9ca3af]">Recommended: {d.default_pct}% · £{Number(d.default_print_cost).toFixed(2)} a print</span>
           </div>
           {d.examples?.length > 0 && (
             <div className="mt-4 overflow-x-auto">

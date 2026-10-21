@@ -1138,9 +1138,19 @@ async def admin_set_print_prices(payload: PrintPricesIn):
 @app.on_event("startup")
 async def _load_profit_floor():
     try:
-        doc = await db.settings.find_one({"key": "profit_floor"})
-        if doc and doc.get("pct") is not None:
+        doc = await db.settings.find_one({"key": "profit_floor"}) or {}
+        # Tim, 21 Oct 2026: real £1.90 print cost with a 25% minimum. Moves a saved
+        # 30% (the old default) to 25% once; anything else he typed is kept.
+        if not doc.get("v25_applied"):
+            upd = {"key": "profit_floor", "v25_applied": True}
+            if doc.get("pct") in (None, 30, 30.0):
+                upd["pct"] = PROFIT_FLOOR_DEFAULT_PCT
+            await db.settings.update_one({"key": "profit_floor"}, {"$set": upd}, upsert=True)
+            doc = {**doc, **upd}
+        if doc.get("pct") is not None:
             _PROFIT_FLOOR["pct"] = float(doc["pct"])
+        if doc.get("print_cost") is not None:
+            _PROFIT_FLOOR["print_cost"] = float(doc["print_cost"])
     except Exception as e:
         logging.warning(f"profit floor load skipped: {e}")
 
@@ -1158,11 +1168,13 @@ def _profit_floor_view() -> Dict:
         ex.append({"id": pid, "name": p["name"], "cost": float(p["source_price"]), "price": price,
                    "lowest": floor, "max_off_pct": round(100 * (1 - floor / price), 0) if price else 0})
     return {"pct": _PROFIT_FLOOR["pct"], "default_pct": PROFIT_FLOOR_DEFAULT_PCT,
+            "print_cost": _PROFIT_FLOOR["print_cost"], "default_print_cost": PRINT_COST_DEFAULT,
             "codes_off_from_pct": PROMO_CODES_MAX_DISCOUNT_PCT, "examples": ex}
 
 
 class ProfitFloorIn(BaseModel):
-    pct: float
+    pct: Optional[float] = None
+    print_cost: Optional[float] = None
 
 
 @api_router.get("/admin/profit-floor", dependencies=[Depends(require_admin)])
@@ -1172,12 +1184,19 @@ async def admin_get_profit_floor():
 
 @api_router.put("/admin/profit-floor", dependencies=[Depends(require_admin)])
 async def admin_set_profit_floor(payload: ProfitFloorIn):
-    if not (0 <= payload.pct <= 60):
-        raise HTTPException(400, "Lowest profit must be between 0% and 60%")
-    await db.settings.update_one({"key": "profit_floor"},
-                                 {"$set": {"key": "profit_floor", "pct": round(payload.pct, 1),
-                                           "updated_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
-    _PROFIT_FLOOR["pct"] = round(payload.pct, 1)
+    upd = {"key": "profit_floor", "updated_at": datetime.now(timezone.utc).isoformat()}
+    if payload.pct is not None:
+        if not (0 <= payload.pct <= 60):
+            raise HTTPException(400, "Lowest profit must be between 0% and 60%")
+        upd["pct"] = round(payload.pct, 1)
+    if payload.print_cost is not None:
+        if not (0 <= payload.print_cost <= 20):
+            raise HTTPException(400, "Cost of one print must be between £0 and £20")
+        upd["print_cost"] = round(payload.print_cost, 2)
+    await db.settings.update_one({"key": "profit_floor"}, {"$set": upd}, upsert=True)
+    for k in ("pct", "print_cost"):
+        if k in upd:
+            _PROFIT_FLOOR[k] = upd[k]
     return _profit_floor_view()
 
 
@@ -2920,13 +2939,17 @@ def snap_to_99(price: float) -> float:
 # garment below the price that still leaves PROFIT_FLOOR_PCT of the money we keep
 # (after VAT and Stripe) once the garment's trade cost (source_price) and its logo
 # print are paid for. Worked out for a garment with ONE small logo (sold at the
-# left-breast price, costing PRINT_COST_ESTIMATE); extra prints only add profit.
+# left-breast price, costing _PROFIT_FLOOR["print_cost"]); extra prints only add profit.
+# Your Own Print Specials keep the old £1 print cost so their floors never move.
 # Garments with no saved trade cost (built-in products) have no floor.
 # Admin > Configurator prices > "Lowest profit allowed" (db.settings "profit_floor").
-PROFIT_FLOOR_DEFAULT_PCT = 30.0
-PRINT_COST_ESTIMATE = 1.00               # DTF film + ink + powder for one logo
+PROFIT_FLOOR_DEFAULT_PCT = 25.0
+# Real cost of one print (Tim, 21 Oct 2026): film + ink + powder ~£1.00, ~4 min press
+# labour ~£0.80, packing ~£0.10. Editable next to the % (db.settings "profit_floor".print_cost).
+PRINT_COST_DEFAULT = 1.90
+SPECIALS_PRINT_COST = 1.00               # Specials keep their old floor (never repriced by this)
 STRIPE_PCT, STRIPE_PER_ITEM = 0.015, 0.10
-_PROFIT_FLOOR = {"pct": PROFIT_FLOOR_DEFAULT_PCT}
+_PROFIT_FLOOR = {"pct": PROFIT_FLOOR_DEFAULT_PCT, "print_cost": PRINT_COST_DEFAULT}
 
 
 def ceil_to_99(price: float) -> float:
@@ -2948,7 +2971,8 @@ def garment_floor(p: Dict, print_price: Optional[float] = None, prints: int = 1)
     keep = 1 - _PROFIT_FLOOR["pct"] / 100.0
     logo = float(PLACEMENT_BY_ID["left-breast"]["price"]) if print_price is None else float(print_price)
     # unit U (garment + print): U/vat - U*stripe% - per_item >= (cost + print cost) / keep
-    unit = ((cost + PRINT_COST_ESTIMATE * prints) / keep + STRIPE_PER_ITEM) / (1 / vat - STRIPE_PCT)
+    print_cost = SPECIALS_PRINT_COST if p.get("specials_eligible") else _PROFIT_FLOOR["print_cost"]
+    unit = ((cost + print_cost * prints) / keep + STRIPE_PER_ITEM) / (1 / vat - STRIPE_PCT)
     floor = max(0.99, ceil_to_99(unit - logo))
     return round(min(float(p.get("price") or 0), floor), 2)
 

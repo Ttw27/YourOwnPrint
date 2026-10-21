@@ -264,8 +264,9 @@ export async function adminGetProfitFloor() {
   const { data } = await api.get("/admin/profit-floor");
   return data;
 }
-export async function adminSetProfitFloor(pct) {
-  const { data } = await api.put("/admin/profit-floor", { pct });
+export async function adminSetProfitFloor(changes) {
+  // partial save: only the fields that changed ({pct}, {print_cost} or both)
+  const { data } = await api.put("/admin/profit-floor", changes);
   return data;
 }
 export async function adminGetPrintPrices() {
