@@ -1,0 +1,24 @@
+{
+  "trading_name": "Your Own Print",
+  "legal_name": "TEZL GROUP LTD",
+  "town": "Leicester",
+  "email": "info@yourownprint.co.uk",
+  "website": "yourownprint.co.uk",
+  "logo": "../frontend/public/logo.png",
+  "accent": "#7bc67e",
+  "quote_prefix": "YOP-Q",
+  "valid_days": 30,
+  "included": [
+    "Printing on every position shown - no set-up or screen fees",
+    "A digital proof to approve before anything is printed",
+    "Printed in-house in Leicester",
+    "Free UK delivery on orders over £150"
+  ],
+  "terms": [
+    "Prices are per item and exclude VAT at 20% unless shown otherwise.",
+    "Quantity prices apply per garment style across all colours and sizes.",
+    "Typical turnaround is 7-10 working days from proof approval.",
+    "Payment by card or BACS on approval of your proof.",
+    "Prices are subject to garment availability at the time of order."
+  ]
+}
