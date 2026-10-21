@@ -190,7 +190,7 @@ frontend/src/
   `backend/data/specials_range.json` (`print`, `brand` per item) by `routers/specials.create_specials_range()`
   (marker `specials_range_2026_v2`, only missing ids are made; photos mirrored to R2). New photos with the
   "YOUROWNPRINT SPECIAL OFFER" band live in frontend/public/specials/2026-10/ (generator:
-  marketing/instagram/_source/make_specials.py). Specials have no source_price, so no profit floor. Kit Your Workforce's
+  marketing/instagram/_source/make_specials.py). GD11 £9.99 / GD12 £7.99 (+£1, `_raise_prices_v1`, marker `specials_price_raise_v1`, saved as price overrides). Specials have no source_price, so no profit floor. Kit Your Workforce's
   category fallback floor (cheapest Special of the same category) is capped at the garment's own price + logo. `colour_upcharges` (e.g.
   {"Black": 2.0}) adds to the garment price per colour, server + PDP. Designer products are never Specials.
 - **Design Your Own products** (`designer_enabled`) are sold ONLY through the designer: `/product/:id`

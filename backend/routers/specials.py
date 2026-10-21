@@ -120,3 +120,32 @@ async def create_specials_range(force: bool = False) -> Dict:
         "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
     logging.info(f"Specials range: {len(created)} created, {len(existing)} already there")
     return {"created": created, "existing": existing}
+
+
+# Tim, 21 Oct 2026: GD11 (long sleeve) and GD12 (tank) roughly broke even with the real
+# £1.90 print cost - up £1 each. Only moves a price still at the old figure (a hand-set
+# price is kept); saved as a price override like Product settings > Name, price & photo.
+PRICE_RAISES_V1 = {"special-gd11": (8.99, 9.99), "special-gd12": (6.99, 7.99)}
+
+
+async def _raise_prices_v1() -> None:
+    from server import PRODUCTS, _apply_product_override
+    key = "specials_price_raise_v1"
+    if await db.settings.find_one({"key": key}):
+        return
+    done = []
+    for pid, (old, new) in PRICE_RAISES_V1.items():
+        p = PRODUCTS.get(pid)
+        if not p or abs(float(p.get("price") or 0) - old) > 0.001:
+            continue
+        await db.product_overrides.update_one({"product_id": pid}, {"$set": {"product_id": pid, "price": new}}, upsert=True)
+        _apply_product_override(pid, {"price": new})
+        done.append(pid)
+    await db.settings.update_one({"key": key}, {"$set": {"key": key, "raised": done,
+                                                          "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    logging.info(f"specials price raise: {done}")
+
+
+async def specials_startup() -> None:
+    await create_specials_range()
+    await _raise_prices_v1()

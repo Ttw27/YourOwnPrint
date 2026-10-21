@@ -8815,8 +8815,8 @@ async def _load_imported_products():
         except Exception as e:
             logging.warning(f"auto size guide cleanup skipped: {e}")
         try:
-            from routers.specials import create_specials_range
-            asyncio.create_task(create_specials_range())
+            from routers.specials import specials_startup
+            asyncio.create_task(specials_startup())
         except Exception as e:
             logging.warning(f"specials range skipped: {e}")
         try:
