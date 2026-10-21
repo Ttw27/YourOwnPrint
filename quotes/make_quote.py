@@ -36,38 +36,41 @@ def nice_date(d: dt.date) -> str:
 def option_html(opt: dict, ex_vat: bool) -> str:
     rows = []
     total = 0.0
+    basis = "ex VAT" if ex_vat else "inc VAT"
+    other_basis = "inc VAT" if ex_vat else "ex VAT"
+    other = (lambda v: v * (1 + VAT)) if ex_vat else (lambda v: v / (1 + VAT))
     # "print_price" on an item = print shown as its own price; "price" is then the garment only
     split = any("print_price" in it for it in opt["items"])
     for it in opt["items"]:
         garment, prt = float(it["price"]), float(it.get("print_price") or 0)
         total += garment + prt
         note = f' · <span class="note">{esc(it["note"])}</span>' if it.get("note") else ""
-        code = f' <span class="code">{esc(it["code"])}</span>' if it.get("code") else ""
+        code = f'{esc(it["code"])} · ' if it.get("code") else ""
         cols = (f'<td class="num">{money(garment)}</td>'
                 f'<td class="print">{esc(it.get("print"))}<div class="sub">{money(prt)}</div></td>') if split else \
                f'<td class="print">{esc(it.get("print"))}</td>'
         rows.append(f"""
         <tr>
           <td class="type">{esc(it["type"])}</td>
-          <td><div class="garment">{esc(it["garment"])}{code}</div>
-              <div class="sub">{esc(it.get("colours"))}{note}</div></td>
+          <td><div class="garment">{esc(it["garment"])}</div>
+              <div class="sub">{code}{esc(it.get("colours"))}{note}</div></td>
           {cols}
           <td class="price">{money(garment + prt)}</td>
+          <td class="num alt">{money(other(garment + prt))}</td>
         </tr>""")
-    heads = '<th class="num">Garment</th><th>Printing</th>' if split else "<th>Printing</th>"
-    other = total * (1 + VAT) if ex_vat else total / (1 + VAT)
-    other_label = "inc VAT" if ex_vat else "ex VAT"
+    heads = (f'<th class="num">Garment<br>{basis}</th><th>Print<br>{basis}</th>' if split
+             else "<th>Printing</th>")
     badge = '<span class="badge">Recommended</span>' if opt.get("recommended") else ""
     return f"""
     <section class="option{' rec' if opt.get('recommended') else ''}">
       <header>
         <div><h2>{esc(opt["name"])} {badge}</h2><p>{esc(opt.get("tagline"))}</p></div>
-        <div class="setprice"><span class="lbl">Per set</span>
+        <div class="setprice"><span class="lbl">Per set {basis}</span>
           <span class="big">{money(total)}</span>
-          <span class="alt">{money(other)} {other_label}</span></div>
+          <span class="alt">{money(other(total))} {other_basis}</span></div>
       </header>
       <table>
-        <thead><tr><th>Item</th><th>Garment</th>{heads}<th class="price">Per item</th></tr></thead>
+        <thead><tr><th>Item</th><th>Product</th>{heads}<th class="price">Per item<br>{basis}</th><th class="num">Per item<br>{other_basis}</th></tr></thead>
         <tbody>{''.join(rows)}</tbody>
       </table>
     </section>"""
@@ -84,7 +87,7 @@ def build_html(q: dict, co: dict) -> str:
     basis = "All prices exclude VAT" if ex_vat else "All prices include VAT"
     extras = "".join(f'<tr><td>{esc(e["label"])}</td><td class="price">{esc(e["price"])}</td></tr>'
                      for e in q.get("extras") or [])
-    extras_html = f"""<div class="box"><h3>Optional extras</h3>
+    extras_html = f"""<div class="box"><h3>Optional extras ({"ex VAT" if ex_vat else "inc VAT"})</h3>
         <table class="extras">{extras}</table></div>""" if extras else ""
     benefits = "".join(f'<div class="ben"><b>{esc(b["title"])}</b><span>{esc(b["text"])}</span></div>'
                        for b in q.get("benefits") or co["benefits"])
@@ -95,7 +98,7 @@ def build_html(q: dict, co: dict) -> str:
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>{number}</title>
 <style>
-  @page {{ size: A4; margin: 14mm 14mm 18mm; }}
+  @page {{ size: A4; margin: 13mm 14mm 11mm; }}
   :root {{ --accent: {accent}; --ink: #1d1d1f; --muted: #6b6b70; --line: #e6e6e9; --tint: #f3f9f3; }}
   * {{ box-sizing: border-box; }}
   body {{ margin: 0; font: 9pt/1.4 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); }}
@@ -125,12 +128,14 @@ def build_html(q: dict, co: dict) -> str:
   .setprice .big {{ display: block; font-size: 17pt; font-weight: 800; line-height: 1.1; }}
   .setprice .alt {{ font-size: 7.5pt; color: var(--muted); }}
   table {{ width: 100%; border-collapse: collapse; }}
-  th {{ text-align: left; font-size: 7pt; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; padding: 2mm 4.5mm 1.2mm; }}
-  td {{ padding: 1.5mm 4.5mm; border-top: 1px solid var(--line); vertical-align: top; }}
-  td.type {{ font-weight: 700; width: 19mm; }}
-  td.num, th.num {{ text-align: right; width: 20mm; }}
-  td.print {{ width: 32mm; white-space: nowrap; color: #3a3a3e; }}
-  .price {{ text-align: right; width: 24mm; font-weight: 700; }}
+  th {{ white-space: nowrap; vertical-align: bottom; text-align: left; font-size: 7pt; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; padding: 2mm 2.5mm 1.2mm; }}
+  th:first-child, td:first-child {{ padding-left: 4.5mm; }} th:last-child, td:last-child {{ padding-right: 4.5mm; }}
+  td {{ padding: 1.5mm 2.5mm; border-top: 1px solid var(--line); vertical-align: top; }}
+  td.type {{ font-weight: 700; width: 16mm; }}
+  td.num, th.num {{ text-align: right; width: 19mm; }}
+  td.alt {{ color: var(--muted); }}
+  td.print {{ width: 29mm; white-space: nowrap; color: #3a3a3e; }}
+  .price {{ text-align: right; width: 21mm; font-weight: 700; }}
   .garment {{ font-weight: 600; }}
   .code {{ white-space: nowrap; font-weight: 500; color: var(--muted); font-size: 7.5pt; margin-left: 1mm; }}
   .note {{ color: var(--ink); font-weight: 600; }}
