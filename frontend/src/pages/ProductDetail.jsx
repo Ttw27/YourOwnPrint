@@ -158,7 +158,7 @@ export default function ProductDetail() {
         setSizeQtys({});
         setPrintMode("custom");
         // Specials products auto-select left-breast so the upload widget is visible immediately
-        setSelectedPlacements(p?.specials_eligible ? ["left-breast"] : []);
+        setSelectedPlacements(p?.specials_eligible ? [(p.allowed_placements && p.allowed_placements[0]) || "left-breast"] : []);
         setArtwork({});
       })
       .catch((e) => setErr(e?.response?.status === 404 ? "Product not found" : "Could not load product"))
@@ -167,15 +167,18 @@ export default function ProductDetail() {
 
   const blank = printMode === "blank";
   const isSpecial = !!product?.specials_eligible;
+  // Specials print ONE logo in their own spot: left breast, or large front (tote, apron), or the beanie's patch
+  const specialPos = (isSpecial && product?.allowed_placements?.[0]) || "left-breast";
+  const specialWhere = product?.category === "hats" ? "on the front patch" : specialPos === "full-front" ? "large on the front" : "on the left breast";
   const agg = aggregates[id];
   const placementById = useMemo(() => Object.fromEntries(placements.map(p => [p.id, p])), [placements]);
   const visiblePlacements = useMemo(() => {
     if (isSpecial) {
-      return placements.filter((pl) => pl.id === "left-breast");
+      return placements.filter((pl) => pl.id === specialPos);
     }
     if (!Array.isArray(allowedPlacements)) return placements;
     return placements.filter(p => allowedPlacements.includes(p.id));
-  }, [placements, allowedPlacements, isSpecial]);
+  }, [placements, allowedPlacements, isSpecial, specialPos]);
 
   // No print positions allowed for this product (e.g. footwear, socks - set in
   // Product settings > Printing): it's sold as-is, so skip the print step.
@@ -585,12 +588,12 @@ export default function ProductDetail() {
                   </Section>
                 ) : isSpecial ? (
                   <>
-                    <Section title="3. Your breast logo">
+                    <Section title={specialPos === "left-breast" ? "3. Your breast logo" : "3. Your logo"}>
                       <div className="bg-[#f0fdf4] border-2 border-[#dcfce7] rounded-2xl p-4 flex items-start gap-3" data-testid="specials-included-note">
                         <div className="w-8 h-8 grid place-items-center bg-[#7bc67e] text-[#1a1a1a] rounded-full flex-shrink-0"><Check size={16} /></div>
                         <div className="text-sm">
-                          <div className="font-nunito font-extrabold text-[#1a1a1a]">Left-breast logo print is included in the price</div>
-                          <div className="text-xs text-[#4b5563] mt-1">This is one of our Starter Specials - no MOQ, no setup, no upsell. Just upload your logo below and we'll print it neatly on the left breast of every garment.</div>
+                          <div className="font-nunito font-extrabold text-[#1a1a1a]">Your logo printed {specialWhere} - included in the price</div>
+                          <div className="text-xs text-[#4b5563] mt-1">This is one of our Starter Specials - no MOQ, no setup, no upsell. Just upload your logo below and we'll print it neatly {specialWhere} of every item.</div>
                         </div>
                       </div>
                     </Section>

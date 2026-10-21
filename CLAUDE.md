@@ -182,10 +182,16 @@ frontend/src/
   that rewrites a product's colours/sizes must be followed by `reapply_saved_settings` or
   `_apply_hidden_options(pid)`.
 
-- **Your Own Print Specials** (`specials_eligible`): ONE left-breast logo included in the price - checkout
-  forces placements to ["left-breast"] at £0 print and only accepts the product's own colours.
-  The 13-product range (from the old Shopify store) is created once from `backend/data/specials_range.json`
-  by `routers/specials.create_specials_range()` (photos mirrored to R2). `colour_upcharges` (e.g.
+- **Your Own Print Specials** (`specials_eligible`): ONE logo included in the price, in the Special's own position
+  (`allowed_placements[0]`: left breast; large front for tote W101 / apron PR165; beanie BB445 = its patch, stored as
+  full-front) - checkout forces that one placement at £0 print and only accepts the product's own colours.
+  The range (13 from the old Shopify store + 6 workwear added 21 Oct 2026: hi-vis vest PW002 £6.99, hi-vis polo RX710
+  £15.99, softshell RX500 £20.99, patch beanie £6.99, apron £9.99, tote £3.99 = loss leader) is created from
+  `backend/data/specials_range.json` (`print`, `brand` per item) by `routers/specials.create_specials_range()`
+  (marker `specials_range_2026_v2`, only missing ids are made; photos mirrored to R2). New photos with the
+  "YOUROWNPRINT SPECIAL OFFER" band live in frontend/public/specials/2026-10/ (generator:
+  marketing/instagram/_source/make_specials.py). Specials have no source_price, so no profit floor. Kit Your Workforce's
+  category fallback floor (cheapest Special of the same category) is capped at the garment's own price + logo. `colour_upcharges` (e.g.
   {"Black": 2.0}) adds to the garment price per colour, server + PDP. Designer products are never Specials.
 - **Design Your Own products** (`designer_enabled`) are sold ONLY through the designer: `/product/:id`
   redirects to `/design?product=:id`. For a garment that should also be sold normally, duplicate it first.

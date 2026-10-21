@@ -1912,8 +1912,10 @@ async def _resolve_line_pricing(
         placements_clean = ["drawstring-bag"] if "drawstring-bag" in wanted else []
         print_cost = LEAVERS_BAG_PRICE if "drawstring-bag" in wanted else 0.0
     elif product.get("specials_eligible") and not product.get("bundle_items") and not product.get("designer_enabled"):
-        # Your Own Print Specials: ONE breast-pocket logo, included in the price.
-        placements_clean = ["left-breast"]
+        # Your Own Print Specials: ONE logo, included in the price, in the Special's own
+        # position (left breast; large front on the tote / apron; the beanie's patch).
+        sp_pos = (product.get("allowed_placements") or ["left-breast"])[0]
+        placements_clean = [sp_pos if sp_pos in PLACEMENT_BY_ID else "left-breast"]
         print_cost = 0.0
         sp_colours = [(c.get("name") if isinstance(c, dict) else c) for c in (product.get("colors") or [])]
         if sp_colours and color not in sp_colours:
@@ -4246,7 +4248,9 @@ def workforce_min_unit(p: Dict) -> float:
         return max(float(sp["price"]), profit)
     same = [float(s["price"]) for s in live_products()
             if s.get("specials_eligible") and not s.get("designer_enabled") and s.get("category") == p.get("category")]
-    return max(min(same) if same else 0.0, profit)
+    # a Special of a different garment never pushes this one above its own normal price + logo
+    own = float(p.get("price") or 0) + WORKFORCE_LOGO_PRICE
+    return max(min(min(same), own) if same else 0.0, profit)
 
 
 def workforce_unit(base_price: float, factor: float, p: Dict) -> float:

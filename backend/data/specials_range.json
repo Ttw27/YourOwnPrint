@@ -514,5 +514,221 @@
    "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/rx01f_white_ft2_edb185dd-b4bc-48a1-a5db-1fffd90ea21a.jpg",
    "https://cdn.shopify.com/s/files/1/0572/8278/9513/files/ProRTXLadiesProPiquePoloShirt-RX101F_3bae4643-38d7-4592-94f0-36611c8959d7.jpg"
   ]
+ },
+ {
+  "id": "special-pw002",
+  "name": "Special - Portwest Hi-Vis Vest (PW002) - Breast Print",
+  "base": "PW002",
+  "category": "hi-vis",
+  "gender_fit": "unisex",
+  "price": 6.99,
+  "sizes": [
+   "S/M",
+   "L/XL",
+   "2X3X",
+   "4X5X"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "Yellow",
+    "hex": "#deff00",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/pw002-Yellow.jpg"
+   }
+  ],
+  "colour_upcharges": {},
+  "images": [
+   "https://www.yourownprint.co.uk/specials/2026-10/pw002-Yellow.jpg"
+  ],
+  "print": "left-breast",
+  "brand": "Portwest"
+ },
+ {
+  "id": "special-rx710",
+  "name": "Special - Pro RTX Hi-Vis Polo Shirt (RX710) - Breast Print",
+  "base": "RX710",
+  "category": "polos",
+  "gender_fit": "unisex",
+  "price": 15.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL"
+  ],
+  "size_upcharges": {
+   "4XL": 2.0,
+   "5XL": 2.0
+  },
+  "colors": [
+   {
+    "name": "Yellow/Navy",
+    "hex": "#ffff00;#001228",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/rx710-Yellow-Navy.jpg"
+   },
+   {
+    "name": "Orange/Navy",
+    "hex": "#ff5900;#001228",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/rx710-Orange-Navy.jpg"
+   }
+  ],
+  "colour_upcharges": {},
+  "images": [
+   "https://www.yourownprint.co.uk/specials/2026-10/rx710-Yellow-Navy.jpg",
+   "https://www.yourownprint.co.uk/specials/2026-10/rx710-Orange-Navy.jpg"
+  ],
+  "print": "left-breast",
+  "brand": "Pro RTX High Visibility"
+ },
+ {
+  "id": "special-rx500",
+  "name": "Special - Pro RTX Two Layer Softshell Jacket (RX500) - Breast Print",
+  "base": "RX500",
+  "category": "jackets",
+  "gender_fit": "unisex",
+  "price": 20.99,
+  "sizes": [
+   "S",
+   "M",
+   "L",
+   "XL",
+   "XXL",
+   "3XL",
+   "4XL",
+   "5XL"
+  ],
+  "size_upcharges": {
+   "3XL": 2.5,
+   "4XL": 2.5,
+   "5XL": 4.5
+  },
+  "colors": [
+   {
+    "name": "Black",
+    "hex": "#000000",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/rx500-Black.jpg"
+   },
+   {
+    "name": "Navy",
+    "hex": "#041745",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/rx500-Navy.jpg"
+   },
+   {
+    "name": "Charcoal",
+    "hex": "#363e48",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/rx500-Charcoal.jpg"
+   }
+  ],
+  "colour_upcharges": {},
+  "images": [
+   "https://www.yourownprint.co.uk/specials/2026-10/rx500-Black.jpg",
+   "https://www.yourownprint.co.uk/specials/2026-10/rx500-Navy.jpg",
+   "https://www.yourownprint.co.uk/specials/2026-10/rx500-Charcoal.jpg"
+  ],
+  "print": "left-breast",
+  "brand": "Pro RTX"
+ },
+ {
+  "id": "special-bb445",
+  "name": "Special - Beechfield Patch Beanie (BB445) - Logo on the Patch",
+  "base": "BB445",
+  "category": "hats",
+  "gender_fit": "unisex",
+  "price": 6.99,
+  "sizes": [
+   "ONE"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "Black",
+    "hex": "#000000",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/bb445-Black.jpg"
+   },
+   {
+    "name": "French Navy",
+    "hex": "#000d59",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/bb445-French_Navy.jpg"
+   },
+   {
+    "name": "Heather Grey",
+    "hex": "#ccd5d3",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/bb445-Heather_Grey.jpg"
+   }
+  ],
+  "colour_upcharges": {},
+  "images": [
+   "https://www.yourownprint.co.uk/specials/2026-10/bb445-Black.jpg",
+   "https://www.yourownprint.co.uk/specials/2026-10/bb445-French_Navy.jpg",
+   "https://www.yourownprint.co.uk/specials/2026-10/bb445-Heather_Grey.jpg"
+  ],
+  "print": "full-front",
+  "brand": "Beechfield"
+ },
+ {
+  "id": "special-pr165",
+  "name": "Special - Premier Essential Bib Apron (PR165) - Large Front Print",
+  "base": "PR165",
+  "category": "aprons",
+  "gender_fit": "unisex",
+  "price": 9.99,
+  "sizes": [
+   "ONE"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "Black",
+    "hex": "#000000",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/pr165-Black.jpg"
+   },
+   {
+    "name": "Navy",
+    "hex": "#041848",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/pr165-Navy.jpg"
+   }
+  ],
+  "colour_upcharges": {},
+  "images": [
+   "https://www.yourownprint.co.uk/specials/2026-10/pr165-Black.jpg",
+   "https://www.yourownprint.co.uk/specials/2026-10/pr165-Navy.jpg"
+  ],
+  "print": "full-front",
+  "brand": "Premier"
+ },
+ {
+  "id": "special-w101",
+  "name": "Special - Westford Mill Cotton Tote Bag (W101) - Large Front Print",
+  "base": "W101",
+  "category": "bags",
+  "gender_fit": "unisex",
+  "price": 3.99,
+  "sizes": [
+   "ONE"
+  ],
+  "size_upcharges": {},
+  "colors": [
+   {
+    "name": "Natural",
+    "hex": "#fff2d9",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/w101-Natural.jpg"
+   },
+   {
+    "name": "Black",
+    "hex": "#000000",
+    "image": "https://www.yourownprint.co.uk/specials/2026-10/w101-Black.jpg"
+   }
+  ],
+  "colour_upcharges": {},
+  "images": [
+   "https://www.yourownprint.co.uk/specials/2026-10/w101-Natural.jpg",
+   "https://www.yourownprint.co.uk/specials/2026-10/w101-Black.jpg"
+  ],
+  "print": "full-front",
+  "brand": "Westford Mill"
  }
 ]

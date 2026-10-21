@@ -26,7 +26,7 @@ export default function Specials() {
 
   const copy = usePageCopy("specials", {
     title: "",
-    subtitle: "A curated lineup for new businesses. One sharp logo on the breast pocket, printed in the UK, no minimum order and no big up-front costs. Order one, order ten - whatever you need to get going.",
+    subtitle: "A curated lineup for new businesses. One sharp logo included - on the breast pocket, or large on the front of totes and aprons - printed in the UK, no minimum order and no big up-front costs. Order one, order ten - whatever you need to get going.",
   });
 
   const filtered = useMemo(() => {
@@ -71,8 +71,8 @@ export default function Specials() {
             <p className="text-zinc-300 mt-4 text-lg max-w-xl" data-testid="specials-hero-subtitle">{copy.subtitle}</p>
             <div className="mt-6 flex flex-wrap gap-3 text-xs">
               <Badge>No MOQ - order 1+</Badge>
-              <Badge>Breast logo included</Badge>
-              <Badge>UK printed · 7–10 days</Badge>
+              <Badge>Logo included</Badge>
+              <Badge>Printed in the UK</Badge>
               <Badge>Stripe checkout</Badge>
             </div>
           </div>
@@ -94,14 +94,14 @@ export default function Specials() {
       {/* Value props */}
       <section className="max-w-6xl mx-auto px-6 py-14 grid sm:grid-cols-3 gap-4" data-testid="specials-value-props">
         <Prop icon={<Tag size={18} />} title="No MOQ" body="Order a single piece, or a hundred - same per-unit price. Test the look before committing." />
-        <Prop icon={<Briefcase size={18} />} title="Trade-ready in days" body="A clean breast-logo print is all most new clients need to take you seriously. We turn it around in 7–10 working days." />
+        <Prop icon={<Briefcase size={18} />} title="Trade-ready in days" body="A clean logo on your tees, polos, hi-vis and jackets is all most new clients need to take you seriously." />
         <Prop icon={<Zap size={18} />} title="No setup fees" body="No screen charges, no setup costs. Just the price you see - and Stripe to check out." />
       </section>
 
       {/* Product grid */}
       <section className="max-w-6xl mx-auto px-6 pb-16" data-testid="specials-grid-section">
         <h2 className="font-black text-3xl mb-2">The starter lineup</h2>
-        <p className="text-[#4b5563] mb-6">Hand-picked staples that look smart with a single breast-logo print. Tap one to start your order.</p>
+        <p className="text-[#4b5563] mb-6">Hand-picked staples - tees, polos, hi-vis, jackets, beanies, aprons and totes - each with your logo included. Tap one to start your order.</p>
 
         {!loading && filtered.length > 0 && (
           <div className="text-xs text-[#4b5563] mb-2" data-testid="specials-count">
@@ -154,7 +154,7 @@ export default function Specials() {
                     <span className="text-xs inline-flex items-center gap-1 text-[#7bc67e] font-extrabold group-hover:translate-x-0.5 transition-transform">Pick this <ArrowRight size={14} /></span>
                   </div>
                   <div className="mt-3 text-[11px] text-[#4b5563] inline-flex items-center gap-1.5">
-                    <CheckCircle2 size={11} className="text-[#7bc67e]" /> Breast logo print included · No MOQ
+                    <CheckCircle2 size={11} className="text-[#7bc67e]" /> {p.category === "hats" ? "Logo on the patch included" : ["bags", "aprons"].includes(p.category) ? "Large front print included" : "Breast logo print included"} · No MOQ
                   </div>
                 </div>
               </Link>

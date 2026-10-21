@@ -10,8 +10,9 @@ guarded - copying the photos into our own R2 storage so they keep working after
 Shopify is closed. Anything Tim edits afterwards (Product settings) is kept:
 existing products are never touched.
 
-Pricing: checkout includes the breast print for any `specials_eligible`
-product (see server._resolve_line_pricing) - nothing extra is charged for it.
+Pricing: checkout includes ONE print for any `specials_eligible` product, in the
+Special's own position (allowed_placements[0]: left breast, or large front for
+the tote / apron and the patch on the beanie) - see server._resolve_line_pricing.
 """
 from __future__ import annotations
 
@@ -23,7 +24,8 @@ from typing import Dict, List, Optional
 
 from deps import ROOT_DIR, db
 
-MARKER = "specials_range_2026_v1"
+MARKER = "specials_range_2026_v2"   # v2 (21 Oct 2026): 6 workwear Specials added (only missing ones are made)
+PRINT_WORDS = {"left-breast": "printed on the breast pocket", "full-front": "printed large on the front"}
 KIDS_AGE_TO_SIZE = {"3-4 yrs": "XS", "5-6 yrs": "S", "7-8 yrs": "M", "9-11 yrs": "L", "12-14 yrs": "XL"}
 
 
@@ -46,7 +48,8 @@ def _size_chart(spec: Dict) -> List[Dict]:
 def _description(spec: Dict) -> str:
     colours = ", ".join(c["name"] for c in spec["colors"])
     extra = " (Black +£2.00)" if spec.get("colour_upcharges", {}).get("Black") else ""
-    return (f"Part of our Your Own Print Specials range - your logo printed on the breast pocket, "
+    where = "printed on the front patch" if spec.get("category") == "hats" else PRINT_WORDS.get(spec.get("print") or "left-breast")
+    return (f"Part of our Your Own Print Specials range - your logo {where}, "
             f"included in the price. No minimum order, no set-up fees.\n\n"
             f"Available in: {colours}{extra}.\n\n"
             f"Upload your logo when you order and we'll send a free proof before we print. "
@@ -94,8 +97,8 @@ async def create_specials_range(force: bool = False) -> Dict:
             "sizes": spec["sizes"],
             "size_upcharges": spec.get("size_upcharges") or {},
             "colour_upcharges": spec.get("colour_upcharges") or {},
-            "allowed_placements": ["left-breast"],
-            "brand": "Gildan" if spec["base"].upper().startswith("GD") else "Pro RTX",
+            "allowed_placements": [spec.get("print") or "left-breast"],
+            "brand": spec.get("brand") or ("Gildan" if spec["base"].upper().startswith("GD") else "Pro RTX"),
             "source_sku": spec["base"].upper(),
             "source": "special",
             "active": True,
@@ -104,7 +107,7 @@ async def create_specials_range(force: bool = False) -> Dict:
         }
         await db.imported_products.insert_one(dict(doc))
         await db.product_meta.update_one({"product_id": pid}, {"$set": {
-            "product_id": pid, "specials_eligible": True, "allowed_placements": ["left-breast"],
+            "product_id": pid, "specials_eligible": True, "allowed_placements": [spec.get("print") or "left-breast"],
             "gender_fit": spec["gender_fit"], "description_full": _description(spec),
             "size_guide_table": _size_chart(spec), "brand": doc["brand"], "sku": doc["source_sku"],
             "updated_at": now}}, upsert=True)
