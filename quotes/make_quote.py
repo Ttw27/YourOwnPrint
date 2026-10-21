@@ -36,18 +36,25 @@ def nice_date(d: dt.date) -> str:
 def option_html(opt: dict, ex_vat: bool) -> str:
     rows = []
     total = 0.0
+    # "print_price" on an item = print shown as its own price; "price" is then the garment only
+    split = any("print_price" in it for it in opt["items"])
     for it in opt["items"]:
-        total += float(it["price"])
+        garment, prt = float(it["price"]), float(it.get("print_price") or 0)
+        total += garment + prt
         note = f' · <span class="note">{esc(it["note"])}</span>' if it.get("note") else ""
         code = f' <span class="code">{esc(it["code"])}</span>' if it.get("code") else ""
+        cols = (f'<td class="num">{money(garment)}</td>'
+                f'<td class="print">{esc(it.get("print"))}<div class="sub">{money(prt)}</div></td>') if split else \
+               f'<td class="print">{esc(it.get("print"))}</td>'
         rows.append(f"""
         <tr>
           <td class="type">{esc(it["type"])}</td>
           <td><div class="garment">{esc(it["garment"])}{code}</div>
               <div class="sub">{esc(it.get("colours"))}{note}</div></td>
-          <td class="print">{esc(it.get("print"))}</td>
-          <td class="price">{money(float(it["price"]))}</td>
+          {cols}
+          <td class="price">{money(garment + prt)}</td>
         </tr>""")
+    heads = '<th class="num">Garment</th><th>Printing</th>' if split else "<th>Printing</th>"
     other = total * (1 + VAT) if ex_vat else total / (1 + VAT)
     other_label = "inc VAT" if ex_vat else "ex VAT"
     badge = '<span class="badge">Recommended</span>' if opt.get("recommended") else ""
@@ -60,7 +67,7 @@ def option_html(opt: dict, ex_vat: bool) -> str:
           <span class="alt">{money(other)} {other_label}</span></div>
       </header>
       <table>
-        <thead><tr><th>Item</th><th>Garment</th><th>Printing</th><th class="price">Per item</th></tr></thead>
+        <thead><tr><th>Item</th><th>Garment</th>{heads}<th class="price">Per item</th></tr></thead>
         <tbody>{''.join(rows)}</tbody>
       </table>
     </section>"""
@@ -79,7 +86,8 @@ def build_html(q: dict, co: dict) -> str:
                      for e in q.get("extras") or [])
     extras_html = f"""<div class="box"><h3>Optional extras</h3>
         <table class="extras">{extras}</table></div>""" if extras else ""
-    included = "".join(f"<li>{esc(i)}</li>" for i in q.get("included") or co["included"])
+    benefits = "".join(f'<div class="ben"><b>{esc(b["title"])}</b><span>{esc(b["text"])}</span></div>'
+                       for b in q.get("benefits") or co["benefits"])
     terms = "".join(f"<li>{esc(t)}</li>" for t in q.get("terms") or co["terms"])
     notes = f'<p class="notes">{esc(q["notes"])}</p>' if q.get("notes") else ""
     accent = co["accent"]
@@ -90,7 +98,7 @@ def build_html(q: dict, co: dict) -> str:
   @page {{ size: A4; margin: 14mm 14mm 18mm; }}
   :root {{ --accent: {accent}; --ink: #1d1d1f; --muted: #6b6b70; --line: #e6e6e9; --tint: #f3f9f3; }}
   * {{ box-sizing: border-box; }}
-  body {{ margin: 0; font: 9.5pt/1.45 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); }}
+  body {{ margin: 0; font: 9pt/1.4 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); }}
   .top {{ display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 6mm; border-bottom: 3px solid var(--accent); }}
   .top img {{ height: 13mm; }}
   .top .co {{ margin-top: 3mm; color: var(--muted); font-size: 8.5pt; }}
@@ -120,7 +128,8 @@ def build_html(q: dict, co: dict) -> str:
   th {{ text-align: left; font-size: 7pt; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; padding: 2mm 4.5mm 1.2mm; }}
   td {{ padding: 1.5mm 4.5mm; border-top: 1px solid var(--line); vertical-align: top; }}
   td.type {{ font-weight: 700; width: 19mm; }}
-  td.print {{ width: 38mm; white-space: nowrap; color: #3a3a3e; }}
+  td.num, th.num {{ text-align: right; width: 20mm; }}
+  td.print {{ width: 32mm; white-space: nowrap; color: #3a3a3e; }}
   .price {{ text-align: right; width: 24mm; font-weight: 700; }}
   .garment {{ font-weight: 600; }}
   .code {{ white-space: nowrap; font-weight: 500; color: var(--muted); font-size: 7.5pt; margin-left: 1mm; }}
@@ -129,15 +138,19 @@ def build_html(q: dict, co: dict) -> str:
   .cols {{ display: grid; grid-template-columns: 1fr 1fr; gap: 4.5mm; margin-top: 2mm; break-inside: avoid; }}
   .box {{ border: 1px solid var(--line); border-radius: 3mm; padding: 3.5mm 4.5mm; }}
   .box h3 {{ margin: 0 0 2mm; font-size: 10pt; }}
-  .box ul {{ margin: 0; padding-left: 4.5mm; }} .box li {{ margin: .6mm 0; }}
-  .included li::marker {{ color: var(--accent); content: "✓  "; }}
-  .included ul {{ padding-left: 0; list-style-position: inside; }}
-  .extras td {{ border-top: 0; border-bottom: 1px solid var(--line); padding: 1.6mm 0; }}
-  .extras td.price {{ width: 38mm; white-space: nowrap; }}
-  .terms ul {{ columns: 2; column-gap: 8mm; }}
-  .terms {{ margin-top: 3.5mm; font-size: 7.8pt; color: #4a4a4f; break-inside: avoid; }}
+  .box ul {{ margin: 0; padding-left: 4.5mm; }} .box li {{ margin: .3mm 0; }}
+  .benefits {{ margin-top: 3.5mm; padding: 3.5mm 4.5mm 4mm; background: var(--tint); border-radius: 3mm; break-inside: avoid; }}
+  .benefits h3 {{ margin: 0 0 2.5mm; font-size: 10pt; }}
+  .bgrid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5mm 5mm; }}
+  .ben {{ padding-left: 5mm; position: relative; }}
+  .ben::before {{ content: "✓"; position: absolute; left: 0; top: -.2mm; color: var(--accent); font-weight: 800; font-size: 10pt; }}
+  .ben b {{ display: block; font-size: 8.8pt; }}
+  .ben span {{ display: block; font-size: 7.8pt; color: #4a4a4f; line-height: 1.35; }}
+  .extras td {{ border-top: 0; border-bottom: 1px solid var(--line); padding: 1.1mm 0; }}
+  .extras td.price {{ width: 30mm; white-space: nowrap; }}
+  .terms {{ font-size: 7.8pt; color: #4a4a4f; }}
   .notes {{ margin-top: 4mm; }}
-  .accept {{ margin-top: 3.5mm; padding: 4mm 4.5mm; background: var(--ink); color: #fff; border-radius: 3mm; display: flex; justify-content: space-between; align-items: center; break-inside: avoid; }}
+  .accept {{ margin-top: 3.5mm; padding: 3mm 4.5mm; background: var(--ink); color: #fff; border-radius: 3mm; display: flex; justify-content: space-between; align-items: center; break-inside: avoid; }}
   .accept b {{ font-size: 11pt; }} .accept span {{ color: #c9c9cf; font-size: 8.5pt; }}
   .foot {{ margin-top: 2.5mm; text-align: center; color: var(--muted); font-size: 7.5pt; }}
 </style></head>
@@ -159,11 +172,11 @@ def build_html(q: dict, co: dict) -> str:
   {''.join(option_html(o, ex_vat) for o in q['options'])}
 
   <div class="cols">
-    <div class="box included"><h3>Included in every price</h3><ul>{included}</ul></div>
     {extras_html}
+    <div class="box terms"><h3>Terms</h3><ul>{terms}</ul></div>
   </div>
   {notes}
-  <div class="box terms"><h3>Terms</h3><ul>{terms}</ul></div>
+  <div class="benefits"><h3>Why order with {esc(co['trading_name'])}</h3><div class="bgrid">{benefits}</div></div>
 
   <div class="accept"><div><b>Ready to go ahead?</b><br><span>Reply to this quote with your chosen option, colours, sizes and artwork, and we'll send your proof.</span></div>
     <div style="text-align:right"><b>{esc(co['email'])}</b><br><span>{esc(co['website'])}</span></div></div>

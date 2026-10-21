@@ -8,17 +8,37 @@
   "accent": "#7bc67e",
   "quote_prefix": "YOP-Q",
   "valid_days": 30,
-  "included": [
-    "Printing on every position shown - no set-up or screen fees",
-    "A digital proof to approve before anything is printed",
-    "Printed in-house in Leicester",
-    "Free UK delivery on orders over £150"
-  ],
   "terms": [
     "Prices are per item and exclude VAT at 20% unless shown otherwise.",
     "Quantity prices apply per garment style across all colours and sizes.",
     "Typical turnaround is 7-10 working days from proof approval.",
     "Payment by card or BACS on approval of your proof.",
     "Prices are subject to garment availability at the time of order."
+  ],
+  "benefits": [
+    {
+      "title": "No set-up fees, ever",
+      "text": "Not on first orders and not on repeats."
+    },
+    {
+      "title": "Free artwork help",
+      "text": "We'll tidy or tweak your design - free, within reason."
+    },
+    {
+      "title": "Proof before print",
+      "text": "Approve a digital proof before anything is printed."
+    },
+    {
+      "title": "Easy repeat orders",
+      "text": "Your artwork stays on file for quick, matching reorders."
+    },
+    {
+      "title": "Printed in-house in Leicester",
+      "text": "We control the quality and the timing."
+    },
+    {
+      "title": "Free UK delivery over £150",
+      "text": "Or collect free from us in Leicester."
+    }
   ]
 }
