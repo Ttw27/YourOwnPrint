@@ -47,6 +47,7 @@ import Specials from "@/pages/Specials";
 import IndustriesIndex from "@/pages/IndustriesIndex";
 import IndustryDetail from "@/pages/IndustryDetail";
 import ShopByType from "@/pages/ShopByType";
+import Brands from "@/pages/Brands";
 import AdminLeaversTemplates from "@/pages/AdminLeaversTemplates";
 import Sports from "@/pages/Sports";
 import SportsTeamDetail from "@/pages/SportsTeamDetail";
@@ -132,6 +133,8 @@ function App() {
           <Route path="/industries" element={<IndustriesIndex />} />
           <Route path="/industries/:slug" element={<IndustryDetail />} />
           <Route path="/shop/:slug" element={<ShopByType />} />
+          <Route path="/brands" element={<Brands />} />
+          <Route path="/brands/:slug" element={<ShopByType brandMode key="brand" />} />
           <Route path="/find-my-kit" element={<FindMyKit />} />
           <Route path="/design-shop" element={<DesignShop />} />
           <Route path="/design-shop/:slug" element={<DesignShop />} />

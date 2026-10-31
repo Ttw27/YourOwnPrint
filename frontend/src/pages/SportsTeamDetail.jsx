@@ -5,6 +5,7 @@ import ToolsShowcase from "../components/bold/ToolsShowcase";
 import { fetchSportsTeam } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, Truck, Package, CheckCircle2, ChevronLeft, ChevronRight, SlidersHorizontal, X, Zap } from "lucide-react";
 import FacetBlock from "../components/bold/FacetBlock";
+import BrandFacet from "../components/bold/BrandFacet";
 import PriceTag from "../components/bold/PriceTag";
 import { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
@@ -43,6 +44,7 @@ export default function SportsTeamDetail() {
     category: params.get("category") || "",
     price_min: params.get("price_min") || "",
     price_max: params.get("price_max") || "",
+    brand: params.get("brand") || "",
   }), [params]);
 
   const load = useCallback(() => {
@@ -76,7 +78,7 @@ export default function SportsTeamDetail() {
 
   const isChecked = (key, value) => new Set((params.get(key) || "").split(",").filter(Boolean)).has(value);
   const clearAll = () => setParams({}, { replace: true });
-  const activeCount = ["gender_fit", "colour", "size", "category", "price_min", "price_max"]
+  const activeCount = ["gender_fit", "colour", "size", "category", "price_min", "price_max", "brand"]
     .reduce((n, k) => n + (params.get(k) ? 1 : 0), 0);
 
   // Switching landing page has to reset the page number, or arriving on Gyms
@@ -286,6 +288,8 @@ export default function SportsTeamDetail() {
                     ))}
                   </FacetBlock>
                 )}
+
+                <BrandFacet facets={facets} checked={(v) => isChecked("brand", v)} toggle={(v) => toggleMulti("brand", v)} />
 
                 {facets.colour && (
                   <FacetBlock title="Colour" testid="facet-colour" collapsibleThreshold={8} items={facets.colour}>

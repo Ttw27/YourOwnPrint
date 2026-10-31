@@ -551,6 +551,16 @@ export async function fetchShopTypes() {
   const { data } = await api.get("/shop/types");
   return data;
 }
+export async function fetchBrands() {
+  const { data } = await api.get("/brands");
+  return data;
+}
+
+export async function fetchBrand(slug, opts = {}) {
+  const { data } = await api.get(`/brands/${slug}`, { params: opts });
+  return data;
+}
+
 export async function fetchShopByType(slug, opts = {}) {
   const { data } = await api.get(`/shop/type/${slug}`, { params: opts });
   return data;

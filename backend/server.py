@@ -903,6 +903,9 @@ async def sitemap_xml():
     ]
     for t in GARMENT_TYPE_CATALOGUE:
         urls.append((f"/shop/{t['slug']}", "0.8", "daily"))
+    urls.append(("/brands", "0.7", "weekly"))
+    for bslug in sorted({brand_slug(brand_group(p.get("brand"))) for p in _brand_catalogue()}):
+        urls.append((f"/brands/{bslug}", "0.7", "weekly"))
     for i in INDUSTRIES_CATALOGUE:
         if not i.get("alias_of"):  # skip aliases, only canonical pages
             urls.append((f"/industries/{i['slug']}", "0.7", "weekly"))
@@ -4431,6 +4434,35 @@ def _collect_variant_field(prod: Dict, field: str) -> List:
     return v if isinstance(v, list) else []
 
 
+# ---------- Brands (shop by brand + sidebar Brand filter) ----------
+# Supplier brand names come in sub-lines ("Result Core", "Result Work-Guard",
+# "Regatta Professional"...). Customers look for the maker, so those are grouped.
+_BRAND_PREFIX_GROUPS = ["Result", "Regatta", "Pro RTX", "Russell"]
+_BRAND_ALIASES = {"just hoods": "AWDis", "just cool": "AWDis", "just ts": "AWDis", "just polos": "AWDis",
+                  "so denim": "AWDis", "awdis": "AWDis", "adidas®": "adidas", "adidas": "adidas"}
+
+
+def brand_group(raw: Optional[str]) -> str:
+    b = (raw or "").strip()
+    if not b:
+        return ""
+    if b.lower() in _BRAND_ALIASES:
+        return _BRAND_ALIASES[b.lower()]
+    for g in _BRAND_PREFIX_GROUPS:
+        if b.lower().startswith(g.lower()):
+            return g
+    return b
+
+
+def brand_slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", (name or "").lower().replace("&", "and").replace("+", " ")).strip("-")
+
+
+def brand_matches(p: Dict, wanted: str) -> bool:
+    names = {w.strip().lower() for w in (wanted or "").split(",") if w.strip()}
+    return not names or brand_group(p.get("brand")).lower() in names
+
+
 def _facets_from_products(products: List[Dict]) -> Dict:
     """Compute auto-derived facets. Only facets with variance (>1 distinct value) are returned."""
     from collections import Counter
@@ -4439,8 +4471,12 @@ def _facets_from_products(products: List[Dict]) -> Dict:
     size_c: Counter = Counter()
     industry_c: Counter = Counter()
     prices: List[float] = []
+    brand_c: Counter = Counter()
     for p in products:
         gender_c[p.get("gender_fit") or "unisex"] += 1
+        bg = brand_group(p.get("brand"))
+        if bg:
+            brand_c[bg] += 1
         for c in _collect_variant_field(p, "colors"):
             if isinstance(c, dict):
                 name = c.get("name")
@@ -4475,6 +4511,8 @@ def _facets_from_products(products: List[Dict]) -> Dict:
         facets["size"] = [{"value": k, "count": size_c[k]} for k in keys]
     if len(industry_c) > 1:
         facets["industry"] = [{"value": k, "count": v} for k, v in industry_c.most_common(20)]
+    if len(brand_c) > 1:
+        facets["brand"] = [{"value": k, "count": v} for k, v in sorted(brand_c.items(), key=lambda kv: kv[0].lower())]
     if prices:
         facets["price_range"] = {"min": round(min(prices), 2), "max": round(max(prices), 2)}
     return facets
@@ -4501,6 +4539,7 @@ async def shop_by_garment_type(
     industry: Optional[str] = None,    # comma-separated list of industry tags
     price_min: Optional[float] = None,
     price_max: Optional[float] = None,
+    brand: Optional[str] = None,       # comma-separated brand names (brand_group)
     limit: int = 25,
     offset: int = 0,
 ):
@@ -4516,6 +4555,8 @@ async def shop_by_garment_type(
     industry_set = {i.strip() for i in (industry or "").split(",") if i.strip()}
 
     def matches(p: Dict) -> bool:
+        if brand and not brand_matches(p, brand):
+            return False
         if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
             return False
         if colour_set:
@@ -4567,6 +4608,105 @@ async def shop_by_garment_type(
 WORKWEAR_INDUSTRY_SLUGS = ["construction-trades", "cleaning", "industrial", "security"]
 
 
+def _brand_catalogue() -> List[Dict]:
+    """Products that belong on brand pages: the normal catalogue only (no Design Shop,
+    Leavers, designer-only, bundles, Specials or team kits)."""
+    return [p for p in live_products()
+            if not p.get("design_shop") and p.get("category") not in ("leavers", "team-kits")
+            and not p.get("designer_only") and not p.get("bundle_items") and not p.get("specials_eligible")
+            and brand_group(p.get("brand"))]
+
+
+@api_router.get("/brands")
+async def list_brands():
+    """Shop by brand: every maker we stock, grouped (Result Core + Result Work-Guard = Result)."""
+    groups: Dict[str, Dict] = {}
+    for p in _brand_catalogue():
+        name = brand_group(p.get("brand"))
+        g = groups.setdefault(name, {"name": name, "slug": brand_slug(name), "count": 0, "lines": set(),
+                                     "image": "", "_best": -1, "categories": {}})
+        g["count"] += 1
+        raw = (p.get("brand") or "").strip()
+        if raw and raw != name:
+            g["lines"].add(raw)
+        g["categories"][p["category"]] = g["categories"].get(p["category"], 0) + 1
+        n_col = len(p.get("colors") or [])
+        if n_col > g["_best"] and p.get("image"):
+            g["_best"], g["image"] = n_col, p["image"]
+    out = []
+    for g in groups.values():
+        top = sorted(g["categories"].items(), key=lambda kv: -kv[1])[:3]
+        out.append({"name": g["name"], "slug": g["slug"], "count": g["count"], "image": g["image"],
+                    "lines": sorted(g["lines"]), "top_types": [k for k, _ in top]})
+    out.sort(key=lambda b: b["name"].lower())
+    return {"brands": out, "total": len(out)}
+
+
+@api_router.get("/brands/{slug}")
+async def get_brand(
+    slug: str,
+    gender_fit: Optional[str] = None,
+    colour: Optional[str] = None,
+    size: Optional[str] = None,
+    category: Optional[str] = None,
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+    limit: int = 24,
+    offset: int = 0,
+):
+    """One brand's products - same shape as /shop/type/{slug} (+ a Product type facet)."""
+    all_prods = [p for p in _brand_catalogue() if brand_slug(brand_group(p.get("brand"))) == slug]
+    if not all_prods:
+        raise HTTPException(404, "Brand not found")
+    name = brand_group(all_prods[0].get("brand"))
+    facets = _facets_from_products(all_prods)
+    facets.pop("brand", None)
+    cats: Dict[str, int] = {}
+    for p in all_prods:
+        cats[p["category"]] = cats.get(p["category"], 0) + 1
+    if len(cats) > 1:
+        facets["category"] = [{"value": k, "count": v} for k, v in sorted(cats.items(), key=lambda kv: -kv[1])]
+    colour_set = {c.strip() for c in (colour or "").split(",") if c.strip()}
+    size_set = {z.strip() for z in (size or "").split(",") if z.strip()}
+
+    def matches(p: Dict) -> bool:
+        if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
+            return False
+        if category and p["category"] != category:
+            return False
+        if colour_set and not (colour_set & {(c.get("name") if isinstance(c, dict) else c) for c in _collect_variant_field(p, "colors")}):
+            return False
+        if size_set and not (size_set & set(_collect_variant_field(p, "sizes"))):
+            return False
+        price = float(p.get("price") or 0)
+        if price_min is not None and price < price_min:
+            return False
+        if price_max is not None and price > price_max:
+            return False
+        return True
+
+    items = [{
+        "id": p["id"], "name": p["name"], "price": float(p["price"]), **_vat_fields(p),
+        "image": p["image"], "category": p["category"], "description": p.get("description") or "",
+        "gender_fit": p.get("gender_fit") or "unisex",
+        "colors": [{"name": c.get("name"), "hex": c.get("hex")} for c in (p.get("colors") or []) if isinstance(c, dict)][:40],
+    } for p in all_prods if matches(p)]
+    # most colours first (the core styles), then price
+    items.sort(key=lambda x: (-len(x["colors"]), x["price"]))
+    lines = sorted({(p.get("brand") or "").strip() for p in all_prods} - {name, ""})
+    image = max(all_prods, key=lambda p: len(p.get("colors") or [])).get("image") or ""
+    seo = await _collection_seo_copy(f"brand-{slug}")
+    if not seo.get("intro"):
+        seo["intro"] = (f"Every {name} style we stock - {len(all_prods)} in all"
+                        + (f", including {', '.join(lines)}" if lines else "")
+                        + ". Printed with your logo or design, no minimum order.")
+    limit = min(max(1, limit), 200)
+    return {"slug": slug, "title": name, "brand": name, "lines": lines, "image": image,
+            "products": items[offset:offset + limit], "facets": facets, "seo": seo,
+            "total": len(all_prods), "matched_total": len(items), "offset": offset,
+            "returned": len(items[offset:offset + limit])}
+
+
 @api_router.get("/collections/workwear")
 async def workwear_collection(
     gender_fit: Optional[str] = None,
@@ -4575,6 +4715,7 @@ async def workwear_collection(
     industry: Optional[str] = None,
     price_min: Optional[float] = None,
     price_max: Optional[float] = None,
+    brand: Optional[str] = None,       # comma-separated brand names (brand_group)
     limit: int = 25,
     offset: int = 0,
 ):
@@ -4600,6 +4741,8 @@ async def workwear_collection(
     industry_set = {i.strip() for i in (industry or "").split(",") if i.strip()}
 
     def matches(p: Dict) -> bool:
+        if brand and not brand_matches(p, brand):
+            return False
         if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
             return False
         if colour_set:
@@ -4711,6 +4854,7 @@ async def get_industry(
     category: Optional[str] = None,
     price_min: Optional[float] = None,
     price_max: Optional[float] = None,
+    brand: Optional[str] = None,       # comma-separated brand names (brand_group)
     limit: int = 25,
     offset: int = 0,
 ):
@@ -4736,6 +4880,8 @@ async def get_industry(
     size_set = {s.strip() for s in (size or "").split(",") if s.strip()}
 
     def matches(p: Dict) -> bool:
+        if brand and not brand_matches(p, brand):
+            return False
         if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
             return False
         if category and p["category"] != category:
@@ -4890,6 +5036,7 @@ async def get_sports_team(
     category: Optional[str] = None,
     price_min: Optional[float] = None,
     price_max: Optional[float] = None,
+    brand: Optional[str] = None,       # comma-separated brand names (brand_group)
     limit: int = 12,
     offset: int = 0,
 ):
@@ -4914,6 +5061,8 @@ async def get_sports_team(
     size_set = {z.strip() for z in (size or "").split(",") if z.strip()}
 
     def matches(p: Dict) -> bool:
+        if brand and not brand_matches(p, brand):
+            return False
         if gender_fit and (p.get("gender_fit") or "unisex") != gender_fit:
             return False
         if category and p.get("category") != category:
@@ -6267,6 +6416,7 @@ DEFAULT_NAV_CONFIG = {
                     {"label": "Bags", "to": "/shop/bags"},
                     {"label": "Promotional & Gifts", "to": "/shop/promotional"},
                     {"label": "Accessories", "to": "/shop/accessories"},
+                    {"label": "Shop by brand", "to": "/brands", "badge": "New"},
                 ]},
                 {"heading": "Featured", "links": [
                     {"label": "The Design Shop", "to": "/design-shop", "badge": "New"},
@@ -6716,6 +6866,33 @@ async def _nav_add_corporate_v2():
                                       "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
     except Exception as e:
         logging.warning(f"nav corporate link (v2) skipped: {e}")
+
+
+async def _nav_add_brands_v1():
+    """One-off (Tim, Oct 2026): add "Shop by brand" (/brands) to the SAVED menu, under
+    Shop > By garment after Accessories, without replacing the rest of the menu."""
+    marker = "nav_add_brands_v1"
+    try:
+        if await db.settings.find_one({"key": marker}):
+            return
+        doc = await db.settings.find_one({"key": "navigation_config"})
+        cfg = (doc or {}).get("config") or {}
+        added = False
+        links_all = [l for m in cfg.get("menu") or [] for c in m.get("columns") or [] for l in c.get("links") or []]
+        if cfg.get("menu") and not any(l.get("to") == "/brands" for l in links_all):
+            shop = next((m for m in cfg["menu"] if m.get("key") == "shop" and m.get("columns")), None)
+            if shop:
+                col = next((c for c in shop["columns"] if any((l.get("to") or "").startswith("/shop/") for l in c.get("links") or [])),
+                           shop["columns"][0])
+                links = col.setdefault("links", [])
+                at = next((i + 1 for i, l in enumerate(links) if l.get("to") == "/shop/accessories"), len(links))
+                links.insert(at, {"label": "Shop by brand", "to": "/brands", "badge": "New"})
+                added = True
+                await db.settings.update_one({"key": "navigation_config"}, {"$set": {"config": cfg}})
+        await db.settings.update_one({"key": marker}, {"$set": {"key": marker, "added": added,
+                                      "ran_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    except Exception as e:
+        logging.warning(f"nav brands link skipped: {e}")
 
 
 async def _nav_add_sports_day_v1():
@@ -8844,6 +9021,7 @@ async def _load_imported_products():
         await _nav_add_sports_day_v1()
         await _nav_add_corporate_v1()
         await _nav_add_corporate_v2()
+        await _nav_add_brands_v1()
         try:
             await _seed_leavers_designs_v1()
         except Exception as e:

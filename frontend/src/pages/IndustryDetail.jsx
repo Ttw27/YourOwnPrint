@@ -7,6 +7,7 @@ import { fetchIndustry, fetchReviewsAggregate } from "../lib/api";
 import { ArrowRight, ShieldCheck, Loader2, X, ChevronDown, SlidersHorizontal, Building2 } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import FacetBlock from "../components/bold/FacetBlock";
+import BrandFacet from "../components/bold/BrandFacet";
 import PriceTag from "../components/bold/PriceTag";
 import usePageCopy, { useSiteImages } from "../hooks/usePageCopy";
 import SiteImage from "../components/bold/SiteImage";
@@ -46,6 +47,7 @@ export default function IndustryDetail() {
     category: params.get("category") || "",
     price_min: params.get("price_min") || "",
     price_max: params.get("price_max") || "",
+    brand: params.get("brand") || "",
   }), [params]);
 
   useEffect(() => { setPage(0); }, [filters, slug]);
@@ -77,7 +79,7 @@ export default function IndustryDetail() {
   const isChecked = (key, value) => new Set((params.get(key) || "").split(",").filter(Boolean)).has(value);
 
   const clearAll = () => setParams({}, { replace: true });
-  const activeCount = ["gender_fit", "colour", "size", "category", "price_min", "price_max"]
+  const activeCount = ["gender_fit", "colour", "size", "category", "price_min", "price_max", "brand"]
     .reduce((n, k) => n + (params.get(k) ? 1 : 0), 0);
 
   if (err) return (
@@ -209,6 +211,8 @@ export default function IndustryDetail() {
                 ))}
               </FacetBlock>
             )}
+
+            <BrandFacet facets={facets} checked={(v) => isChecked("brand", v)} toggle={(v) => toggleMulti("brand", v)} />
 
             {facets.colour && (
               <FacetBlock title="Colour" testid="facet-colour" collapsibleThreshold={8} items={facets.colour}>

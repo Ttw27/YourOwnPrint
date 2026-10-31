@@ -312,6 +312,12 @@ frontend/src/
   photo > "Offer - 'Was' price"). Shown only while above `price` (`offer_was_price()`): crossed out +
   "Offer" pill in PriceTag (cards), designer Total panel + product dropdown, basket (`on_offer` from
   /cart/price). Display only - checkout charges `price` as normal. Empty it to end the offer.
+- **Shop by brand** (Oct 2026): `/brands` (Brands.jsx) lists every maker, `/brands/:slug` = ShopByType with `brandMode`
+  (GET /api/brands, /api/brands/{slug}, Product type facet). Supplier sub-lines are grouped by `brand_group()` (Result*,
+  Regatta*, Pro RTX*, Russell* -> one name; Just Hoods/Just Cool/Just Ts/Just Polos/So Denim -> AWDis; adidas®).
+  Brand pages show the normal catalogue only (`_brand_catalogue`: no Design Shop, Leavers, team kits, bundles,
+  Specials, designer-only). Sidebar "Brand" filter (BrandFacet.jsx, facets.brand, `brand` param) on /shop/:slug,
+  /collections/workwear, /industries/:slug and /sports-teams/:slug. Menu link added by `_nav_add_brands_v1`; sitemap too.
 - **Industry page tabs** (`/industries/:slug`): "Popular for this sector" garment-type buttons above the
   products = shortcuts to the sidebar's Product type filter (`category` URL param; sidebar unchanged).
   Defaults in `INDUSTRY_TAB_DEFAULTS` (server.py); admin overrides in Admin > Pages > "Industry: ..."

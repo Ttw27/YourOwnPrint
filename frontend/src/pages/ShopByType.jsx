@@ -3,10 +3,11 @@ import FindMyKitPromo from "../components/bold/FindMyKitPromo";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ToolsShowcase from "../components/bold/ToolsShowcase";
-import { fetchShopByType, fetchReviewsAggregate } from "../lib/api";
+import { fetchShopByType, fetchBrand, fetchReviewsAggregate } from "../lib/api";
 import { ArrowRight, Loader2, X, ChevronDown, SlidersHorizontal } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import FacetBlock from "../components/bold/FacetBlock";
+import BrandFacet from "../components/bold/BrandFacet";
 import PriceTag from "../components/bold/PriceTag";
 
 /**
@@ -18,7 +19,8 @@ import PriceTag from "../components/bold/PriceTag";
 const GENDER_LABEL = { mens: "Men's", womens: "Women's", unisex: "Unisex", kids: "Kids" };
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
 
-export default function ShopByType() {
+// brandMode: the same page shows one brand (/brands/:slug) with a Product type filter
+export default function ShopByType({ brandMode = false }) {
   const { slug } = useParams();
   const [params, setParams] = useSearchParams();
   const [data, setData] = useState(null);
@@ -39,6 +41,8 @@ export default function ShopByType() {
     industry: params.get("industry") || "",
     price_min: params.get("price_min") || "",
     price_max: params.get("price_max") || "",
+    brand: params.get("brand") || "",
+    category: params.get("category") || "",
   }), [params]);
 
   // Any filter change resets back to page 1.
@@ -48,8 +52,8 @@ export default function ShopByType() {
     setLoading(true); setErr(false);
     const opts = { limit: PAGE_SIZE, offset: page * PAGE_SIZE };
     Object.entries(filters).forEach(([k, v]) => { if (v) opts[k] = v; });
-    fetchShopByType(slug, opts).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
-  }, [slug, filters, page]);
+    (brandMode ? fetchBrand : fetchShopByType)(slug, opts).then(setData).catch(() => setErr(true)).finally(() => setLoading(false));
+  }, [slug, filters, page, brandMode]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -71,7 +75,7 @@ export default function ShopByType() {
   const isChecked = (key, value) => new Set((params.get(key) || "").split(",").filter(Boolean)).has(value);
 
   const clearAll = () => setParams({}, { replace: true });
-  const activeCount = ["gender_fit", "colour", "size", "industry", "price_min", "price_max"]
+  const activeCount = ["gender_fit", "colour", "size", "industry", "price_min", "price_max", "brand", "category"]
     .reduce((n, k) => n + (params.get(k) ? 1 : 0), 0);
 
   if (err) return (
@@ -100,7 +104,7 @@ export default function ShopByType() {
         {image && <div className="absolute inset-0 opacity-25"><img src={image} alt="" className="w-full h-full object-cover" /></div>}
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/85 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-6 py-14">
-          <Link to="/" className="text-xs text-[#7bc67e] hover:underline" data-testid="shop-type-back">&larr; Home</Link>
+          <Link to={brandMode ? "/brands" : "/"} className="text-xs text-[#7bc67e] hover:underline" data-testid="shop-type-back">&larr; {brandMode ? "All brands" : "Home"}</Link>
           <h1 className="font-black text-5xl lg:text-6xl mt-3">{title}</h1>
           <div className="text-zinc-300 mt-2">
             {products.length} of {total} {total === 1 ? "option" : "options"}
@@ -146,6 +150,20 @@ export default function ShopByType() {
                 ))}
               </FacetBlock>
             )}
+
+            {facets.category && facets.category.length > 1 && (
+              <FacetBlock title="Product type" testid="facet-category" collapsibleThreshold={8} items={facets.category}>
+                {(shown) => shown.map((f) => (
+                  <label key={f.value} className="flex items-center gap-2 text-xs cursor-pointer capitalize" data-testid={`facet-category-${f.value}`}>
+                    <input type="radio" name="category" checked={filters.category === f.value} onChange={() => patch({ category: filters.category === f.value ? "" : f.value })} className="accent-[#7bc67e]" />
+                    <span className="flex-1">{String(f.value).replace(/-/g, " ")}</span>
+                    <span className="text-[10px] text-[#4b5563]">{f.count}</span>
+                  </label>
+                ))}
+              </FacetBlock>
+            )}
+
+            <BrandFacet facets={facets} checked={(v) => isChecked("brand", v)} toggle={(v) => toggleMulti("brand", v)} />
 
             {facets.colour && (
               <FacetBlock title="Colour" testid="facet-colour" collapsibleThreshold={8} items={facets.colour}>

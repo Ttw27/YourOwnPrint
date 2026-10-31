@@ -9,10 +9,11 @@ import usePageCopy from "../hooks/usePageCopy";
 import { ArrowRight, ChevronDown, Loader2, SlidersHorizontal } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 import FacetBlock from "../components/bold/FacetBlock";
+import BrandFacet from "../components/bold/BrandFacet";
 import PriceTag from "../components/bold/PriceTag";
 
 const PAGE_SIZE = 24;  // divides evenly by 2 / 3 / 4 - no orphan row on any screen size
-const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], price_min: "", price_max: "" };
+const EMPTY_FILTERS = { gender_fit: "", colour: [], size: [], industry: [], brand: [], price_min: "", price_max: "" };
 
 /**
  * /workwear - the Workwear umbrella collection.
@@ -48,6 +49,7 @@ export default function Workwear() {
       colour: filters.colour.length ? filters.colour.join(",") : undefined,
       size: filters.size.length ? filters.size.join(",") : undefined,
       industry: filters.industry.length ? filters.industry.join(",") : undefined,
+      brand: filters.brand?.length ? filters.brand.join(",") : undefined,
       price_min: filters.price_min || undefined,
       price_max: filters.price_max || undefined,
     };
@@ -132,6 +134,8 @@ export default function Workwear() {
                 ))}
               </FacetBlock>
             )}
+
+            <BrandFacet facets={facets} checked={(v) => (filters.brand || []).includes(v)} toggle={(v) => toggleMulti("brand", v)} />
 
             {facets.colour && (
               <FacetBlock title="Colour" testid="workwear-facet-colour" collapsibleThreshold={8} items={facets.colour}>
