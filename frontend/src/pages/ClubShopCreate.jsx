@@ -19,7 +19,7 @@ export default function ClubShopCreate({ defaultMode = "pay_each" }) {
   usePageTitle(company ? "Staff order link" : "Set up a club shop", { description: company
     ? "Share one link - staff choose their own garments and sizes, the company gets one order and one invoice."
     : "A link for parents and members to order and pay for their own kit with your logo." });
-  const [form, setForm] = useState({ name: "", organiser: "", email: "", phone: "", closes_on: "", message: "" });
+  const [form, setForm] = useState({ name: "", organiser: "", email: "", phone: "", closes_on: "", message: "", print_notes: "" });
   const [logo, setLogo] = useState(null);
   const [items, setItems] = useState([]);          // {product, colour, names, label}
   const [q, setQ] = useState("");
@@ -42,7 +42,8 @@ export default function ClubShopCreate({ defaultMode = "pay_each" }) {
     if (items.length >= MAX) { toast.error(`Up to ${MAX} items per shop`); return; }
     const full = (await api.get(`/products/${p.id}`).catch(() => ({ data: p }))).data;
     const black = (full.colors || []).find((c) => /black/i.test(c.name)) || (full.colors || [])[0];
-    setItems((it) => [...it, { product: full, colour: black?.name || "", names: false, label: "", max_each: 0 }]);
+    const positions = (await api.get(`/club-shops/positions/${p.id}`).catch(() => ({ data: {} }))).data.positions || [];
+    setItems((it) => [...it, { product: full, colour: black?.name || "", names: false, label: "", max_each: 0, positions, position: positions[0]?.id || "" }]);
     setQ(""); setResults([]);
   };
   const patch = (i, p) => setItems((it) => it.map((x, j) => (j === i ? { ...x, ...p } : x)));
@@ -55,7 +56,7 @@ export default function ClubShopCreate({ defaultMode = "pay_each" }) {
     try {
       const art = await uploadOrderArtwork({ logo }, "club-shop");
       const { data } = await api.post("/club-shops", { ...form, logo: art.art_logo, mode,
-        items: items.map((x) => ({ product_id: x.product.id, colour: x.colour, names: x.names, label: x.label, max_each: Number(x.max_each) || 0 })) });
+        items: items.map((x) => ({ product_id: x.product.id, colour: x.colour, names: x.names, label: x.label, max_each: Number(x.max_each) || 0, position: x.position })) });
       setDone(data);
     } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't set up the shop - please try again"); }
     finally { setBusy(false); }
@@ -127,14 +128,17 @@ export default function ClubShopCreate({ defaultMode = "pay_each" }) {
                 <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder={company ? "Message for staff (optional) - e.g. 'Please choose by Friday - 2 polos and a fleece each'" : "Message for parents (optional) - e.g. 'Orders close Friday, kit handed out at class'"}
                   rows={2} className="border-2 border-[#dcfce7] rounded-xl px-3 py-2 text-sm outline-none focus:border-[#7bc67e]" />
               </div>
-              <div className="mt-4"><ImageSlot label="Your logo *" hint="Printed on every item" value={logo} onChange={setLogo} testid="cs-logo" /></div>
+              <div className="mt-4"><ImageSlot label="Your logo *" hint="Printed on every item - choose where on each item below" value={logo} onChange={setLogo} testid="cs-logo" /></div>
+              <textarea value={form.print_notes} onChange={(e) => setForm({ ...form, print_notes: e.target.value })} rows={2} maxLength={600} data-testid="cs-print-notes"
+                placeholder="Print notes (optional) - e.g. 'White logo on dark colours', 'Logo about 8cm wide', 'Use the round badge version'"
+                className="mt-3 w-full border-2 border-[#dcfce7] rounded-xl px-3 py-2 text-sm outline-none focus:border-[#7bc67e]" />
             </section>
 
             <section className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5">
               <h2 className="font-black text-2xl mb-1"><span className="text-[#7bc67e]">2.</span> {company ? "What can staff choose?" : "What can they order?"}</h2>
               <p className="text-sm text-[#4b5563] mb-3">{company
-                ? <>Up to {MAX} items, each in one colour, with your logo on the front. Set &quot;up to&quot; to limit how many of each item one person can choose (e.g. 2 polos), or leave it at 0 for no limit.</>
-                : <>Up to {MAX} items, each in one colour. Your logo is on the front of everything (£3 included in the price parents see); tick &quot;names&quot; to let them add a name on the back (+£3).</>}</p>
+                ? <>Up to {MAX} items, each in one colour, with your logo - choose where it goes on each one. Set &quot;up to&quot; to limit how many of each item one person can choose (e.g. 2 polos), or leave it at 0 for no limit.</>
+                : <>Up to {MAX} items, each in one colour. Choose where your logo goes on each one (£3 included in the price parents see, large front +£2); tick &quot;names&quot; to let them add a name on the back (+£3).</>}</p>
               <div className="space-y-2">
                 {items.map((x, i) => {
                   const col = (x.product.colors || []).find((c) => c.name === x.colour);
@@ -149,6 +153,17 @@ export default function ClubShopCreate({ defaultMode = "pay_each" }) {
                               className={`w-6 h-6 rounded-full border-2 ${x.colour === c.name ? "border-[#1a1a1a] ring-2 ring-[#7bc67e]" : "border-[#e5e7eb]"}`} style={{ background: c.hex || "#ccc" }} />
                           ))}
                         </div>
+                        {x.positions && x.positions.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs" data-testid={`cs-pos-${i}`}>
+                            <span className="font-extrabold">Logo:</span>
+                            {x.positions.map((o) => (
+                              <button key={o.id} type="button" onClick={() => patch(i, { position: o.id })} data-testid={`cs-pos-${i}-${o.id}`}
+                                className={`rounded-full px-2.5 py-1 border-2 font-bold ${x.position === o.id ? "border-[#7bc67e] bg-[#f0fdf4]" : "border-[#e5e7eb] hover:border-[#7bc67e]"}`}>
+                                {o.label}{o.extra ? ` +£${o.extra.toFixed(0)}` : ""}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-3 items-center text-xs">
                           <label className="inline-flex items-center gap-1.5"><input type="checkbox" checked={x.names} onChange={(e) => patch(i, { names: e.target.checked })} className="accent-[#7bc67e]" /> Name on the back (+£3)</label>
                           {company && (

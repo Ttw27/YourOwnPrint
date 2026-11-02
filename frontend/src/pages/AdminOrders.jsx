@@ -112,6 +112,8 @@ function OrderDetails({ o }) {
             <div>Print: {(l.placements && l.placements.length) ? l.placements.join(", ") : "blank / none"}</div>
             {l.dm && (l.dm.mode || l.dm.flow) && <div className="text-zinc-500">Artwork: {l.dm.mode || l.dm.flow}</div>}
             {l.dm && (l.dm.bespoke || l.dm.design_notes) && <div className="text-amber-300">Bespoke design{l.dm.bespoke ? ` (${l.dm.bespoke})` : ""}{l.dm.design_notes ? `: ${l.dm.design_notes}` : ""}</div>}
+            {l.dm && l.dm.logo_position && <div>Logo position: <strong>{l.dm.logo_position}</strong></div>}
+            {l.dm && l.dm.print_notes && <div className="text-amber-300">Print notes: {l.dm.print_notes}</div>}
             {l.dm && l.dm.child_name && <div>Name on back: <strong>{l.dm.child_name}</strong>{l.dm.club_name ? ` · ${l.dm.club_name} club shop` : ""}</div>}
             {l.dm && Object.keys(l.dm).some((k) => k.startsWith("art_") && l.dm[k]) && (
               <div className="flex flex-wrap gap-2 pt-1" data-testid="admin-order-artwork">

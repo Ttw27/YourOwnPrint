@@ -1515,6 +1515,8 @@ def _stripe_line(p: Dict) -> Dict:
     qty = int(p.get("total_qty") or 0)
     sizes = ", ".join(f"{q}x {sz}" for sz, q in (p.get("size_qtys") or {}).items() if sz.upper() not in ("ONE", "ONE SIZE", "OS"))
     names = {"logo": "Logo", "name": "Name", "back-logo": "Back logo", "big-front": "Big front logo"}
+    if dm.get("logo_position"):   # club shops: where the logo goes
+        names["logo"] = f"Logo - {dm['logo_position'].split(' (')[0].lower()}"
     prints = ", ".join((PLACEMENT_BY_ID.get(x) or {}).get("label") or names.get(x) or x.replace("-", " ").capitalize()
                        for x in (p.get("placements_clean") or []))
     bits = [b for b in [p.get("color"), sizes, (f"Print: {prints}" if prints else ("Blank" if p.get("blank") else "")),
@@ -1558,6 +1560,10 @@ def _order_details_html(doc: dict) -> str:
         if dm.get("club_code"):
             rows.append(f"Club shop: {esc(dm.get('club_name') or dm.get('club_code'))}"
                         + (f" - name on back: <strong>{esc(dm.get('child_name'))}</strong>" if dm.get("child_name") else ""))
+        if dm.get("logo_position"):
+            rows.append(f"Logo position: <strong>{esc(dm['logo_position'])}</strong>")
+        if dm.get("print_notes"):
+            rows.append(f"Print notes: {esc(dm['print_notes'])}")
         if dm.get("mode") or dm.get("flow"):
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
         # the customer's actual print files (art_<position> -> /api/uploads/artwork/...)

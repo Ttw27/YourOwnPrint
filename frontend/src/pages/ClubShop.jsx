@@ -76,7 +76,7 @@ export default function ClubShop() {
                 <div className="aspect-square bg-[#f9fafb]"><img src={it.image} alt={it.name} className="w-full h-full object-contain" /></div>
                 <div className="p-4 space-y-2">
                   <div className="font-extrabold">{it.name}</div>
-                  <div className="text-xs text-[#4b5563]">{it.colour} · {shop.name} logo on the front{it.names ? " · name on the back optional" : ""}</div>
+                  <div className="text-xs text-[#4b5563]">{it.colour} · {shop.name} logo: {(it.position_label || "front").toLowerCase()}{it.names ? " · name on the back optional" : ""}</div>
                   <div className="font-black text-lg">£{(p.size ? unit(it, p.size, p.name || "") : Math.min(...it.sizes.map((s) => s.price))).toFixed(2)}</div>
                   {shop.open && (
                     <>
@@ -184,7 +184,7 @@ function StaffPicker({ shop }) {
                   <div className="aspect-square bg-[#f9fafb]"><img src={it.image} alt={it.name} className="w-full h-full object-contain" /></div>
                   <div className="p-4 space-y-2">
                     <div className="font-extrabold">{it.name}</div>
-                    <div className="text-xs text-[#4b5563]">{it.colour} · {shop.name} logo{it.max_each ? ` · up to ${it.max_each} each` : ""}</div>
+                    <div className="text-xs text-[#4b5563]">{it.colour} · {shop.name} logo: {(it.position_label || "front").toLowerCase()}{it.max_each ? ` · up to ${it.max_each} each` : ""}</div>
                     {shop.open && (
                       <>
                         <select value={p.size || ""} onChange={(e) => setPick((x) => ({ ...x, [it.product_id]: { ...p, size: e.target.value } }))} className="w-full border-2 border-[#dcfce7] rounded-xl px-2 py-2 text-sm bg-white" data-testid={`staff-size-${it.product_id}`}>

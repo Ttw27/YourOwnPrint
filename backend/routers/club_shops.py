@@ -34,6 +34,31 @@ from deps import api_router, db, require_admin
 LOGO_PRICE = 3.00
 NAME_PRICE = 3.00
 MAX_ITEMS = 8
+LARGE_FRONT_EXTRA = 2.00   # same as the dance kit's big front
+
+
+def logo_positions(p: Dict) -> List[Dict]:
+    """Where a club shop logo can go on this garment (first = default)."""
+    from server import _auto_allowed_placements
+    allowed = p.get("allowed_placements")
+    if not isinstance(allowed, list):
+        allowed = _auto_allowed_placements(p.get("name") or "", p.get("category") or "")
+    chest = "left-breast" in allowed or "right-breast" in allowed
+    front = "full-front" in allowed
+    out = []
+    if chest:
+        out.append({"id": "left-chest", "label": "Left chest (small logo)", "extra": 0.0})
+    if chest and front:
+        out += [{"id": "centre-chest", "label": "Centre chest (medium logo)", "extra": 0.0},
+                {"id": "large-front", "label": "Large front", "extra": LARGE_FRONT_EXTRA}]
+    if not out:
+        out.append({"id": "front", "label": "Front", "extra": 0.0})
+    return out
+
+
+def _position(p: Dict, it: Dict) -> Dict:
+    opts = logo_positions(p)
+    return next((o for o in opts if o["id"] == it.get("position")), opts[0])
 
 
 def _site() -> str:
@@ -59,9 +84,11 @@ def _item_view(it: Dict) -> Optional[Dict]:
     col = next((c for c in (p.get("colors") or []) if isinstance(c, dict) and c.get("name") == it.get("colour")), None)
     ups = p.get("size_upcharges") or {}
     cup = float((p.get("colour_upcharges") or {}).get(it.get("colour") or "", 0) or 0)
-    base = float(p.get("price") or 0) + cup + LOGO_PRICE
+    pos = _position(p, it)
+    base = float(p.get("price") or 0) + cup + LOGO_PRICE + pos["extra"]
     return {"product_id": p["id"], "name": it.get("label") or p.get("name"), "garment": p.get("name"),
             "colour": it.get("colour"), "image": (col or {}).get("image") or p.get("image"),
+            "position": pos["id"], "position_label": pos["label"],
             "names": bool(it.get("names")), "max_each": int(it.get("max_each") or 0),
             "sizes": [{"size": s, "price": round(base + float(ups.get(s, 0) or 0), 2)} for s in (p.get("sizes") or [])]}
 
@@ -82,7 +109,13 @@ async def club_print(product_id: str, placements: List[str], color: Optional[str
     it = next((i for i in shop.get("items") or [] if i["product_id"] == product_id and i.get("colour") == color), None)
     if not it:
         raise HTTPException(400, "That item isn't in this club shop")
-    clean, cost = ["logo"], LOGO_PRICE
+    from server import PRODUCTS
+    pos = _position(PRODUCTS.get(product_id) or {}, it)
+    clean, cost = ["logo"], LOGO_PRICE + pos["extra"]
+    if design_meta is not None:   # shown on the order (email, Admin > Orders, Stripe line)
+        design_meta["logo_position"] = pos["label"]
+        if shop.get("print_notes"):
+            design_meta["print_notes"] = shop["print_notes"]
     if it.get("names") and (design_meta or {}).get("child_name", "").strip():
         clean.append("name"); cost += NAME_PRICE
     return clean, round(cost, 2)
@@ -96,6 +129,7 @@ class ShopItemIn(BaseModel):
     names: bool = False
     label: str = ""
     max_each: int = 0         # staff links: most of this item one person can choose (0 = no limit)
+    position: str = ""        # one of logo_positions() ids; "" = the garment's default
 
 
 class ShopIn(BaseModel):
@@ -106,6 +140,7 @@ class ShopIn(BaseModel):
     logo: str                 # /api/uploads/artwork/... from uploadOrderArtwork
     closes_on: str = ""       # YYYY-MM-DD
     message: str = ""
+    print_notes: str = ""     # anything else about the print (logo size, colours...)
     items: List[ShopItemIn]
     mode: str = "pay_each"    # "pay_each" (club shop) | "company" (staff order link)
 
@@ -130,8 +165,9 @@ async def create_club_shop(payload: ShopIn):
         cols = [c.get("name") for c in (p.get("colors") or []) if isinstance(c, dict)]
         if cols and it.colour not in cols:
             continue
+        pos = next((o["id"] for o in logo_positions(p) if o["id"] == it.position), logo_positions(p)[0]["id"])
         items.append({"product_id": p["id"], "colour": it.colour, "names": bool(it.names), "label": it.label.strip()[:60],
-                      "max_each": max(0, min(int(it.max_each or 0), 50))})
+                      "max_each": max(0, min(int(it.max_each or 0), 50)), "position": pos})
     if not items:
         raise HTTPException(400, "Pick at least one item for your shop")
     mode = "company" if payload.mode == "company" else "pay_each"
@@ -140,7 +176,7 @@ async def create_club_shop(payload: ShopIn):
     await db.club_shops.insert_one({
         "code": code, "manage_token": manage, "name": name, "organiser": payload.organiser.strip()[:80],
         "email": email, "phone": payload.phone.strip()[:30], "logo": payload.logo, "closes_on": payload.closes_on,
-        "message": payload.message.strip()[:600], "items": items, "status": "open", "created_at": _now(), "mode": mode,
+        "message": payload.message.strip()[:600], "print_notes": payload.print_notes.strip()[:600], "items": items, "status": "open", "created_at": _now(), "mode": mode,
     })
     shop_url, manage_url = f"{_site()}/club/{code}", f"{_site()}/club/{code}/manage/{manage}"
     who = "staff - each person picks their garments and sizes (no payment)" if mode == "company" else "parents / members - each person picks their sizes and pays for their own"
@@ -153,10 +189,24 @@ async def create_club_shop(payload: ShopIn):
            f"<p style='color:#4b5563'>We'll print everything together once the shop closes{(' on ' + payload.closes_on) if payload.closes_on else ''} and send you a proof first.</p>")))
     shop_to = await shop_notification_recipient()
     if shop_to:
+        import html as _h
+        lines = "".join(f"<li>{_h.escape(v['garment'])} ({_h.escape(v['colour'] or '')}) - logo: <strong>{_h.escape(v['position_label'])}</strong>"
+                        f"{' + names on back' if v['names'] else ''}</li>" for v in (_item_view(i) for i in items) if v)
+        notes = f"<p><strong>Print notes:</strong> {_h.escape(payload.print_notes.strip()[:600])}</p>" if payload.print_notes.strip() else ""
         await send_email(to=[shop_to], subject=f"[{'Staff order link' if mode == 'company' else 'Club shop'}] {name} set up", html=email_wrap(
             "New staff order link" if mode == "company" else "New club shop", f"<p><strong>{name}</strong> ({email}) set up a {'staff order link' if mode == 'company' else 'club shop'} with {len(items)} item(s), closing {payload.closes_on or 'no date'}.</p>"
+                             f"<ul>{lines}</ul>{notes}"
                              f"<p><a href='{shop_url}'>{shop_url}</a> - logo: <a href='{_backend_public_url()}{payload.logo}'>file</a></p>"))
     return {"code": code, "shop_url": shop_url, "manage_url": manage_url}
+
+
+@api_router.get("/club-shops/positions/{product_id}")
+async def club_logo_positions(product_id: str):
+    from server import PRODUCTS
+    p = PRODUCTS.get(product_id)
+    if not p:
+        raise HTTPException(404, "Product not found")
+    return {"positions": logo_positions(p), "logo_price": LOGO_PRICE}
 
 
 # ------------------------------------------------------------- public
@@ -168,6 +218,7 @@ async def get_club_shop(code: str):
         raise HTTPException(404, "Shop not found")
     return {"code": code, "name": shop["name"], "logo": shop.get("logo"), "closes_on": shop.get("closes_on"),
             "message": shop.get("message"), "open": _open(shop), "mode": shop.get("mode") or "pay_each",
+            "print_notes": shop.get("print_notes") or "",
             "items": [v for v in (_item_view(i) for i in shop.get("items") or []) if v],
             "prices": {"logo": LOGO_PRICE, "name": NAME_PRICE}}
 
@@ -327,10 +378,11 @@ async def staff_send(code: str, token: str, payload: SendIn):
             v = views.get((k["product_id"], k["colour"]))
             unit = next((s["price"] for s in (v or {}).get("sizes", []) if s["size"] == k["size"]), 0) + (NAME_PRICE if k.get("name_on_back") else 0)
             total += unit * k["qty"]; qty += k["qty"]
-            roster.append({"name": p["name"], "number": f"{k['item']} ({k['colour']})", "size": k["size"], "tracksuit": f"x{k['qty']}" + (f" · back: {k['name_on_back']}" if k.get("name_on_back") else "")})
+            roster.append({"name": p["name"], "number": f"{k['item']} ({k['colour']})" + (f" - logo {v['position_label']}" if v else ""), "size": k["size"], "tracksuit": f"x{k['qty']}" + (f" · back: {k['name_on_back']}" if k.get("name_on_back") else "")})
     msg = (f"Staff order link: {shop['name']} - {len(staff)} people, {qty} garments, about £{total:.2f} at website prices (inc VAT).\n"
            f"Invoice requested (BACS once the proof is approved). PO: {payload.po_number or '-'}\n"
            f"Company: {payload.company or shop['name']}\nDelivery address(es): {payload.address or '-'}\nNotes: {payload.notes or '-'}\n"
+           + (f"Print notes (from set-up): {shop['print_notes']}\n" if shop.get("print_notes") else "") +
            f"Organiser page: {_site()}/club/{code}/manage/{token}")
     await db.quote_requests.insert_one({"id": secrets.token_hex(8), "kind": "staff_order", "name": shop.get("organiser") or shop["name"],
                                         "email": shop["email"], "phone": shop.get("phone") or "", "company": payload.company or shop["name"],

@@ -371,6 +371,10 @@ frontend/src/
   - Club shops: `routers/club_shops.py` - /club-shop/new (organiser), /club/<code> (parents pay individually, lines
     flow "club_shop", priced by club_print: garment + logo £3 + name £3, free "delivered to the club" shipping),
     /club/<code>/manage/<token>, Admin > Club shops (CSV).
+    Logo position per item (Nov 2026, a customer couldn't say "left breast / large front"): organiser picks from
+    `logo_positions(p)` (GET /club-shops/positions/{id}): left chest / centre chest (£3) or large front (+£2,
+    LARGE_FRONT_EXTRA) where the garment takes a front print, else "Front"; plus shop `print_notes`. club_print writes
+    design_meta.logo_position / print_notes onto every order line (email, Admin > Orders, Stripe line). Old shops = left chest.
   - Staff order links (Oct 2026): same club shop with `mode: "company"` - /staff-order-link (ClubShopCreate
     defaultMode="company"; optional `max_each` allowance per item). Staff open /club/<code>, pick garments + sizes, NO prices,
     no payment -> POST /club-shops/<code>/staff (db.club_shop_staff, same name = replace). Organiser page lists everyone and
