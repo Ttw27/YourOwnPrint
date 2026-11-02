@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import DeliveryRegionPicker from "./DeliveryRegionPicker";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { createCheckout, submitQuoteRequest, fetchTeamKitBrands, fetchTeamKitAddons, fetchKitDetails, uploadOrderArtwork, ARTWORK_ACCEPT, readArtworkFile, isPreviewableArt } from "../../lib/api";
@@ -439,6 +440,7 @@ export default function TeamKitConfigurator({ product }) {
               : <>Under 15 kits - pay securely with Stripe. We&apos;ll send a proof for sign-off before printing.</>}
           </div>
         </div>
+        {!finalQuoteOnly && <DeliveryRegionPicker dark className="mt-4 max-w-xs" />}
         <div className="mt-5 flex flex-wrap gap-2">
           {finalQuoteOnly ? (
             <button data-testid="submit-quote" onClick={submitQuote} disabled={submitting} className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold px-6 py-3.5 rounded-full transition-transform hover:-translate-y-0.5">

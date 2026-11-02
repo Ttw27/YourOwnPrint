@@ -346,6 +346,12 @@ frontend/src/
   (`_ack_enquiry`, 1/hour/address). Search matches every word (plurals, hi vis/hivis, t shirt, colours, kids=junior/youth).
   /cart route opens the basket (Stripe's back link); the success page empties the basket once paid. Basket limit 90 lines.
   Tests read ADMIN_EMAIL/ADMIN_PASSWORD from env - never hard-code credentials (the GitHub repo was public).
+  Also: "Delivering to" (DeliveryRegionPicker, same localStorage key as the basket) beside Buy now / designer /
+  Fight Night / team kit pay buttons; createCheckout sends `delivery_region`; an overseas order too heavy for the zone
+  bands is refused (not given UK rates). PDP total applies the bulk % ladder (`raw_tiers` from /bulk-tiers/product).
+  Design Shop adds the linked garment's colour_upcharges. Review requests skip refunded orders (`_was_refunded`).
+  Leavers / workforce no longer copy data-URL files into side docs (R2 links on the order only). Staff links: same
+  name with a different email can't overwrite someone's picks.
 - **Every customer detail reaches the order (Nov 2026 gap audit).** Admin > Orders (`dmExtra`) and the shop's order email
   (`_dm_extra` / `_dm_extra_html`) list EVERY design_meta key that has no row of its own (`_DM_OWN_ROWS`; labels in
   `_DM_LABELS`, keep both sides in step): rosters, wording, house names, `notes`, `print_colour`, `badge_position`... A

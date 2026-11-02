@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import DeliveryRegionPicker from "../components/bold/DeliveryRegionPicker";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { BoldNavbar, BoldFooter, StarRating } from "../components/bold/BoldLayout";
 import ProductReviews from "../components/bold/ProductReviews";
@@ -315,6 +316,12 @@ export default function ProductDetail() {
     return { ...prev, [pid]: cur };
   });
   const packMeta = isPack ? { pack_sizes: JSON.stringify(packSizes) } : {};
+  // Bulk % ladder (products with bulk pricing switched on) - same maths as checkout
+  const [bulkLadder, setBulkLadder] = useState(null);
+  useEffect(() => {
+    if (!product?.id) return;
+    fetchProductBulkTiers(product.id).then(setBulkLadder).catch(() => setBulkLadder(null));
+  }, [product?.id]);
   // The account discount's profit floor for THIS line (blank / number of prints / their
   // price), worked out exactly like checkout (server garment_floor via floor_units).
   const pricingProduct = useMemo(() => {
@@ -325,6 +332,16 @@ export default function ProductDetail() {
     const floor = Math.max(0.99, Math.ceil(Math.round(raw * 100) / 100 + 0.01) - 0.01);
     return { ...product, min_price: Math.min(Number(product.price) || 0, Math.round(floor * 100) / 100) };
   }, [product, blank, selectedPlacements, printCostPerGarment]);
+  // garment base after the bulk % for this quantity (snapped to .99, held at the profit floor)
+  const bulkBase = useMemo(() => {
+    const price = Number(product?.price) || 0;
+    const raw = bulkLadder?.mode === "percent" ? bulkLadder.raw_tiers || [] : [];
+    const tier = raw.filter(([q]) => totalQty >= q).pop();
+    if (!tier) return price;
+    const snapped = Math.max(0.99, Math.round(price * (1 - tier[1] / 100)) - 0.01);
+    const floor = pricingProduct && pricingProduct.min_price ? Number(pricingProduct.min_price) : 0;
+    return Math.min(price, Math.max(snapped, floor));
+  }, [product, bulkLadder, totalQty, pricingProduct]);
   const lineTotal = useMemo(() => {
     if (!product) return 0;
     const upcharges = product.size_upcharges || {};
@@ -334,11 +351,11 @@ export default function ProductDetail() {
       if (qn <= 0) return;
       // Regular-customer discount: garment only, print stays full price (matches server).
       const colourUp = Number(product.colour_upcharges?.[color] || 0);   // e.g. Black +£2 on Specials
-      const unit = discounted((product.price || 0) + (upcharges[sz] || 0) + colourUp, accountPct, pricingProduct) + printCostPerGarment;
+      const unit = discounted(bulkBase + (upcharges[sz] || 0) + colourUp, accountPct, { ...pricingProduct, price: bulkBase }) + printCostPerGarment;
       total += Math.round(unit * qn * 100) / 100;
     });
     return total;
-  }, [product, pricingProduct, sizeQtys, printCostPerGarment, accountPct, color]);
+  }, [product, pricingProduct, bulkBase, sizeQtys, printCostPerGarment, accountPct, color]);
   // Headline price follows the chosen colour when that colour costs more
   // (e.g. Black +£2 on the Specials range).
   const priceShown = useMemo(() => {
@@ -756,6 +773,12 @@ export default function ProductDetail() {
                     <span>Base price ({totalQty || 0} × £{product.price.toFixed(2)})</span>
                     <span data-testid="price-base">£{((product.price || 0) * totalQty).toFixed(2)}</span>
                   </div>
+                  {bulkBase < (product.price || 0) && totalQty > 0 && (
+                    <div className="flex items-center justify-between text-sm mt-1 text-[#86efac]" data-testid="price-bulk-line">
+                      <span>Bulk price ({totalQty} × £{bulkBase.toFixed(2)} each)</span>
+                      <span>-£{(((product.price || 0) - bulkBase) * totalQty).toFixed(2)}</span>
+                    </div>
+                  )}
                   {Number(product.colour_upcharges?.[color] || 0) > 0 && totalQty > 0 && (
                     <div className="flex items-center justify-between text-sm mt-1 text-neutral-300" data-testid="price-colour-extra">
                       <span>{color} ({totalQty} × £{Number(product.colour_upcharges[color]).toFixed(2)})</span>
@@ -794,6 +817,7 @@ export default function ProductDetail() {
                     </div>
                   </div>
 
+                  <DeliveryRegionPicker dark className="mt-4" />
                   <div className="mt-5 grid sm:grid-cols-2 gap-2">
                     <button
                       data-testid="add-to-cart"

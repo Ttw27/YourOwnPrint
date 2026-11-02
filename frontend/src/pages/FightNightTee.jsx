@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import DeliveryRegionPicker from "../components/bold/DeliveryRegionPicker";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
@@ -531,6 +532,7 @@ export default function FightNightTee() {
             </div>
           </div>
           <div className="text-xs text-neutral-400 mt-1">Pay now → we send a <strong className="text-[#7bc67e]">free artwork proof</strong> → only then do we print.</div>
+          <DeliveryRegionPicker dark className="mt-3 max-w-xs" />
           <div className="mt-4 flex flex-wrap gap-2">
             <button data-testid="fn-checkout" onClick={checkout} disabled={submitting} className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold px-6 py-3.5 rounded-full transition-transform hover:-translate-y-0.5">
               {submitting ? <><Loader2 className="animate-spin" size={16} /> Redirecting…</> : <><ShieldCheck size={16} /> Pay £{total.toFixed(2)} - proof before print</>}

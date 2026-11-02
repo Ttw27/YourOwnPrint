@@ -106,6 +106,27 @@ def _list(products: List[Dict]) -> str:
 
 # ---------------------------------------------------------------- reviews
 
+async def _was_refunded(session_id: str) -> bool:
+    """Refunded (fully or partly) on Stripe? Then no 'how did we do' email. Stripe
+    lookup failing = assume not refunded."""
+    import asyncio as _a
+    import stripe
+    from server import STRIPE_API_KEY
+    if not STRIPE_API_KEY:
+        return False
+    try:
+        stripe.api_key = STRIPE_API_KEY
+        sess = await _a.to_thread(stripe.checkout.Session.retrieve, session_id, expand=["payment_intent.latest_charge"])
+        ch = getattr(getattr(sess, "payment_intent", None), "latest_charge", None)
+        refunded = bool(ch and (getattr(ch, "refunded", False) or int(getattr(ch, "amount_refunded", 0) or 0) > 0))
+        if refunded:
+            await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"refunded": True}})
+        return refunded
+    except Exception as e:
+        log.info(f"refund check failed: {e}")
+        return False
+
+
 async def _review_requests():
     started = await _started_at()
     due = _iso(_now() - timedelta(days=REVIEW_DAYS))
@@ -118,7 +139,7 @@ async def _review_requests():
         if not claim.modified_count:
             continue
         email = doc["paid_email"]
-        if await _opted_out(email):
+        if await _opted_out(email) or doc.get("refunded") or await _was_refunded(doc["session_id"]):
             continue
         products = _order_products(doc)
         token = secrets.token_urlsafe(18)

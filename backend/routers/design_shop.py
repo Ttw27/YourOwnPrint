@@ -225,6 +225,7 @@ async def design_shop_product(pid: str, include_hidden: bool = False):
             "colours": colours,
             "sizes": list(base.get("sizes") or []),
             "size_upcharges": base.get("size_upcharges") or {},
+            "colour_upcharges": base.get("colour_upcharges") or {},
             "size_guide_table": base.get("size_guide_table") or [],
         })
     return {

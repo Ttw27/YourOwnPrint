@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import DeliveryRegionPicker from "../components/bold/DeliveryRegionPicker";
 import { useSearchParams, Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
@@ -890,6 +891,7 @@ export default function DesignYourOwn() {
                   ))}
                 </div>
               )}
+              <DeliveryRegionPicker className="mt-3" />
               <button data-testid="designer-checkout" onClick={checkout} disabled={checkingOut} className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold rounded-full px-6 py-4 shadow-md hover:-translate-y-0.5 transition-transform">
                 {checkingOut ? <><Loader2 className="animate-spin" size={16} /> Saving design…</> : <><ShoppingCart size={16} /> Checkout with Stripe</>}
               </button>

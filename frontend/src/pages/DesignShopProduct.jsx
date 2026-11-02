@@ -88,12 +88,13 @@ export default function DesignShopProduct() {
   }, [garment]);
   const colour = useMemo(() => (garment?.colours || []).find((c) => c.name === colourName) || garment?.colours?.[0] || null, [garment, colourName]);
   const totalQty = Object.values(sizeQtys).reduce((a, b) => a + (Number(b) || 0), 0);
-  const unit = garment ? discounted(garment.price, accountPct) : 0;
+  const colourUp = Number(garment?.colour_upcharges?.[colour?.name] || 0);   // dearer colours cost a bit more
+  const unit = garment ? discounted(garment.price + colourUp, accountPct) : 0;
   const total = useMemo(() => {
     if (!garment) return 0;
     return Object.entries(sizeQtys).reduce((s, [sz, q]) =>
-      s + Math.round(discounted(garment.price + Number(garment.size_upcharges?.[sz] || 0), accountPct) * (Number(q) || 0) * 100) / 100, 0);
-  }, [garment, sizeQtys, accountPct]);
+      s + Math.round(discounted(garment.price + colourUp + Number(garment.size_upcharges?.[sz] || 0), accountPct) * (Number(q) || 0) * 100) / 100, 0);
+  }, [garment, sizeQtys, accountPct, colourUp]);
 
   const pickGarment = (g) => {
     setGarmentSlug(g.slug);
@@ -151,7 +152,7 @@ export default function DesignShopProduct() {
               {garment && (
                 <div className="mt-3 flex items-baseline gap-2 flex-wrap">
                   <span className="font-black text-3xl text-[#7c3aed]">£{unit.toFixed(2)}</span>
-                  {unit < garment.price && <span className="text-sm text-[#9ca3af] line-through">£{garment.price.toFixed(2)}</span>}
+                  {unit < garment.price + colourUp && <span className="text-sm text-[#9ca3af] line-through">£{(garment.price + colourUp).toFixed(2)}</span>}
                   <span className="text-sm text-[#4b5563]">{garment.title}, printed and ready to wear</span>
                 </div>
               )}

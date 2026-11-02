@@ -102,8 +102,12 @@ export async function selectTheme(theme_id, note = "") {
   return data;
 }
 
+export function getDeliveryRegion() {
+  try { return localStorage.getItem("yop_delivery_region") || "uk"; } catch { return "uk"; }
+}
 export async function createCheckout(payload) {
-  const { data } = await api.post("/checkout/session", payload);
+  // "Delivering to" (DeliveryRegionPicker / basket) decides Stripe's delivery prices + countries
+  const { data } = await api.post("/checkout/session", { delivery_region: getDeliveryRegion(), ...payload });
   trackBeginCheckout(0, "single");
   return data;
 }

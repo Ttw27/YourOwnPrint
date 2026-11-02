@@ -761,6 +761,7 @@ class CheckoutRequest(BaseModel):
     blank: bool = False  # "buy blank" - no placements
     origin_url: str
     design_meta: Optional[Dict[str, Any]] = None
+    delivery_region: Optional[str] = "uk"   # uk | europe | world (DeliveryRegionPicker / basket)
 
 
 class CheckoutResponse(BaseModel):
@@ -1480,6 +1481,7 @@ async def create_quote_request(payload: QuoteRequest):
 # ---------- Stripe Checkout ----------
 @api_router.post("/checkout/session", response_model=CheckoutResponse)
 async def create_checkout(payload: CheckoutRequest, http_request: Request):
+    region = payload.delivery_region if payload.delivery_region in ("uk", "europe", "world") else "uk"
     # Normalise legacy {size, quantity} → {size_qtys} so the shared helper can price it
     if payload.size_qtys:
         size_qtys = dict(payload.size_qtys)
@@ -1547,7 +1549,8 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         metadata=metadata,
         allow_promotion_codes=promo_codes_ok([priced["garment_discount_pct"]]),
         product_name=product["name"],
-        shipping_options=await _delivery_options_for([(product, total_qty)], total_amount),
+        shipping_options=await _delivery_options_for([(product, total_qty)], total_amount, region),
+        allowed_countries=await _allowed_countries(region),
         lines=[_stripe_line(priced)],
     )
 
@@ -1705,7 +1708,8 @@ def _order_details_html(doc: dict, for_customer: bool = False) -> str:
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
         rows.extend(_dm_extra_html(dm, esc))
         # the customer's actual print files (art_<position> -> /api/uploads/artwork/...)
-        arts = [(k[4:], v) for k, v in dm.items() if k.startswith("art_") and k != "art_pending" and v]
+        arts = [(k[4:], v) for k, v in dm.items() if k.startswith("art_") and k != "art_pending" and v
+                and str(v).startswith(("/api/", "https://"))]   # our own file links only
         if arts:
             base = _backend_public_url()
             rows.append(("Your files: " if for_customer else "Customer files: ") + " · ".join(
@@ -1989,7 +1993,13 @@ async def _delivery_options_for(weighted: List, goods_total: float, region: str 
     from routers.delivery import get_settings as _ds, garment_weight_kg, stripe_shipping_options
     st = await _ds()
     weight = sum(garment_weight_kg(p or {}, st) * int(q or 0) for p, q in weighted)
-    return await stripe_shipping_options(weight, goods_total, region or "uk")
+    opts = await stripe_shipping_options(weight, goods_total, region or "uk")
+    intl_on = bool(st.get("international_enabled")) and (region or "uk") in (st.get("zones") or {})
+    if intl_on and opts and str(opts[0]["shipping_rate_data"].get("display_name", "")).startswith("UK"):
+        # no international rate for this weight - don't offer UK prices to an overseas address
+        raise HTTPException(400, "This order is too heavy for our standard international rates - "
+                                 "please contact us (info@yourownprint.co.uk) for a delivery quote")
+    return opts
 
 
 async def customer_id_for_request(request: Request) -> Optional[str]:
@@ -2040,6 +2050,7 @@ async def _resolve_line_pricing(
         dg = await resolve_design_garment(product, (design_meta or {}).get("garment"))
         base_price = float(dg["price"])
         size_upcharges = dg["base"].get("size_upcharges", {}) or {}
+        design_colour_ups = dg["base"].get("colour_upcharges") or {}   # dearer colours of the linked garment
         allowed_sizes = set(dg["base"].get("sizes", []))
         colour_names = [(c.get("name") if isinstance(c, dict) else c) for c in (dg["base"].get("colors") or [])]
         if colour_names and color not in colour_names:
@@ -2203,7 +2214,8 @@ async def _resolve_line_pricing(
     account_saving = 0.0
     breakdown: List[str] = []
     for sz, q in resolved_qtys.items():
-        garment = base_price + float(size_upcharges.get(sz, 0.0)) + float((product.get("colour_upcharges") or {}).get(color or "", 0.0))
+        colour_ups = design_colour_ups if is_design else (product.get("colour_upcharges") or {})
+        garment = base_price + float(size_upcharges.get(sz, 0.0)) + float(colour_ups.get(color or "", 0.0))
         garment_disc = round(garment * acct_factor, 2) if acct_pct > 0 else garment
         if floor_g and garment_disc < garment:  # profit floor (size/colour upcharges kept on top)
             garment_disc = min(garment, max(garment_disc, round(floor_g + garment - base_price, 2)))
@@ -3795,6 +3807,8 @@ async def get_product_bulk_tiers(product_id: str):
     priced = _distinct_tiers([(q, floored(snap_to_99(base_price * (1 - pct / 100)), p)) for q, pct in sorted(tiers_pct)], base_price)
     return {
         "mode": "percent", "base_price": base_price,
+        # the % ladder itself, so the product page total can price exactly like checkout
+        "raw_tiers": [[q, pct] for q, pct in sorted(tiers_pct)],
         "tiers": [
             {"min_qty": q, "pct": round(100 * (1 - up / base_price), 1) if base_price else 0, "unit_price": up,
              "savings_per_unit": round(base_price - up, 2)}
@@ -4330,9 +4344,11 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
         await db.leavers_artwork.insert_one({
             "id": artwork_id,
             "session_id": session.id,
-            "custom_design": payload.custom_design_data_url,               # front
-            "custom_back_design": payload.custom_back_design_data_url,     # back
-            "names_file": payload.names_file_data_url,                     # names list
+            # files themselves go to R2 via _save_order_file (on the order) - not copied here,
+            # three big data URLs could pass Mongo's 16MB document limit
+            "custom_design_bytes": len(payload.custom_design_data_url or ""),
+            "custom_back_design_bytes": len(payload.custom_back_design_data_url or ""),
+            "names_file_bytes": len(payload.names_file_data_url or ""),
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
 
@@ -5443,6 +5459,7 @@ async def workforce_quote(payload: WorkforceCheckoutRequest):
 
 @api_router.post("/workforce/checkout", response_model=CheckoutResponse)
 async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Request):
+    _assert_origin_ok(payload.origin_url)
     threshold = await _get_workforce_threshold()
     tiers = await _get_workforce_tiers()
 
@@ -5554,8 +5571,10 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     await db.workforce_artwork.insert_one({
         "id": artwork_doc_id,
         "session_id": session.id,
-        "breast_logo": payload.breast_logo_data_url,
-        "back_print": payload.back_print_data_url,
+        # the files themselves go to R2 (art_logo / art_back-print on the order below) - keeping
+        # two big data URLs here could pass Mongo's 16MB limit after the Stripe session exists
+        "breast_logo_bytes": len(payload.breast_logo_data_url or ""),
+        "back_print_bytes": len(payload.back_print_data_url or ""),
         "needs_back_print": needs_back_print,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })

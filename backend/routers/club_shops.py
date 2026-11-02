@@ -342,6 +342,10 @@ async def staff_choose(code: str, payload: StaffIn):
         raise HTTPException(400, "Choose at least one item")
     doc = {"code": code, "name": name, "email": payload.email.strip().lower()[:120], "picks": picks, "updated_at": _now()}
     existing = await db.club_shop_staff.find_one({"code": code, "name_key": name.lower()})
+    if existing and (existing.get("email") or "") and existing.get("email") != doc["email"]:
+        # same name, different person (or someone else's email) - don't overwrite their choices
+        raise HTTPException(400, f"Someone called {name} has already chosen - please add your surname, "
+                                 "or use the same email you used before to change your choices")
     if existing:
         await db.club_shop_staff.update_one({"_id": existing["_id"]}, {"$set": doc})
     else:
