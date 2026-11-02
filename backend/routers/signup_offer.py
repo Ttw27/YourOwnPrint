@@ -60,11 +60,14 @@ async def signup_offer(payload: SignupIn, request: Request):
         raise HTTPException(400, "Please enter a valid email address")
     now = datetime.now(timezone.utc)
     # at most 5 sign-ups an hour from one address (each makes a Stripe code)
-    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[0].strip()
+    # Railway appends the real client address LAST - the first entry is whatever the browser sent
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[-1].strip()
     hour_ago = (now - timedelta(hours=1)).isoformat()
     if await db.signup_attempts.count_documents({"ip": ip, "at": {"$gte": hour_ago}}) >= 5:
         raise HTTPException(429, "Too many sign-ups - please try again later")
     await db.signup_attempts.insert_one({"ip": ip, "at": now.isoformat()})
+    if await db.subscribers.count_documents({"created_at": {"$gte": (now - timedelta(days=1)).isoformat()}}) >= 300:
+        raise HTTPException(429, "Sign-ups are busy just now - please try again tomorrow")
     existing = await db.subscribers.find_one({"email": email})
     if existing and existing.get("code"):
         # don't hand out a second code - just resend the first (at most every 10 minutes)

@@ -26,8 +26,8 @@ load_dotenv("/app/backend/.env")
 BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
 API = f"{BASE_URL}/api"
 
-ADMIN_EMAIL = "admin@yourownprint.co.uk"
-ADMIN_PASSWORD = "RDAzhFOX_ZyNSgcldy-gDA"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")  # never hard-code (repo was public)
 
 # Fresh email each run to avoid cross-run pollution
 _CUST_EMAIL = f"testauth1+{uuid.uuid4().hex[:6]}@example.com"

@@ -3,7 +3,7 @@ import os
 import requests
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://branded-workwear-lab.preview.emergentagent.com").rstrip("/")
-ADMIN_EMAIL = "admin@yourownprint.co.uk"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
 ADMIN_PASS = "RDAzhFOX_ZyNSgcldy-gDA"
 
 

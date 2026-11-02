@@ -18,8 +18,8 @@ def _load_backend_url():
 BASE = _load_backend_url().rstrip("/")
 API = f"{BASE}/api"
 
-ADMIN_EMAIL = "admin@yourownprint.co.uk"
-ADMIN_PASSWORD = "RDAzhFOX_ZyNSgcldy-gDA"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")  # never hard-code (repo was public)
 
 
 # ---------- fixtures ----------

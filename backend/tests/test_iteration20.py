@@ -12,8 +12,8 @@ from pymongo import MongoClient
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:3000").rstrip("/")
 API = f"{BASE_URL}/api"
-ADMIN_EMAIL = "admin@yourownprint.co.uk"
-ADMIN_PASSWORD = "RDAzhFOX_ZyNSgcldy-gDA"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")  # never hard-code (repo was public)
 TINY_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
 
 # frontend env for backend url

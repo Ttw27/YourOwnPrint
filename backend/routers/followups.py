@@ -238,6 +238,34 @@ def _restore_lines(items: List[Dict]) -> List[Dict]:
     return out
 
 
+async def _recover_paid_orders():
+    """Paid on Stripe but never confirmed here (customer closed the tab before the
+    success page and the webhook didn't land), or the order email failed: mark it
+    paid, capture delivery + send the emails - same as the success page does."""
+    from server import STRIPE_API_KEY, _maybe_send_order_emails
+    from services.stripe_checkout import get_checkout_status
+    if not STRIPE_API_KEY:
+        return
+    now = _now()
+    q = {"created_at": {"$gte": _iso(now - timedelta(days=3)), "$lte": _iso(now - timedelta(minutes=20))},
+         "receipt_sent": {"$ne": True}, "recover_done": {"$ne": True}}
+    async for doc in db.payment_transactions.find(q).limit(60):
+        try:
+            st = await get_checkout_status(STRIPE_API_KEY, doc["session_id"])
+        except Exception as e:
+            log.info(f"paid-order recovery: stripe lookup failed {e}")
+            continue
+        if getattr(st, "payment_status", "") == "paid":
+            if doc.get("payment_status") != "paid":
+                await db.payment_transactions.update_one({"session_id": doc["session_id"]}, {"$set": {
+                    "payment_status": "paid", "status": getattr(st, "status", "complete"), "updated_at": _iso(now),
+                    "recovered_by_followups": True}})
+                doc["payment_status"] = "paid"
+            await _maybe_send_order_emails(doc, st)
+        elif getattr(st, "status", "") == "expired":
+            await db.payment_transactions.update_one({"session_id": doc["session_id"]}, {"$set": {"recover_done": True}})
+
+
 async def _abandoned_checkouts():
     from server import STRIPE_API_KEY
     from services.stripe_checkout import get_checkout_status
@@ -257,6 +285,7 @@ async def _abandoned_checkouts():
             email = email or (getattr(details, "email", None) if details else None)
         except Exception as e:
             log.info(f"basket reminder: stripe lookup failed {e}")
+            continue   # can't tell if they paid - don't risk reminding a paying customer
         if not email or await _paid_since(email, doc["created_at"]):
             continue
         await _remind(email, _restore_lines(doc.get("items") or []), f"checkout:{doc['session_id']}")
@@ -301,7 +330,7 @@ async def email_stop(token: str):
 async def _loop():
     await asyncio.sleep(90)
     while True:
-        for job in (_review_requests, _abandoned_checkouts, _abandoned_saved_carts):
+        for job in (_recover_paid_orders, _review_requests, _abandoned_checkouts, _abandoned_saved_carts):
             try:
                 await job()
             except Exception as e:

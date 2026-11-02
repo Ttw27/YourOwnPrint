@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
 import { initWhatsAppNumber } from "@/lib/data";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
+import { useCart } from "./context/CartContext";
 import { Toaster } from "sonner";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/NotFound";
@@ -97,6 +98,17 @@ import ClubShop from "@/pages/ClubShop";
 import ClubShopManage from "@/pages/ClubShopManage";
 import AdminClubShops from "@/pages/AdminClubShops";
 import BasketRestore from "@/pages/BasketRestore";
+
+// Stripe's "back" link (cancel_url) and old links: home with the basket drawer open
+function CartRoute() {
+  const { openDrawer } = useCart();
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate("/", { replace: true });
+    setTimeout(openDrawer, 300);   // after the page change (which closes the drawer); this route unmounts, so no cleanup
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
 
 function App() {
   // Pull the admin-set WhatsApp number once on load so every WhatsApp link
@@ -207,6 +219,7 @@ function App() {
           <Route path="/admin" element={<RequireAdmin><AdminLayout><AdminDashboard /></AdminLayout></RequireAdmin>} />
           <Route path="/admin/qa" element={<RequireAdmin><AdminLayout><AdminQA /></AdminLayout></RequireAdmin>} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/cart" element={<CartRoute />} />
           {/* Catch-all - must stay last. Without it, unknown URLs rendered a blank page. */}
           <Route path="*" element={<NotFound />} />
         </Routes>

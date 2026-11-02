@@ -13,8 +13,8 @@ import requests
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/") or \
            "https://branded-workwear-lab.preview.emergentagent.com"
 
-ADMIN_EMAIL = "admin@yourownprint.co.uk"
-ADMIN_PASSWORD = "RDAzhFOX_ZyNSgcldy-gDA"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")  # never hard-code (repo was public)
 
 # 1x1 red PNG
 TINY_PNG_B64 = (

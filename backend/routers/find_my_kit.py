@@ -28,7 +28,7 @@ import re
 from typing import Dict, List, Optional
 
 import httpx
-from fastapi import Depends
+from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from deps import api_router, db, _get_integration_value
@@ -216,8 +216,15 @@ def _system_prompt() -> str:
 
 
 @api_router.post("/find-my-kit")
-async def find_my_kit(payload: KitRequest):
+async def find_my_kit(payload: KitRequest, request: Request):
     """Build a grouped, concierge kit for a trade. Read-only."""
+    # each call can use the paid AI - at most 20 an hour from one address
+    from datetime import datetime, timedelta, timezone
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[-1].strip()
+    now = datetime.now(timezone.utc)
+    if await db.find_my_kit_calls.count_documents({"ip": ip, "at": {"$gte": (now - timedelta(hours=1)).isoformat()}}) >= 20:
+        raise HTTPException(429, "Lots of searches just now - please try again in a little while")
+    await db.find_my_kit_calls.insert_one({"ip": ip, "at": now.isoformat()})
     industries = _resolve_industries(payload.industry, payload.trade)
     candidates = _gather_candidates(industries)
 

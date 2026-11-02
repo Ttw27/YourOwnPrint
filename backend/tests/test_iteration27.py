@@ -12,8 +12,8 @@ if not BASE_URL:
                 BASE_URL = ln.split("=", 1)[1].strip().rstrip("/")
                 break
 
-ADMIN_EMAIL = "admin@yourownprint.co.uk"
-ADMIN_PASSWORD = "RDAzhFOX_ZyNSgcldy-gDA"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")  # never hard-code (repo was public)
 
 TEST_PREFIX = "TEST_iter27"
 

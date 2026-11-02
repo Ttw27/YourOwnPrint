@@ -3,12 +3,14 @@ import { Link, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import { fetchCheckoutStatus } from "../lib/api";
 import { trackPurchase } from "../lib/tracking";
+import { useCart } from "../context/CartContext";
 import { CheckCircle2, Loader2, XCircle, ArrowRight, PartyPopper } from "lucide-react";
 
 export default function CheckoutSuccess() {
   const [params] = useSearchParams();
   const sessionId = params.get("session_id");
   const [state, setState] = useState({ loading: true, paid: false, expired: false, info: null, error: null });
+  const { clear } = useCart();
 
   useEffect(() => {
     if (!sessionId) {
@@ -22,6 +24,7 @@ export default function CheckoutSuccess() {
         const data = await fetchCheckoutStatus(sessionId);
         if (data.payment_status === "paid") {
           trackPurchase(sessionId, Number(data.amount_total) || 0);
+          clear();   // paid - empty the basket so nobody pays twice
           setState({ loading: false, paid: true, expired: false, info: data, error: null });
           return;
         }
@@ -36,11 +39,15 @@ export default function CheckoutSuccess() {
         }
         setTimeout(poll, 2000);
       } catch (e) {
-        setState({ loading: false, paid: false, expired: false, info: null, error: e?.response?.data?.detail || e.message });
+        // a hiccup checking with Stripe - keep trying before saying anything
+        attempts += 1;
+        if (attempts < maxAttempts + 4) { setTimeout(poll, 2500); return; }
+        setState({ loading: false, paid: false, expired: false, info: null,
+          error: "We couldn't confirm your payment just yet. If you paid, your confirmation email will arrive shortly - or contact us on info@yourownprint.co.uk and we'll check." });
       }
     };
     poll();
-  }, [sessionId]);
+  }, [sessionId]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="bg-white text-[#1a1a1a] font-nunito min-h-screen">
@@ -59,9 +66,9 @@ export default function CheckoutSuccess() {
             </div>
             <h1 data-testid="checkout-success-heading" className="mt-6 font-nunito font-black text-4xl">Order Confirmed! 🎉</h1>
             <p className="text-[#4b5563] mt-3">Total paid: <span className="text-[#7bc67e] font-extrabold">£{state.info?.amount_total?.toFixed(2)} {state.info?.currency?.toUpperCase()}</span></p>
-            <p className="text-[#4b5563] mt-2 text-sm">A receipt is on its way to your inbox.</p>
+            <p className="text-[#4b5563] mt-2 text-sm">A confirmation is on its way to your inbox. We&apos;ll email you a free proof to approve before anything is printed.</p>
             <div className="mt-8 flex justify-center gap-3 flex-wrap">
-              <Link to="/design" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white font-nunito font-extrabold px-6 py-3 rounded-full transition-colors">Design another</Link>
+              <Link to="/contact" className="inline-flex items-center gap-2 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white font-nunito font-extrabold px-6 py-3 rounded-full transition-colors">Questions? Contact us</Link>
               <Link to="/" className="inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-6 py-3 rounded-full transition-colors">Back to home <ArrowRight size={14} /></Link>
             </div>
             <div className="mt-10 bg-[#f0fdf4] border border-[#dcfce7] rounded-2xl p-5">
@@ -75,14 +82,14 @@ export default function CheckoutSuccess() {
             <XCircle className="mx-auto text-rose-500" size={48} />
             <h1 className="mt-6 font-nunito font-black text-3xl">Session Expired</h1>
             <p className="text-[#4b5563] mt-2">Your checkout session expired. Please try again.</p>
-            <Link to="/design" className="mt-6 inline-flex items-center gap-2 bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-6 py-3 rounded-full">Back to designer</Link>
+            <Link to="/cart" className="mt-6 inline-flex items-center gap-2 bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-6 py-3 rounded-full">Back to your basket</Link>
           </>
         ) : (
           <>
             <XCircle className="mx-auto text-amber-500" size={48} />
             <h1 className="mt-6 font-nunito font-black text-3xl">Payment Pending</h1>
             <p className="text-[#4b5563] mt-2">{state.error || "We couldn't confirm the payment yet."}</p>
-            <Link to="/design" className="mt-6 inline-flex items-center gap-2 bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-6 py-3 rounded-full">Back to designer</Link>
+            <Link to="/" className="mt-6 inline-flex items-center gap-2 bg-[#7bc67e] text-[#1a1a1a] font-nunito font-extrabold px-6 py-3 rounded-full">Back to home</Link>
           </>
         )}
       </div>

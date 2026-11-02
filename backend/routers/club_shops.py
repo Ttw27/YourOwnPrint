@@ -23,7 +23,7 @@ import io
 import os
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
 from fastapi import Depends, HTTPException, Response
@@ -149,12 +149,18 @@ class ShopIn(BaseModel):
 async def create_club_shop(payload: ShopIn):
     from server import PRODUCTS, is_live, _backend_public_url
     from services.email import send_email, email_wrap, shop_notification_recipient
+    import html as _h
     name = payload.name.strip()[:80]
     email = payload.email.strip().lower()
     if not name or not re.match(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$", email):
         raise HTTPException(400, "Add your club / school name and a valid email")
     if not payload.logo:
         raise HTTPException(400, "Upload your logo")
+    # each shop emails the address typed - stop the form being used to spam people
+    day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    if await db.club_shops.count_documents({"email": email, "created_at": {"$gte": day_ago}}) >= 5 or \
+            await db.club_shops.count_documents({"created_at": {"$gte": day_ago}}) >= 200:
+        raise HTTPException(429, "That's a lot of shops in one day - please get in touch and we'll help")
     if payload.closes_on and not re.match(r"^\d{4}-\d{2}-\d{2}$", payload.closes_on):
         raise HTTPException(400, "Closing date should be a date")
     items = []
@@ -179,6 +185,7 @@ async def create_club_shop(payload: ShopIn):
         "message": payload.message.strip()[:600], "print_notes": payload.print_notes.strip()[:600], "items": items, "status": "open", "created_at": _now(), "mode": mode,
     })
     shop_url, manage_url = f"{_site()}/club/{code}", f"{_site()}/club/{code}/manage/{manage}"
+    raw_name, name = name, _h.escape(name)   # emails below show it as HTML
     who = "staff - each person picks their garments and sizes (no payment)" if mode == "company" else "parents / members - each person picks their sizes and pays for their own"
     await send_email(to=[email], subject=f"Your {name} {'staff order link' if mode == 'company' else 'shop'} is ready", html=email_wrap(
         "Your staff order link is ready" if mode == "company" else "Your club shop is ready",
@@ -189,12 +196,11 @@ async def create_club_shop(payload: ShopIn):
            f"<p style='color:#4b5563'>We'll print everything together once the shop closes{(' on ' + payload.closes_on) if payload.closes_on else ''} and send you a proof first.</p>")))
     shop_to = await shop_notification_recipient()
     if shop_to:
-        import html as _h
         lines = "".join(f"<li>{_h.escape(v['garment'])} ({_h.escape(v['colour'] or '')}) - logo: <strong>{_h.escape(v['position_label'])}</strong>"
                         f"{' + names on back' if v['names'] else ''}</li>" for v in (_item_view(i) for i in items) if v)
         notes = f"<p><strong>Print notes:</strong> {_h.escape(payload.print_notes.strip()[:600])}</p>" if payload.print_notes.strip() else ""
         await send_email(to=[shop_to], subject=f"[{'Staff order link' if mode == 'company' else 'Club shop'}] {name} set up", html=email_wrap(
-            "New staff order link" if mode == "company" else "New club shop", f"<p><strong>{name}</strong> ({email}) set up a {'staff order link' if mode == 'company' else 'club shop'} with {len(items)} item(s), closing {payload.closes_on or 'no date'}.</p>"
+            "New staff order link" if mode == "company" else "New club shop", f"<p><strong>{name}</strong> ({_h.escape(email)}) set up a {'staff order link' if mode == 'company' else 'club shop'} with {len(items)} item(s), closing {payload.closes_on or 'no date'}.</p>"
                              f"<ul>{lines}</ul>{notes}"
                              f"<p><a href='{shop_url}'>{shop_url}</a> - logo: <a href='{_backend_public_url()}{payload.logo}'>file</a></p>"))
     return {"code": code, "shop_url": shop_url, "manage_url": manage_url}

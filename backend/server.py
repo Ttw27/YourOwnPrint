@@ -760,7 +760,7 @@ class CheckoutRequest(BaseModel):
     placements: Optional[List[str]] = None
     blank: bool = False  # "buy blank" - no placements
     origin_url: str
-    design_meta: Optional[Dict[str, str]] = None
+    design_meta: Optional[Dict[str, Any]] = None
 
 
 class CheckoutResponse(BaseModel):
@@ -877,7 +877,14 @@ async def sitemap_xml():
         ("/easy-ordering", "0.7", "monthly"),
         ("/bundles", "0.8", "weekly"),
         ("/business-enquiry", "0.7", "monthly"),
-        ("/sports-fitness", "0.8", "weekly"),
+        ("/sports", "0.8", "weekly"),
+        ("/portfolio", "0.6", "weekly"),
+        ("/design-shop", "0.7", "weekly"),
+        ("/contact", "0.6", "monthly"),
+        ("/find-my-kit", "0.6", "monthly"),
+        ("/school-trips", "0.7", "monthly"),
+        ("/for-business", "0.7", "monthly"),
+        ("/kit-your-workforce", "0.7", "monthly"),
         ("/team-kits", "0.8", "weekly"),
         ("/specials", "0.7", "weekly"),
         ("/dtf-printing", "0.6", "monthly"),
@@ -903,16 +910,24 @@ async def sitemap_xml():
         ("/occasions/back-to-school", "0.6", "monthly"),
     ]
     for t in GARMENT_TYPE_CATALOGUE:
-        urls.append((f"/shop/{t['slug']}", "0.8", "daily"))
+        if t["slug"] != "online-designer":   # empty listing - designer products live at /design
+            urls.append((f"/shop/{t['slug']}", "0.8", "daily"))
+    for st in SPORTS_TEAMS_CATALOGUE:
+        if not st.get("alias_of"):
+            urls.append((f"/sports-teams/{st['slug']}", "0.7", "weekly"))
     urls.append(("/brands", "0.7", "weekly"))
     for bslug in sorted({brand_slug(brand_group(p.get("brand"))) for p in _brand_catalogue()}):
         urls.append((f"/brands/{bslug}", "0.7", "weekly"))
     for i in INDUSTRIES_CATALOGUE:
         if not i.get("alias_of"):  # skip aliases, only canonical pages
             urls.append((f"/industries/{i['slug']}", "0.7", "weekly"))
-    for pid, p in PRODUCTS.items():
-        if p.get("active", True):
-            urls.append((f"/product/{pid}", "0.6", "weekly"))
+    from routers.team_kits import is_kit
+    for p in live_products():
+        pid = p["id"]
+        # pages that just redirect elsewhere (designer-only, leavers, Fight Night, kits) aren't listed
+        if p.get("designer_enabled") or p.get("category") in ("leavers", "team-kits") or pid in FIGHT_NIGHT_IDS or is_kit(pid):
+            continue
+        urls.append((f"/design/{pid}" if p.get("design_shop") else f"/product/{pid}", "0.6", "weekly"))
 
     xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for path, priority, freq in urls:
@@ -964,6 +979,29 @@ async def best_sellers(limit: int = 12):
     return {"items": items, "total": len(items)}
 
 
+_SEARCH_STOP = {"a", "an", "the", "and", "for", "with", "of", "in", "my", "our", "custom", "printed", "personalised", "personalized"}
+_SEARCH_ALTS = {"hoodie": ("hoodie", "hooded"), "kid": ("kid", "junior", "youth", "child", "baby", "boy", "girl"),
+                "ladie": ("ladie", "women", "womens", "female", "fitted"), "women": ("ladie", "women", "female", "fitted"),
+                "men": ("men", "unisex", "adult"), "jumper": ("jumper", "sweat"), "sweater": ("sweat", "jumper"),
+                "tracksuit": ("tracksuit", "track"), "trouser": ("trouser", "pant", "jogger", "bottom"),
+                "jacket": ("jacket", "coat", "softshell", "fleece"), "coat": ("coat", "jacket", "parka")}
+
+
+def _search_norm(text: str) -> str:
+    """Lowercase, one spelling for the usual variants, plurals off: 'Hi-Vis T-Shirts' -> 'hivis tshirt'."""
+    t = (text or "").lower()
+    t = re.sub(r"\bhi(gh)?[\s\-]?vis(ibility)?\b", "hivis", t)
+    t = re.sub(r"\bt[\s\-]?shirts?\b|\btees?\b", "tshirt", t)
+    t = re.sub(r"\bpolo[\s\-]?shirts?\b", "polo", t)
+    t = re.sub(r"\bhoody\b|\bhoodys\b", "hoodie", t)
+    t = re.sub(r"[^a-z0-9 ]+", " ", t)
+    return " ".join(w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w for w in t.split())
+
+
+def _search_words(query: str) -> List[str]:
+    return [w for w in _search_norm(query).split() if w not in _SEARCH_STOP]
+
+
 @api_router.get("/search")
 async def search_products(q: str = "", limit: int = 25, offset: int = 0):
     """Site-wide product search by name/brand - powers the header search bar."""
@@ -971,17 +1009,28 @@ async def search_products(q: str = "", limit: int = 25, offset: int = 0):
     if not query:
         return {"items": [], "total": 0, "offset": offset, "returned": 0, "query": q}
 
+    words = _search_words(query)
+
     def matches(p: Dict) -> bool:
         # Design Shop products have their own browse/search - keep them out of the
         # main (workwear) search results.
         if p.get("design_shop") or p.get("category") == "leavers":
             return False
-        hay = f"{p.get('name', '')} {p.get('brand', '') or p.get('_brand', '')} {p.get('id', '')} {p.get('sku', '') or ''} {p.get('source_sku', '') or ''}".lower()
-        return query in hay
+        raw = f"{p.get('name', '')} {p.get('brand', '') or p.get('_brand', '')} {p.get('id', '')} {p.get('sku', '') or ''} {p.get('source_sku', '') or ''}".lower()
+        if query in raw:
+            return True
+        cols = " ".join((c.get("name") or "") if isinstance(c, dict) else str(c) for c in (p.get("colors") or []))
+        hay = _search_norm(f"{raw} {p.get('category') or ''} {' '.join(p.get('industries') or [])} {cols}")
+        # every word must appear (any order); "kids" also matches junior / youth...
+        return bool(words) and all(any(alt in hay for alt in _SEARCH_ALTS.get(w, (w,))) for w in words)
 
     results = [p for p in live_products() if matches(p)]
-    # Names that start with the query rank above names that merely contain it.
-    results.sort(key=lambda p: (0 if p.get("name", "").lower().startswith(query) else 1, p.get("name", "")))
+    # Names that start with the query first, then names holding more of the words.
+    def _rank(p):
+        name = _search_norm(p.get("name", ""))
+        hits = sum(1 for w in words if any(alt in name for alt in _SEARCH_ALTS.get(w, (w,))))
+        return (0 if p.get("name", "").lower().startswith(query) else 1, -hits, p.get("name", ""))
+    results.sort(key=_rank)
     total = len(results)
     limit = min(limit, 100)
     page = results[offset:offset + limit]
@@ -1060,24 +1109,52 @@ async def get_product(product_id: str):
     return {**p, **_vat_fields(PRODUCTS[product_id])}
 
 
+async def _ack_enquiry(email: str, name: str) -> None:
+    """'We've got your enquiry' email to the customer (at most one an hour per address,
+    so the forms can't be used to spam someone). Never raises."""
+    try:
+        email = (email or "").strip().lower()
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$", email):
+            return
+        hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        if await db.enquiry_acks.find_one({"email": email, "at": {"$gte": hour_ago}}):
+            return
+        await db.enquiry_acks.insert_one({"email": email, "at": datetime.now(timezone.utc).isoformat()})
+        first = _html_mod.escape((name or "").strip().split(" ")[0][:40]) or "there"
+        await _send_email(to=[email], subject="We've got your enquiry - Your Own Print", html=_email_wrap(
+            "Thanks - we've got your enquiry",
+            f"<p>Hi {first},</p><p>Thanks for getting in touch. We'll come back to you with prices (and a free proof "
+            "if you sent a logo) within one working day - usually much sooner.</p>"
+            "<p style='color:#4b5563'>Anything to add, like your logo or a deadline? Just reply to this email.</p>"
+            "<p>- The Your Own Print team</p>"))
+    except Exception as e:
+        logging.warning(f"enquiry acknowledgement skipped: {e}")
+
+
+def _linkify(escaped: str) -> str:
+    """Make our own file links in already-escaped text clickable (e.g. an uploaded logo)."""
+    return re.sub(r"(https://[^\s<>&\"']+)", r"<a href='\1'>\1</a>", escaped)
+
+
 @api_router.post("/contact")
 async def submit_contact(payload: ContactRequest):
     record = ContactRecord(**payload.model_dump())
     await db.contact_submissions.insert_one(record.model_dump())
     # Fire Resend notification to the shop - non-blocking. Failures don't affect the response.
+    e = lambda v: _html_mod.escape(str(v or ""))  # noqa: E731 - customer text is never trusted HTML
     try:
         shop_to = await _shop_notification_recipient()
         if shop_to:
             body = _email_wrap(
-                f"New quote enquiry - {payload.name}",
+                f"New quote enquiry - {e(payload.name)}",
                 f"""
-                <p><strong>{payload.name}</strong> {'(' + payload.company + ')' if payload.company else ''} has submitted the /contact form.</p>
+                <p><strong>{e(payload.name)}</strong> {'(' + e(payload.company) + ')' if payload.company else ''} has submitted the /contact form.</p>
                 <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
-                  <tr><td style="color:#4b5563"><strong>Email</strong></td><td>{payload.email}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{payload.phone or '-'}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Sector</strong></td><td>{payload.sector or '-'}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Est. qty</strong></td><td>{payload.quantity or '-'}</td></tr>
-                  <tr><td style="color:#4b5563" valign="top"><strong>Message</strong></td><td>{(payload.message or '-').replace(chr(10),'<br>')}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Email</strong></td><td>{e(payload.email)}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Phone</strong></td><td>{e(payload.phone or '-')}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Sector</strong></td><td>{e(payload.sector or '-')}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Est. qty</strong></td><td>{e(payload.quantity or '-')}</td></tr>
+                  <tr><td style="color:#4b5563" valign="top"><strong>Message</strong></td><td>{_linkify(e(payload.message or '-')).replace(chr(10),'<br>')}</td></tr>
                 </table>
                 """,
             )
@@ -1085,6 +1162,7 @@ async def submit_contact(payload: ContactRequest):
                               html=body, reply_to=payload.email)
     except Exception as e:
         logging.warning(f"contact email dispatch skipped: {e}")
+    await _ack_enquiry(str(payload.email or ""), payload.name)
     return {"ok": True, "id": record.id}
 
 
@@ -1395,6 +1473,7 @@ async def create_quote_request(payload: QuoteRequest):
                               html=body, reply_to=str(payload.email))
     except Exception as e:
         logging.warning(f"quote email skipped: {e}")
+    await _ack_enquiry(str(payload.email or ""), doc.get("name") or "")
     return {"ok": True, "id": doc["id"]}
 
 
@@ -1476,6 +1555,7 @@ async def create_checkout(payload: CheckoutRequest, http_request: Request):
         {
             "id": str(uuid.uuid4()),
             "session_id": session.id,
+            "customer_id": await customer_id_for_request(http_request),  # links the order to a signed-in account
             "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
             "product_id": payload.product_id,
             "product_name": product["name"],
@@ -1583,7 +1663,7 @@ def _dm_extra_html(dm: Dict, esc) -> List[str]:
     return rows
 
 
-def _order_details_html(doc: dict) -> str:
+def _order_details_html(doc: dict, for_customer: bool = False) -> str:
     """What was actually ordered - product, colour, sizes, print positions and
     (for bulk packs) the size split per garment - for the shop's order email."""
     import html as _h
@@ -1621,19 +1701,19 @@ def _order_details_html(doc: dict) -> str:
             rows.append(f"Logo position: <strong>{esc(dm['logo_position'])}</strong>")
         if dm.get("print_notes"):
             rows.append(f"Print notes: {esc(dm['print_notes'])}")
-        if dm.get("mode") or dm.get("flow"):
+        if (dm.get("mode") or dm.get("flow")) and not for_customer:
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
         rows.extend(_dm_extra_html(dm, esc))
         # the customer's actual print files (art_<position> -> /api/uploads/artwork/...)
         arts = [(k[4:], v) for k, v in dm.items() if k.startswith("art_") and k != "art_pending" and v]
         if arts:
             base = _backend_public_url()
-            rows.append("Customer files: " + " · ".join(
+            rows.append(("Your files: " if for_customer else "Customer files: ") + " · ".join(
                 f"<a href='{esc(base + v if str(v).startswith('/') else v)}'>{esc(k.replace('-', ' '))}</a>" for k, v in arts))
         return "<li style='margin-bottom:8px'>" + "<br>".join(rows) + "</li>"
 
     items = []
-    if (doc.get("metadata") or {}).get("account_discount"):
+    if (doc.get("metadata") or {}).get("account_discount") and not for_customer:
         items.append(f"<li style='margin-bottom:8px'><strong>Regular-customer discount:</strong> {esc(doc['metadata']['account_discount'])}</li>")
     if doc.get("items"):
         for it in doc["items"]:
@@ -1728,13 +1808,13 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
         delivery = await _capture_delivery(doc, status_resp)
         if delivery:
             a = delivery.get("address") or {}
-            addr = ", ".join(x for x in [delivery.get("name"), a.get("line1"), a.get("line2"), a.get("city"),
-                                         a.get("state"), a.get("postal_code")] if x)
+            addr = _html_mod.escape(", ".join(x for x in [delivery.get("name"), a.get("line1"), a.get("line2"), a.get("city"),
+                                                          a.get("state"), a.get("postal_code")] if x))
             delivery_html = (
                 "<p style='margin-top:14px'><strong>Delivery</strong></p><p style='font-size:14px'>"
                 f"{delivery.get('method') or '-'}"
                 f"{' - £%.2f' % delivery['cost'] if delivery.get('cost') else ' - free'}<br>"
-                f"{addr or '-'}<br>{('Phone: ' + delivery['phone']) if delivery.get('phone') else ''}</p>"
+                f"{addr or '-'}<br>{('Phone: ' + _html_mod.escape(delivery['phone'])) if delivery.get('phone') else ''}</p>"
                 + (f"<p style='font-size:14px;color:#b91c1c'><strong>Check:</strong> {delivery['warning']}</p>"
                    if delivery.get("warning") else ""))
     except Exception as e:
@@ -1755,7 +1835,11 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
 
         amount = float(getattr(status_resp, "amount_total", None) or 0) / 100.0
         currency = (getattr(status_resp, "currency", None) or "gbp").upper()
-        order_label = doc.get("product_name") or doc.get("flow") or doc.get("kind") or "order"
+        _kinds = {"cart": "Basket order", "leavers": "Leavers order", "workforce": "Kit Your Workforce order"}
+        order_label = doc.get("product_name") or _kinds.get(doc.get("kind")) or doc.get("flow") or "Order"
+        if doc.get("items") and not doc.get("product_name"):
+            order_label += f" ({len(doc['items'])} item{'s' if len(doc['items']) != 1 else ''})"
+        order_ref = "YOP-" + str(doc.get("session_id") or "")[-8:].upper()
         qty = doc.get("total_quantity", "")
 
         shop_to = await _shop_notification_recipient()
@@ -1768,38 +1852,54 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
                   <tr><td style="color:#4b5563"><strong>Order</strong></td><td>{order_label}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Quantity</strong></td><td>{qty or '-'}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Amount</strong></td><td>£{amount:.2f} {currency}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Customer</strong></td><td>{customer_email or '-'}</td></tr>
-                  <tr><td style="color:#4b5563"><strong>Session</strong></td><td>{doc.get('session_id','')}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Customer</strong></td><td>{_html_mod.escape(customer_email or '-')}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Reference</strong></td><td>{order_ref} ({doc.get('session_id','')})</td></tr>
                 </table>
                 {("<p style='margin-top:14px;font-size:15px;color:#b45309'><strong>Customer's notes:</strong> " + _html_mod.escape(doc['order_notes']) + "</p>") if doc.get('order_notes') else ""}
                 {_order_details_html(doc)}
                 {delivery_html}
                 """,
             )
-            await _send_email(to=[shop_to], subject=f"[Paid order] {order_label} - £{amount:.2f}", html=body_shop)
+            res = await _send_email(to=[shop_to], subject=f"[Paid order] {order_label} - £{amount:.2f}", html=body_shop)
+            if not (res or {}).get("ok") and int(doc.get("email_tries") or 0) < 6:
+                # didn't send (Resend down / key missing) - release the claim so
+                # routers/followups._recover_paid_orders tries again in 30 min
+                await db.payment_transactions.update_one({"session_id": doc["session_id"]},
+                                                         {"$set": {"receipt_sent": False}, "$inc": {"email_tries": 1}})
+                return
 
         if customer_email:
             body_cust = _email_wrap(
                 "Order confirmed - thank you!",
                 f"""
-                <p>Thanks for your order - we've received payment and it's on its way into production.</p>
+                <p>Thanks for your order - we've received your payment.</p>
                 <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-top:8px">
-                  <tr><td style="color:#4b5563"><strong>Order</strong></td><td>{order_label}</td></tr>
+                  <tr><td style="color:#4b5563"><strong>Order reference</strong></td><td>{order_ref}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Amount paid</strong></td><td>£{amount:.2f} {currency}</td></tr>
                 </table>
+                {_order_details_html(doc, for_customer=True)}
                 {delivery_html}
-                <p style="margin-top:16px;color:#4b5563">We'll be in touch if we need anything from you (like artwork approval); otherwise we'll email you again once it's shipped.</p>
+                <p style="margin-top:16px"><strong>What happens next:</strong> we'll email you a free proof of your print to approve -
+                nothing is printed until you're happy with it. Then we print and send it (or let you know it's ready to collect).</p>
+                <p style="color:#4b5563">Questions or changes? Just reply to this email, or contact us on info@yourownprint.co.uk
+                quoting your order reference.</p>
                 <p style="margin-top:16px">- The Your Own Print team</p>
                 """,
             )
-            await _send_email(to=[customer_email], subject="Your Your Own Print order is confirmed", html=body_cust)
+            await _send_email(to=[customer_email], subject=f"Your Your Own Print order {order_ref} is confirmed", html=body_cust)
     except Exception as e:
         logging.getLogger(__name__).warning(f"order confirmation email failed: {e}")
 
 
 @api_router.get("/checkout/status/{session_id}", response_model=CheckoutStatusOut)
 async def checkout_status(session_id: str, http_request: Request):
-    status_resp = await get_checkout_status(STRIPE_API_KEY, session_id)
+    try:
+        status_resp = await get_checkout_status(STRIPE_API_KEY, session_id)
+    except Exception as e:
+        logging.warning(f"checkout status lookup failed for {session_id[:24]}: {e}")
+        if not await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 1}):
+            raise HTTPException(404, "We can't find that checkout")
+        raise HTTPException(502, "We couldn't reach the payment provider just now - please refresh in a moment")
 
     existing = await db.payment_transactions.find_one({"session_id": session_id})
     if existing and existing.get("payment_status") != status_resp.payment_status:
@@ -1833,7 +1933,7 @@ class CartLineItem(BaseModel):
     color: Optional[str] = None
     placements: Optional[List[str]] = None
     blank: bool = False
-    design_meta: Optional[Dict[str, str]] = None  # DYO artwork ref, etc.
+    design_meta: Optional[Dict[str, Any]] = None  # DYO artwork ref, etc.
 
 
 class CartCheckoutRequest(BaseModel):
@@ -1890,6 +1990,11 @@ async def _delivery_options_for(weighted: List, goods_total: float, region: str 
     st = await _ds()
     weight = sum(garment_weight_kg(p or {}, st) * int(q or 0) for p, q in weighted)
     return await stripe_shipping_options(weight, goods_total, region or "uk")
+
+
+async def customer_id_for_request(request: Request) -> Optional[str]:
+    from routers.customer_auth import customer_id_for_request as _f
+    return await _f(request)
 
 
 async def account_discount_for_request(request: Request) -> float:
@@ -2085,7 +2190,13 @@ async def _resolve_line_pricing(
     # Regular-customer account discount (Admin > Customers): % off the GARMENT
     # only (print stays full price), on top of bulk pricing. Never on bundles -
     # they're already discounted packs.
-    acct_pct = float(account_discount_pct or 0) if not product.get("bundle_items") else 0.0
+    # Regular-customer % applies to normal products / basket / designer lines. Kit builders,
+    # club shops, school / dance / Fight Night flows have their own price tables (and pages
+    # that don't show an account discount), so they're left at the price the page shows.
+    _own_price_flows = ("club_shop", "group_kit", "dance", "club_bag", "full_squad", "sports_outfit", "fight_night_tee", "team_kit")
+    acct_pct = float(account_discount_pct or 0) if not (product.get("bundle_items") or is_kit(product_id)
+                                                          or product_id in FIGHT_NIGHT_IDS
+                                                          or (design_meta or {}).get("flow") in _own_price_flows) else 0.0
     acct_factor = 1 - acct_pct / 100.0
     floor_g = 0.0 if (is_design or is_kit(product_id)) else garment_floor(product, *line_prints)
     line_total = 0.0
@@ -2204,8 +2315,8 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
     """Combined Stripe session for a multi-line cart. Reprices every line server-side."""
     if not payload.items:
         raise HTTPException(400, "Cart is empty")
-    if len(payload.items) > 20:
-        raise HTTPException(400, "Cart limit is 20 lines - please split into two orders")
+    if len(payload.items) > 90:   # Stripe takes up to 100 rows a checkout
+        raise HTTPException(400, "Basket limit is 90 lines - please split into two orders")
     _assert_origin_ok(payload.origin_url)
 
     acct_pct = await account_discount_for_request(http_request)
@@ -2257,6 +2368,7 @@ async def create_cart_checkout(payload: CartCheckoutRequest, http_request: Reque
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.id,
+        "customer_id": await customer_id_for_request(http_request),  # links the order to a signed-in account
         "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
         "kind": "cart",
         "customer_email": payload.customer_email,
@@ -2298,8 +2410,8 @@ async def price_cart(payload: CartCheckoutRequest, request: Request):
     breaking the whole basket."""
     if not payload.items:
         return {"items": [], "grand_total": 0.0, "total_qty": 0}
-    if len(payload.items) > 20:
-        raise HTTPException(400, "Cart limit is 20 lines")
+    if len(payload.items) > 90:   # Stripe takes up to 100 rows a checkout
+        raise HTTPException(400, "Basket limit is 90 lines")
     acct_pct = await account_discount_for_request(request)
     _set_group_qty(payload.items)
     out_items: List[Dict] = []
@@ -2683,6 +2795,7 @@ def _vat_fields(p: Dict) -> Dict:
     floor = garment_floor(p)
     if floor:
         out["min_price"] = floor  # profit floor - discounts never go below it (CustomerAuthContext.discounted)
+        out["floor_units"] = garment_floor_units(p)
     was = offer_was_price(p)
     if was:
         out["was_price"] = was
@@ -3043,6 +3156,25 @@ def ceil_to_99(price: float) -> float:
     return math.ceil(round(price, 2) + 0.01) - 0.01
 
 
+def _floor_unit(cost: float, vat: float, keep: float, print_cost: float, prints: int) -> float:
+    """Lowest garment + print unit price (inc VAT) that keeps the profit floor."""
+    return ((cost + print_cost * prints) / keep + STRIPE_PER_ITEM) / (1 / vat - STRIPE_PCT)
+
+
+def garment_floor_units(p: Dict) -> List[float]:
+    """_floor_unit for 0..4 prints, so the product page can floor a discount exactly
+    like checkout does (floor = unit - the line's print price, ends .99)."""
+    try:
+        cost = float(p.get("source_price") or 0)
+    except (TypeError, ValueError):
+        cost = 0.0
+    if cost <= 0:
+        return []
+    vat = 1.0 if is_zero_rated(p) else 1 + UK_VAT_RATE
+    print_cost = SPECIALS_PRINT_COST if p.get("specials_eligible") else _PROFIT_FLOOR["print_cost"]
+    return [round(_floor_unit(cost, vat, 1 - _PROFIT_FLOOR["pct"] / 100.0, print_cost, n), 4) for n in range(5)]
+
+
 def garment_floor(p: Dict, print_price: Optional[float] = None, prints: int = 1) -> float:
     """Lowest garment price (inc VAT, ends .99) a discount may reach - never above
     the product's own price. 0 = no floor (trade cost unknown). Default = one logo
@@ -3058,7 +3190,7 @@ def garment_floor(p: Dict, print_price: Optional[float] = None, prints: int = 1)
     logo = float(PLACEMENT_BY_ID["left-breast"]["price"]) if print_price is None else float(print_price)
     # unit U (garment + print): U/vat - U*stripe% - per_item >= (cost + print cost) / keep
     print_cost = SPECIALS_PRINT_COST if p.get("specials_eligible") else _PROFIT_FLOOR["print_cost"]
-    unit = ((cost + print_cost * prints) / keep + STRIPE_PER_ITEM) / (1 / vat - STRIPE_PCT)
+    unit = _floor_unit(cost, vat, keep, print_cost, prints)
     floor = max(0.99, ceil_to_99(unit - logo))
     return round(min(float(p.get("price") or 0), floor), 2)
 
@@ -3518,6 +3650,11 @@ async def save_designer_artwork(payload: DesignerArtwork):
         raise HTTPException(400, "Unknown product_id")
     if not payload.artwork_png or len(payload.artwork_png) > 6_000_000:
         raise HTTPException(400, "artwork_png missing or too large")
+    # images only - these files are later opened from Admin > Orders / the order email
+    for v in [payload.artwork_png, payload.preview_png, payload.back_png, payload.back_preview_png,
+              *(payload.neck_label_pngs or {}).values(), *(payload.neck_label_preview_pngs or {}).values()]:
+        if v and not re.match(r"^data:image/(png|jpeg|webp);base64,", v):
+            raise HTTPException(400, "Artwork must be a PNG image")
     if payload.back_png and len(payload.back_png) > 6_000_000:
         raise HTTPException(400, "back_png too large")
     # Neck-label PNGs are smaller - cap each at 2MB to keep the doc reasonable
@@ -3560,8 +3697,12 @@ async def get_designer_artwork_file(artwork_id: str, part: str):
     if not data or "," not in data:
         raise HTTPException(404, "No such file")
     head, b64 = data.split(",", 1)
-    return Response(content=_base64.b64decode(b64), media_type=head.split(";")[0].replace("data:", "") or "image/png",
-                    headers={"Cache-Control": "public, max-age=86400"})
+    ctype = head.split(";")[0].replace("data:", "")
+    if ctype not in ("image/png", "image/jpeg", "image/webp"):
+        ctype = "image/png"   # never serve anything that could run as a page/script
+    return Response(content=_base64.b64decode(b64), media_type=ctype,
+                    headers={"Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff",
+                             "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox"})
 
 
 @api_router.get("/designer/artwork/{artwork_id}")
@@ -4198,6 +4339,7 @@ async def leavers_checkout(payload: LeaversCheckoutRequest, http_request: Reques
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.id,
+        "customer_id": await customer_id_for_request(http_request),  # links the order to a signed-in account
         "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
         "flow": "leavers",
         "school": payload.school,
@@ -5421,6 +5563,7 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "session_id": session.id,
+        "customer_id": await customer_id_for_request(http_request),  # links the order to a signed-in account
         "tracking": _meta_tracking(http_request),  # consent + Meta ids for the Conversions API
         "flow": "workforce",
         "lines": valid_lines,

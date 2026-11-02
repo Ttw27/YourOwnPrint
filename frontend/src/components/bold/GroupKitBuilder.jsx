@@ -52,7 +52,9 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
     if (!side) return 0;
     const sz = side.sizes.find((s) => s.value === size);
     const base = side.price;
-    const disc = pct ? snap99(base * (1 - pct / 100)) : base;
+    // same profit floor as the server (never below it, never above full price)
+    const floor = Number(side.floors?.[String(Math.max(1, printsFor(g).length))] || 0);
+    const disc = pct ? Math.min(base, Math.max(snap99(base * (1 - pct / 100)), floor)) : base;
     return disc + ((sz?.price || base) - base) + Number(side.colour_upcharges?.[colour] || 0) + (cfg?.print_price || 3) * printsFor(g).length;
   };
   const lines = [];

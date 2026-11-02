@@ -334,6 +334,18 @@ frontend/src/
 
 ---
 
+- **Nov 2026 site audit fixes (keep them):** orders link to accounts by `customer_id` (stamped at all 4 checkouts via
+  `customer_id_for_request`); /customer/orders shows ONLY those (email matching let anyone register a guest's email).
+  Password-reset links always use SITE_BASE_URL. `routers/followups._recover_paid_orders` (every 30 min) confirms
+  checkouts paid on Stripe but never confirmed here + retries order emails that failed (shop email failure releases
+  `receipt_sent`). Designer artwork accepts/serves images only (CSP sandbox). Customer text in emails is escaped.
+  Sign-up codes: last X-Forwarded-For hop + 300/day cap; Find My Kit 20/hour per IP; club shops 5/day per email.
+  Account discount is NOT applied to kit/club/school/dance/Fight Night flows (they have their own prices, pages don't
+  show it). PDP floors the account discount exactly like checkout via `floor_units`. Group builders get `floors` per
+  side. Customer order email = items + reference YOP-xxxxxxxx + proof next step; enquiries get an acknowledgement
+  (`_ack_enquiry`, 1/hour/address). Search matches every word (plurals, hi vis/hivis, t shirt, colours, kids=junior/youth).
+  /cart route opens the basket (Stripe's back link); the success page empties the basket once paid. Basket limit 90 lines.
+  Tests read ADMIN_EMAIL/ADMIN_PASSWORD from env - never hard-code credentials (the GitHub repo was public).
 - **Every customer detail reaches the order (Nov 2026 gap audit).** Admin > Orders (`dmExtra`) and the shop's order email
   (`_dm_extra` / `_dm_extra_html`) list EVERY design_meta key that has no row of its own (`_DM_OWN_ROWS`; labels in
   `_DM_LABELS`, keep both sides in step): rosters, wording, house names, `notes`, `print_colour`, `badge_position`... A

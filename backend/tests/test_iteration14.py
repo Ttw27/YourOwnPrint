@@ -9,8 +9,8 @@ BASE_URL = os.environ.get("REACT_APP_BACKEND_URL") or "https://branded-workwear-
 BASE_URL = BASE_URL.rstrip("/")
 API = f"{BASE_URL}/api"
 
-ADMIN_EMAIL = "admin@yourownprint.co.uk"
-ADMIN_PASSWORD = "RDAzhFOX_ZyNSgcldy-gDA"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")  # never hard-code (repo was public)
 
 ALLOWED_7 = {"left-breast", "right-breast", "full-front", "back-print",
              "left-sleeve", "right-sleeve", "neck-label"}

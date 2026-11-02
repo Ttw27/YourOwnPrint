@@ -315,6 +315,16 @@ export default function ProductDetail() {
     return { ...prev, [pid]: cur };
   });
   const packMeta = isPack ? { pack_sizes: JSON.stringify(packSizes) } : {};
+  // The account discount's profit floor for THIS line (blank / number of prints / their
+  // price), worked out exactly like checkout (server garment_floor via floor_units).
+  const pricingProduct = useMemo(() => {
+    const u = product?.floor_units;
+    if (!product || !Array.isArray(u) || !u.length) return product;
+    const n = blank ? 0 : Math.min(selectedPlacements.length, u.length - 1);
+    const raw = u[n] - (blank ? 0 : printCostPerGarment);
+    const floor = Math.max(0.99, Math.ceil(Math.round(raw * 100) / 100 + 0.01) - 0.01);
+    return { ...product, min_price: Math.min(Number(product.price) || 0, Math.round(floor * 100) / 100) };
+  }, [product, blank, selectedPlacements, printCostPerGarment]);
   const lineTotal = useMemo(() => {
     if (!product) return 0;
     const upcharges = product.size_upcharges || {};
@@ -324,11 +334,11 @@ export default function ProductDetail() {
       if (qn <= 0) return;
       // Regular-customer discount: garment only, print stays full price (matches server).
       const colourUp = Number(product.colour_upcharges?.[color] || 0);   // e.g. Black +£2 on Specials
-      const unit = discounted((product.price || 0) + (upcharges[sz] || 0) + colourUp, accountPct, product) + printCostPerGarment;
+      const unit = discounted((product.price || 0) + (upcharges[sz] || 0) + colourUp, accountPct, pricingProduct) + printCostPerGarment;
       total += Math.round(unit * qn * 100) / 100;
     });
     return total;
-  }, [product, sizeQtys, printCostPerGarment, accountPct, color]);
+  }, [product, pricingProduct, sizeQtys, printCostPerGarment, accountPct, color]);
   // Headline price follows the chosen colour when that colour costs more
   // (e.g. Black +£2 on the Specials range).
   const priceShown = useMemo(() => {
@@ -343,9 +353,9 @@ export default function ProductDetail() {
     const upcharges = product.size_upcharges || {};
     return Object.entries(sizeQtys).reduce((s, [sz, q]) => {
       const g = (product.price || 0) + (upcharges[sz] || 0);
-      return s + (g - discounted(g, accountPct, product)) * (Number(q) || 0);
+      return s + (g - discounted(g, accountPct, pricingProduct)) * (Number(q) || 0);
     }, 0);
-  }, [product, sizeQtys, accountPct]);
+  }, [product, pricingProduct, sizeQtys, accountPct]);
 
   const allArtworkUploaded = useMemo(
     () => blank || (selectedPlacements.length > 0 && (artLater || selectedPlacements.every(p => artwork[p]))),

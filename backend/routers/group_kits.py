@@ -80,7 +80,7 @@ def group_print(product_id: str, placements: List[str], color: Optional[str], de
 
 @api_router.get("/group-kits/{page}")
 async def group_kit_config(page: str):
-    from server import PRODUCTS, LEAVERS_BULK_TIERS_PCT
+    from server import PRODUCTS, LEAVERS_BULK_TIERS_PCT, garment_floor
     from routers.dance_kit import _side
     if page not in PAGES:
         raise HTTPException(404, "Unknown page")
@@ -91,6 +91,10 @@ async def group_kit_config(page: str):
         if not adult:
             continue
         kids = _side(g.get("kids"), g.get("kid_labels"), kids=True) if g.get("kids") else None
+        # lowest garment price the bulk % may reach with 1 / 2 prints (server floors the same way)
+        for side, pid in ((adult, g["adult"]), (kids, g.get("kids"))):
+            if side and PRODUCTS.get(pid):
+                side["floors"] = {str(n): garment_floor(PRODUCTS[pid], PRINT_PRICE * n, n) for n in (1, 2)}
         kid_names = {(c.get("name") if isinstance(c, dict) else c) for c in ((PRODUCTS.get(g.get("kids") or "") or {}).get("colors") or [])}
         cols = [{"name": c["name"], "hex": c.get("hex") or "#cccccc", "image": c.get("image") or adult["image"],
                  "kids": (c["name"] in kid_names) if kids else None}

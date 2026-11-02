@@ -32,7 +32,7 @@ export function useKit(pid) {
       setOpts({ socks: !!k.defaults?.socks, names: !!k.defaults?.names });
       const pick = (c) => (c.find((x) => /^(jet |deep )?black$/i.test(x.name)) || c[0] || {}).name;
       setCols(Object.fromEntries(k.parts.map((pt) => [pt.key, pick(pt.colours)])));
-    }).catch(() => {});
+    }).catch(() => toast.error("Couldn't load this kit's prices - please refresh the page"));
   }, [pid]);
   const unit = (size) => {
     if (!kit) return 0;

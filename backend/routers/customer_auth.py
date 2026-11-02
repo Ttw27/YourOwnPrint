@@ -213,6 +213,24 @@ def _clean_discount(v) -> float:
         return 0.0
 
 
+async def customer_id_for_request(request: Request) -> Optional[str]:
+    """The signed-in customer's id (for linking a checkout to their account), or None."""
+    tokens = [request.headers.get("X-Customer-Token") or "", request.cookies.get("customer_access_token") or ""]
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        tokens.append(auth[7:])
+    for token in tokens:
+        if not token:
+            continue
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        except jwt.InvalidTokenError:
+            continue
+        if payload.get("role") == "customer" and payload.get("type") == "access" and payload.get("sub"):
+            return payload["sub"]
+    return None
+
+
 async def account_discount_for_request(request: Request) -> float:
     """The signed-in customer's regular-customer discount (% off garments), or 0.
     Never raises - pricing must work the same for guests. The site sends the
@@ -371,12 +389,10 @@ async def customer_forgot_password(payload: ForgotPasswordRequest, request: Requ
             "expires_at": expires_at.isoformat(),
             "used": False,
         })
-        origin = request.headers.get("origin") or request.headers.get("referer", "").rsplit("/", 1)[0]
-        origin = (origin or "").rstrip("/")
-        if not origin:
-            # Fallback for server-to-server calls without an Origin header.
-            import os
-            origin = (os.environ.get("YOP_APP_ORIGIN") or "https://www.yourownprint.co.uk").rstrip("/")
+        # Always our own site - never the request's Origin/Referer (a forged header would send
+        # the reset token to someone else's site).
+        import os
+        origin = (os.environ.get("SITE_BASE_URL") or os.environ.get("YOP_APP_ORIGIN") or "https://www.yourownprint.co.uk").rstrip("/")
         reset_link = f"{origin}/reset-password?token={token}"
         body = email_wrap(
             "Reset your password",
@@ -500,9 +516,9 @@ async def customer_cart_merge(payload: CartSyncRequest, customer: Dict = Depends
 # ---------------------------------------------------------------------------
 @api_router.get("/customer/orders")
 async def customer_orders(customer: Dict = Depends(require_customer)):
-    cursor = db.payment_transactions.find({
-        "$or": [{"customer_email": customer["email"]}, {"metadata.customer_email": customer["email"]}]
-    }).sort("created_at", -1).limit(50)
+    # Only orders placed while signed in to THIS account (customer_id stamped at checkout).
+    # Matching by email let anyone register a guest's email (no verification) and see their orders.
+    cursor = db.payment_transactions.find({"customer_id": customer["id"]}).sort("created_at", -1).limit(50)
     orders = []
     async for doc in cursor:
         orders.append({
