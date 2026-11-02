@@ -154,7 +154,7 @@ export default function GroupKitBuilder({ page, accent = "#7bc67e", eventLabel =
                 </label>
                 {st.on && (
                   <div className="mt-3 space-y-3">
-                    <ImageSlot label={`Upload ${title.toLowerCase()} design`} hint="PNG / JPG - logo, badge or full design (optional)" value={st.art} onChange={(v) => set({ ...st, art: v })} testid={`gk-${k}-art`} />
+                    <ImageSlot label={`Upload ${title.toLowerCase()} design`} hint="Image, PDF, AI or EPS - logo, badge or full design (optional)" value={st.art} onChange={(v) => set({ ...st, art: v })} testid={`gk-${k}-art`} />
                     <textarea value={st.text} onChange={(e) => set({ ...st, text: e.target.value })} rows={2} placeholder={`Or type it: ${hint}`}
                       className="w-full border-2 border-[#dcfce7] rounded-xl px-3 py-2 text-sm outline-none focus:border-[#7bc67e] bg-white" data-testid={`gk-${k}-text`} />
                     {k === "back" && houses && <div className="text-[11px] text-[#4b5563]">You can also give each colour its own house or team name below (e.g. NELSON) - we print it on the back. One colour for an inter-school team? Just add one.</div>}

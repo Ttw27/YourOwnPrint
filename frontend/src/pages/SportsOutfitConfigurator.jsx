@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { submitQuoteRequest, createCartCheckout, uploadOrderArtwork, fetchTeamKitAddons } from "../lib/api";
+import { submitQuoteRequest, createCartCheckout, uploadOrderArtwork, fetchTeamKitAddons, isPreviewableArt } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { useKit, OptionalSet, ImageSlot } from "./FullSquadConfigurator";
 import { useClubBag, ClubBagCard, clubBagItem } from "../components/bold/ClubBagAddon";
+import { NameColourPicker, NAME_COLOURS } from "../components/bold/TeamKitConfigurator";
 import { toast } from "sonner";
 import { Plus, Trash2, ShieldCheck, Loader2, Check, ShoppingCart, Send } from "lucide-react";
 import { ExVat } from "../components/bold/PriceTag";
@@ -20,6 +21,7 @@ import { ExVat } from "../components/bold/PriceTag";
  * (server re-prices each), or a quote for big orders.
  */
 const QUOTE_THRESHOLD = 25;
+const ROSTER_MAX = 150;
 
 const blankPerson = () => ({ name: "", size: "M", tracksuit: "" });
 
@@ -35,6 +37,7 @@ export default function SportsOutfitConfigurator() {
   const [backPrice, setBackPrice] = useState(3.5);
   const [people, setPeople] = useState(Array.from({ length: 5 }, blankPerson));
   const [busy, setBusy] = useState(false);
+  const [printColour, setPrintColour] = useState(NAME_COLOURS[0]);
   const bag = useClubBag();
 
   useEffect(() => {
@@ -101,7 +104,8 @@ export default function SportsOutfitConfigurator() {
     return null;
   };
 
-  const peopleText = people.filter((p) => sets.some((s) => s.sizeOf(p))).map((p) =>
+  const namesOn = withTraining && !!training.kit?.options && training.opts.names;
+  const peopleText = people.filter((p) => sets.some((s) => s.sizeOf(p))).slice(0, ROSTER_MAX).map((p) =>
     `${p.name || "-"}: ${sets.map((s) => `${s.label.toLowerCase()} ${s.sizeOf(p) || "none"}`).join(", ")}`);
   const setSummary = lines.map((l) => `${l.label}: ${l.k.kit?.garments || l.k.pid} - ${l.k.parts.map((pt) => `${pt.label} ${l.k.cols[pt.key]}`).join(", ")}` +
     (l.k.kit?.options ? ` (${l.k.opts.socks ? "with socks" : "no socks"}, ${l.k.opts.names ? "names & numbers" : "logo only"})` : "") +
@@ -123,7 +127,10 @@ export default function SportsOutfitConfigurator() {
           kit_socks: l.k.opts.socks ? "yes" : "no", kit_names: l.k.opts.names ? "yes" : "no",
           ...Object.fromEntries(l.k.parts.map((pt) => [`${pt.key}_colour`, l.k.cols[pt.key]])),
           garments: l.k.kit?.garments || "",
-          roster: peopleText.join(" | ").slice(0, 1500),
+          roster: peopleText.join(" | "),
+          people: String(peopleText.length),
+          logo_placement: l.key === "tracksuit" ? "Left chest of the hoodie + on the joggers" : "Left chest of the top + on the shorts",
+          ...(l.key === "training" && namesOn ? { print_colour: printColour } : {}),
           ...art,
         },
       }));
@@ -144,7 +151,7 @@ export default function SportsOutfitConfigurator() {
       await submitQuoteRequest({
         kind: "team_kit", name: team.contact_name || team.name, email: team.contact_email, phone: team.contact_phone,
         company: team.name, sport: "", kit_type: "sports-outfit-configurator", quantity: totalItems,
-        message: [`Gym / club kit order for ${team.name} (${headcount} people)`, ...setSummary, ...(bagPeople.length ? [`Kit bag: ${bag.opt.label} (${bag.opt.adult.name}) in ${bag.colour}${bag.name ? ", names on the bags" : ""} x${bagPeople.length} = £${bagTotal.toFixed(2)}`] : []), `Indicative total: £${grandTotal.toFixed(2)}`, "", ...peopleText].join("\n"),
+        message: [`Gym / club kit order for ${team.name} (${headcount} people)`, ...setSummary, ...(bagPeople.length ? [`Kit bag: ${bag.opt.label} (${bag.opt.adult.name}) in ${bag.colour}${bag.name ? ", names on the bags" : ""} x${bagPeople.length} = £${bagTotal.toFixed(2)}`] : []), ...(namesOn ? [`Name & number colour: ${printColour}`] : []), `Indicative total: £${grandTotal.toFixed(2)}`, "", ...peopleText].join("\n"),
         artwork: [logo, anyBack ? backLogo : null].filter(Boolean),
         roster: people.filter((p) => sets.some((s) => s.sizeOf(p))).map((p) => ({ name: p.name, number: "", size: p.size, qty: 1, tracksuit: p.tracksuit })),
         product_id: "sports-outfit",
@@ -191,7 +198,7 @@ export default function SportsOutfitConfigurator() {
               ))}
             </div>
             <div className="grid sm:grid-cols-2 gap-4 mt-4">
-              <ImageSlot label="Your logo *" hint="Front of everything - included" value={logo} onChange={setLogo} testid="soc-logo" />
+              <ImageSlot label="Your logo *" hint="Left chest of every top & hoodie (and on shorts / joggers) - included" value={logo} onChange={setLogo} testid="soc-logo" />
               {anyBack && <ImageSlot label="Back logo *" hint="Big print on the back of the top / hoodie" value={backLogo} onChange={setBackLogo} testid="soc-back-logo" />}
             </div>
           </div>
@@ -202,7 +209,7 @@ export default function SportsOutfitConfigurator() {
           <OptionalSet n={3} title="Tracksuit" sub="College hoodie + cuffed joggers, your logo on both. Adult sizes." on={withTracksuit} setOn={setWithTracksuit} k={tracksuit} kidsProblem={[]} testid="soc-tracksuit" />
           {withTracksuit && tracksuit.kit && <BackToggle setKey="tracksuit" what="hoodie" />}
 
-          <ClubBagCard bag={bag} n={4} logo={logo} testid="soc-bag" />
+          <ClubBagCard bag={bag} n={4} logo={isPreviewableArt(logo) ? logo : null} testid="soc-bag" />
 
           <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="soc-people">
             <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
@@ -213,6 +220,7 @@ export default function SportsOutfitConfigurator() {
                 {[1, 2, 3, 5, 8, 10, 15, 20, 25].map((n) => <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>)}
               </select>
             </div>
+            {namesOn && <div className="mb-3"><NameColourPicker value={printColour} onChange={setPrintColour} label="Name colour" testid="soc-name-colour" /></div>}
             <div className="text-xs text-[#4b5563] mb-2">
               One line per person with their size{withTraining && withTracksuit ? " for each set - leave a set blank for anyone who doesn't need it" : ""}.
               {training.opts.names && withTraining ? " The name goes on the back of the training top." : " Names are optional - just to help you hand them out."}

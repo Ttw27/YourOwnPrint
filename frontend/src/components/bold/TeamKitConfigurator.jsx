@@ -1,13 +1,63 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { createCheckout, submitQuoteRequest, fetchTeamKitBrands, fetchTeamKitAddons, fetchKitDetails, uploadOrderArtwork } from "../../lib/api";
+import { createCheckout, submitQuoteRequest, fetchTeamKitBrands, fetchTeamKitAddons, fetchKitDetails, uploadOrderArtwork, ARTWORK_ACCEPT, readArtworkFile, isPreviewableArt } from "../../lib/api";
 import { WhatsAppInline } from "./WhatsAppFAB";
-import { Upload, Plus, Trash2, Loader2, ShoppingCart, Send, Info, Camera, Sparkles, Check, X } from "lucide-react";
+import { Upload, Plus, Trash2, Loader2, ShoppingCart, Send, Info, Camera, Sparkles, Check, X, FileText } from "lucide-react";
 import { ExVat } from "./PriceTag";
 
 const QUOTE_THRESHOLD = 15;
 const DEFAULT_SIZE = "M";
+const ROSTER_MAX = 150;
+
+// Colour of the printed names & numbers (saved on the order as print_colour).
+export const NAME_COLOURS = ["Auto (best contrast)", "White", "Black", "Gold", "Silver", "Red", "Navy", "Royal blue", "Sky blue", "Green", "Yellow", "Orange", "Purple", "Pink"];
+
+export function NameColourPicker({ value, onChange, testid = "name-colour", label = "Name & number colour" }) {
+  return (
+    <label className="flex flex-wrap items-center gap-2 text-xs font-nunito font-bold text-[#1a1a1a]" data-testid={testid}>
+      {label}
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="bg-[#f0fdf4] border border-[#dcfce7] rounded-full px-3 py-1.5 text-xs font-bold outline-none min-w-0" data-testid={`${testid}-select`}>
+        {NAME_COLOURS.map((c) => <option key={c} value={c}>{c}</option>)}
+      </select>
+      <span className="font-normal text-[#4b5563]">Auto = we pick white or black to stand out on your kit colour.</span>
+    </label>
+  );
+}
+
+// Read a customer's print file. Photos (PNG/JPG/WebP...) are shrunk for upload as
+// before; PDF / AI / EPS / SVG are kept exactly as sent (never redrawn).
+export function readPrintFile(file, max = 1000) {
+  if (!file) return Promise.reject(new Error("No file chosen"));
+  if (file.size > 15 * 1024 * 1024) return Promise.reject(new Error("That file is over 15MB - please send a smaller one (or email it to us)"));
+  return readArtworkFile(file).then((url) => {
+    if (!/^data:image\/(png|jpe?g|webp|gif|bmp)/i.test(url)) return url;
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const sc = Math.min(1, max / Math.max(img.width, img.height));
+          const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL("image/png"));
+        } catch { resolve(url); }
+      };
+      img.onerror = () => resolve(url);
+      img.src = url;
+    });
+  });
+}
+
+// Preview of an uploaded print file: the image, or a "file attached" tile for PDF / AI / EPS.
+export function ArtTile({ src, className = "w-full h-full object-contain p-1", testid }) {
+  if (isPreviewableArt(src)) return <img src={src} alt="" className={className} data-testid={testid} />;
+  const kind = /^data:application\/pdf/.test(String(src)) ? "PDF" : "File";
+  return (
+    <div className="w-full h-full grid place-items-center text-center text-[#1a1a1a] p-1" data-testid={testid}>
+      <div><FileText size={20} className="mx-auto text-[#7bc67e]" /><div className="text-[9px] font-extrabold leading-tight mt-0.5">{kind} attached</div></div>
+    </div>
+  );
+}
 
 /**
  * Single-team team-kit configurator with optional brand picker.
@@ -46,6 +96,7 @@ export default function TeamKitConfigurator({ product }) {
   const [rightSleeve, setRightSleeve] = useState({ on: false, art: null });
   const [backPrint, setBackPrint] = useState({ on: false, art: null });
   const [submitting, setSubmitting] = useState(false);
+  const [printColour, setPrintColour] = useState(NAME_COLOURS[0]);
 
   useEffect(() => {
     fetchTeamKitBrands(product.id).then((b) => { setBrands(b); setBrand(b[0] || null); }).catch(() => {});
@@ -144,6 +195,7 @@ export default function TeamKitConfigurator({ product }) {
         kit ? `Options: ${kitOpts.socks ? "with socks" : "no socks"}, ${kitOpts.names ? "names & numbers" : "badge only"}` : null,
         `Total kits: ${totalKits}`,
         `Prints: ${placementsHuman}`,
+        !isFrontOnly ? `Name & number colour: ${printColour}` : null,
         `Per-kit addon cost: £${addonCostPerKit.toFixed(2)}`,
         `Indicative total: £${lineTotal.toFixed(2)}`,
         isFrontOnly ? "FRONT-PRINT-ONLY variant - no names/numbers on backs." : "Includes badge, names & numbers.",
@@ -176,7 +228,9 @@ export default function TeamKitConfigurator({ product }) {
     try {
       const size_qtys = {};
       roster.forEach((r) => { const q = Number(r.qty) || 0; if (q > 0) size_qtys[r.size] = (size_qtys[r.size] || 0) + q; });
-      const rosterLines = roster.map(r => `${r.name || "-"}#${r.number || "-"}/${r.size}×${r.qty}`).join("|").slice(0, 380);
+      // Full player list on the order (one line each); Stripe only gets a short copy, the order keeps it all.
+      const rosterLines = roster.slice(0, ROSTER_MAX).filter((r) => Number(r.qty) > 0)
+        .map((r) => (isFrontOnly ? `${r.size} x ${r.qty}` : `${r.name || "-"} #${r.number || "-"} - ${r.size} x ${r.qty}`)).join(" | ");
       // the actual files (badge etc.) go with the order, not just yes/no flags
       const art = await uploadOrderArtwork({
         badge: team.badge, "front-sponsor": frontSponsor,
@@ -201,6 +255,9 @@ export default function TeamKitConfigurator({ product }) {
           right_sleeve: rightSleeve.on ? "yes" : "no",
           back_print: backPrint.on ? "yes" : "no",
           roster: rosterLines,
+          players: String(roster.length),
+          badge_position: kit && !kit.options ? "Left chest of the hoodie + on the joggers" : "Left chest of every shirt",
+          ...(!isFrontOnly ? { print_colour: printColour } : {}),
           ...art,
           ...(kit ? {
             kit_socks: kitOpts.socks ? "yes" : "no",
@@ -259,7 +316,8 @@ export default function TeamKitConfigurator({ product }) {
           <LabeledInput label="Contact phone" testId="team-0-contact-phone" v={team.contact_phone} onV={(v) => setTeam({ ...team, contact_phone: v })} />
         </div>
         <div className="mt-4">
-          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Club badge *</div>
+          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-1">Club badge *</div>
+          <div className="text-xs text-[#4b5563] mb-2">{kit && !kit.options ? "Left chest of the hoodie, and on the joggers" : "Left chest of every shirt"} - included. PNG, JPG, PDF, AI or EPS.</div>
           <BadgeUpload badge={team.badge} onPick={onPickBadge} onClear={() => setTeam({ ...team, badge: null })} testId="team-0-badge" />
         </div>
       </div>
@@ -272,6 +330,9 @@ export default function TeamKitConfigurator({ product }) {
             {[5, 11, 15, 18, 22, 25].map((n) => <option key={n} value={n}>{n} blank rows</option>)}
           </select>
         </div>
+        {!isFrontOnly && (
+          <div className="mb-3"><NameColourPicker value={printColour} onChange={setPrintColour} testid="kit-name-colour" /></div>
+        )}
         {isFrontOnly && (
           <div className="text-xs text-[#4b5563] mb-2 italic" data-testid="front-only-note">Front-print-only variant - no names or numbers on the back. Just tell us the sizes and how many.</div>
         )}
@@ -476,19 +537,7 @@ function blankRow() { return { name: "", number: "", size: DEFAULT_SIZE, qty: 1 
 
 function readImage(file, onDone) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = new Image();
-    img.onload = () => {
-      const max = 800; const sc = Math.min(1, max / Math.max(img.width, img.height));
-      const w = Math.round(img.width * sc), h = Math.round(img.height * sc);
-      const c = document.createElement("canvas"); c.width = w; c.height = h;
-      c.getContext("2d").drawImage(img, 0, 0, w, h);
-      onDone(c.toDataURL("image/png"));
-    };
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
+  readPrintFile(file, 800).then(onDone).catch((e) => toast.error(e?.message || "Couldn't read that file"));
 }
 
 function LabeledInput({ label, v, onV, type = "text", testId }) {
@@ -505,14 +554,14 @@ function BadgeUpload({ badge, onPick, onClear, testId }) {
   return (
     <div className="flex items-center gap-4">
       <div className="w-24 h-24 rounded-2xl bg-[#f0fdf4] border-2 border-dashed border-[#7bc67e] grid place-items-center overflow-hidden">
-        {badge ? <img src={badge} alt="" className="w-full h-full object-contain p-1.5" /> : <Camera className="text-[#7bc67e]" size={26} />}
+        {badge ? <ArtTile src={badge} className="w-full h-full object-contain p-1.5" /> : <Camera className="text-[#7bc67e]" size={26} />}
       </div>
       <div className="flex flex-col gap-1.5">
         <button data-testid={`${testId}-upload`} onClick={() => ref.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-4 py-2 rounded-full text-sm transition-colors inline-flex items-center gap-1.5">
           <Upload size={14} /> {badge ? "Replace" : "Upload badge"}
         </button>
         {badge && <button data-testid={`${testId}-clear`} onClick={onClear} className="text-xs font-nunito font-bold text-rose-500 hover:underline">Remove</button>}
-        <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => onPick(e.target.files?.[0])} />
+        <input ref={ref} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => { onPick(e.target.files?.[0]); e.target.value = ""; }} />
       </div>
     </div>
   );
@@ -523,14 +572,14 @@ function SingleSlot({ image, onPick, onClear, testId, placeholder }) {
   return (
     <div className="flex items-center gap-4">
       <div className="w-24 h-24 rounded-2xl bg-[#f0fdf4] border-2 border-dashed border-[#7bc67e] grid place-items-center overflow-hidden">
-        {image ? <img src={image} alt="" className="w-full h-full object-contain p-1.5" data-testid={`${testId}-preview`} /> : <Camera className="text-[#7bc67e]" size={22} />}
+        {image ? <ArtTile src={image} className="w-full h-full object-contain p-1.5" testid={`${testId}-preview`} /> : <Camera className="text-[#7bc67e]" size={22} />}
       </div>
       <div className="flex flex-col gap-1.5">
         <button data-testid={`${testId}-upload`} onClick={() => ref.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold px-4 py-2 rounded-full text-sm transition-colors inline-flex items-center gap-1.5">
           <Upload size={14} /> {image ? "Replace" : placeholder}
         </button>
         {image && <button data-testid={`${testId}-clear`} onClick={onClear} className="text-xs font-nunito font-bold text-rose-500 hover:underline">Remove</button>}
-        <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => onPick(e.target.files?.[0])} />
+        <input ref={ref} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => { onPick(e.target.files?.[0]); e.target.value = ""; }} />
       </div>
     </div>
   );
@@ -551,7 +600,7 @@ function AddonSlot({ testId, label, price, state, onToggle, onPick, onClear }) {
         <div className="mt-3 flex items-center gap-2">
           <div className="w-14 h-14 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
             {state.art
-              ? <img src={state.art} alt="" className="w-full h-full object-contain p-1" data-testid={`addon-${testId}-preview`} />
+              ? <ArtTile src={state.art} testid={`addon-${testId}-preview`} />
               : <Camera size={18} className="text-[#7bc67e]" />}
           </div>
           <div className="flex-1 flex flex-col gap-1">
@@ -559,7 +608,7 @@ function AddonSlot({ testId, label, price, state, onToggle, onPick, onClear }) {
               <Upload size={12} /> {state.art ? "Replace" : "Upload"}
             </button>
             {state.art && <button data-testid={`addon-${testId}-clear`} onClick={onClear} className="text-[10px] font-nunito font-bold text-rose-500 hover:underline inline-flex items-center gap-0.5"><X size={10} /> Remove</button>}
-            <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => onPick(e.target.files?.[0])} />
+            <input ref={ref} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => { onPick(e.target.files?.[0]); e.target.value = ""; }} />
           </div>
         </div>
       )}

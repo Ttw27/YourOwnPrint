@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchClubBags } from "../../lib/api";
+import { fetchClubBags, isPreviewableArt } from "../../lib/api";
 
 /**
  * Kit bag add-on for the Sports Outfit + Full Squad builders. Real bags
@@ -75,7 +75,7 @@ export function ClubBagCard({ bag, n, logo, testid = "club-bag" }) {
         <div className="px-5 pb-5 grid md:grid-cols-5 gap-4">
           <div className="md:col-span-2 relative aspect-square rounded-2xl bg-[#f9fafb] border border-[#eef2f7] overflow-hidden">
             {bag.colourObj?.image && <img src={bag.colourObj.image} alt={`${opt.label} in ${bag.colour}`} className="absolute inset-0 w-full h-full object-contain" />}
-            {logo && <img src={logo} alt="" aria-hidden="true" className="absolute object-contain opacity-90" style={{ left: "38%", top: "40%", width: "24%" }} />}
+            {logo && isPreviewableArt(logo) && <img src={logo} alt="" aria-hidden="true" className="absolute object-contain opacity-90" style={{ left: "38%", top: "40%", width: "24%" }} />}
           </div>
           <div className="md:col-span-3 space-y-3 min-w-0">
             <div className="grid grid-cols-2 gap-1.5">

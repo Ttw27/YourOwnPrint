@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchKitDetails, submitQuoteRequest, createCartCheckout, uploadOrderArtwork } from "../lib/api";
+import { fetchKitDetails, submitQuoteRequest, createCartCheckout, uploadOrderArtwork, ARTWORK_ACCEPT, isPreviewableArt } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
-import { KitPicker } from "../components/bold/TeamKitConfigurator";
+import { KitPicker, NameColourPicker, NAME_COLOURS, readPrintFile, ArtTile } from "../components/bold/TeamKitConfigurator";
 import { useClubBag, ClubBagCard, clubBagItem } from "../components/bold/ClubBagAddon";
 import { toast } from "sonner";
 import { Plus, Trash2, ShieldCheck, Loader2, Check, Camera, Upload, ShoppingCart, Send } from "lucide-react";
@@ -18,6 +18,7 @@ import { ExVat } from "../components/bold/PriceTag";
  * kit lines (server re-prices each), or sends a quote for big squads.
  */
 const QUOTE_THRESHOLD = 25;
+const ROSTER_MAX = 150;
 
 // One kit's state: details from the server, options, colours.
 export function useKit(pid) {
@@ -60,6 +61,7 @@ export default function FullSquadConfigurator() {
   const [withTracksuit, setWithTracksuit] = useState(false);
   const [players, setPlayers] = useState(Array.from({ length: 5 }, blankPlayer));
   const [busy, setBusy] = useState(false);
+  const [printColour, setPrintColour] = useState(NAME_COLOURS[0]);
   const bag = useClubBag();
 
   const active = useMemo(() => players.filter((p) => p.size), [players]);
@@ -115,7 +117,8 @@ export default function FullSquadConfigurator() {
     return null;
   };
 
-  const rosterText = active.map((p) => `${p.name || "-"} #${p.number || "-"} ${p.size}${withTracksuit && p.tracksuit ? ` / tracksuit ${p.tracksuit}` : ""}`);
+  const rosterText = active.slice(0, ROSTER_MAX).map((p) => `${p.name || "-"} #${p.number || "-"} - ${p.size}${withTracksuit && p.tracksuit ? ` / tracksuit ${p.tracksuit}` : ""}`);
+  const anyNames = sets.some((s) => s.k.kit?.options && s.k.opts.names);
   const setSummary = lines.map((l) => `${l.label}: ${l.k.kit?.garments || l.k.pid} - ${l.k.parts.map((pt) => `${pt.label} ${l.k.cols[pt.key]}`).join(", ")}` +
     (l.k.kit?.options ? ` (${l.k.opts.socks ? "with socks" : "no socks"}, ${l.k.opts.names ? "names & numbers" : "badge only"})` : "") + ` x${l.qty} = £${l.total.toFixed(2)}`);
 
@@ -135,7 +138,10 @@ export default function FullSquadConfigurator() {
           kit_socks: l.k.opts.socks ? "yes" : "no", kit_names: l.k.opts.names ? "yes" : "no",
           ...Object.fromEntries(l.k.parts.map((pt) => [`${pt.key}_colour`, l.k.cols[pt.key]])),
           garments: l.k.kit?.garments || "",
-          roster: rosterText.join(" | ").slice(0, 1500),
+          roster: rosterText.join(" | "),
+          players: String(active.length),
+          badge_position: l.k.kit?.options ? "Left chest of every shirt" : "Left chest of the hoodie + on the joggers",
+          ...(l.k.kit?.options && l.k.opts.names ? { print_colour: printColour } : {}),
           ...art,
         },
       }));
@@ -156,7 +162,7 @@ export default function FullSquadConfigurator() {
       await submitQuoteRequest({
         kind: "full_squad", name: team.contact_name || team.name, email: team.contact_email, phone: team.contact_phone,
         company: team.name, sport: "football", kit_type: "full squad", quantity: totalKits,
-        message: [`Full squad order for ${team.name} (${active.length} players)`, ...setSummary, ...(bagPeople.length ? [`Kit bag: ${bag.opt.label} (${bag.opt.adult.name}) in ${bag.colour}${bag.name ? ", names on the bags" : ""} x${bagPeople.length} = £${bagTotal.toFixed(2)}`] : []), `Indicative total: £${grandTotal.toFixed(2)}`].join("\n"),
+        message: [`Full squad order for ${team.name} (${active.length} players)`, ...setSummary, ...(bagPeople.length ? [`Kit bag: ${bag.opt.label} (${bag.opt.adult.name}) in ${bag.colour}${bag.name ? ", names on the bags" : ""} x${bagPeople.length} = £${bagTotal.toFixed(2)}`] : []), ...(anyNames ? [`Name & number colour: ${printColour}`] : []), `Indicative total: £${grandTotal.toFixed(2)}`].join("\n"),
         artwork: [badge, sponsor].filter(Boolean),
         roster: active.map((p) => ({ name: p.name, number: p.number, size: p.size, qty: 1, tracksuit: p.tracksuit })),
         product_id: "full-squad",
@@ -195,7 +201,7 @@ export default function FullSquadConfigurator() {
               ))}
             </div>
             <div className="grid sm:grid-cols-2 gap-4 mt-4">
-              <ImageSlot label="Club badge *" hint="Front of every kit" value={badge} onChange={setBadge} testid="fsc-badge" />
+              <ImageSlot label="Club badge *" hint="Left chest of every shirt (and on tracksuits) - included" value={badge} onChange={setBadge} testid="fsc-badge" />
               <ImageSlot label="Front sponsor (optional)" hint="On the match kit front - free" value={sponsor} onChange={setSponsor} testid="fsc-sponsor" />
             </div>
           </div>
@@ -215,7 +221,7 @@ export default function FullSquadConfigurator() {
 
           <OptionalSet n={3} title="Training kit" sub="Top + shorts with your badge - add socks or names if you want." on={withTraining} setOn={setWithTraining} k={training} kidsProblem={kidsProblem(training)} testid="fsc-training" />
           <OptionalSet n={4} title="Club tracksuit" sub="College hoodie + cuffed joggers, badge on both. Adult sizes." on={withTracksuit} setOn={setWithTracksuit} k={tracksuit} kidsProblem={[]} testid="fsc-tracksuit" />
-          <ClubBagCard bag={bag} n={5} logo={badge} testid="fsc-bag" />
+          <ClubBagCard bag={bag} n={5} logo={isPreviewableArt(badge) ? badge : null} testid="fsc-bag" />
 
           <div className="bg-white border-2 border-[#dcfce7] rounded-3xl p-5" data-testid="fsc-roster">
             <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
@@ -226,6 +232,7 @@ export default function FullSquadConfigurator() {
                 {[5, 7, 11, 15, 18, 22, 25].map((n) => <option key={n} value={n}>{n} players</option>)}
               </select>
             </div>
+            {anyNames && <div className="mb-3"><NameColourPicker value={printColour} onChange={setPrintColour} testid="fsc-name-colour" /></div>}
             <div className="text-xs text-[#4b5563] mb-2">One line per player - their name and number go on the back of the match kit, and the size is used for every set.{withTracksuit ? " Tracksuits come in adult sizes - leave blank for anyone who doesn't need one." : ""}</div>
             <div className="space-y-1.5">
               {players.map((p, i) => (
@@ -313,25 +320,15 @@ export function OptionalSet({ n, title, sub, on, setOn, k, kidsProblem, testid }
 
 export function ImageSlot({ label, hint, value, onChange, testid }) {
   const ref = useRef(null);
+  // Photos are shrunk as before; PDF / AI / EPS / SVG are kept as sent (shown as a "file attached" tile).
   const pick = (file) => {
     if (!file) return;
-    const r = new FileReader();
-    r.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const sc = Math.min(1, 1000 / Math.max(img.width, img.height));
-        const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-        onChange(c.toDataURL("image/png"));
-      };
-      img.src = r.result;
-    };
-    r.readAsDataURL(file);
+    readPrintFile(file, 1000).then(onChange).catch((e) => toast.error(e?.message || "Couldn't read that file"));
   };
   return (
     <div className="flex items-center gap-3" data-testid={testid}>
       <div className="w-20 h-20 rounded-2xl bg-[#f0fdf4] border-2 border-dashed border-[#7bc67e] grid place-items-center overflow-hidden flex-shrink-0">
-        {value ? <img src={value} alt="" className="w-full h-full object-contain p-1" /> : <Camera className="text-[#7bc67e]" size={22} />}
+        {value ? <ArtTile src={value} /> : <Camera className="text-[#7bc67e]" size={22} />}
       </div>
       <div className="min-w-0">
         <div className="text-sm font-extrabold">{label}</div>
@@ -340,7 +337,8 @@ export function ImageSlot({ label, hint, value, onChange, testid }) {
           <button type="button" onClick={() => ref.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-extrabold px-3 py-1.5 rounded-full text-xs inline-flex items-center gap-1"><Upload size={12} /> {value ? "Replace" : "Upload"}</button>
           {value && <button type="button" onClick={() => onChange(null)} className="text-xs font-bold text-rose-500 hover:underline">Remove</button>}
         </div>
-        <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+        <div className="text-[10px] text-[#4b5563] mt-1">PNG, JPG, PDF, AI or EPS</div>
+        <input ref={ref} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import TeamKitConfigurator from "../components/bold/TeamKitConfigurator";
 import PlacementDesignerModal from "../components/bold/PlacementDesignerModal";
 import { DEFAULT_PLACEMENT_AREAS } from "../components/bold/SimplePrintCanvas";
-import { api, uploadOrderArtwork, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
+import { api, uploadOrderArtwork, ARTWORK_ACCEPT, readArtworkFile, isPreviewableArt, fetchReviewsAggregate, fetchPlacements, createCheckout, fetchProductBulkTiers, fetchAllowedPlacements, fetchProductQA, postProductQuestion, fetchAlsoBought, fetchMatchWith } from "../lib/api";
 import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import { ArrowRight, ShieldCheck, Truck, Sparkles, Loader2, ShoppingCart, ShoppingBag, Wand2, Minus, Plus, Info, Shirt, Upload, Trash2, Lock, Check, ImageIcon, X, ChevronDown } from "lucide-react";
@@ -101,6 +101,9 @@ export default function ProductDetail() {
   const [selectedPlacements, setSelectedPlacements] = useState([]);
   // Per-placement artwork uploads (data URLs)
   const [artwork, setArtwork] = useState({}); // { 'left-breast': dataUrl, ... }
+  // "I'll email my artwork" (positions without a file are sent as art_pending) + free-text print notes
+  const [artLater, setArtLater] = useState(false);
+  const [printNotes, setPrintNotes] = useState("");
   const [checkingOut, setCheckingOut] = useState(false);
 
   useEffect(() => {
@@ -160,6 +163,8 @@ export default function ProductDetail() {
         // Specials products auto-select left-breast so the upload widget is visible immediately
         setSelectedPlacements(p?.specials_eligible ? [(p.allowed_placements && p.allowed_placements[0]) || "left-breast"] : []);
         setArtwork({});
+        setArtLater(false);
+        setPrintNotes("");
       })
       .catch((e) => setErr(e?.response?.status === 404 ? "Product not found" : "Could not load product"))
       .finally(() => setLoading(false));
@@ -233,6 +238,12 @@ export default function ProductDetail() {
     if (isDataUrl) {
       // Already a flattened PNG data URL from the "Design your print" canvas - use as-is.
       setArtwork(prev => ({ ...prev, [pid]: file }));
+      return;
+    }
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.type)) {
+      // PDF / AI / EPS / SVG logos: keep the original file (no resize)
+      if (file.size > 15_000_000) { toast.error("That file is over 15MB - please email it to us instead"); return; }
+      readArtworkFile(file).then((url) => setArtwork(prev => ({ ...prev, [pid]: url }))).catch(() => toast.error("Couldn't read that file"));
       return;
     }
     const reader = new FileReader();
@@ -337,9 +348,18 @@ export default function ProductDetail() {
   }, [product, sizeQtys, accountPct]);
 
   const allArtworkUploaded = useMemo(
-    () => blank || (selectedPlacements.length > 0 && selectedPlacements.every(p => artwork[p])),
-    [blank, selectedPlacements, artwork]
+    () => blank || (selectedPlacements.length > 0 && (artLater || selectedPlacements.every(p => artwork[p]))),
+    [blank, selectedPlacements, artwork, artLater]
   );
+  const allUploadedNow = selectedPlacements.length > 0 && selectedPlacements.every((p) => artwork[p]);
+  // extra order details: print notes + positions whose file the customer will email
+  const orderNotesMeta = () => {
+    const pending = artLater ? selectedPlacements.filter((p) => !artwork[p]) : [];
+    return {
+      ...(printNotes.trim() ? { notes: printNotes.trim().slice(0, 600) } : {}),
+      ...(pending.length ? { art_pending: `Customer will email artwork for: ${pending.map((p) => placementById[p]?.label || p).join(", ")}` } : {}),
+    };
+  };
   const checkoutBlocked = totalQty < 1
     || (!blank && selectedPlacements.length === 0)
     || (!blank && !allArtworkUploaded)
@@ -356,7 +376,7 @@ export default function ProductDetail() {
       if (totalQty < 1) toast.error(isPack ? "Choose how many packs you'd like" : "Add at least 1 item to a size");
       else if (!packComplete) toast.error("Split the sizes for each garment in the pack - they need to add up");
       else if (!blank && selectedPlacements.length === 0) toast.error("Pick at least one print placement (or switch to Buy Blank)");
-      else toast.error("Please upload artwork for every selected placement");
+      else toast.error("Please upload artwork for every selected placement - or tick \"I'll email my artwork\"");
       return;
     }
     setCheckingOut(true);
@@ -374,6 +394,7 @@ export default function ProductDetail() {
           placements_uploaded: Object.keys(artwork).join(","),
           ...packMeta,
           ...art,
+          ...orderNotesMeta(),
         },
       });
       window.location.href = url;
@@ -682,7 +703,7 @@ export default function ProductDetail() {
                     title={isSpecial || isLogoOnlyBundle ? "4. Upload your logo" : "4. Upload your prints"}
                     right={
                       allArtworkUploaded
-                        ? <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e]"><Check size={14} /> {isSpecial ? "Logo uploaded" : "All artwork uploaded"}</span>
+                        ? <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-[#7bc67e]"><Check size={14} /> {!allUploadedNow ? "Emailing artwork later" : isSpecial ? "Logo uploaded" : "All artwork uploaded"}</span>
                         : <span className="inline-flex items-center gap-1 text-xs font-nunito font-extrabold text-rose-500"><Lock size={12} /> Required to checkout</span>
                     }
                   >
@@ -692,6 +713,7 @@ export default function ProductDetail() {
                           key={pid}
                           placement={placementById[pid]}
                           dataUrl={artwork[pid]}
+                          later={artLater}
                           onPick={(file, isDataUrl) => onPickArtwork(pid, file, isDataUrl)}
                           productColor={colorHex}
                           onRemove={() => removeArtwork(pid)}
@@ -701,8 +723,20 @@ export default function ProductDetail() {
                     </div>
                     <div className="mt-3 text-xs text-[#4b5563] flex items-start gap-1.5">
                       <Info size={12} className="mt-0.5 flex-shrink-0" />
-                      <span>PNG with transparent background works best · we'll send a free proof before printing · same logo for every placement? Just upload the same file for each.</span>
+                      <span>PNG with transparent background works best (PDF, AI and EPS are fine too) · we'll send a free proof before printing · same logo for every placement? Just upload the same file for each.</span>
                     </div>
+                    {!allUploadedNow && (
+                      <label className="mt-3 flex items-start gap-2 text-sm bg-[#fffbeb] border-2 border-[#fde68a] rounded-xl p-3 cursor-pointer" data-testid="art-later">
+                        <input type="checkbox" checked={artLater} onChange={(e) => setArtLater(e.target.checked)} className="mt-1 w-4 h-4 accent-[#7bc67e]" data-testid="art-later-checkbox" />
+                        <span><strong>I&apos;ll email my artwork after ordering</strong> - or ask us to tidy up / design it. Reply to your order email or send it to info@yourownprint.co.uk; nothing prints until you&apos;ve approved your free proof.</span>
+                      </label>
+                    )}
+                    <label className="block mt-3">
+                      <span className="text-xs font-nunito font-extrabold">Print notes (optional)</span>
+                      <textarea value={printNotes} onChange={(e) => setPrintNotes(e.target.value)} maxLength={600} rows={2} data-testid="print-notes"
+                        placeholder="e.g. 'Logo about 8cm wide', 'White print please', 'Small logo on the front, big one on the back', 'Need them by 20th'"
+                        className="mt-1 w-full border-2 border-[#dcfce7] focus:border-[#7bc67e] rounded-xl px-3 py-2 text-sm outline-none resize-none" />
+                    </label>
                   </Section>
                 )}
 
@@ -758,7 +792,7 @@ export default function ProductDetail() {
                           if (totalQty < 1) toast.error(isPack ? "Choose how many packs you'd like" : "Add at least 1 item to a size");
       else if (!packComplete) toast.error("Split the sizes for each garment in the pack - they need to add up");
                           else if (!blank && selectedPlacements.length === 0) toast.error("Pick at least one print placement (or switch to Buy Blank)");
-                          else toast.error("Please upload artwork for every selected placement");
+                          else toast.error("Please upload artwork for every selected placement - or tick \"I'll email my artwork\"");
                           return;
                         }
                         let art = {};
@@ -776,6 +810,7 @@ export default function ProductDetail() {
                             placements_uploaded: Object.keys(artwork).join(","),
                             ...packMeta,
                             ...art,
+                            ...orderNotesMeta(),
                           },
                         });
                       }}
@@ -1126,7 +1161,7 @@ function Section({ title, right, children }) {
   );
 }
 
-function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId, productColor }) {
+function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId, productColor, later }) {
   const ref = useRef(null);
   const [designing, setDesigning] = useState(false);
   const printArea = DEFAULT_PLACEMENT_AREAS[placement?.id] || DEFAULT_PLACEMENT_AREAS["full-front"];
@@ -1137,11 +1172,14 @@ function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId, productColo
         <span className="font-nunito font-extrabold text-sm">{placement?.label}</span>
         {dataUrl
           ? <span className="inline-flex items-center gap-1 text-xs font-nunito font-bold text-[#7bc67e]"><Check size={12} /> Uploaded</span>
+          : later ? <span className="text-xs text-amber-600 font-nunito font-bold">Emailing later</span>
           : <span className="text-xs text-rose-500 font-nunito font-bold">Required</span>}
       </div>
       {dataUrl ? (
         <div className="flex items-center gap-2">
-          <img src={dataUrl} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-[#dcfce7] p-1" />
+          {isPreviewableArt(dataUrl)
+            ? <img src={dataUrl} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-[#dcfce7] p-1" />
+            : <span className="w-16 h-16 grid place-items-center bg-white rounded-lg border border-[#dcfce7] text-[10px] font-nunito font-extrabold text-center leading-tight">📄<br />{(String(dataUrl).match(/^data:application\/(pdf)/) ? "PDF" : "FILE")} attached</span>}
           <div className="flex flex-col gap-1.5">
             <button data-testid={`${testId}-replace`} onClick={() => ref.current?.click()} className="text-xs font-nunito font-extrabold bg-white border border-[#dcfce7] hover:border-[#7bc67e] rounded-full px-3 py-1.5 transition-colors">Replace</button>
             <button data-testid={`${testId}-remove`} onClick={onRemove} className="text-xs font-nunito font-extrabold text-rose-500 hover:bg-rose-50 rounded-full px-3 py-1.5 transition-colors inline-flex items-center gap-1"><Trash2 size={10} /> Remove</button>
@@ -1159,7 +1197,7 @@ function ArtworkSlot({ placement, dataUrl, onPick, onRemove, testId, productColo
           </button>
         </div>
       )}
-      <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => onPick(e.target.files?.[0])} />
+      <input ref={ref} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => { onPick(e.target.files?.[0]); e.target.value = ""; }} />
 
       {designing && (
         <PlacementDesignerModal

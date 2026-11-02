@@ -59,8 +59,7 @@ async def create_checkout_session(
                                          "unit_amount": int(round(float(ln["amount"]) * 100))}, "quantity": 1})
         if sum(i["price_data"]["unit_amount"] for i in items) != total_p or any(i["price_data"]["unit_amount"] < 0 for i in items):
             items = None
-    return await asyncio.to_thread(
-        stripe.checkout.Session.create,
+    params = dict(
         mode="payment",
         payment_method_types=["card"],
         line_items=items or [
@@ -85,6 +84,19 @@ async def create_checkout_session(
             "shipping_address_collection": {"allowed_countries": allowed_countries or ["GB"]},
             "phone_number_collection": {"enabled": True}} if shipping_options else {}),
     )
+    # A free-text box on Stripe's page for print notes / deadlines on EVERY checkout
+    # (saved on the order as order_notes by server._capture_order_notes).
+    try:
+        return await asyncio.to_thread(stripe.checkout.Session.create, custom_fields=[ORDER_NOTES_FIELD], **params)
+    except stripe.InvalidRequestError as e:
+        if "custom_fields" not in str(e):
+            raise
+        return await asyncio.to_thread(stripe.checkout.Session.create, **params)
+
+
+ORDER_NOTES_FIELD = {"key": "ordernotes", "type": "text", "optional": True,
+                     "label": {"type": "custom", "custom": "Print notes or deadline (optional)"},
+                     "text": {"maximum_length": 255}}
 
 
 async def get_checkout_status(api_key: str, session_id: str):

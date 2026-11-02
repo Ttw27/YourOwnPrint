@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { submitContact } from "../lib/api";
+import { submitContact, uploadArtwork, readArtworkFile, ARTWORK_ACCEPT } from "../lib/api";
 import { toast } from "sonner";
 import { SECTORS } from "../lib/data";
 import usePageCopy from "../hooks/usePageCopy";
-import { Phone, Mail, MessageSquare, Send, Sparkles } from "lucide-react";
+import { Phone, Mail, MessageSquare, Send, Sparkles, Upload, X } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
 
 // "What's it about?" - prefixed onto the message so the enquiry email/admin
@@ -26,11 +26,18 @@ export default function Contact() {
   const [topic, setTopic] = useState(() => TOPICS.find((t) => t.key === params.get("topic"))?.key || "clothing");
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "", quantity: "", sector: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [logo, setLogo] = useState(null); // {name, data} - optional logo / artwork, sent as a link in the message
 
   const copy = usePageCopy("contact", {
     title: "",
     subtitle: "Tell us what you need - we'll come back with a tailored quote, fabric advice and free logo design ideas.",
   });
+
+  const pickLogo = async (file) => {
+    if (!file) return;
+    if (file.size > 15_000_000) { toast.error("That file is over 15MB - send it by email instead"); return; }
+    try { setLogo({ name: file.name, data: await readArtworkFile(file) }); } catch { toast.error("Couldn't read that file - try another"); }
+  };
 
   const update = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -43,9 +50,15 @@ export default function Contact() {
     setSubmitting(true);
     try {
       const t = TOPICS.find((x) => x.key === topic);
-      await submitContact({ ...form, message: `[${t ? t.label : "Enquiry"}]\n\n${form.message}` });
+      let fileLine = "";
+      if (logo) {
+        const up = await uploadArtwork({ dataUrl: logo.data, filename: logo.name, purpose: "contact-logo" });
+        fileLine = `\n\nLogo / artwork (${logo.name}): ${up.absolute_url}`;
+      }
+      await submitContact({ ...form, message: `[${t ? t.label : "Enquiry"}]\n\n${form.message}${fileLine}` });
       toast.success("Thanks! Your message is with us - we'll be in touch soon.");
       setForm({ name: "", email: "", phone: "", company: "", message: "", quantity: "", sector: "" });
+      setLogo(null);
     } catch {
       toast.error("Something went wrong. Please try again or email us.");
     } finally {
@@ -112,6 +125,16 @@ export default function Contact() {
             <div className="mt-4">
               <label className="block text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Tell us about your project *</label>
               <textarea data-testid="contact-message" rows={5} value={form.message} onChange={update("message")} className="w-full bg-white border border-[#e5e7eb] focus:border-[#7bc67e] outline-none rounded-xl px-3 py-2.5" placeholder="What garments, what print, deadline, budget, anything..." />
+            </div>
+            <div className="mt-4">
+              <label className="block text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Your logo / artwork (optional)</label>
+              <div className="flex items-center gap-2">
+                <label className="flex-1 min-w-0 flex items-center gap-3 border-2 border-dashed border-[#dcfce7] rounded-xl px-4 py-3 cursor-pointer text-sm" data-testid="contact-logo">
+                  <Upload size={16} className="text-[#16a34a] shrink-0" /> {logo ? <span className="font-bold truncate">{logo.name}</span> : <span>Upload your logo - image, PDF, AI or EPS</span>}
+                  <input type="file" accept={ARTWORK_ACCEPT} className="hidden" onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = ""; }} />
+                </label>
+                {logo && <button type="button" onClick={() => setLogo(null)} className="p-2 rounded-full hover:bg-[#f0fdf4]" aria-label="Remove file"><X size={16} /></button>}
+              </div>
             </div>
             <button data-testid="contact-submit" type="submit" disabled={submitting} className="mt-6 inline-flex items-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-nunito font-extrabold px-7 py-3.5 rounded-full shadow-md hover:-translate-y-1 transition-transform">
               {submitting ? "Sending…" : <>Send Enquiry <Send size={16} /></>}

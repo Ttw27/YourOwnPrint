@@ -4,7 +4,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import usePageCopy from "../hooks/usePageCopy";
 import usePageTitle from "../hooks/usePageTitle";
 import JsonLd from "../components/bold/JsonLd";
-import { submitQuoteRequest } from "../lib/api";
+import { submitQuoteRequest, readArtworkFile, ARTWORK_ACCEPT } from "../lib/api";
 import { buildWhatsAppLink, RATING } from "../lib/data";
 import { toast } from "sonner";
 import {
@@ -34,10 +34,10 @@ export default function Corporate() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const pickLogo = (file) => {
+  const pickLogo = async (file) => {
     if (!file) return;
-    if (file.size > 10_000_000) { toast.error("That file is over 10MB - send it by email instead"); return; }
-    const r = new FileReader(); r.onload = () => setLogo({ name: file.name, data: r.result }); r.readAsDataURL(file);
+    if (file.size > 8_000_000) { toast.error("That file is over 8MB - send it by email instead"); return; }
+    try { setLogo({ name: file.name, data: await readArtworkFile(file) }); } catch { toast.error("Couldn't read that file - try another"); }
   };
   const submit = async (e) => {
     e.preventDefault();
@@ -180,8 +180,8 @@ export default function Corporate() {
               <input value={f.sites} onChange={(e) => setF({ ...f, sites: e.target.value })} placeholder="How many sites to deliver to?" className={input} />
               <textarea value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} rows={3} placeholder="Anything else - colours, print positions, a sample first, invoice / PO details..." className={input} />
               <label className="flex items-center gap-3 border-2 border-dashed border-[#dcfce7] rounded-xl px-4 py-3 cursor-pointer text-sm">
-                <Upload size={16} className="text-[#16a34a]" /> {logo ? <span className="font-bold">{logo.name}</span> : <span>Upload your logo (optional)</span>}
-                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => pickLogo(e.target.files?.[0])} />
+                <Upload size={16} className="text-[#16a34a]" /> {logo ? <span className="font-bold">{logo.name}</span> : <span>Upload your logo (optional) - image, PDF, AI or EPS</span>}
+                <input type="file" accept={ARTWORK_ACCEPT} className="hidden" onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = ""; }} />
               </label>
               <button type="submit" disabled={busy} className="w-full bg-[#1a1a1a] text-white font-extrabold py-3.5 rounded-full inline-flex items-center justify-center gap-2 disabled:opacity-60" data-testid="corp-submit">
                 {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Send my enquiry

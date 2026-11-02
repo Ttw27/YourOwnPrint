@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import WhatsAppFAB, { WhatsAppInline } from "../components/bold/WhatsAppFAB";
-import { api, createCheckout, fetchFightNightAddons, fetchFightNightTiers, uploadOrderArtwork } from "../lib/api";
+import { api, createCheckout, fetchFightNightAddons, fetchFightNightTiers, uploadOrderArtwork, ARTWORK_ACCEPT } from "../lib/api";
+import { readPrintFile, ArtTile } from "../components/bold/TeamKitConfigurator";
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Plus, Minus, Loader2, Send, Zap, Sparkles, ShieldCheck, Info, Camera, Upload } from "lucide-react";
@@ -36,7 +37,9 @@ export default function FightNightTee() {
   const [tierInfo, setTierInfo] = useState({ tiers: [], discounts: [] });
   const [color, setColor] = useState("Black");
   const [sizeQtys, setSizeQtys] = useState({});
-  const [sponsors, setSponsors] = useState([]);
+  const [mainLogo, setMainLogo] = useState(null);     // the gym / event's own logo for the front
+  const [sponsors, setSponsors] = useState([]);       // optional sponsor logos
+  const [notes, setNotes] = useState("");             // event details & layout notes -> design_meta.notes
   const [backPrint, setBackPrint] = useState(false);
   const [backArt, setBackArt] = useState(null);        // artwork data URL for back print
   const [leftSleeve, setLeftSleeve] = useState(false);
@@ -47,6 +50,7 @@ export default function FightNightTee() {
   const [contact, setContact] = useState({ name: "", email: "", phone: "", company: "" });
   const [submitting, setSubmitting] = useState(false);
   const sponsorRef = useRef(null);
+  const mainRef = useRef(null);
   const backRef = useRef(null);
   const leftRef = useRef(null);
   const rightRef = useRef(null);
@@ -131,19 +135,9 @@ export default function FightNightTee() {
 
   const onPickSponsors = (e) => {
     Array.from(e.target.files || []).slice(0, 30 - sponsors.length).forEach((f) => {
-      const r = new FileReader();
-      r.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const max = 800; const sc = Math.min(1, max / Math.max(img.width, img.height));
-          const w = Math.round(img.width * sc), h = Math.round(img.height * sc);
-          const c = document.createElement("canvas"); c.width = w; c.height = h;
-          c.getContext("2d").drawImage(img, 0, 0, w, h);
-          setSponsors(prev => [...prev, c.toDataURL("image/png")]);
-        };
-        img.src = r.result;
-      };
-      r.readAsDataURL(f);
+      readPrintFile(f, 800)
+        .then((url) => setSponsors((prev) => (prev.length < 30 ? [...prev, url] : prev)))
+        .catch((err) => toast.error(err?.message || "Couldn't read that file"));
     });
     e.target.value = "";
   };
@@ -152,24 +146,12 @@ export default function FightNightTee() {
   const pickSingleArt = (e, setter) => {
     const f = e.target.files?.[0]; e.target.value = "";
     if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const max = 800; const sc = Math.min(1, max / Math.max(img.width, img.height));
-        const w = Math.round(img.width * sc), h = Math.round(img.height * sc);
-        const c = document.createElement("canvas"); c.width = w; c.height = h;
-        c.getContext("2d").drawImage(img, 0, 0, w, h);
-        setter(c.toDataURL("image/png"));
-      };
-      img.src = r.result;
-    };
-    r.readAsDataURL(f);
+    readPrintFile(f, 800).then(setter).catch((err) => toast.error(err?.message || "Couldn't read that file"));
   };
 
   const validate = () => {
     if (!contact.name.trim() || !contact.email.trim()) return "Add your name and email";
-    if (sponsors.length === 0) return "Upload at least one sponsor logo for the front";
+    if (!mainLogo && sponsors.length === 0) return "Upload your logo for the front (sponsors are optional)";
     if (totalQty < 1) return "Pick at least 1 tee size & quantity";
     if (backPrint && !backArt) return "Upload artwork for the back print (or untick back print)";
     if (leftSleeve && !leftArt) return "Upload artwork for the left sleeve (or untick left sleeve)";
@@ -190,7 +172,9 @@ export default function FightNightTee() {
         event_date: eventDate,
         color,
         tee_type: (TEE_TYPES.find((t) => t.key === teeType) || TEE_TYPES[0]).label,
+        front_logo: mainLogo ? "yes" : "no",
         sponsors_count: String(sponsors.length),
+        ...(notes.trim() ? { notes: notes.trim().slice(0, 2000) } : {}),
         back_print: backPrint ? "full" : "no",
         left_sleeve: leftSleeve ? "yes" : "no",
         right_sleeve: rightSleeve ? "yes" : "no",
@@ -199,6 +183,7 @@ export default function FightNightTee() {
       // Pass sponsor data URLs via design_meta (split if necessary). For Stripe metadata size limits we store only count + send full artwork to a quote_requests doc shadow record so the team has the actual files.
       // Actually we'll persist sponsors in a quote_requests doc keyed by session_id reference (best-effort) for the team to access - backend will tie it via metadata.session_id after checkout.
       const art = await uploadOrderArtwork({
+        "front-logo": mainLogo,
         ...Object.fromEntries(sponsors.map((s, i) => [`sponsor-${i + 1}`, s])),
         "back-print": backPrint ? backArt : null,
         "left-sleeve": leftSleeve ? leftArt : null,
@@ -226,8 +211,8 @@ export default function FightNightTee() {
           kit_type: `fight-night-tee-${session_id}`,
           quantity: totalQty,
           deadline: eventDate,
-          message: `PAID fight-night order. Sponsors: ${sponsors.length}. Back print: ${backPrint ? "full" : "no"}${backPrint && backArt ? " (art uploaded)" : ""}. Sleeves: ${leftSleeve ? "L" : ""}${rightSleeve ? "R" : ""}${(leftSleeve && leftArt) || (rightSleeve && rightArt) ? " (art uploaded)" : ""}. Stripe session: ${session_id}. Proof before print.`,
-          artwork: [...sponsors, backArt, leftArt, rightArt].filter(Boolean),
+          message: `PAID fight-night order. Front logo: ${mainLogo ? "yes" : "no"}. Sponsors: ${sponsors.length}. Back print: ${backPrint ? "full" : "no"}${backPrint && backArt ? " (art uploaded)" : ""}. Sleeves: ${leftSleeve ? "L" : ""}${rightSleeve ? "R" : ""}${(leftSleeve && leftArt) || (rightSleeve && rightArt) ? " (art uploaded)" : ""}. Stripe session: ${session_id}. Proof before print.${notes.trim() ? `\nNotes: ${notes.trim().slice(0, 2000)}` : ""}`,
+          artwork: [mainLogo, ...sponsors, backArt, leftArt, rightArt].filter(Boolean),
           product_id: tee.id,
         });
       } catch { /* non-blocking quote sync */ }
@@ -308,25 +293,43 @@ export default function FightNightTee() {
             <Field label="Gym / promotion / fighter" v={contact.company} onV={(v) => setContact({ ...contact, company: v })} testId="fn-company" />
             <Field label="Event date" type="date" v={eventDate} onV={setEventDate} testId="fn-event-date" />
           </div>
+          <div className="mt-3">
+            <label className="block text-xs font-nunito font-bold text-[#1a1a1a] mb-1">Event details &amp; layout notes <span className="font-normal text-[#4b5563]">(optional)</span></label>
+            <textarea data-testid="fn-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={2000}
+              placeholder="e.g. Event name, fighter names, date & venue, which sponsor should be biggest, the order sponsors go in..."
+              className="w-full bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm" />
+          </div>
         </Block>
 
-        <Block n={2} title="Upload sponsor logos">
+        <Block n={2} title="Front print: your logo + any sponsors">
           <div className="text-xs text-[#4b5563] mb-3">
-            The <strong>main sponsor goes on the front big</strong>. Upload all sponsors - we&apos;ll lay them out cleanly and send a free proof.
+            Your gym / event logo goes on the <strong>front, included in the price</strong>. Got sponsors? Add them below too (optional) - we&apos;ll lay everything out cleanly and send a free proof. PNG, JPG, PDF, AI or EPS.
           </div>
+          <div className="flex items-center gap-3 mb-4" data-testid="fn-main-logo-row">
+            <div className="w-16 h-16 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
+              {mainLogo ? <ArtTile src={mainLogo} testid="fn-main-logo-preview" /> : <Camera size={18} className="text-[#7bc67e]" />}
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="text-xs font-nunito font-bold text-[#1a1a1a]">Your logo (front)</div>
+              <button data-testid="fn-main-logo-upload" onClick={() => mainRef.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full inline-flex items-center justify-center gap-1 w-fit"><Upload size={12} /> {mainLogo ? "Replace" : "Upload your logo"}</button>
+              {mainLogo && <button data-testid="fn-main-logo-clear" onClick={() => setMainLogo(null)} className="text-[10px] font-nunito font-bold text-rose-500 hover:underline w-fit">Remove</button>}
+              <input ref={mainRef} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => pickSingleArt(e, setMainLogo)} />
+            </div>
+          </div>
+          <div className="text-xs font-nunito font-bold text-[#1a1a1a] mb-2">Sponsor logos <span className="font-normal text-[#4b5563]">(optional)</span></div>
           <div className="flex flex-wrap items-center gap-2" data-testid="fn-logos">
             {sponsors.map((src, i) => (
               <div key={i} className="relative w-16 h-16 rounded-xl bg-white border border-[#dcfce7] overflow-hidden">
-                <img src={src} alt="" className="w-full h-full object-contain p-1" />
+                <ArtTile src={src} />
                 <button onClick={() => removeSponsor(i)} className="absolute -top-2 -right-2 w-5 h-5 bg-[#1a1a1a] text-white rounded-full text-xs grid place-items-center">×</button>
               </div>
             ))}
             {sponsors.length < 30 && (
               <button data-testid="fn-upload-logos" onClick={() => sponsorRef.current?.click()} className="w-16 h-16 rounded-xl border-2 border-dashed border-[#7bc67e] grid place-items-center text-[#7bc67e] hover:bg-[#f0fdf4]"><Plus size={18} /></button>
             )}
-            <input ref={sponsorRef} type="file" accept="image/*" multiple hidden onChange={onPickSponsors} />
+            <input ref={sponsorRef} type="file" accept={ARTWORK_ACCEPT} multiple hidden onChange={onPickSponsors} />
           </div>
-          <div className="text-xs text-[#4b5563] mt-2">{sponsors.length}/30 logos uploaded</div>
+          <div className="text-xs text-[#4b5563] mt-2">{sponsors.length}/30 sponsor logos uploaded</div>
         </Block>
 
         <Block n={3} title="Back print (optional)">
@@ -344,13 +347,13 @@ export default function FightNightTee() {
               </div>
               <div className="mt-3 flex items-center gap-3" data-testid="fn-back-upload-row">
                 <div className="w-16 h-16 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
-                  {backArt ? <img src={backArt} alt="" className="w-full h-full object-contain p-1" data-testid="fn-back-art-preview" /> : <Camera size={18} className="text-[#7bc67e]" />}
+                  {backArt ? <ArtTile src={backArt} testid="fn-back-art-preview" /> : <Camera size={18} className="text-[#7bc67e]" />}
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="text-xs font-nunito font-bold text-[#1a1a1a]">Back print artwork *</div>
                   <button data-testid="fn-back-upload" onClick={() => backRef.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full inline-flex items-center justify-center gap-1 w-fit"><Upload size={12} /> {backArt ? "Replace" : "Upload back art"}</button>
                   {backArt && <button data-testid="fn-back-clear" onClick={() => setBackArt(null)} className="text-[10px] font-nunito font-bold text-rose-500 hover:underline w-fit">Remove</button>}
-                  <input ref={backRef} type="file" accept="image/*" hidden onChange={(e) => pickSingleArt(e, setBackArt)} />
+                  <input ref={backRef} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => pickSingleArt(e, setBackArt)} />
                 </div>
               </div>
             </>
@@ -367,12 +370,12 @@ export default function FightNightTee() {
               {leftSleeve && (
                 <div className="mt-3 flex items-center gap-3" data-testid="fn-left-upload-row">
                   <div className="w-14 h-14 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
-                    {leftArt ? <img src={leftArt} alt="" className="w-full h-full object-contain p-1" data-testid="fn-left-art-preview" /> : <Camera size={16} className="text-[#7bc67e]" />}
+                    {leftArt ? <ArtTile src={leftArt} testid="fn-left-art-preview" /> : <Camera size={16} className="text-[#7bc67e]" />}
                   </div>
                   <div className="flex flex-col gap-1">
                     <button data-testid="fn-left-upload" onClick={() => leftRef.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1 w-fit"><Upload size={12} /> {leftArt ? "Replace" : "Upload"}</button>
                     {leftArt && <button data-testid="fn-left-clear" onClick={() => setLeftArt(null)} className="text-[10px] font-nunito font-bold text-rose-500 hover:underline w-fit">Remove</button>}
-                    <input ref={leftRef} type="file" accept="image/*" hidden onChange={(e) => pickSingleArt(e, setLeftArt)} />
+                    <input ref={leftRef} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => pickSingleArt(e, setLeftArt)} />
                   </div>
                 </div>
               )}
@@ -385,12 +388,12 @@ export default function FightNightTee() {
               {rightSleeve && (
                 <div className="mt-3 flex items-center gap-3" data-testid="fn-right-upload-row">
                   <div className="w-14 h-14 rounded-xl bg-white border border-[#dcfce7] grid place-items-center overflow-hidden flex-shrink-0">
-                    {rightArt ? <img src={rightArt} alt="" className="w-full h-full object-contain p-1" data-testid="fn-right-art-preview" /> : <Camera size={16} className="text-[#7bc67e]" />}
+                    {rightArt ? <ArtTile src={rightArt} testid="fn-right-art-preview" /> : <Camera size={16} className="text-[#7bc67e]" />}
                   </div>
                   <div className="flex flex-col gap-1">
                     <button data-testid="fn-right-upload" onClick={() => rightRef.current?.click()} className="bg-[#7bc67e] hover:bg-[#5eb062] text-[#1a1a1a] font-nunito font-extrabold text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1 w-fit"><Upload size={12} /> {rightArt ? "Replace" : "Upload"}</button>
                     {rightArt && <button data-testid="fn-right-clear" onClick={() => setRightArt(null)} className="text-[10px] font-nunito font-bold text-rose-500 hover:underline w-fit">Remove</button>}
-                    <input ref={rightRef} type="file" accept="image/*" hidden onChange={(e) => pickSingleArt(e, setRightArt)} />
+                    <input ref={rightRef} type="file" accept={ARTWORK_ACCEPT} hidden onChange={(e) => pickSingleArt(e, setRightArt)} />
                   </div>
                 </div>
               )}

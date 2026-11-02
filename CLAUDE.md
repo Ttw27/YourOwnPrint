@@ -334,6 +334,16 @@ frontend/src/
 
 ---
 
+- **Every customer detail reaches the order (Nov 2026 gap audit).** Admin > Orders (`dmExtra`) and the shop's order email
+  (`_dm_extra` / `_dm_extra_html`) list EVERY design_meta key that has no row of its own (`_DM_OWN_ROWS`; labels in
+  `_DM_LABELS`, keep both sides in step): rosters, wording, house names, `notes`, `print_colour`, `badge_position`... A
+  " | " string shows one per line, a list of dicts as a table (but checkout models type design_meta as Dict[str, str], so
+  send strings). Product pages: "Print notes" box (`notes`) + "I'll email my artwork" tick (`art_pending`, unlocks checkout
+  without files). Stripe's page has an optional "Print notes or deadline" box on EVERY checkout (stripe_checkout.ORDER_NOTES_FIELD,
+  retried without it if Stripe refuses) -> `order_notes` (`_capture_order_notes`), top of the order email + Admin > Orders.
+  Uploads take PDF / AI / EPS / SVG (`ARTWORK_ACCEPT`, `readArtworkFile`, `isPreviewableArt` in lib/api.js; /uploads/artwork
+  `print_files=True`, 15MB; served with a sandbox CSP). Contact / business enquiry: logo uploaded, link added to the message.
+  Fight Night: own front logo, sponsors optional, event notes. Kit builders: name & number colour picker.
 - **Customer print files must reach the order.** Uploads on product pages / team kits / Fight Night are sent
   with `uploadOrderArtwork()` (lib/api.js -> POST /uploads/artwork, stored in R2) and saved on the order line as
   `design_meta.art_<position>` = "/api/uploads/artwork/<id>.png". Shown as thumbnails in Admin > Orders and as

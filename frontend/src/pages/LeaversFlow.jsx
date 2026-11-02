@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversCheckout, fetchPortfolio, api, mediaUrl } from "../lib/api";
+import { fetchLeaversProducts, fetchLeaversTiers, fetchLeaversTemplates, leaversCheckout, fetchPortfolio, api, mediaUrl, ARTWORK_ACCEPT, readArtworkFile, isPreviewableArt } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { toast } from "sonner";
 import { ArrowRight, CheckCircle2, GraduationCap, Sparkles, Loader2, ShieldCheck, Package, Upload, ImageIcon, Users, FileText, Info } from "lucide-react";
@@ -556,7 +556,7 @@ function BespokeBox({ slot, dataUrl, onFile, notes, onNotes }) {
         Show us your {slot} design
         {dataUrl && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold bg-[#7bc67e] text-[#1a1a1a]">Uploaded</span>}
       </div>
-      <div className="text-[11px] text-[#4b5563] mt-0.5">Upload your artwork, a sketch, or a screenshot of a design you&apos;ve seen and like (PNG or JPG, max 6&nbsp;MB). We&apos;ll recreate it with your school, year and names and send a free proof before anything is printed.</div>
+      <div className="text-[11px] text-[#4b5563] mt-0.5">Upload your artwork, a sketch, or a screenshot of a design you&apos;ve seen and like (image, PDF, AI or EPS, max 6&nbsp;MB). We&apos;ll recreate it with your school, year and names and send a free proof before anything is printed.</div>
       <CustomDesignDrop dataUrl={dataUrl} onChange={onFile} slot={slot} />
       <textarea
         value={notes}
@@ -641,21 +641,22 @@ function Field({ label, value, onChange, type = "text", testid }) {
 function CustomDesignDrop({ dataUrl, onChange, slot = "" }) {
   const inputRef = React.useRef(null);
   const suffix = slot ? `-${slot}` : "";
-  const onFile = (file) => {
+  const [fileName, setFileName] = React.useState("");
+  const onFile = async (file) => {
     if (!file) return;
-    if (!/^image\//.test(file.type)) { toast.error("Image only (PNG, JPG, SVG)."); return; }
-    if (file.size > 6 * 1024 * 1024) { toast.error("Image too large (max 6 MB)."); return; }
-    const reader = new FileReader();
-    reader.onload = (e) => onChange(e.target.result);
-    reader.readAsDataURL(file);
+    if (file.size > 6 * 1024 * 1024) { toast.error("File too large (max 6 MB) - email it to us instead."); return; }
+    try { const url = await readArtworkFile(file); setFileName(file.name); onChange(url); }
+    catch { toast.error("Couldn't read that file - try another."); }
   };
   return (
     <div className="mt-3" data-testid={`ls-custom-design-drop${suffix}`}>
       {dataUrl ? (
         <div className="flex items-center gap-3 bg-white border border-[#fed7aa] rounded-xl p-3">
-          <img src={dataUrl} alt="Your design" className="w-20 h-20 object-contain bg-[#fff7ed] rounded-lg border border-[#fed7aa] p-1" data-testid={`ls-custom-design-preview${suffix}`} />
-          <div className="text-xs flex-1">
-            <div className="font-extrabold">Design uploaded</div>
+          {isPreviewableArt(dataUrl)
+            ? <img src={dataUrl} alt="Your design" className="w-20 h-20 object-contain bg-[#fff7ed] rounded-lg border border-[#fed7aa] p-1" data-testid={`ls-custom-design-preview${suffix}`} />
+            : <div className="w-20 h-20 flex-shrink-0 grid place-items-center bg-[#fff7ed] rounded-lg border border-[#fed7aa] text-2xl" data-testid={`ls-custom-design-preview${suffix}`}>📄</div>}
+          <div className="text-xs flex-1 min-w-0">
+            <div className="font-extrabold truncate">{isPreviewableArt(dataUrl) ? "Design uploaded" : `${fileName || "File"} attached`}</div>
             <div className="text-[#4b5563]">We&apos;ll send a proof and reply as soon as we can.</div>
           </div>
           <button type="button" onClick={() => inputRef.current?.click()} className="text-xs font-extrabold underline" data-testid={`ls-custom-design-replace${suffix}`}>Replace</button>
@@ -674,9 +675,9 @@ function CustomDesignDrop({ dataUrl, onChange, slot = "" }) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={ARTWORK_ACCEPT}
         hidden
-        onChange={(e) => onFile(e.target.files?.[0])}
+        onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }}
       />
     </div>
   );

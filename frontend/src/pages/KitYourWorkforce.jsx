@@ -3,7 +3,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import PricePromise from "../components/bold/PricePromise";
 import ProofPromise from "../components/bold/ProofPromise";
 import AccountManagerPromise from "../components/bold/AccountManagerPromise";
-import { fetchWorkforceProducts, fetchWorkforceTiers, workforceCheckout, workforceQuote } from "../lib/api";
+import { fetchWorkforceProducts, fetchWorkforceTiers, workforceCheckout, workforceQuote, ARTWORK_ACCEPT, readArtworkFile, isPreviewableArt } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { toast } from "sonner";
 import { Plus, Minus, Trash2, ShieldCheck, Truck, Sparkles, ArrowRight, Loader2, ChevronDown } from "lucide-react";
@@ -512,13 +512,12 @@ function snap99(price) {
 // ---- Reusable artwork uploader (file → data URL) ----
 function ArtworkUploader({ label, helper, required, dataUrl, onChange, testid, accent = "#fbbf24" }) {
   const inputRef = React.useRef(null);
-  const onFile = (file) => {
+  const [fileName, setFileName] = React.useState("");
+  const onFile = async (file) => {
     if (!file) return;
-    if (!/^image\//.test(file.type)) { toast.error("Please choose an image file (PNG, JPG, SVG)."); return; }
-    if (file.size > 6 * 1024 * 1024) { toast.error("Image too large (max 6 MB)."); return; }
-    const reader = new FileReader();
-    reader.onload = (e) => onChange(e.target.result);
-    reader.readAsDataURL(file);
+    if (file.size > 6 * 1024 * 1024) { toast.error("File too large (max 6 MB) - email it to us instead."); return; }
+    try { const url = await readArtworkFile(file); setFileName(file.name); onChange(url); }
+    catch { toast.error("Couldn't read that file - try another."); }
   };
   return (
     <div
@@ -546,7 +545,9 @@ function ArtworkUploader({ label, helper, required, dataUrl, onChange, testid, a
       </div>
       {dataUrl ? (
         <div className="mt-2 flex items-center gap-3">
-          <img src={dataUrl} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-[#fed7aa] p-1" data-testid={`${testid}-preview`} />
+          {isPreviewableArt(dataUrl)
+            ? <img src={dataUrl} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-[#fed7aa] p-1" data-testid={`${testid}-preview`} />
+            : <div className="min-w-0 max-w-[60%] bg-white rounded-lg border border-[#fed7aa] px-3 py-2 text-xs font-bold truncate" data-testid={`${testid}-preview`}>📄 {fileName || "File"} attached</div>}
           <button type="button" onClick={() => inputRef.current?.click()} className="text-xs font-extrabold underline" data-testid={`${testid}-replace`}>Replace</button>
         </div>
       ) : (
@@ -557,15 +558,15 @@ function ArtworkUploader({ label, helper, required, dataUrl, onChange, testid, a
           style={{ borderColor: accent, color: accent === "#1a1a1a" ? "#1a1a1a" : "#b45309" }}
           data-testid={`${testid}-upload`}
         >
-          + Upload image
+          + Upload logo (image, PDF, AI or EPS)
         </button>
       )}
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={ARTWORK_ACCEPT}
         hidden
-        onChange={(e) => onFile(e.target.files?.[0])}
+        onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }}
       />
     </div>
   );

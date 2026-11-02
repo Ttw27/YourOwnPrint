@@ -13,6 +13,7 @@ import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Tuple, Any
+import html as _html_mod
 import uuid
 from datetime import datetime, timezone, timedelta
 import bcrypt
@@ -1519,6 +1520,8 @@ def _stripe_line(p: Dict) -> Dict:
         names["logo"] = f"Logo - {dm['logo_position'].split(' (')[0].lower()}"
     prints = ", ".join((PLACEMENT_BY_ID.get(x) or {}).get("label") or names.get(x) or x.replace("-", " ").capitalize()
                        for x in (p.get("placements_clean") or []))
+    if dm.get("flow") == "fight_night_tee":   # the front print (logo + sponsors) is in the tee's price
+        prints = ", ".join(x for x in ["Front logo / sponsors", prints] if x)
     bits = [b for b in [p.get("color"), sizes, (f"Print: {prints}" if prints else ("Blank" if p.get("blank") else "")),
                         (f"for {dm.get('child_name')}" if dm.get("child_name") else "")] if b]
     name = dm.get("garment_name") and f"{prod.get('name')} on {dm.get('garment_name')}" or prod.get("name") or "Item"
@@ -1526,6 +1529,58 @@ def _stripe_line(p: Dict) -> Dict:
     col = next((c for c in (prod.get("colors") or []) if isinstance(c, dict) and c.get("name") == p.get("color") and c.get("image")), None)
     return {"name": f"{name} x{qty}" if qty > 1 else name, "description": " · ".join(bits),
             "amount": p["line_total"], "image": (col or {}).get("image") or img}
+
+
+# Order line details (design_meta) shown by their own rows in _order_details_html /
+# Admin > Orders, or internal - everything ELSE the customer gave us is listed by
+# _dm_extra(), so names, rosters, wording, notes... always reach the shop.
+_DM_OWN_ROWS = {"pack_sizes_text", "pack_sizes", "garment_name", "design_image", "print_size", "bespoke", "design_notes",
+                "club_code", "club_name", "child_name", "logo_position", "print_notes", "mode", "flow",
+                "group_id", "artwork_id", "design_id", "garment", "group_qty", "image_count", "text_count", "placements_uploaded"}
+_DM_LABELS = {"notes": "Customer notes", "art_pending": "Artwork", "team_name": "Team", "set": "Kit", "roster": "Players",
+              "kit_socks": "Socks", "kit_names": "Names & numbers", "kit_type": "Kit", "front_text": "Front wording",
+              "back_text": "Back wording", "print_colour": "Name & number colour", "names": "Names", "staff": "Staff",
+              "event_date": "Event date", "front_sponsor": "Front sponsor", "names_numbers": "Names & numbers"}
+
+
+def _dm_extra(dm: Dict) -> List[Tuple[str, Any]]:
+    """(label, value) for every customer detail on an order line that has no row of
+    its own. value is a str, or a list of dicts (a table, e.g. a players list)."""
+    out = []
+    for k, v in (dm or {}).items():
+        if k in _DM_OWN_ROWS or k.startswith("art_") and k != "art_pending" or k.endswith("_id") or v in (None, "", [], {}):
+            continue
+        label = _DM_LABELS.get(k) or k.replace("_", " ").capitalize()
+        if k == "art_pending":
+            v = "Customer will email their artwork" if v is True else str(v)
+        elif isinstance(v, bool):
+            v = "yes" if v else "no"
+        elif isinstance(v, list) and v and all(isinstance(x, dict) for x in v):
+            v = v[:200]
+        elif isinstance(v, list):
+            v = ", ".join(str(x) for x in v)
+        elif isinstance(v, dict):
+            v = ", ".join(f"{a}: {b}" for a, b in v.items() if b not in (None, ""))
+        else:
+            v = str(v)
+        out.append((label, v))
+    out.sort(key=lambda r: r[0] != "Customer notes")   # notes first
+    return out
+
+
+def _dm_extra_html(dm: Dict, esc) -> List[str]:
+    rows = []
+    for label, v in _dm_extra(dm):
+        if isinstance(v, list):
+            cols = list(dict.fromkeys(c for r in v for c in r))
+            rows.append(f"{esc(label)} ({len(v)}):<table cellpadding='3' style='border-collapse:collapse;font-size:12px'>"
+                        + "<tr>" + "".join(f"<th align='left'>{esc(c.replace('_', ' ').capitalize())}</th>" for c in cols) + "</tr>"
+                        + "".join("<tr>" + "".join(f"<td>{esc(r.get(c))}</td>" for c in cols) + "</tr>" for r in v) + "</table>")
+        elif " | " in v:
+            rows.append(f"{esc(label)}:<br>" + "<br>".join(esc(x) for x in v.split(" | ")))
+        else:
+            rows.append(f"{'<strong>' if label == 'Customer notes' else ''}{esc(label)}: {esc(v)}{'</strong>' if label == 'Customer notes' else ''}")
+    return rows
 
 
 def _order_details_html(doc: dict) -> str:
@@ -1543,6 +1598,8 @@ def _order_details_html(doc: dict) -> str:
             rows.append(f"Sizes: {esc(sizes)}")
         if dm.get("pack_sizes_text"):
             rows.append(f"Pack size split: {esc(dm['pack_sizes_text'])}")
+        if dm.get("flow") == "fight_night_tee":
+            placements = ", ".join(x for x in ["front (logo / sponsors - in the price)", placements] if x)
         if not dm.get("garment_name"):
             rows.append(f"Print: {esc(placements) if placements else 'blank / none'}")
         if dm.get("garment_name"):
@@ -1566,8 +1623,9 @@ def _order_details_html(doc: dict) -> str:
             rows.append(f"Print notes: {esc(dm['print_notes'])}")
         if dm.get("mode") or dm.get("flow"):
             rows.append(f"Artwork: {esc(dm.get('mode') or dm.get('flow'))}")
+        rows.extend(_dm_extra_html(dm, esc))
         # the customer's actual print files (art_<position> -> /api/uploads/artwork/...)
-        arts = [(k[4:], v) for k, v in dm.items() if k.startswith("art_") and v]
+        arts = [(k[4:], v) for k, v in dm.items() if k.startswith("art_") and k != "art_pending" and v]
         if arts:
             base = _backend_public_url()
             rows.append("Customer files: " + " · ".join(
@@ -1603,6 +1661,18 @@ def _sget(obj, *path):
             except Exception:
                 return None
     return obj
+
+
+async def _capture_order_notes(doc: dict, status_resp) -> str:
+    """The optional 'Print notes or deadline' box on Stripe's checkout page -> order_notes."""
+    note = ""
+    for f in (_sget(status_resp, "custom_fields") or []):
+        if _sget(f, "key") == "ordernotes":
+            note = (_sget(f, "text", "value") or "").strip()
+    if note:
+        await db.payment_transactions.update_one({"session_id": doc.get("session_id")}, {"$set": {"order_notes": note[:255]}})
+        doc["order_notes"] = note[:255]
+    return note
 
 
 async def _capture_delivery(doc: dict, status_resp) -> Optional[Dict]:
@@ -1651,6 +1721,10 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
 
     delivery_html = ""
     try:
+        await _capture_order_notes(doc, status_resp)
+    except Exception as e:
+        logging.warning(f"order notes capture failed: {e}")
+    try:
         delivery = await _capture_delivery(doc, status_resp)
         if delivery:
             a = delivery.get("address") or {}
@@ -1697,6 +1771,7 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
                   <tr><td style="color:#4b5563"><strong>Customer</strong></td><td>{customer_email or '-'}</td></tr>
                   <tr><td style="color:#4b5563"><strong>Session</strong></td><td>{doc.get('session_id','')}</td></tr>
                 </table>
+                {("<p style='margin-top:14px;font-size:15px;color:#b45309'><strong>Customer's notes:</strong> " + _html_mod.escape(doc['order_notes']) + "</p>") if doc.get('order_notes') else ""}
                 {_order_details_html(doc)}
                 {delivery_html}
                 """,
@@ -5274,11 +5349,11 @@ async def workforce_checkout(payload: WorkforceCheckoutRequest, http_request: Re
         )
 
     # Validate artwork
-    if not payload.breast_logo_data_url or not payload.breast_logo_data_url.startswith("data:image/"):
+    if not payload.breast_logo_data_url or not payload.breast_logo_data_url.startswith(("data:image/", "data:application/pdf", "data:application/postscript")):
         raise HTTPException(400, "Please upload your breast-logo artwork before checking out")
     needs_back_print = any(ln["back_print"] for ln in valid_lines)
     if needs_back_print:
-        if not payload.back_print_data_url or not payload.back_print_data_url.startswith("data:image/"):
+        if not payload.back_print_data_url or not payload.back_print_data_url.startswith(("data:image/", "data:application/pdf", "data:application/postscript")):
             raise HTTPException(400, "You've selected back print on some garments - please upload your back-print artwork")
     # Cap size to ~8 MB total each (Stripe metadata won't carry the image; we'll save to artwork doc)
     MAX_DATA_URL = 8 * 1024 * 1024
@@ -5929,7 +6004,12 @@ class PortfolioPatch(BaseModel):
     show_on: Optional[List[str]] = None      # page galleries it also appears in
 
 
-def _parse_data_url(data_url: str, max_bytes: int = 8_000_000) -> Tuple[bytes, str, str]:
+# Customer print files: logos often arrive as PDF / Illustrator / EPS, not just images.
+_PRINT_FILE_TYPES = {"application/pdf": "pdf", "application/postscript": "eps", "application/illustrator": "ai",
+                     "image/svg+xml": "svg"}
+
+
+def _parse_data_url(data_url: str, max_bytes: int = 8_000_000, print_files: bool = False) -> Tuple[bytes, str, str]:
     """Returns (bytes, content_type, ext). Raises HTTPException on invalid input."""
     if not data_url or not data_url.startswith("data:"):
         raise HTTPException(400, "image_data_url must be a data: URL")
@@ -5939,8 +6019,12 @@ def _parse_data_url(data_url: str, max_bytes: int = 8_000_000) -> Tuple[bytes, s
         raw = _base64.b64decode(b64)
     except Exception:
         raise HTTPException(400, "invalid data URL")
+    if print_files and content_type in _PRINT_FILE_TYPES:
+        if len(raw) > max_bytes:
+            raise HTTPException(400, f"File too large (max {max_bytes // 1_000_000}MB)")
+        return raw, content_type, _PRINT_FILE_TYPES[content_type]
     if not content_type.startswith("image/"):
-        raise HTTPException(400, "image content-type required")
+        raise HTTPException(400, "Please upload an image, PDF, AI or EPS file" if print_files else "image content-type required")
     if len(raw) > max_bytes:
         raise HTTPException(400, f"image too large (max {max_bytes // 1_000_000}MB)")
     ext = content_type.split("/")[-1].split("+")[0]
@@ -6326,7 +6410,7 @@ async def upload_artwork(payload: ArtworkUploadPayload):
     """Public endpoint used by the configurators to attach print files to quote requests.
     Stores the file in R2 and returns a public URL served via
     /api/uploads/artwork/{filename} (auth-free since these are quote attachments)."""
-    raw, content_type, ext = _parse_data_url(payload.image_data_url, max_bytes=10_000_000)
+    raw, content_type, ext = _parse_data_url(payload.image_data_url, max_bytes=15_000_000, print_files=True)
     item_id = str(uuid.uuid4())
     storage_path = f"{_OBJ_APP_NAME}/artwork/{item_id}.{ext}"
     try:
@@ -6352,7 +6436,7 @@ async def upload_artwork(payload: ArtworkUploadPayload):
 
 
 _ORDER_FILE_EXT = {"image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", "image/webp": "webp", "image/gif": "gif",
-                   "image/svg+xml": "svg", "application/pdf": "pdf", "text/csv": "csv", "text/plain": "txt",
+                   "image/svg+xml": "svg", "application/pdf": "pdf", "application/postscript": "eps", "text/csv": "csv", "text/plain": "txt",
                    "application/vnd.ms-excel": "xls",
                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx"}
 
@@ -6397,7 +6481,10 @@ async def get_artwork(filename: str):
     if not doc:
         raise HTTPException(404, "Artwork not found")
     data, ct = _storage_get(doc["storage_path"])
-    return Response(content=data, media_type=doc.get("content_type") or ct)
+    ctype = doc.get("content_type") or ct
+    # served from the API's own domain: never let an uploaded SVG / file run scripts there
+    return Response(content=data, media_type=ctype, headers={"Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
+                                                             "X-Content-Type-Options": "nosniff"})
 
 
 # ============================================================================

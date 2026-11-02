@@ -823,11 +823,38 @@ export async function uploadArtwork({ dataUrl, filename, purpose }) {
 // Customer print files -> stored on the server, returned as {art_<key>: url}
 // to put in the order line's design_meta, so the order carries the actual
 // logos (previously only the position names reached the order).
+// Print files customers can send: images plus the vector/PDF files logos usually come as.
+export const ARTWORK_ACCEPT = "image/*,application/pdf,.pdf,.ai,.eps,.svg";
+const _ART_MIME = { pdf: "application/pdf", ai: "application/postscript", eps: "application/postscript", svg: "image/svg+xml" };
+
+/** Read a chosen print file as a data URL (fixes the type browsers leave blank for .ai / .eps). */
+export function readArtworkFile(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      let url = String(r.result || "");
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+      if (_ART_MIME[ext] && !/^data:(image|application\/pdf|application\/postscript)/.test(url)) url = url.replace(/^data:[^;,]*/, `data:${_ART_MIME[ext]}`);
+      resolve(url);
+    };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+/** True when a data URL / link can be shown as an <img> (PDF / AI / EPS can't - show a "file attached" tile). */
+export function isPreviewableArt(src) {
+  const s = String(src || "");
+  return s.startsWith("data:image/") || /\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(s);
+}
+
 export async function uploadOrderArtwork(files, purpose = "order") {
   const out = {};
   for (const [key, dataUrl] of Object.entries(files || {})) {
     if (!dataUrl || !String(dataUrl).startsWith("data:")) continue;
-    const r = await uploadArtwork({ dataUrl, filename: `${key}.png`, purpose });
+    const mime = String(dataUrl).slice(5).split(/[;,]/)[0];
+    const ext = { "application/pdf": "pdf", "application/postscript": "eps", "image/svg+xml": "svg", "image/jpeg": "jpg" }[mime] || "png";
+    const r = await uploadArtwork({ dataUrl, filename: `${key}.${ext}`, purpose });
     out[`art_${key}`] = r.url;
   }
   return out;

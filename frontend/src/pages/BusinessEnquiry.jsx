@@ -4,11 +4,11 @@ import { toast } from "sonner";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import usePageCopy from "../hooks/usePageCopy";
 import usePageTitle from "../hooks/usePageTitle";
-import { submitContact } from "../lib/api";
+import { submitContact, uploadArtwork, readArtworkFile, ARTWORK_ACCEPT } from "../lib/api";
 import { buildWhatsAppLink, RATING } from "../lib/data";
 import { ORDERS_EMAIL } from "./EasyOrdering";
 import {
-  Star, Mail, MessageCircle, Loader2, CheckCircle2, Shirt, Printer, Package, Megaphone, ArrowRight,
+  Star, Mail, MessageCircle, Loader2, CheckCircle2, Shirt, Printer, Package, Megaphone, ArrowRight, Upload, X,
 } from "lucide-react";
 
 /**
@@ -38,6 +38,12 @@ export default function BusinessEnquiry() {
   const clothing = !NOT_CLOTHING.includes(form.sector);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [logo, setLogo] = useState(null); // {name, data} - optional logo / artwork, sent as a link in the message
+  const pickLogo = async (file) => {
+    if (!file) return;
+    if (file.size > 15_000_000) { toast.error("That file is over 15MB - send it by email instead"); return; }
+    try { setLogo({ name: file.name, data: await readArtworkFile(file) }); } catch { toast.error("Couldn't read that file - try another"); }
+  };
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const submit = async (e) => {
@@ -45,7 +51,12 @@ export default function BusinessEnquiry() {
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) { toast.error("Please add your name, email and a short message"); return; }
     setSending(true);
     try {
-      await submitContact({ ...form, message: `[Business enquiry - ${form.sector}${clothing ? `, approx ${form.quantity}` : ""}]\n\n${form.message}` });
+      let fileLine = "";
+      if (logo) {
+        const up = await uploadArtwork({ dataUrl: logo.data, filename: logo.name, purpose: "business-enquiry-logo" });
+        fileLine = `\n\nLogo / artwork (${logo.name}): ${up.absolute_url}`;
+      }
+      await submitContact({ ...form, message: `[Business enquiry - ${form.sector}${clothing ? `, approx ${form.quantity}` : ""}]\n\n${form.message}${fileLine}` });
       setSent(true);
     } catch (err) {
       toast.error(err?.response?.data?.detail?.[0]?.msg || err?.response?.data?.detail || "Couldn't send - please email us instead");
@@ -106,6 +117,13 @@ export default function BusinessEnquiry() {
                   {clothing && <select value={form.quantity} onChange={set("quantity")} className={ic} aria-label="Roughly how many?">{QTYS.map((q) => <option key={q} value={q}>{`Roughly ${q} items`}</option>)}</select>}
                 </div>
                 <textarea value={form.message} onChange={set("message")} rows={4} placeholder="Tell us a bit about what you need - garments, colours, where the logo goes… *" className={ic + " resize-none"} data-testid="biz-message" />
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 min-w-0 flex items-center gap-3 border-2 border-dashed border-[#dcfce7] rounded-xl px-4 py-3 cursor-pointer text-sm" data-testid="biz-logo">
+                    <Upload size={16} className="text-[#16a34a] shrink-0" /> {logo ? <span className="font-bold truncate">{logo.name}</span> : <span>Upload your logo (optional) - image, PDF, AI or EPS</span>}
+                    <input type="file" accept={ARTWORK_ACCEPT} className="hidden" onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = ""; }} />
+                  </label>
+                  {logo && <button type="button" onClick={() => setLogo(null)} className="p-2 rounded-full hover:bg-[#f0fdf4]" aria-label="Remove file"><X size={16} /></button>}
+                </div>
                 <button type="submit" disabled={sending} className="w-full inline-flex items-center justify-center gap-2 bg-[#7bc67e] hover:bg-[#5eb062] disabled:opacity-60 text-[#1a1a1a] font-extrabold rounded-full py-3.5" data-testid="biz-submit">
                   {sending ? <Loader2 size={16} className="animate-spin" /> : null} Send my enquiry
                 </button>

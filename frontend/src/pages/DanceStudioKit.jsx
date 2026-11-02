@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
-import { fetchDanceKitConfig, submitQuoteRequest, createCartCheckout, uploadOrderArtwork } from "../lib/api";
+import { fetchDanceKitConfig, submitQuoteRequest, createCartCheckout, uploadOrderArtwork, isPreviewableArt } from "../lib/api";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import { ImageSlot } from "./FullSquadConfigurator";
 import { toast } from "sonner";
@@ -335,7 +335,7 @@ function SetCard({ s, st, opt, colour, patch, prices, printCost, swatch, logo, k
           <div className="md:col-span-2">
             <div className="relative aspect-square rounded-2xl bg-[#f9fafb] border border-[#eef2f7] overflow-hidden">
               {colour?.image && <img src={colour.image} alt={`${opt.label} in ${colour.name}`} className="absolute inset-0 w-full h-full object-contain" />}
-              {logo && <img src={logo} alt="" aria-hidden="true" className="absolute object-contain opacity-90" style={logoBox} />}
+              {logo && isPreviewableArt(logo) && <img src={logo} alt="" aria-hidden="true" className="absolute object-contain opacity-90" style={logoBox} />}
             </div>
             <div className="text-[11px] text-[#4b5563] mt-1 text-center">Preview - your proof shows the exact placement</div>
           </div>
