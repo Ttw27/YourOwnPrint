@@ -5993,17 +5993,64 @@ async def _record_admin_login_attempt(email: str, success: bool) -> None:
     await db.admin_login_attempts.update_one({"email": email}, {"$set": update}, upsert=True)
 
 
+async def _admin_login_alert(kind: str, email: str, request: Request) -> None:
+    """Email the shop when someone logs into admin (every time) or keeps getting the
+    password wrong (at most one email an hour, so a bot can't flood the inbox)."""
+    try:
+        now = datetime.now(timezone.utc)
+        if kind != "success":
+            claim = await db.settings.update_one(
+                {"key": "admin_fail_alert", "$or": [{"at": {"$lt": (now - timedelta(hours=1)).isoformat()}}, {"at": {"$exists": False}}]},
+                {"$set": {"at": now.isoformat()}})
+            if claim.matched_count == 0:
+                if await db.settings.find_one({"key": "admin_fail_alert"}):
+                    return  # already warned this hour
+                await db.settings.insert_one({"key": "admin_fail_alert", "at": now.isoformat()})
+        ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[-1].strip()
+        ua = request.headers.get("user-agent") or "-"
+        e = _html_mod.escape
+        from zoneinfo import ZoneInfo
+        when = now.astimezone(ZoneInfo("Europe/London")).strftime("%d %b %Y, %H:%M")
+        if kind == "success":
+            title, intro = "Someone logged into your admin", "This is a heads-up that your admin was just logged into."
+            advice = "If this was you, ignore this email. If it wasn't, change ADMIN_PASSWORD on Railway straight away and tell us."
+        else:
+            title = "Admin locked after wrong passwords" if kind == "locked" else "Wrong admin password tried"
+            intro = ("Someone got the admin password wrong 5 times, so that login is locked for 15 minutes."
+                     if kind == "locked" else "Someone just tried to log into your admin with a wrong password.")
+            advice = ("If this wasn't you, the lock is doing its job - but make sure your admin password is long and only "
+                      "used here. (You'll get at most one of these emails an hour.)")
+        html = _email_wrap(title, f"""<p>{intro}</p>
+          <table cellpadding="6" cellspacing="0" style="font-size:14px">
+            <tr><td style="color:#4b5563"><strong>Email used</strong></td><td>{e(email[:120])}</td></tr>
+            <tr><td style="color:#4b5563"><strong>When</strong></td><td>{when} (UK time)</td></tr>
+            <tr><td style="color:#4b5563"><strong>Internet address</strong></td><td>{e(ip)}</td></tr>
+            <tr><td style="color:#4b5563"><strong>Device / browser</strong></td><td style="font-size:12px">{e(ua[:200])}</td></tr>
+          </table><p style="margin-top:14px">{advice}</p>""")
+        to = await _shop_notification_recipient()
+        if to:
+            await _send_email(to=[to], subject=f"[Admin security] {title}", html=html)
+    except Exception as ex:
+        logging.warning(f"admin login alert failed: {ex}")
+
+
 @api_router.post("/auth/login")
-async def admin_login(payload: LoginRequest, response: Response):
+async def admin_login(payload: LoginRequest, response: Response, request: Request):
     email = payload.email.lower().strip()
     await _check_admin_lockout(email)
     user = await db.users.find_one({"email": email})
     valid = bool(user) and _verify_password(payload.password, user.get("password_hash", ""))
     await _record_admin_login_attempt(email, success=valid)
     if not valid:
+        try:
+            locked = await _check_admin_lockout(email) or False
+        except HTTPException:
+            locked = True
+        asyncio.create_task(_admin_login_alert("locked" if locked else "failed", email, request))
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Not an admin account")
+    asyncio.create_task(_admin_login_alert("success", email, request))
     token = _create_access_token(email)
     response.set_cookie(
         key="access_token", value=token, httponly=True, secure=True,

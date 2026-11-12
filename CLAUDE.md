@@ -420,6 +420,10 @@ frontend/src/
   button, and "Resend order email" per paid order (POST /admin/orders/{sid}/resend-email, shop copy only). Shop
   recipient falls back to info@yourownprint.co.uk when Contact email isn't set.
 
+- **Admin login alerts** (Nov 2026): `_admin_login_alert` emails the shop recipient on every successful admin login and
+  on wrong passwords / lockout (wrong-password emails max 1 an hour, `db.settings` `admin_fail_alert`). Lockout: 5 tries
+  -> 15 min per email (`_check_admin_lockout`).
+
 ## 6. Known gotchas / debugging lessons (all learned the hard way)
 
 - **Backend-served image paths need the backend prefix.** Portfolio (and some other) images are
