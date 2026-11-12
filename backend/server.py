@@ -1683,6 +1683,8 @@ def _order_details_html(doc: dict, for_customer: bool = False) -> str:
             rows.append(f"Pack size split: {esc(dm['pack_sizes_text'])}")
         if dm.get("flow") == "fight_night_tee":
             placements = ", ".join(x for x in ["front (logo / sponsors - in the price)", placements] if x)
+        elif dm.get("flow") == "designer" and int(dm.get("items") or 0) > 0:
+            placements = ", ".join(x for x in ["front (their design)", placements] if x)
         if not dm.get("garment_name"):
             rows.append(f"Print: {esc(placements) if placements else 'blank / none'}")
         if dm.get("garment_name"):

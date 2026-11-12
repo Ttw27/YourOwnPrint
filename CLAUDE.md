@@ -424,6 +424,12 @@ frontend/src/
   on wrong passwords / lockout (wrong-password emails max 1 an hour, `db.settings` `admin_fail_alert`). Lockout: 5 tries
   -> 15 min per email (`_check_admin_lockout`).
 
+- **Designer print file = what the customer saw** (Nov 2026, a DJ poster came through cropped top + bottom):
+  `composeArtwork` in DesignYourOwn.jsx uses the real on-screen print-area size per side (`areaPx`), draws images
+  object-contain (never stretched), text at its on-screen size/spot, and GROWS the file to include anything dragged
+  past the dashed box instead of cutting it off. The customer's own uploaded files also go on the order as
+  `art_original-N` (R2 links, "customer's own file" in Admin > Orders). Designer orders show "Print: front (their design)".
+
 ## 6. Known gotchas / debugging lessons (all learned the hard way)
 
 - **Backend-served image paths need the backend prefix.** Portfolio (and some other) images are

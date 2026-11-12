@@ -5,7 +5,7 @@ import { BoldNavbar, BoldFooter } from "../components/bold/BoldLayout";
 import DesignerHelpFAB from "../components/bold/DesignerHelpFAB";
 import NeedHelpCTA from "../components/bold/NeedHelpCTA";
 import FontPicker from "../components/bold/FontPicker";
-import { fetchDesignerProducts, fetchProductBulkTiers, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken } from "../lib/api";
+import { fetchDesignerProducts, fetchProductBulkTiers, createCheckout, saveDesignerArtwork, designerRemoveBg, designerAiEffect, designerAiUsage, getCustomerToken, uploadOrderArtwork } from "../lib/api";
 import usePageCopy from "../hooks/usePageCopy";
 import { useCustomerAuth, useAccountDiscount, discounted } from "../context/CustomerAuthContext";
 import { toast } from "sonner";
@@ -398,36 +398,69 @@ export default function DesignYourOwn() {
   });
 
   // ---- Render to transparent PNG ----
-  // sizePx - canvas dimensions; itemsList - items to render; substituteSize - when set, swap {SIZE} tokens.
-  const composeArtwork = async (sizePx, itemsList, substituteSize = null, aspect = 1) => {
-    const c = document.createElement("canvas");
-    c.width = sizePx; c.height = Math.round(sizePx / aspect);
-    const ctx = c.getContext("2d");
-    ctx.clearRect(0, 0, c.width, c.height);
+  // Draws exactly what the customer sees: same print-area shape, images kept in
+  // proportion (like object-contain on screen), text at its on-screen size and
+  // spot. Anything dragged past the dashed box is KEPT (the file grows to fit)
+  // rather than cut off. sizePx = file width for the print area itself.
+  const areaPx = useRef({});
+  useEffect(() => {
+    const el = printAreaRef.current; if (!el) return;
+    const keep = () => { const r = el.getBoundingClientRect(); if (r.width > 20) areaPx.current[view] = { w: r.width, h: r.height }; };
+    keep();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(keep) : null;
+    ro && ro.observe(el);
+    return () => ro && ro.disconnect();
+  });
+  const loadImg = (src) => new Promise((resolve) => {
+    const im = new Image(); im.crossOrigin = "anonymous";
+    im.onload = () => resolve(im); im.onerror = () => resolve(null); im.src = src;
+  });
+  const composeArtwork = async (sizePx, itemsList, substituteSize = null, aspect = 1, side = "front") => {
+    const area = areaPx.current[side] || areaPx.current.front || { w: 400, h: 400 / aspect };
+    const aw = area.w, ah = side === "neck" ? area.w / NECK_LABEL_ASPECT : area.h;
+    const measure = document.createElement("canvas").getContext("2d");
+    // each item in on-screen px inside the print area: box, rotation pivot, drawer
+    const parts = [];
     for (const it of itemsList) {
-      const cx = (it.x / 100) * c.width + ((it.w || 0) / 100) * c.width / 2;
-      const cy = (it.y / 100) * c.height + (it.type === "text" ? (it.fontSize || 28) / 2 : ((it.h || 0) / 100) * c.height / 2);
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate((it.rot || 0) * Math.PI / 180);
+      const x = (it.x / 100) * aw, y = (it.y / 100) * ah, rot = ((it.rot || 0) * Math.PI) / 180;
       if (it.type === "image") {
-        const w = (it.w / 100) * c.width;
-        const h = (it.h / 100) * c.height;
-        await new Promise((resolve) => {
-          const im = new Image(); im.crossOrigin = "anonymous";
-          im.onload = () => { ctx.drawImage(im, -w / 2, -h / 2, w, h); resolve(); };
-          im.onerror = resolve;
-          im.src = it.src;
-        });
+        const im = await loadImg(it.src); if (!im) continue;
+        const bw = (it.w / 100) * aw, bh = (it.h / 100) * ah;
+        const ar = (im.naturalWidth || 1) / (im.naturalHeight || 1);
+        const dw = Math.min(bw, bh * ar), dh = dw / ar;   // object-contain
+        const px = x + bw / 2, py = y + bh / 2;           // rotates about its centre
+        parts.push({ px, py, rot, box: [-dw / 2, -dh / 2, dw, dh], draw: (ctx) => ctx.drawImage(im, -dw / 2, -dh / 2, dw, dh) });
       } else {
         const text = (it.isSizeToken && substituteSize) ? substituteSize : it.text;
-        const fontPx = (it.fontSize / 100) * (c.width / 4); // scale text proportionally
-        ctx.fillStyle = it.color || "#000";
-        ctx.font = `800 ${fontPx}px ${it.font || "Nunito, sans-serif"}`;
-        ctx.textBaseline = "middle"; ctx.textAlign = "center";
-        ctx.fillText(text, 0, 0);
+        if (!text) continue;
+        const font = `800 ${it.fontSize}px ${it.font || "Nunito, sans-serif"}`;
+        measure.font = font;
+        const tw = measure.measureText(text).width, lh = it.fontSize * 1.1;
+        // on screen: padding 2px 4px, rotated about the top-left corner
+        parts.push({ px: x, py: y, rot, box: [4, 2, tw, lh], draw: (ctx) => {
+          ctx.font = font; ctx.fillStyle = it.color || "#000"; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+          ctx.fillText(text, 4, 2 + lh / 2);
+        } });
       }
-      ctx.restore();
+    }
+    // bounds = the print area plus anything sticking out of it
+    let minX = 0, minY = 0, maxX = aw, maxY = ah;
+    for (const p of parts) {
+      const [bx, by, bw, bh] = p.box, c = Math.cos(p.rot), s = Math.sin(p.rot);
+      for (const [cx, cy] of [[bx, by], [bx + bw, by], [bx, by + bh], [bx + bw, by + bh]]) {
+        const X = p.px + cx * c - cy * s, Y = p.py + cx * s + cy * c;
+        minX = Math.min(minX, X); minY = Math.min(minY, Y); maxX = Math.max(maxX, X); maxY = Math.max(maxY, Y);
+      }
+    }
+    let k = sizePx / aw;
+    const big = Math.max(maxX - minX, maxY - minY) * k;
+    if (big > sizePx * 2) k *= (sizePx * 2) / big;   // keep the file a sane size
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round((maxX - minX) * k)); c.height = Math.max(1, Math.round((maxY - minY) * k));
+    const ctx = c.getContext("2d");
+    ctx.scale(k, k); ctx.translate(-minX, -minY);
+    for (const p of parts) {
+      ctx.save(); ctx.translate(p.px, p.py); ctx.rotate(p.rot); p.draw(ctx); ctx.restore();
     }
     return c.toDataURL("image/png");
   };
@@ -444,15 +477,15 @@ export default function DesignYourOwn() {
     try {
       // Front always
       const [frontPreview, frontFull] = await Promise.all([
-        composeArtwork(1000, frontItems),
-        composeArtwork(2000, frontItems),
+        composeArtwork(1000, frontItems, null, 1, "front"),
+        composeArtwork(2000, frontItems, null, 1, "front"),
       ]);
       // Back only if enabled
       let backFull = null, backPreview = null;
       if (backEnabled) {
         [backPreview, backFull] = await Promise.all([
-          composeArtwork(1000, backItems),
-          composeArtwork(2000, backItems),
+          composeArtwork(1000, backItems, null, 1, "back"),
+          composeArtwork(2000, backItems, null, 1, "back"),
         ]);
       }
       // Neck label - one PNG per unique size if enabled
@@ -462,8 +495,8 @@ export default function DesignYourOwn() {
         const sizesUsed = Object.entries(sizeQtys).filter(([, q]) => Number(q) > 0).map(([s]) => s);
         for (const sz of sizesUsed) {
           // Print resolution 1500x750 (2:1) ≈ 60×30mm @ ~600dpi
-          neckPngs[sz]        = await composeArtwork(1500, neckItems, sz, NECK_LABEL_ASPECT);
-          neckPreviewPngs[sz] = await composeArtwork(600,  neckItems, sz, NECK_LABEL_ASPECT);
+          neckPngs[sz]        = await composeArtwork(1500, neckItems, sz, NECK_LABEL_ASPECT, "neck");
+          neckPreviewPngs[sz] = await composeArtwork(600,  neckItems, sz, NECK_LABEL_ASPECT, "neck");
         }
       }
       const placements = [];
@@ -482,6 +515,12 @@ export default function DesignYourOwn() {
         neck_label_items_count: neckItems.length,
         width: 2000, height: 2000,
       });
+      // the customer's own uploaded files, full size, for printing from
+      const originals = {};
+      [...frontItems, ...backItems, ...neckItems].filter((i) => i.type === "image" && String(i.src || "").startsWith("data:"))
+        .forEach((i, n) => { if (n < 6) originals[`original-${n + 1}`] = i.src; });
+      let originalLinks = {};
+      try { originalLinks = await uploadOrderArtwork(originals, "designer"); } catch { originalLinks = {}; }
       const { url } = await createCheckout({
         product_id: productId,
         size_qtys: sizeQtys,
@@ -499,6 +538,7 @@ export default function DesignYourOwn() {
           artwork_id,
           back_print: backEnabled ? "yes" : "no",
           neck_label: neckEnabled ? "yes" : "no",
+          ...originalLinks,
         },
       });
       window.location.href = url;

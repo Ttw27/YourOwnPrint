@@ -217,7 +217,7 @@ function OrderDetails({ o }) {
             {l.color && <div>Colour: {l.color}</div>}
             {l.size_qtys && Object.keys(l.size_qtys).length > 0 && <div>Sizes: {Object.entries(l.size_qtys).map(([sz, q]) => `${q}×${sz}`).join(", ")}</div>}
             {l.dm && l.dm.pack_sizes_text && <div className="text-amber-300">Pack size split: {l.dm.pack_sizes_text}</div>}
-            <div>Print: {[...(l.dm && l.dm.flow === "fight_night_tee" ? ["front (logo / sponsors - in the price)"] : []), ...(l.placements || [])].join(", ") || "blank / none"}</div>
+            <div>Print: {[...(l.dm && l.dm.flow === "fight_night_tee" ? ["front (logo / sponsors - in the price)"] : []), ...(l.dm && l.dm.flow === "designer" && Number(l.dm.items) > 0 ? ["front (their design)"] : []), ...(l.placements || [])].join(", ") || "blank / none"}</div>
             {l.dm && (l.dm.mode || l.dm.flow) && <div className="text-zinc-500">Artwork: {l.dm.mode || l.dm.flow}</div>}
             {l.dm && (l.dm.bespoke || l.dm.design_notes) && <div className="text-amber-300">Bespoke design{l.dm.bespoke ? ` (${l.dm.bespoke})` : ""}{l.dm.design_notes ? `: ${l.dm.design_notes}` : ""}</div>}
             {l.dm && l.dm.logo_position && <div>Logo position: <strong>{l.dm.logo_position}</strong></div>}
@@ -231,7 +231,7 @@ function OrderDetails({ o }) {
                     {/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(v) || /designer\/artwork/.test(v)
                       ? <img src={mediaUrl(v)} alt="" className="w-16 h-16 object-contain bg-white rounded-lg border border-zinc-700" />
                       : <span className="w-16 h-16 grid place-items-center bg-zinc-800 rounded-lg border border-zinc-700 text-[10px] font-bold text-zinc-300">FILE</span>}
-                    <span className="block text-[10px] text-zinc-400 mt-0.5">{k.slice(4).replace(/[-_]/g, " ")}</span>
+                    <span className="block text-[10px] text-zinc-400 mt-0.5">{k.startsWith("art_original") ? "customer's own file" : k.slice(4).replace(/[-_]/g, " ")}</span>
                   </a>
                 ))}
               </div>
