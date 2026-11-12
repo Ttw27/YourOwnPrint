@@ -13,7 +13,23 @@ from typing import Dict, List, Optional
 
 import resend
 
-from deps import _get_integration_value
+from datetime import datetime, timezone
+
+from deps import _get_integration_value, db
+
+SHOP_FALLBACK_EMAIL = "info@yourownprint.co.uk"
+
+
+async def _record(res: Dict, to: List[str], subject: str) -> None:
+    """Remember the last good send and the last failure, so Admin > Orders can
+    warn when emails stop going out (a bad / rotated Resend key fails silently)."""
+    now = datetime.now(timezone.utc).isoformat()
+    upd = ({"last_ok_at": now} if res.get("ok") else
+           {"last_error": str(res.get("error"))[:400], "last_error_at": now, "last_error_subject": subject[:120]})
+    try:
+        await db.settings.update_one({"key": "email_health"}, {"$set": upd}, upsert=True)
+    except Exception:
+        pass
 
 
 async def send_email(*, to: List[str], subject: str, html: str,
@@ -21,23 +37,28 @@ async def send_email(*, to: List[str], subject: str, html: str,
     """Send a transactional email via Resend. Returns {ok, id?, error?}."""
     api_key = await _get_integration_value("resend_api_key")
     if not api_key:
-        return {"ok": False, "error": "Resend API key not configured (paste it in /admin/integrations)"}
+        res = {"ok": False, "error": "Resend API key not set (Admin > Integrations)"}
+        await _record(res, to, subject)
+        return res
     resend.api_key = api_key
     sender = os.environ.get("SENDER_EMAIL") or "Your Own Print <onboarding@resend.dev>"
     params = {"from": sender, "to": to, "subject": subject, "html": html}
     if reply_to:
         params["reply_to"] = reply_to
     try:
-        res = await asyncio.to_thread(resend.Emails.send, params)
-        return {"ok": True, "id": (res or {}).get("id")}
+        sent = await asyncio.to_thread(resend.Emails.send, params)
+        res = {"ok": True, "id": (sent or {}).get("id")}
     except Exception as e:
         logging.warning(f"Resend email failed: {e}")
-        return {"ok": False, "error": str(e)}
+        res = {"ok": False, "error": str(e)}
+    await _record(res, to, subject)
+    return res
 
 
 async def shop_notification_recipient() -> Optional[str]:
-    """The `contact_email` set in /admin/integrations - where quote enquiries land."""
-    return (await _get_integration_value("contact_email")) or None
+    """The `contact_email` set in /admin/integrations - where orders + enquiries land
+    (info@ if it was never set, so the shop still hears about orders)."""
+    return (await _get_integration_value("contact_email")) or SHOP_FALLBACK_EMAIL
 
 
 def email_wrap(title: str, body_html: str) -> str:

@@ -414,6 +414,12 @@ frontend/src/
     off the order, staff order links, quick reorders (NO stockholding). Quote form -> /quote-request kind "corporate".
     Menu link added to the saved menu by `_nav_add_corporate_v1` (Workwear, after For Business).
 
+- **Order email health** (Nov 2026): every Resend send records `db.settings` `email_health` (last_ok_at / last_error);
+  each paid order stores `shop_email` {ok, to, at, error} + `customer_email_sent`. Admin > Orders shows a red/green
+  "Order emails" box (GET /admin/email-health: key missing, SENDER_EMAIL unset/resend.dev, last failure) with a test
+  button, and "Resend order email" per paid order (POST /admin/orders/{sid}/resend-email, shop copy only). Shop
+  recipient falls back to info@yourownprint.co.uk when Contact email isn't set.
+
 ## 6. Known gotchas / debugging lessons (all learned the hard way)
 
 - **Backend-served image paths need the backend prefix.** Portfolio (and some other) images are

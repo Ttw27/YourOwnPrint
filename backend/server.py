@@ -1788,7 +1788,7 @@ async def _capture_delivery(doc: dict, status_resp) -> Optional[Dict]:
     return delivery
 
 
-async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
+async def _maybe_send_order_emails(doc: dict, status_resp, shop_only: bool = False) -> None:
     """Fires the shop notification + customer receipt for a completed order.
     Idempotent: only sends once per order, guarded by the `receipt_sent` flag
     (set atomically here so a webhook and a status-poll firing near-simultaneously
@@ -1829,13 +1829,15 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
         if details:
             customer_email = getattr(details, "email", None)
         customer_email = customer_email or doc.get("customer_email") or doc.get("contact_email")
-        # for the follow-up review email (routers/followups.py)
-        await db.payment_transactions.update_one(
-            {"session_id": doc["session_id"]},
-            {"$set": {"paid_at": datetime.now(timezone.utc).isoformat(), "paid_email": (customer_email or "").strip().lower() or None}})
-        # Meta Conversions API: the Purchase from the server too (same event id as the browser pixel)
-        from services.meta_capi import send_purchase as _meta_purchase
-        asyncio.create_task(_meta_purchase({**doc, "paid_email": (customer_email or "").strip().lower() or None}, status_resp))
+        if not shop_only:
+            # for the follow-up review email (routers/followups.py)
+            await db.payment_transactions.update_one(
+                {"session_id": doc["session_id"]},
+                {"$set": {"paid_at": doc.get("paid_at") or datetime.now(timezone.utc).isoformat(),
+                          "paid_email": (customer_email or "").strip().lower() or None}})
+            # Meta Conversions API: the Purchase from the server too (same event id as the browser pixel)
+            from services.meta_capi import send_purchase as _meta_purchase
+            asyncio.create_task(_meta_purchase({**doc, "paid_email": (customer_email or "").strip().lower() or None}, status_resp))
 
         amount = float(getattr(status_resp, "amount_total", None) or 0) / 100.0
         currency = (getattr(status_resp, "currency", None) or "gbp").upper()
@@ -1865,6 +1867,12 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
                 """,
             )
             res = await _send_email(to=[shop_to], subject=f"[Paid order] {order_label} - £{amount:.2f}", html=body_shop)
+            # shown on the order in Admin > Orders
+            await db.payment_transactions.update_one({"session_id": doc["session_id"]}, {"$set": {"shop_email": {
+                "ok": bool((res or {}).get("ok")), "to": shop_to, "at": datetime.now(timezone.utc).isoformat(),
+                "error": None if (res or {}).get("ok") else str((res or {}).get("error"))[:300]}}})
+            if shop_only:
+                return
             if not (res or {}).get("ok") and int(doc.get("email_tries") or 0) < 6:
                 # didn't send (Resend down / key missing) - release the claim so
                 # routers/followups._recover_paid_orders tries again in 30 min
@@ -1890,7 +1898,9 @@ async def _maybe_send_order_emails(doc: dict, status_resp) -> None:
                 <p style="margin-top:16px">- The Your Own Print team</p>
                 """,
             )
-            await _send_email(to=[customer_email], subject=f"Your Your Own Print order {order_ref} is confirmed", html=body_cust)
+            cres = await _send_email(to=[customer_email], subject=f"Your Your Own Print order {order_ref} is confirmed", html=body_cust)
+            await db.payment_transactions.update_one({"session_id": doc["session_id"]}, {"$set": {
+                "customer_email_sent": bool((cres or {}).get("ok"))}})
     except Exception as e:
         logging.getLogger(__name__).warning(f"order confirmation email failed: {e}")
 
@@ -5836,6 +5846,51 @@ async def admin_list_orders(status: str = "all", limit: int = 200):
         doc.pop("_id", None)
         orders.append(doc)
     return {"orders": orders, "count": len(orders)}
+
+
+@api_router.get("/admin/email-health", dependencies=[Depends(require_admin)])
+async def admin_email_health():
+    """Are order emails going out? Shown at the top of Admin > Orders."""
+    h = await db.settings.find_one({"key": "email_health"}, {"_id": 0}) or {}
+    key_set = bool(await _get_integration_value("resend_api_key"))
+    sender = os.environ.get("SENDER_EMAIL") or ""
+    contact = await _get_integration_value("contact_email")
+    since = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    unsent = await db.payment_transactions.count_documents({
+        "payment_status": "paid", "created_at": {"$gte": since}, "shop_email.ok": False})
+    problems = []
+    if not key_set:
+        problems.append("No Resend API key is saved - paste it in Admin > Integrations (Resend API Key).")
+    if not sender or "resend.dev" in sender:
+        problems.append("SENDER_EMAIL isn't set on Railway, so emails come from Resend's test address and only "
+                        "reach the Resend account owner. Set SENDER_EMAIL to e.g. Your Own Print <orders@yourownprint.co.uk> "
+                        "(the domain must be verified in Resend > Domains).")
+    last_err_newer = h.get("last_error_at") and h.get("last_error_at") > (h.get("last_ok_at") or "")
+    if last_err_newer:
+        problems.append(f"The last email failed: {h.get('last_error')}")
+    return {"ok": not problems, "problems": problems, "resend_key_set": key_set, "sender": sender or None,
+            "shop_email": contact or "info@yourownprint.co.uk (default - set Contact / Reply-to Email in Admin > Integrations)",
+            "last_ok_at": h.get("last_ok_at"), "last_error": h.get("last_error"), "last_error_at": h.get("last_error_at"),
+            "paid_orders_without_email_30d": unsent}
+
+
+@api_router.post("/admin/orders/{session_id}/resend-email", dependencies=[Depends(require_admin)])
+async def admin_resend_order_email(session_id: str):
+    """Send the shop's 'new paid order' email again (not the customer's)."""
+    doc = await db.payment_transactions.find_one({"session_id": session_id})
+    if not doc:
+        raise HTTPException(404, "Order not found")
+    try:
+        st = await get_checkout_status(STRIPE_API_KEY, session_id)
+    except Exception:
+        raise HTTPException(502, "Couldn't reach Stripe just now - try again in a minute")
+    if getattr(st, "payment_status", "") != "paid":
+        raise HTTPException(400, "This checkout wasn't paid - nothing to send")
+    doc["receipt_sent"] = False
+    await db.payment_transactions.update_one({"session_id": session_id}, {"$set": {"receipt_sent": False}})
+    await _maybe_send_order_emails(doc, st, shop_only=True)
+    fresh = await db.payment_transactions.find_one({"session_id": session_id}, {"shop_email": 1})
+    return (fresh or {}).get("shop_email") or {"ok": False, "error": "Email wasn't sent"}
 
 
 @api_router.get("/admin/enquiries", dependencies=[Depends(require_admin)])

@@ -1066,6 +1066,14 @@ export async function adminListOrders(status = "all", limit = 200) {
   const { data } = await api.get("/admin/orders", { params: { status, limit } });
   return data;
 }
+export async function adminEmailHealth() {
+  const { data } = await api.get("/admin/email-health");
+  return data;
+}
+export async function adminResendOrderEmail(sessionId) {
+  const { data } = await api.post(`/admin/orders/${encodeURIComponent(sessionId)}/resend-email`);
+  return data;
+}
 export async function adminListEnquiries(limit = 200) {
   const { data } = await api.get("/admin/enquiries", { params: { limit } });
   return data;

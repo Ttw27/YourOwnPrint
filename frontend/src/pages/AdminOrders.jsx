@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { adminListOrders, mediaUrl } from "../lib/api";
+import { adminListOrders, adminEmailHealth, adminResendOrderEmail, adminSendTestEmail, mediaUrl } from "../lib/api";
 import { toast } from "sonner";
 
 const STATUS_TABS = [
@@ -39,7 +39,9 @@ export default function AdminOrders() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100" data-testid="admin-orders-page">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-extrabold mb-2">Orders</h1>
-        <p className="text-zinc-400 mb-6">Every checkout attempt across the site - single products, cart, leavers hoodies and workforce orders.</p>
+        <p className="text-zinc-400 mb-6">Every checkout attempt across the site - single products, cart, leavers hoodies and workforce orders.
+          Only <strong className="text-emerald-300">PAID</strong> ones are real orders; pending / expired = someone opened the payment page and didn&apos;t pay.</p>
+        <EmailHealth />
 
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <div className="flex gap-2">
@@ -79,6 +81,7 @@ export default function AdminOrders() {
                 <div className="text-right">
                   <div className="font-extrabold text-amber-400">£{Number(o.amount || 0).toFixed(2)}</div>
                   <StatusBadge status={o.payment_status} />
+                  {o.payment_status === "paid" && <OrderEmailStatus o={o} />}
                 </div>
               </div>
               <OrderDetails o={o} />
@@ -86,6 +89,63 @@ export default function AdminOrders() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Are order emails going out? Red box with the reason if not.
+function EmailHealth() {
+  const [h, setH] = useState(null);
+  const [to, setTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = () => adminEmailHealth().then(setH).catch(() => {});
+  useEffect(() => { load(); }, []);
+  if (!h) return null;
+  const test = async () => {
+    if (!to.trim()) return toast.error("Type the email address to send the test to");
+    setBusy(true);
+    try {
+      const r = await adminSendTestEmail(to.trim());
+      r.ok ? toast.success("Test email sent - check that inbox (and spam)") : toast.error(`Didn't send: ${r.error}`);
+    } catch { toast.error("Couldn't send the test"); }
+    setBusy(false); load();
+  };
+  return (
+    <div className={`rounded-xl border p-4 mb-6 text-sm ${h.ok ? "bg-emerald-950/30 border-emerald-800" : "bg-red-950/40 border-red-700"}`} data-testid="email-health">
+      <div className="font-bold">{h.ok ? "Order emails: working" : "Order emails are NOT going out"}</div>
+      {h.problems.map((p, i) => <div key={i} className="text-red-200 mt-1">• {p}</div>)}
+      <div className="text-zinc-400 text-xs mt-2">
+        New-order emails go to <strong className="text-zinc-200">{h.shop_email}</strong>
+        {h.sender ? <> · sent from {h.sender}</> : null}
+        {h.last_ok_at ? <> · last email sent OK {new Date(h.last_ok_at).toLocaleString("en-GB")}</> : null}
+        {h.paid_orders_without_email_30d > 0 && <span className="text-red-300"> · {h.paid_orders_without_email_30d} paid order{h.paid_orders_without_email_30d === 1 ? "" : "s"} whose email failed - use "Resend order email" on each</span>}
+      </div>
+      <div className="flex gap-2 mt-3 flex-wrap">
+        <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="your@email.co.uk" className="bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs w-56" data-testid="email-health-to" />
+        <button onClick={test} disabled={busy} className="bg-zinc-800 hover:bg-zinc-700 rounded-lg px-3 py-1.5 text-xs font-bold">{busy ? "Sending..." : "Send a test email"}</button>
+      </div>
+    </div>
+  );
+}
+
+// Did the "new paid order" email reach the shop? + a button to send it again.
+function OrderEmailStatus({ o }) {
+  const [se, setSe] = useState(o.shop_email);
+  const [busy, setBusy] = useState(false);
+  const resend = async () => {
+    setBusy(true);
+    try {
+      const r = await adminResendOrderEmail(o.session_id);
+      setSe(r);
+      r.ok ? toast.success(`Order email sent to ${r.to}`) : toast.error(`Didn't send: ${r.error}`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Couldn't resend"); }
+    setBusy(false);
+  };
+  return (
+    <div className="mt-1 text-[10px]">
+      {se ? (se.ok ? <div className="text-emerald-400">Email sent to you ✓</div> : <div className="text-red-300" title={se.error || ""}>Email failed</div>)
+          : <div className="text-zinc-500">Email: not recorded</div>}
+      <button onClick={resend} disabled={busy} className="underline text-zinc-300 hover:text-white" data-testid={`resend-order-email-${o.id}`}>{busy ? "Sending..." : "Resend order email"}</button>
     </div>
   );
 }
