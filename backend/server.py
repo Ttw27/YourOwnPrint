@@ -2259,6 +2259,7 @@ async def _resolve_line_pricing(
     }
 
 
+_DESIGNER_MAX = 20_000_000   # characters of data URL (~15MB file)
 _DESIGNER_PARTS = {"print-front": "artwork_png", "mockup-front": "preview_png", "print-back": "back_png", "mockup-back": "back_preview_png"}
 
 
@@ -3672,15 +3673,20 @@ async def save_designer_artwork(payload: DesignerArtwork):
     """Save a composed transparent PNG (and optional preview) for an order."""
     if payload.product_id not in PRODUCTS:
         raise HTTPException(400, "Unknown product_id")
-    if not payload.artwork_png or len(payload.artwork_png) > 6_000_000:
-        raise HTTPException(400, "artwork_png missing or too large")
+    if not payload.artwork_png:
+        raise HTTPException(400, "Your design is empty - add an image or text")
+    if len(payload.artwork_png) > _DESIGNER_MAX:
+        raise HTTPException(400, "Your design file is too big to save - try a smaller photo, or email it to info@yourownprint.co.uk")
     # images only - these files are later opened from Admin > Orders / the order email
     for v in [payload.artwork_png, payload.preview_png, payload.back_png, payload.back_preview_png,
               *(payload.neck_label_pngs or {}).values(), *(payload.neck_label_preview_pngs or {}).values()]:
         if v and not re.match(r"^data:image/(png|jpeg|webp);base64,", v):
             raise HTTPException(400, "Artwork must be a PNG image")
-    if payload.back_png and len(payload.back_png) > 6_000_000:
-        raise HTTPException(400, "back_png too large")
+    if payload.back_png and len(payload.back_png) > _DESIGNER_MAX:
+        raise HTTPException(400, "Your back design file is too big to save - try a smaller photo, or email it to info@yourownprint.co.uk")
+    for v in (payload.preview_png, payload.back_preview_png):
+        if v and len(v) > _DESIGNER_MAX:
+            raise HTTPException(400, "Your design preview is too big to save")
     # Neck-label PNGs are smaller - cap each at 2MB to keep the doc reasonable
     for pngs in ((payload.neck_label_pngs or {}), (payload.neck_label_preview_pngs or {})):
         for sz, data in pngs.items():
@@ -3703,6 +3709,20 @@ async def save_designer_artwork(payload: DesignerArtwork):
         "session_id": payload.session_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    # big print files go to R2 (a Mongo doc is capped at 16MB); the doc keeps "r2:<path>"
+    for field in _DESIGNER_PARTS.values():
+        v = doc.get(field)
+        if v and len(v) > 400_000:
+            try:
+                head, b64 = v.split(",", 1)
+                ctype = head.split(";")[0].replace("data:", "")
+                path = f"designer-artwork/{doc['id']}/{field}.{ctype.split('/')[-1]}"
+                await _storage_put_async(path, _base64.b64decode(b64), ctype)
+                doc[field] = f"r2:{path}"
+            except Exception as e:
+                logging.warning(f"designer artwork R2 save failed ({field}): {e}")
+                if len(v) > 6_000_000:
+                    raise HTTPException(503, "We couldn't save your design just now - please try again in a minute")
     await db.designer_artwork.insert_one(doc)
     return {"id": doc["id"]}
 
@@ -3718,13 +3738,19 @@ async def get_designer_artwork_file(artwork_id: str, part: str):
         data = (doc.get("neck_label_pngs") or {}).get(part[5:])
     else:
         data = doc.get(_DESIGNER_PARTS.get(part, ""))
-    if not data or "," not in data:
-        raise HTTPException(404, "No such file")
-    head, b64 = data.split(",", 1)
-    ctype = head.split(";")[0].replace("data:", "")
+    if data and data.startswith("r2:"):
+        raw, _ = await asyncio.to_thread(_storage_get, data[3:])
+        ext = data.rsplit(".", 1)[-1]
+        ctype = {"jpeg": "image/jpeg", "webp": "image/webp"}.get(ext, "image/png")
+    else:
+        if not data or "," not in data:
+            raise HTTPException(404, "No such file")
+        head, b64 = data.split(",", 1)
+        ctype = head.split(";")[0].replace("data:", "")
+        raw = _base64.b64decode(b64)
     if ctype not in ("image/png", "image/jpeg", "image/webp"):
         ctype = "image/png"   # never serve anything that could run as a page/script
-    return Response(content=_base64.b64decode(b64), media_type=ctype,
+    return Response(content=raw, media_type=ctype,
                     headers={"Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff",
                              "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox"})
 
@@ -3735,6 +3761,10 @@ async def get_designer_artwork(artwork_id: str):
     doc = await db.designer_artwork.find_one({"id": artwork_id})
     if not doc:
         raise HTTPException(404, "Artwork not found")
+    by_field = {f: part for part, f in _DESIGNER_PARTS.items()}
+    for f, part in by_field.items():   # files kept in R2 -> their link
+        if str(doc.get(f) or "").startswith("r2:"):
+            doc[f] = f"/api/designer/artwork/{artwork_id}/{part}.png"
     return {k: doc.get(k) for k in (
         "id", "product_id", "artwork_png", "preview_png",
         "back_png", "back_preview_png",

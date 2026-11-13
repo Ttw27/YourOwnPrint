@@ -427,7 +427,9 @@ frontend/src/
 - **Designer print file = what the customer saw** (Nov 2026, a DJ poster came through cropped top + bottom):
   `composeArtwork` in DesignYourOwn.jsx uses the real on-screen print-area size per side (`areaPx`), draws images
   object-contain (never stretched), text at its on-screen size/spot, and GROWS the file to include anything dragged
-  past the dashed box instead of cutting it off. The customer's own uploaded files also go on the order as
+  past the dashed box instead of cutting it off. Print files over ~400KB are stored in R2
+  (`designer-artwork/<id>/<field>.png`, doc keeps "r2:<path>", served by /designer/artwork/{id}/{part}.png), cap
+  `_DESIGNER_MAX` 20M chars; the designer re-saves smaller (2000->1600->1200->900px) if still too big. The customer's own uploaded files also go on the order as
   `art_original-N` (R2 links, "customer's own file" in Admin > Orders). Designer orders show "Print: front (their design)".
 
 ## 6. Known gotchas / debugging lessons (all learned the hard way)

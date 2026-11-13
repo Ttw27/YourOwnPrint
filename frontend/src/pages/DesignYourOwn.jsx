@@ -476,16 +476,25 @@ export default function DesignYourOwn() {
     setCheckingOut(true);
     try {
       // Front always
+      // print file: 2000px wide, smaller if a photo-heavy design would be too big to save
+      const fitPrint = async (list, side) => {
+        let d = null;
+        for (const w of [2000, 1600, 1200, 900]) {
+          d = await composeArtwork(w, list, null, 1, side);
+          if (d.length < 19_000_000) break;
+        }
+        return d;
+      };
       const [frontPreview, frontFull] = await Promise.all([
-        composeArtwork(1000, frontItems, null, 1, "front"),
-        composeArtwork(2000, frontItems, null, 1, "front"),
+        composeArtwork(700, frontItems, null, 1, "front"),
+        fitPrint(frontItems, "front"),
       ]);
       // Back only if enabled
       let backFull = null, backPreview = null;
       if (backEnabled) {
         [backPreview, backFull] = await Promise.all([
-          composeArtwork(1000, backItems, null, 1, "back"),
-          composeArtwork(2000, backItems, null, 1, "back"),
+          composeArtwork(700, backItems, null, 1, "back"),
+          fitPrint(backItems, "back"),
         ]);
       }
       // Neck label - one PNG per unique size if enabled
